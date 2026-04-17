@@ -217,6 +217,32 @@ export default function SiteWorkspacePage() {
       if (storeData) {
         siteCache.set(id, { data: storeData, timestamp: Date.now() });
       }
+
+      // Detect if there's an active sync running
+      const hasRunning = runsData.some(r => r.status === "running");
+      if (hasRunning && !syncing) {
+        setSyncing(true);
+        const completed = runsData.filter(r => r.status === "completed" || r.status === "failed").length;
+        const running = runsData.find(r => r.status === "running");
+        const totalProcessed = runsData.reduce((s, r) => s + (r.records_processed || 0), 0);
+        setSyncProgress({
+          current: completed,
+          total: 6,
+          aspect: running ? `Syncing ${running.aspect}... (${totalProcessed.toLocaleString()} records)` : "Syncing...",
+        });
+      } else if (!hasRunning && syncing) {
+        // Sync finished while we were polling
+        const totalProcessed = runsData.reduce((s, r) => s + (r.records_processed || 0), 0);
+        setSyncProgress({
+          current: 6,
+          total: 6,
+          aspect: `Done — ${totalProcessed.toLocaleString()} records synced`,
+        });
+        setTimeout(() => {
+          setSyncing(false);
+          setSyncProgress(null);
+        }, 3000);
+      }
     } catch (error) {
       console.error("Error loading site data:", error);
     } finally {
@@ -290,9 +316,19 @@ export default function SiteWorkspacePage() {
     }
   };
 
+  // Initial load
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // Poll every 2s while syncing to show live progress
+  useEffect(() => {
+    if (!syncing || !id) return;
+    const interval = setInterval(() => {
+      loadData();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [syncing, id]);
 
   useEffect(() => {
     if (id) {
@@ -311,42 +347,8 @@ export default function SiteWorkspacePage() {
     
     setSyncing(true);
     setSyncProgress({ current: 0, total: 6, aspect: "Starting sync..." });
+    syncAbortRef.current = false;
     
-    // Start polling immediately
-    let pollActive = true;
-    const pollInterval = setInterval(async () => {
-      if (!pollActive) return;
-      const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-      const { data: runs } = await supabase
-        .from("sync_runs")
-        .select("aspect, status, records_processed, records_created, records_updated")
-        .eq("store_id", store.id)
-        .gte("started_at", twoMinAgo)
-        .order("started_at", { ascending: true });
-
-      if (!runs || !pollActive) return;
-
-      const completed = runs.filter(r => r.status === "completed" || r.status === "failed").length;
-      const running = runs.find(r => r.status === "running");
-      const totalProcessed = runs.reduce((s, r) => s + (r.records_processed || 0), 0);
-
-      if (running) {
-        setSyncProgress({
-          current: completed,
-          total: 6,
-          aspect: `Syncing ${running.aspect}... (${totalProcessed.toLocaleString()} records)`,
-        });
-      } else if (completed > 0) {
-        setSyncProgress({
-          current: completed,
-          total: 6,
-          aspect: completed >= 6
-            ? `Sync complete — ${totalProcessed.toLocaleString()} records`
-            : `${completed}/6 aspects done (${totalProcessed.toLocaleString()} records)`,
-        });
-      }
-    }, 2000);
-
     try {
       const response = await fetch(`/api/stores/${store.id}/sync`, {
         method: "POST",
@@ -359,8 +361,6 @@ export default function SiteWorkspacePage() {
       }
 
       const result = await response.json();
-      pollActive = false;
-      clearInterval(pollInterval);
 
       setSyncProgress({
         current: 6,
@@ -370,8 +370,6 @@ export default function SiteWorkspacePage() {
 
       await loadData();
     } catch (error) {
-      pollActive = false;
-      clearInterval(pollInterval);
       console.error("Sync error:", error);
       setSyncProgress({ 
         current: 0, 
