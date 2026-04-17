@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/database.types";
 
 // Vercel Cron job - runs every minute to check for stores needing sync
 // Configure in vercel.json: { "crons": [{ "path": "/api/cron/sync-scheduler", "schedule": "* * * * *" }] }
@@ -28,8 +29,9 @@ interface WooProduct {
   type: string;
   description: string;
   short_description: string;
-  categories: Array<{ id: number; name: string }>;
-  images: Array<{ id: number; src: string }>;
+  categories: Array<{ id: number; name: string; slug: string }>;
+  images: Array<{ id: number; src: string; name: string; alt: string }>;
+  attributes: Array<{ id: number; name: string; options: string[] }>;
   date_created: string;
   date_modified: string;
 }
@@ -40,10 +42,15 @@ interface WooOrder {
   status: string;
   currency: string;
   total: string;
+  discount_total: string;
+  shipping_total: string;
   customer_id: number;
   billing: Record<string, unknown>;
   shipping: Record<string, unknown>;
   line_items: Array<Record<string, unknown>>;
+  shipping_lines: Array<Record<string, unknown>>;
+  fee_lines: Array<Record<string, unknown>>;
+  coupon_lines: Array<Record<string, unknown>>;
   date_created: string;
   date_modified: string;
 }
@@ -56,8 +63,17 @@ interface WooCustomer {
   username: string;
   billing: Record<string, unknown>;
   shipping: Record<string, unknown>;
+  avatar_url: string;
+  is_paying_customer: boolean;
+  orders_count: number;
+  total_spent: string;
   date_created: string;
   date_modified: string;
+}
+
+// Helper to convert objects to Json type safely
+function toJson<T>(obj: T): Json {
+  return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
 async function fetchFromWooCommerce<T>(
@@ -116,13 +132,14 @@ async function syncProducts(store: StoreToSync): Promise<{ processed: number; cr
       type: product.type,
       description: product.description,
       short_description: product.short_description,
-      categories: product.categories,
-      images: product.images,
-      raw_data: product,
+      categories: toJson(product.categories),
+      images: toJson(product.images),
+      attributes: toJson(product.attributes || []),
+      raw_data: toJson(product),
       synced_at: new Date().toISOString(),
     };
 
-    // Upsert - insert or update on conflict
+    // Upsert - check if exists first
     const { data: existing } = await supabase
       .from("products")
       .select("id")
@@ -166,11 +183,16 @@ async function syncOrders(store: StoreToSync): Promise<{ processed: number; crea
       status: order.status,
       currency: order.currency,
       total: order.total ? parseFloat(order.total) : null,
+      discount_total: order.discount_total ? parseFloat(order.discount_total) : null,
+      shipping_total: order.shipping_total ? parseFloat(order.shipping_total) : null,
       customer_id: order.customer_id || null,
-      billing: order.billing,
-      shipping: order.shipping,
-      line_items: order.line_items,
-      raw_data: order,
+      billing: toJson(order.billing),
+      shipping: toJson(order.shipping),
+      line_items: toJson(order.line_items),
+      shipping_lines: toJson(order.shipping_lines || []),
+      fee_lines: toJson(order.fee_lines || []),
+      coupon_lines: toJson(order.coupon_lines || []),
+      raw_data: toJson(order),
       date_created: order.date_created,
       date_modified: order.date_modified,
       synced_at: new Date().toISOString(),
@@ -219,9 +241,13 @@ async function syncCustomers(store: StoreToSync): Promise<{ processed: number; c
       first_name: customer.first_name,
       last_name: customer.last_name,
       username: customer.username,
-      billing: customer.billing,
-      shipping: customer.shipping,
-      raw_data: customer,
+      billing: toJson(customer.billing),
+      shipping: toJson(customer.shipping),
+      avatar_url: customer.avatar_url || null,
+      is_paying_customer: customer.is_paying_customer || false,
+      orders_count: customer.orders_count || 0,
+      total_spent: customer.total_spent ? parseFloat(customer.total_spent) : null,
+      raw_data: toJson(customer),
       date_created: customer.date_created,
       synced_at: new Date().toISOString(),
     };
