@@ -28,9 +28,18 @@ import {
   CheckCircle2,
   XCircle,
   Webhook,
+  Zap,
+  AlertCircle,
 } from "lucide-react";
 import { getStore, updateStoreStatus, type Store } from "@/services/storeService";
 import { getSyncRunsByStore, createSyncRun, completeSyncRun, type SyncRun } from "@/services/syncService";
+import {
+  getWebhooksByStore,
+  getWebhookEventsByStore,
+  getWebhookStats,
+  type Webhook as WebhookType,
+  type WebhookEvent,
+} from "@/services/webhookService";
 
 const SYNC_ASPECTS = [
   { id: "products", label: "Products", icon: Package },
@@ -46,19 +55,29 @@ export default function SiteWorkspacePage() {
   const { id } = router.query;
   const [store, setStore] = useState<Store | null>(null);
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
+  const [webhooks, setWebhooks] = useState<WebhookType[]>([]);
+  const [webhookEvents, setWebhookEvents] = useState<WebhookEvent[]>([]);
+  const [webhookStats, setWebhookStats] = useState({ total: 0, active: 0, failed: 0, eventsToday: 0 });
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [registeringWebhooks, setRegisteringWebhooks] = useState(false);
 
   const loadData = async () => {
     if (!id || typeof id !== "string") return;
     setLoading(true);
     try {
-      const [storeData, runsData] = await Promise.all([
+      const [storeData, runsData, webhooksData, eventsData, stats] = await Promise.all([
         getStore(id),
         getSyncRunsByStore(id),
+        getWebhooksByStore(id),
+        getWebhookEventsByStore(id, 50),
+        getWebhookStats(id),
       ]);
       setStore(storeData);
       setSyncRuns(runsData);
+      setWebhooks(webhooksData);
+      setWebhookEvents(eventsData);
+      setWebhookStats(stats);
     } catch (error) {
       console.error("Error loading site data:", error);
     } finally {
@@ -109,6 +128,23 @@ export default function SiteWorkspacePage() {
     }
   };
 
+  const handleRegisterWebhooks = async () => {
+    if (!store) return;
+    setRegisteringWebhooks(true);
+    try {
+      const response = await fetch(`/api/stores/${store.id}/register-webhooks`, {
+        method: "POST",
+      });
+      const result = await response.json();
+      console.log("Webhook registration result:", result);
+      await loadData();
+    } catch (error) {
+      console.error("Error registering webhooks:", error);
+    } finally {
+      setRegisteringWebhooks(false);
+    }
+  };
+
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return "Running...";
     const ms = new Date(end).getTime() - new Date(start).getTime();
@@ -125,16 +161,44 @@ export default function SiteWorkspacePage() {
     });
   };
 
+  const formatRelativeTime = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    const diff = Date.now() - new Date(dateString).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
+      case "active":
         return <CheckCircle2 className="h-4 w-4 text-success" />;
       case "failed":
         return <XCircle className="h-4 w-4 text-destructive" />;
       case "running":
+      case "pending":
         return <RefreshCw className="h-4 w-4 text-primary animate-spin" />;
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getWebhookStatusVariant = (status: string) => {
+    switch (status) {
+      case "active":
+        return "success";
+      case "failed":
+        return "error";
+      case "paused":
+      case "disabled":
+        return "warning";
+      default:
+        return "pending";
     }
   };
 
@@ -190,7 +254,14 @@ export default function SiteWorkspacePage() {
         <Tabs defaultValue="sync" className="space-y-6">
           <TabsList>
             <TabsTrigger value="sync">Sync Engine</TabsTrigger>
-            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="webhooks" className="flex items-center gap-2">
+              Webhooks
+              {webhookStats.active > 0 && (
+                <span className="bg-success/20 text-success text-xs px-1.5 py-0.5 rounded-full">
+                  {webhookStats.active}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -289,25 +360,185 @@ export default function SiteWorkspacePage() {
           </TabsContent>
 
           <TabsContent value="webhooks" className="space-y-6">
+            {/* Webhook Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                      <Webhook className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{webhookStats.total}</p>
+                      <p className="text-xs text-muted-foreground">Total Webhooks</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{webhookStats.active}</p>
+                      <p className="text-xs text-muted-foreground">Active</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{webhookStats.failed}</p>
+                      <p className="text-xs text-muted-foreground">Failed</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Zap className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{webhookStats.eventsToday}</p>
+                      <p className="text-xs text-muted-foreground">Events Today</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Registered Webhooks */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Webhook Configuration</CardTitle>
-                    <CardDescription>Manage real-time event subscriptions</CardDescription>
+                    <CardTitle className="text-lg">Registered Webhooks</CardTitle>
+                    <CardDescription>Real-time event subscriptions from WooCommerce</CardDescription>
                   </div>
-                  <Button variant="outline">
-                    <Webhook className="h-4 w-4 mr-2" />
-                    Register Webhooks
+                  <Button
+                    onClick={handleRegisterWebhooks}
+                    disabled={registeringWebhooks || !store.consumer_key}
+                  >
+                    {registeringWebhooks ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Webhook className="h-4 w-4 mr-2" />
+                    )}
+                    {webhooks.length > 0 ? "Repair Webhooks" : "Register Webhooks"}
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Webhook className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No webhooks registered yet</p>
-                  <p className="text-sm">Click "Register Webhooks" to set up real-time sync</p>
-                </div>
+              <CardContent className="p-0">
+                {!store.consumer_key ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Store not connected</p>
+                    <p className="text-sm">Complete OAuth setup to register webhooks</p>
+                  </div>
+                ) : webhooks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Webhook className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No webhooks registered yet</p>
+                    <p className="text-sm">Click &quot;Register Webhooks&quot; to set up real-time sync</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Topic</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Triggered</TableHead>
+                        <TableHead>Failures</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {webhooks.map((webhook) => (
+                        <TableRow key={webhook.id}>
+                          <TableCell>
+                            <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
+                              {webhook.topic}
+                            </code>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge variant={getWebhookStatusVariant(webhook.status || "pending")}>
+                              {webhook.status}
+                            </StatusBadge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatRelativeTime(webhook.last_triggered_at)}
+                          </TableCell>
+                          <TableCell>
+                            {webhook.failure_count && webhook.failure_count > 0 ? (
+                              <span className="text-destructive">{webhook.failure_count}</span>
+                            ) : (
+                              <span className="text-muted-foreground">0</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Webhook Events */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Recent Events</CardTitle>
+                <CardDescription>Incoming webhook events from WooCommerce</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {webhookEvents.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No webhook events received yet</p>
+                    <p className="text-sm">Events will appear here when WooCommerce sends updates</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Topic</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Received</TableHead>
+                        <TableHead>Processed</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {webhookEvents.slice(0, 20).map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell>
+                            <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
+                              {event.topic}
+                            </code>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(event.processed ? "completed" : "pending")}
+                              <span>{event.processed ? "Processed" : "Pending"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(event.created_at)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {event.processed_at ? formatDate(event.processed_at) : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -327,7 +558,7 @@ export default function SiteWorkspacePage() {
                   <div>
                     <p className="text-sm font-medium">API Status</p>
                     <StatusBadge variant={store.consumer_key ? "success" : "warning"}>
-                      {store.consumer_key ? "Configured" : "Not Configured"}
+                      {store.consumer_key ? "Connected" : "Not Connected"}
                     </StatusBadge>
                   </div>
                   <div>
