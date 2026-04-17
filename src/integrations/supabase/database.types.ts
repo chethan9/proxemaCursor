@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -36,6 +36,252 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          avatar_url: string | null
+          billing: Json | null
+          created_at: string | null
+          date_created: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          is_paying_customer: boolean | null
+          last_name: string | null
+          orders_count: number | null
+          raw_data: Json | null
+          role: string | null
+          shipping: Json | null
+          store_id: string
+          synced_at: string | null
+          total_spent: number | null
+          username: string | null
+          woo_id: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          billing?: Json | null
+          created_at?: string | null
+          date_created?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_paying_customer?: boolean | null
+          last_name?: string | null
+          orders_count?: number | null
+          raw_data?: Json | null
+          role?: string | null
+          shipping?: Json | null
+          store_id: string
+          synced_at?: string | null
+          total_spent?: number | null
+          username?: string | null
+          woo_id: number
+        }
+        Update: {
+          avatar_url?: string | null
+          billing?: Json | null
+          created_at?: string | null
+          date_created?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_paying_customer?: boolean | null
+          last_name?: string | null
+          orders_count?: number | null
+          raw_data?: Json | null
+          role?: string | null
+          shipping?: Json | null
+          store_id?: string
+          synced_at?: string | null
+          total_spent?: number | null
+          username?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          billing: Json | null
+          coupon_lines: Json | null
+          created_at: string | null
+          currency: string | null
+          customer_id: number | null
+          date_created: string | null
+          date_modified: string | null
+          discount_total: number | null
+          fee_lines: Json | null
+          id: string
+          line_items: Json | null
+          order_number: string | null
+          payment_method: string | null
+          payment_method_title: string | null
+          raw_data: Json | null
+          shipping: Json | null
+          shipping_lines: Json | null
+          shipping_total: number | null
+          status: string | null
+          store_id: string
+          subtotal: number | null
+          synced_at: string | null
+          total: number | null
+          total_tax: number | null
+          woo_id: number
+        }
+        Insert: {
+          billing?: Json | null
+          coupon_lines?: Json | null
+          created_at?: string | null
+          currency?: string | null
+          customer_id?: number | null
+          date_created?: string | null
+          date_modified?: string | null
+          discount_total?: number | null
+          fee_lines?: Json | null
+          id?: string
+          line_items?: Json | null
+          order_number?: string | null
+          payment_method?: string | null
+          payment_method_title?: string | null
+          raw_data?: Json | null
+          shipping?: Json | null
+          shipping_lines?: Json | null
+          shipping_total?: number | null
+          status?: string | null
+          store_id: string
+          subtotal?: number | null
+          synced_at?: string | null
+          total?: number | null
+          total_tax?: number | null
+          woo_id: number
+        }
+        Update: {
+          billing?: Json | null
+          coupon_lines?: Json | null
+          created_at?: string | null
+          currency?: string | null
+          customer_id?: number | null
+          date_created?: string | null
+          date_modified?: string | null
+          discount_total?: number | null
+          fee_lines?: Json | null
+          id?: string
+          line_items?: Json | null
+          order_number?: string | null
+          payment_method?: string | null
+          payment_method_title?: string | null
+          raw_data?: Json | null
+          shipping?: Json | null
+          shipping_lines?: Json | null
+          shipping_total?: number | null
+          status?: string | null
+          store_id?: string
+          subtotal?: number | null
+          synced_at?: string | null
+          total?: number | null
+          total_tax?: number | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          attributes: Json | null
+          categories: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          images: Json | null
+          name: string
+          price: number | null
+          raw_data: Json | null
+          regular_price: number | null
+          sale_price: number | null
+          short_description: string | null
+          sku: string | null
+          slug: string | null
+          status: string | null
+          stock_quantity: number | null
+          stock_status: string | null
+          store_id: string
+          synced_at: string | null
+          type: string | null
+          updated_at: string | null
+          woo_id: number
+        }
+        Insert: {
+          attributes?: Json | null
+          categories?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          name: string
+          price?: number | null
+          raw_data?: Json | null
+          regular_price?: number | null
+          sale_price?: number | null
+          short_description?: string | null
+          sku?: string | null
+          slug?: string | null
+          status?: string | null
+          stock_quantity?: number | null
+          stock_status?: string | null
+          store_id: string
+          synced_at?: string | null
+          type?: string | null
+          updated_at?: string | null
+          woo_id: number
+        }
+        Update: {
+          attributes?: Json | null
+          categories?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          name?: string
+          price?: number | null
+          raw_data?: Json | null
+          regular_price?: number | null
+          sale_price?: number | null
+          short_description?: string | null
+          sku?: string | null
+          slug?: string | null
+          status?: string | null
+          stock_quantity?: number | null
+          stock_status?: string | null
+          store_id?: string
+          synced_at?: string | null
+          type?: string | null
+          updated_at?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -72,7 +318,9 @@ export type Database = {
           id: string
           last_sync_at: string | null
           name: string
+          next_sync_at: string | null
           status: string | null
+          sync_interval: number | null
           updated_at: string | null
           url: string
         }
@@ -84,7 +332,9 @@ export type Database = {
           id?: string
           last_sync_at?: string | null
           name: string
+          next_sync_at?: string | null
           status?: string | null
+          sync_interval?: number | null
           updated_at?: string | null
           url: string
         }
@@ -96,7 +346,9 @@ export type Database = {
           id?: string
           last_sync_at?: string | null
           name?: string
+          next_sync_at?: string | null
           status?: string | null
+          sync_interval?: number | null
           updated_at?: string | null
           url?: string
         }
