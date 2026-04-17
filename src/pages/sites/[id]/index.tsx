@@ -308,10 +308,44 @@ export default function SiteWorkspacePage() {
     if (!store || syncing) return;
     
     setSyncing(true);
-    setSyncProgress({ current: 0, total: 5, aspect: "Starting sync..." });
+    setSyncProgress({ current: 0, total: 6, aspect: "Starting sync..." });
     
+    // Start polling immediately
+    let pollActive = true;
+    const pollInterval = setInterval(async () => {
+      if (!pollActive) return;
+      const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: runs } = await supabase
+        .from("sync_runs")
+        .select("aspect, status, records_processed, records_created, records_updated")
+        .eq("store_id", store.id)
+        .gte("started_at", twoMinAgo)
+        .order("started_at", { ascending: true });
+
+      if (!runs || !pollActive) return;
+
+      const completed = runs.filter(r => r.status === "completed" || r.status === "failed").length;
+      const running = runs.find(r => r.status === "running");
+      const totalProcessed = runs.reduce((s, r) => s + (r.records_processed || 0), 0);
+
+      if (running) {
+        setSyncProgress({
+          current: completed,
+          total: 6,
+          aspect: `Syncing ${running.aspect}... (${totalProcessed.toLocaleString()} records)`,
+        });
+      } else if (completed > 0) {
+        setSyncProgress({
+          current: completed,
+          total: 6,
+          aspect: completed >= 6
+            ? `Sync complete — ${totalProcessed.toLocaleString()} records`
+            : `${completed}/6 aspects done (${totalProcessed.toLocaleString()} records)`,
+        });
+      }
+    }, 2000);
+
     try {
-      // Call the sync API endpoint
       const response = await fetch(`/api/stores/${store.id}/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -321,60 +355,32 @@ export default function SiteWorkspacePage() {
         const errorData = await response.json();
         throw new Error(errorData.message || "Sync failed");
       }
-      
-      // Poll for progress updates
-      const aspects = ["products", "orders", "customers", "categories", "coupons"];
-      const completedAspects = 0;
-      
-      const pollProgress = async () => {
-        // Get latest sync runs
-        const { data: runs } = await supabase
-          .from("sync_runs")
-          .select("*")
-          .eq("store_id", store.id)
-          .gte("started_at", new Date(Date.now() - 60000).toISOString())
-          .order("started_at", { ascending: false });
-        
-        if (runs) {
-          const completed = runs.filter(r => r.status === "completed").length;
-          const running = runs.find(r => r.status === "running");
-          
-          if (running) {
-            setSyncProgress({
-              current: completed,
-              total: 5,
-              aspect: `Syncing ${running.aspect}...`
-            });
-          } else if (completed >= 5) {
-            setSyncProgress({ current: 5, total: 5, aspect: "Sync complete!" });
-            return true; // Done
-          }
-        }
-        return false; // Not done
-      };
-      
-      // Poll every 2 seconds for up to 5 minutes
-      for (let i = 0; i < 150; i++) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const done = await pollProgress();
-        if (done) break;
-      }
-      
-      // Refresh data
+
+      const result = await response.json();
+      pollActive = false;
+      clearInterval(pollInterval);
+
+      setSyncProgress({
+        current: 6,
+        total: 6,
+        aspect: `Done — ${result.totals?.processed?.toLocaleString() || 0} records (${result.totals?.created || 0} new, ${result.totals?.updated || 0} updated)`,
+      });
+
       await loadData();
-      
     } catch (error) {
+      pollActive = false;
+      clearInterval(pollInterval);
       console.error("Sync error:", error);
       setSyncProgress({ 
         current: 0, 
-        total: 5, 
+        total: 6, 
         aspect: error instanceof Error ? error.message : "Sync failed" 
       });
     } finally {
       setTimeout(() => {
         setSyncing(false);
         setSyncProgress(null);
-      }, 2000);
+      }, 3000);
     }
   };
 
