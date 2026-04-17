@@ -33,6 +33,7 @@ import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Plus, Search, Store, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { getStores, createStore, type Store as StoreType } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
+import { buildWooCommerceAuthUrl, validateStoreUrl } from "@/lib/woocommerce-auth";
 
 export default function SitesPage() {
   const router = useRouter();
@@ -43,6 +44,8 @@ export default function SitesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<"oauth" | "manual">("oauth");
   const [showSecrets, setShowSecrets] = useState(false);
   
   const [newStore, setNewStore] = useState({
@@ -75,19 +78,40 @@ export default function SitesPage() {
 
   const handleCreateStore = async () => {
     if (!newStore.name.trim() || !newStore.url.trim()) return;
+    
+    // Validate URL
+    const validation = validateStoreUrl(newStore.url);
+    if (!validation.valid) {
+      setUrlError(validation.error || "Invalid URL");
+      return;
+    }
+    setUrlError(null);
+    
     setCreating(true);
     try {
-      await createStore({
+      // Create store record first
+      const store = await createStore({
         name: newStore.name.trim(),
         url: newStore.url.trim(),
-        consumer_key: newStore.consumer_key.trim() || null,
-        consumer_secret: newStore.consumer_secret.trim() || null,
+        consumer_key: authMode === "manual" ? newStore.consumer_key.trim() || null : null,
+        consumer_secret: authMode === "manual" ? newStore.consumer_secret.trim() || null : null,
         client_id: newStore.client_id || null,
-        status: "pending",
+        status: authMode === "manual" && newStore.consumer_key && newStore.consumer_secret ? "connected" : "pending",
       });
-      setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
-      setDialogOpen(false);
-      await loadData();
+
+      if (authMode === "oauth") {
+        // Redirect to WooCommerce for OAuth approval
+        const authUrl = buildWooCommerceAuthUrl({
+          storeUrl: newStore.url.trim(),
+          storeId: store.id,
+        });
+        window.location.href = authUrl;
+      } else {
+        // Manual mode - just close dialog and refresh
+        setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
+        setDialogOpen(false);
+        await loadData();
+      }
     } catch (error) {
       console.error("Error creating store:", error);
     } finally {
@@ -129,7 +153,14 @@ export default function SitesPage() {
               Manage WooCommerce store connections and sync status
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
+              setUrlError(null);
+              setAuthMode("oauth");
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -138,9 +169,9 @@ export default function SitesPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Add WooCommerce Site</DialogTitle>
+                <DialogTitle>Connect WooCommerce Store</DialogTitle>
                 <DialogDescription>
-                  Connect a new WooCommerce store by providing API credentials.
+                  Add a store and authorize WooSync to access it.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -155,7 +186,7 @@ export default function SitesPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="client">Client</Label>
+                    <Label htmlFor="client">Client (Optional)</Label>
                     <Select
                       value={newStore.client_id}
                       onValueChange={(value) => setNewStore({ ...newStore, client_id: value })}
@@ -179,34 +210,91 @@ export default function SitesPage() {
                     id="store-url"
                     placeholder="https://mystore.com"
                     value={newStore.url}
-                    onChange={(e) => setNewStore({ ...newStore, url: e.target.value })}
+                    onChange={(e) => {
+                      setNewStore({ ...newStore, url: e.target.value });
+                      setUrlError(null);
+                    }}
+                    className={urlError ? "border-destructive" : ""}
                   />
+                  {urlError && (
+                    <p className="text-sm text-destructive">{urlError}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>WooCommerce API Keys</Label>
-                    <Button
+
+                <div className="space-y-3 pt-2">
+                  <Label>Authentication Method</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowSecrets(!showSecrets)}
+                      onClick={() => setAuthMode("oauth")}
+                      className={`p-3 rounded-lg border text-left transition-colors ${
+                        authMode === "oauth"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/50"
+                      }`}
                     >
-                      {showSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                      <p className="font-medium text-sm">OAuth (Recommended)</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Redirect to store for approval
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("manual")}
+                      className={`p-3 rounded-lg border text-left transition-colors ${
+                        authMode === "manual"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/50"
+                      }`}
+                    >
+                      <p className="font-medium text-sm">Manual Keys</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Enter API keys directly
+                      </p>
+                    </button>
                   </div>
-                  <Input
-                    placeholder="Consumer Key (ck_...)"
-                    type={showSecrets ? "text" : "password"}
-                    value={newStore.consumer_key}
-                    onChange={(e) => setNewStore({ ...newStore, consumer_key: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Consumer Secret (cs_...)"
-                    type={showSecrets ? "text" : "password"}
-                    value={newStore.consumer_secret}
-                    onChange={(e) => setNewStore({ ...newStore, consumer_secret: e.target.value })}
-                  />
                 </div>
+
+                {authMode === "manual" && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <Label>WooCommerce API Keys</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSecrets(!showSecrets)}
+                        className="h-8 px-2"
+                      >
+                        {showSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <Input
+                      placeholder="Consumer Key (ck_...)"
+                      type={showSecrets ? "text" : "password"}
+                      value={newStore.consumer_key}
+                      onChange={(e) => setNewStore({ ...newStore, consumer_key: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Consumer Secret (cs_...)"
+                      type={showSecrets ? "text" : "password"}
+                      value={newStore.consumer_secret}
+                      onChange={(e) => setNewStore({ ...newStore, consumer_secret: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Find these in WooCommerce → Settings → Advanced → REST API
+                    </p>
+                  </div>
+                )}
+
+                {authMode === "oauth" && (
+                  <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                    <p>
+                      You&apos;ll be redirected to your WooCommerce store to approve access. 
+                      API credentials will be generated automatically.
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -216,7 +304,7 @@ export default function SitesPage() {
                   onClick={handleCreateStore}
                   disabled={creating || !newStore.name.trim() || !newStore.url.trim()}
                 >
-                  {creating ? "Adding..." : "Add Site"}
+                  {creating ? "Creating..." : authMode === "oauth" ? "Connect Store" : "Add Site"}
                 </Button>
               </DialogFooter>
             </DialogContent>
