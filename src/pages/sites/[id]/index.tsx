@@ -68,7 +68,7 @@ import {
   getWebhookEventsByStore,
   getWebhookStats,
   type Webhook as WebhookType,
-  type WebhookEvent,
+  type WebhookEventRow,
 } from "@/services/webhookService";
 
 const SYNC_ASPECTS = [
@@ -96,7 +96,7 @@ export default function SiteWorkspacePage() {
   const [store, setStore] = useState<Store | null>(null);
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookType[]>([]);
-  const [webhookEvents, setWebhookEvents] = useState<WebhookEvent[]>([]);
+  const [webhookEvents, setWebhookEvents] = useState<WebhookEventRow[]>([]);
   const [webhookStats, setWebhookStats] = useState({ total: 0, active: 0, failed: 0, eventsToday: 0 });
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
