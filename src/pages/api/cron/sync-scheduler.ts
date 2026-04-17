@@ -337,6 +337,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const now = new Date().toISOString();
+
+    // Auto-timeout: mark stuck running syncs (>10 min) as failed across all stores
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: stuckRuns } = await supabase
+      .from("sync_runs")
+      .select("id, store_id")
+      .eq("status", "running")
+      .lt("started_at", tenMinAgo);
+
+    if (stuckRuns && stuckRuns.length > 0) {
+      await supabase
+        .from("sync_runs")
+        .update({
+          status: "failed",
+          error_message: "Auto-timeout: sync exceeded 10 minute limit",
+          completed_at: new Date().toISOString(),
+        })
+        .in("id", stuckRuns.map(r => r.id));
+
+      const stuckStoreIds = [...new Set(stuckRuns.map(r => r.store_id))];
+      for (const sid of stuckStoreIds) {
+        const { data: stillRunning } = await supabase
+          .from("sync_runs")
+          .select("id")
+          .eq("store_id", sid)
+          .eq("status", "running")
+          .limit(1);
+        if (!stillRunning?.length) {
+          await supabase.from("stores").update({ status: "connected" }).eq("id", sid);
+        }
+      }
+      console.log(`[Cron] Auto-timed-out ${stuckRuns.length} stuck sync runs`);
+    }
+
     const { data: stores, error: storesError } = await supabase
       .from("stores")
       .select("id, name, url, consumer_key, consumer_secret, sync_interval, next_sync_at")

@@ -1,6 +1,6 @@
 ---
 title: Webhook Management
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [webhooks, events]
@@ -13,8 +13,8 @@ position: 6
 Webhook registration status, event log viewing, and repair functionality.
 
 ## Checklist
-- [ ] Create webhookService.ts for webhook operations
-- [ ] Create WebhooksPanel showing registered webhooks per store
-- [ ] Create WebhookEventsTable with recent events and payloads
-- [ ] Add webhook repair action button
-- [ ] Create API route for incoming webhook events
+- [x] Create webhookService.ts for webhook operations
+- [x] Create WebhooksPanel showing registered webhooks per store
+- [x] Create WebhookEventsTable with recent events and payloads
+- [x] Add webhook repair action button
+- [x] Create API route for incoming webhook events
