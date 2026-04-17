@@ -68,6 +68,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Calendar,
+  Loader2,
 } from "lucide-react";
 import { getStore, updateStore, updateStoreStatus, deleteStore, type Store } from "@/services/storeService";
 import {
@@ -90,6 +91,12 @@ import {
   type Webhook as WebhookType,
   type WebhookEventRow,
 } from "@/services/webhookService";
+
+interface SyncProgress {
+  current: number;
+  total: number;
+  aspect: string;
+}
 
 const SYNC_ASPECTS = [
   { id: "products", label: "Products", icon: Package, color: "text-blue-500" },
@@ -125,7 +132,7 @@ export default function SiteWorkspacePage() {
   
   // Sync progress state
   const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [syncStatus, setSyncStatus] = useState("");
   const [currentAspect, setCurrentAspect] = useState("");
   const syncAbortRef = useRef(false);
