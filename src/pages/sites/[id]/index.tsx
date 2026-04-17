@@ -123,7 +123,7 @@ export default function SiteWorkspacePage() {
     error_message: string | null;
     started_at: string;
     completed_at: string | null;
-    metadata: Record<string, unknown> | null;
+    metadata: Record<string, unknown>;
   }[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   
@@ -198,7 +198,10 @@ export default function SiteWorkspacePage() {
         .limit(100);
 
       if (error) throw error;
-      setCronLogs(data || []);
+      setCronLogs((data || []).map(log => ({
+        ...log,
+        metadata: (log.metadata as Record<string, unknown>) || {}
+      })));
     } catch (error) {
       console.error("Error loading cron logs:", error);
     } finally {
