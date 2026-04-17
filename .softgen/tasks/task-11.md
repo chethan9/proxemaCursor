@@ -1,11 +1,11 @@
 ---
 title: Add site health score system + dashboard health indicators
-status: todo
+status: in_progress
 priority: medium
 type: feature
-tags: [monitoring, dashboard]
+tags: [health, dashboard, monitoring]
 created_by: agent
-created_at: 2026-04-17T21:50:00Z
+created_at: 2026-04-17
 position: 11
 ---
 

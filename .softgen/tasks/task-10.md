@@ -1,11 +1,11 @@
 ---
 title: Build public REST API with token authentication for Flutter app
-status: todo
+status: done
 priority: high
 type: feature
-tags: [api, auth, security]
+tags: [api, auth, flutter]
 created_by: agent
-created_at: 2026-04-17T21:50:00Z
+created_at: 2026-04-17
 position: 10
 ---
 

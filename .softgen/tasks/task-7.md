@@ -1,11 +1,11 @@
 ---
 title: Fix database structure - add tags table, fix coupons sync, add API tokens table
-status: todo
+status: done
 priority: urgent
 type: chore
 tags: [database, schema]
 created_by: agent
-created_at: 2026-04-17T21:50:00Z
+created_at: 2026-04-17
 position: 7
 ---
 
