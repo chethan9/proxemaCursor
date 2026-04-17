@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Key, Plus, Trash2, Shield, Activity, BookOpen, Copy, EyeOff, ChevronRight, Terminal, Globe, Lock, Zap } from "lucide-react";
+import { Key, Plus, Trash2, Shield, Activity, BookOpen, Copy, EyeOff, Terminal, Globe, Lock, Zap } from "lucide-react";
 import { getApiKeys, createApiKey, revokeApiKey, deleteApiKey, getApiCallLogs, getApiKeyStats, type ApiKey, type ApiCallLog } from "@/services/apiKeyService";
 import { getClients, type ClientWithStats } from "@/services/clientService";
 import { useToast } from "@/hooks/use-toast";
@@ -144,10 +144,10 @@ const API_ENDPOINTS: EndpointDef[] = [
 ];
 
 const METHOD_COLORS: Record<string, string> = {
-  GET: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  POST: "bg-blue-100 text-blue-800 border-blue-200",
-  PATCH: "bg-amber-100 text-amber-800 border-amber-200",
-  DELETE: "bg-rose-100 text-rose-800 border-rose-200",
+  GET: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  POST: "bg-blue-500/10 text-blue-700 border-blue-500/30",
+  PATCH: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  DELETE: "bg-rose-500/10 text-rose-700 border-rose-500/30",
 };
 
 function formatDate(d: string | null) {
@@ -155,34 +155,47 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, label }: { text: string; label?: string }) {
   const { toast } = useToast();
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
-      className="h-7 px-2 text-xs gap-1"
+      className="h-7 px-2 text-xs gap-1.5 font-mono"
       onClick={() => {
         navigator.clipboard.writeText(text);
         toast({ title: "Copied to clipboard" });
       }}
     >
       <Copy className="h-3 w-3" />
-      Copy
+      {label || "Copy"}
     </Button>
   );
 }
 
-function buildCurl(baseUrl: string, endpoint: EndpointDef): string {
-  let url = baseUrl + endpoint.path;
-  const requiredParams = endpoint.params.filter(p => p.required);
-  const optionalParams = endpoint.params.filter(p => !p.required).slice(0, 2);
-  const allParams = [...requiredParams, ...optionalParams];
-  if (allParams.length > 0) {
-    const qs = allParams.map(p => p.name + "=" + (p.example || "{value}")).join("&");
-    url += (url.includes("?") ? "&" : "?") + qs;
+function CodeBlock({ children, actions }: { children: string; actions?: React.ReactNode }) {
+  return (
+    <div className="relative group">
+      {actions && (
+        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          {actions}
+        </div>
+      )}
+      <pre className="bg-slate-950 text-slate-200 p-4 rounded-lg font-mono text-[13px] leading-relaxed overflow-x-auto whitespace-pre-wrap border border-slate-800">
+        {children}
+      </pre>
+    </div>
+  );
+}
+
+function buildCurl(baseUrl: string, ep: EndpointDef): string {
+  let url = baseUrl + ep.path;
+  const qsParams = ep.params.filter(p => p.example);
+  if (qsParams.length > 0) {
+    const qs = qsParams.map(p => p.name + "=" + (p.example || "{value}")).join("&");
+    url += "?" + qs;
   }
-  return "curl -X " + endpoint.method + " \\\n  -H \"Authorization: Bearer wsk_YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  \"" + url + "\"";
+  return "curl -X " + ep.method + " \\\n  -H \"Authorization: Bearer wsk_YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  \"" + url + "\"";
 }
 
 export default function ApiManagementPage() {
@@ -268,18 +281,13 @@ export default function ApiManagementPage() {
     loadData();
   };
 
-  const copyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    toast({ title: "Copied to clipboard" });
-  };
-
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">API Management</h1>
-            <p className="text-muted-foreground">Manage API keys, monitor usage, and configure access for downstream apps</p>
+            <p className="text-muted-foreground">Manage API keys, monitor usage, and explore the REST API</p>
           </div>
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
@@ -288,7 +296,7 @@ export default function ApiManagementPage() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create API Key</DialogTitle>
-                <DialogDescription>Generate a new API key for downstream app access</DialogDescription>
+                <DialogDescription>Generate a new bearer token for downstream app access</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
@@ -310,7 +318,7 @@ export default function ApiManagementPage() {
                   <Label>Scopes</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {AVAILABLE_SCOPES.map(scope => (
-                      <label key={scope.id} className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-muted/50">
+                      <label key={scope.id} className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
                         <Checkbox
                           checked={formScopes.includes(scope.id)}
                           onCheckedChange={(checked) => {
@@ -346,19 +354,17 @@ export default function ApiManagementPage() {
         </div>
 
         {newKeyRevealed && (
-          <Card className="border-yellow-500 bg-yellow-50">
+          <Card className="border-amber-400 bg-amber-50">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div className="flex-1 space-y-2">
-                  <p className="font-medium text-yellow-900">New API Key — copy it now, it won't be shown again</p>
+                <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <p className="font-semibold text-amber-900">Your new API key — copy it now, it won't be shown again</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-white p-3 rounded border font-mono text-sm break-all">{newKeyRevealed}</code>
-                    <Button variant="outline" size="sm" onClick={() => copyKey(newKeyRevealed)}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    <code className="flex-1 bg-white p-3 rounded-lg border border-amber-200 font-mono text-sm break-all select-all">{newKeyRevealed}</code>
+                    <CopyButton text={newKeyRevealed} label="Copy Key" />
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setNewKeyRevealed(null)}>Dismiss</Button>
+                  <Button variant="ghost" size="sm" className="text-amber-700" onClick={() => setNewKeyRevealed(null)}>Dismiss</Button>
                 </div>
               </div>
             </CardContent>
@@ -366,51 +372,31 @@ export default function ApiManagementPage() {
         )}
 
         <Tabs defaultValue="keys">
-          <TabsList>
+          <TabsList className="bg-muted/60">
             <TabsTrigger value="keys" className="gap-2"><Key className="h-4 w-4" />API Keys</TabsTrigger>
             <TabsTrigger value="logs" className="gap-2"><Activity className="h-4 w-4" />Call Logs</TabsTrigger>
             <TabsTrigger value="docs" className="gap-2"><BookOpen className="h-4 w-4" />API Reference</TabsTrigger>
           </TabsList>
 
+          {/* === KEYS TAB === */}
           <TabsContent value="keys" className="space-y-4 mt-4">
             <div className="grid grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold">{keys.length}</div>
-                  <div className="text-sm text-muted-foreground">Total Keys</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold text-emerald-600">{keys.filter(k => k.is_active).length}</div>
-                  <div className="text-sm text-muted-foreground">Active</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold">{logsTotal.toLocaleString()}</div>
-                  <div className="text-sm text-muted-foreground">Total API Calls</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold text-rose-600">{keys.filter(k => !k.is_active).length}</div>
-                  <div className="text-sm text-muted-foreground">Revoked</div>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{keys.length}</div><div className="text-sm text-muted-foreground">Total Keys</div></CardContent></Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-600">{keys.filter(k => k.is_active).length}</div><div className="text-sm text-muted-foreground">Active</div></CardContent></Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{logsTotal.toLocaleString()}</div><div className="text-sm text-muted-foreground">Total API Calls</div></CardContent></Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-rose-600">{keys.filter(k => !k.is_active).length}</div><div className="text-sm text-muted-foreground">Revoked</div></CardContent></Card>
             </div>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">API Keys</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">API Keys</CardTitle></CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8 text-muted-foreground">Loading...</div>
                 ) : keys.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Key className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                    <p>No API keys yet. Create one to get started.</p>
+                    <p className="font-medium">No API keys yet</p>
+                    <p className="text-sm mt-1">Create one to start using the WooSync REST API</p>
                   </div>
                 ) : (
                   <Table>
@@ -424,7 +410,7 @@ export default function ApiManagementPage() {
                         <TableHead>Usage (24h)</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Last Used</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -435,17 +421,17 @@ export default function ApiManagementPage() {
                             <TableCell className="font-medium">{key.name}</TableCell>
                             <TableCell className="text-muted-foreground">{key.clients?.name || "—"}</TableCell>
                             <TableCell>
-                              <code className="text-xs bg-muted px-2 py-1 rounded">{key.key_prefix}...</code>
+                              <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{key.key_prefix}...</code>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1 flex-wrap">
                                 {key.scopes?.map(s => (
-                                  <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
+                                  <Badge key={s} variant="secondary" className="text-[11px] font-mono">{s}</Badge>
                                 ))}
                               </div>
                             </TableCell>
-                            <TableCell>{key.rate_limit?.toLocaleString()}/hr</TableCell>
-                            <TableCell>{stats ? stats.last24h.toLocaleString() : "—"}</TableCell>
+                            <TableCell className="font-mono text-sm">{key.rate_limit?.toLocaleString()}/hr</TableCell>
+                            <TableCell className="font-mono text-sm">{stats ? stats.last24h.toLocaleString() : "—"}</TableCell>
                             <TableCell>
                               <StatusBadge variant={key.is_active ? "success" : "error"}>
                                 {key.is_active ? "Active" : "Revoked"}
@@ -455,11 +441,11 @@ export default function ApiManagementPage() {
                             <TableCell>
                               <div className="flex gap-1">
                                 {key.is_active && (
-                                  <Button variant="ghost" size="sm" onClick={() => handleRevoke(key.id)}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRevoke(key.id)} title="Revoke">
                                     <EyeOff className="h-4 w-4" />
                                   </Button>
                                 )}
-                                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(key.id)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(key.id)} title="Delete">
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -474,17 +460,19 @@ export default function ApiManagementPage() {
             </Card>
           </TabsContent>
 
+          {/* === LOGS TAB === */}
           <TabsContent value="logs" className="mt-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">API Call Logs</CardTitle>
-                <CardDescription>Recent API calls across all keys</CardDescription>
+                <CardDescription>Recent API calls across all keys ({logsTotal.toLocaleString()} total)</CardDescription>
               </CardHeader>
               <CardContent>
                 {logs.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Activity className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                    <p>No API calls logged yet.</p>
+                    <p className="font-medium">No API calls logged yet</p>
+                    <p className="text-sm mt-1">Calls made with your API keys will appear here</p>
                   </div>
                 ) : (
                   <ScrollArea className="h-[500px]">
@@ -502,16 +490,20 @@ export default function ApiManagementPage() {
                       <TableBody>
                         {logs.map(log => (
                           <TableRow key={log.id}>
-                            <TableCell className="text-xs text-muted-foreground">{formatDate(log.created_at)}</TableCell>
-                            <TableCell><Badge variant="outline">{log.method}</Badge></TableCell>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.created_at)}</TableCell>
+                            <TableCell>
+                              <span className={"px-2 py-0.5 rounded text-[11px] font-bold border " + (METHOD_COLORS[log.method] || "bg-muted text-foreground")}>
+                                {log.method}
+                              </span>
+                            </TableCell>
                             <TableCell className="font-mono text-xs max-w-[300px] truncate">{log.path}</TableCell>
                             <TableCell>
                               <StatusBadge variant={(log.status_code || 0) < 400 ? "success" : "error"}>
                                 {log.status_code}
                               </StatusBadge>
                             </TableCell>
-                            <TableCell className="text-xs">{log.response_time_ms}ms</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{log.ip_address}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.response_time_ms}ms</TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">{log.ip_address}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -522,213 +514,187 @@ export default function ApiManagementPage() {
             </Card>
           </TabsContent>
 
+          {/* === DOCS TAB === */}
           <TabsContent value="docs" className="mt-4 space-y-6">
-            {/* Getting Started */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
                   Getting Started
                 </CardTitle>
                 <CardDescription>Quick start guide for integrating with the WooSync REST API v1</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid md:grid-cols-3 gap-4">
-                  <div className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</div>
-                      Create an API Key
+                  {[
+                    { step: "1", title: "Create an API Key", desc: "Go to the API Keys tab and create a key scoped to your client." },
+                    { step: "2", title: "Add Authorization Header", desc: "Include your API key as a Bearer token in every request." },
+                    { step: "3", title: "Start Querying Data", desc: "Fetch stores, products, orders, customers from your synced data." },
+                  ].map(s => (
+                    <div key={s.step} className="border rounded-lg p-4 space-y-2 bg-muted/30">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">{s.step}</div>
+                        <span className="font-semibold text-sm">{s.title}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground pl-9">{s.desc}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Go to the API Keys tab and create a key scoped to your client.</p>
-                  </div>
-                  <div className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</div>
-                      Add Authorization Header
-                    </div>
-                    <p className="text-sm text-muted-foreground">Include your API key as a Bearer token in every request.</p>
-                  </div>
-                  <div className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</div>
-                      Start Querying Data
-                    </div>
-                    <p className="text-sm text-muted-foreground">Fetch stores, products, orders, customers — all from your synced data.</p>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
-                      Base URL
-                    </h4>
-                    <CopyButton text={baseUrl + "/api/v1"} />
+                    <h4 className="text-sm font-semibold flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Base URL</h4>
+                    <CopyButton text={(baseUrl || "https://your-domain.com") + "/api/v1"} />
                   </div>
-                  <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-sm">
-                    {baseUrl || "https://your-domain.com"}/api/v1
-                  </div>
+                  <CodeBlock>{(baseUrl || "https://your-domain.com") + "/api/v1"}</CodeBlock>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Authentication
-                    </h4>
+                    <h4 className="text-sm font-semibold flex items-center gap-2"><Lock className="h-4 w-4 text-muted-foreground" />Authentication</h4>
                     <CopyButton text="Authorization: Bearer wsk_YOUR_API_KEY" />
                   </div>
-                  <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-sm space-y-1">
-                    <span className="text-slate-400"># Include in every request header:</span>
-                    <br />
-                    <span className="text-emerald-400">Authorization</span>: Bearer <span className="text-amber-300">wsk_YOUR_API_KEY</span>
-                  </div>
+                  <CodeBlock>{`# Include in every request header:\nAuthorization: Bearer wsk_YOUR_API_KEY`}</CodeBlock>
                 </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Rate Limiting
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Rate limits are configured per API key (default: 1,000 req/hour).
-                    Check response headers for current usage:
-                  </p>
-                  <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-xs space-y-1">
-                    <div><span className="text-slate-400">X-RateLimit-Limit:</span> <span className="text-emerald-400">1000</span></div>
-                    <div><span className="text-slate-400">X-RateLimit-Remaining:</span> <span className="text-emerald-400">987</span></div>
-                    <div><span className="text-slate-400">X-RateLimit-Reset:</span> <span className="text-emerald-400">1713400000</span></div>
-                  </div>
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" />Rate Limiting</h4>
+                  <p className="text-sm text-muted-foreground">Rate limits are configured per API key (default: 1,000 req/hour). Check response headers:</p>
+                  <CodeBlock>{`X-RateLimit-Limit: 1000\nX-RateLimit-Remaining: 987\nX-RateLimit-Reset: 1713400000`}</CodeBlock>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Endpoints */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Terminal className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2">
+                  <Terminal className="h-5 w-5 text-primary" />
                   Endpoints
                 </CardTitle>
-                <CardDescription>Complete reference for all available v1 API endpoints</CardDescription>
+                <CardDescription>Complete reference for all WooSync v1 REST API endpoints</CardDescription>
               </CardHeader>
               <CardContent>
                 <Accordion type="multiple" className="w-full">
-                  {API_ENDPOINTS.map((ep, i) => (
-                    <AccordionItem key={i} value={"ep-" + i}>
-                      <AccordionTrigger className="hover:no-underline py-3">
-                        <div className="flex items-center gap-3 text-left">
-                          <span className={"px-2.5 py-1 rounded text-xs font-bold border " + METHOD_COLORS[ep.method]}>
-                            {ep.method}
-                          </span>
-                          <code className="font-mono text-sm">{ep.path}</code>
-                          <span className="text-sm text-muted-foreground hidden md:inline">{ep.summary}</span>
-                          <Badge variant="outline" className="text-xs ml-auto mr-4">{ep.scope}</Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4 pt-2 pl-1">
-                          <p className="text-sm text-muted-foreground">{ep.description}</p>
+                  {API_ENDPOINTS.map((ep, i) => {
+                    const curlCmd = buildCurl(baseUrl || "https://your-domain.com", ep);
+                    return (
+                      <AccordionItem key={i} value={"ep-" + i} className="border rounded-lg mb-3 px-1 last:mb-0">
+                        <AccordionTrigger className="hover:no-underline py-3 px-3">
+                          <div className="flex items-center gap-3 text-left w-full">
+                            <span className={"px-2.5 py-1 rounded text-xs font-bold border shrink-0 " + METHOD_COLORS[ep.method]}>
+                              {ep.method}
+                            </span>
+                            <code className="font-mono text-sm font-medium">{ep.path}</code>
+                            <span className="text-sm text-muted-foreground hidden md:inline ml-1">— {ep.summary}</span>
+                            <Badge variant="outline" className="text-[11px] ml-auto mr-2 font-mono shrink-0">{ep.scope}</Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-3 pb-4">
+                          <div className="space-y-5 pt-1">
+                            <p className="text-sm text-muted-foreground leading-relaxed">{ep.description}</p>
 
-                          {ep.params.length > 0 && (
+                            {ep.params.length > 0 && (
+                              <div className="space-y-2">
+                                <h5 className="text-sm font-semibold">Parameters</h5>
+                                <div className="border rounded-lg overflow-hidden">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="bg-muted/30">
+                                        <TableHead className="w-[140px] text-xs">Name</TableHead>
+                                        <TableHead className="w-[80px] text-xs">Type</TableHead>
+                                        <TableHead className="w-[80px] text-xs">Required</TableHead>
+                                        <TableHead className="text-xs">Description</TableHead>
+                                        <TableHead className="w-[120px] text-xs">Example</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {ep.params.map(p => (
+                                        <TableRow key={p.name}>
+                                          <TableCell><code className="text-xs font-semibold text-primary">{p.name}</code></TableCell>
+                                          <TableCell><Badge variant="outline" className="text-[11px] font-mono">{p.type}</Badge></TableCell>
+                                          <TableCell>
+                                            {p.required ? (
+                                              <Badge className="text-[11px] bg-rose-500/10 text-rose-700 border-rose-500/30 hover:bg-rose-500/10">required</Badge>
+                                            ) : (
+                                              <span className="text-xs text-muted-foreground">optional</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-muted-foreground">{p.desc}</TableCell>
+                                          <TableCell><code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{p.example}</code></TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            )}
+
                             <div className="space-y-2">
-                              <h5 className="text-sm font-semibold">Parameters</h5>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-[140px]">Name</TableHead>
-                                    <TableHead className="w-[80px]">Type</TableHead>
-                                    <TableHead className="w-[80px]">Required</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="w-[120px]">Example</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {ep.params.map(p => (
-                                    <TableRow key={p.name}>
-                                      <TableCell><code className="text-xs font-semibold">{p.name}</code></TableCell>
-                                      <TableCell><Badge variant="outline" className="text-xs">{p.type}</Badge></TableCell>
-                                      <TableCell>
-                                        {p.required ? (
-                                          <Badge variant="default" className="text-xs bg-rose-100 text-rose-800 border-rose-200">required</Badge>
-                                        ) : (
-                                          <span className="text-xs text-muted-foreground">optional</span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell className="text-sm">{p.desc}</TableCell>
-                                      <TableCell><code className="text-xs bg-muted px-1.5 py-0.5 rounded">{p.example}</code></TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-sm font-semibold flex items-center gap-2">
+                                  <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                                  cURL Example
+                                </h5>
+                                <CopyButton text={curlCmd} label="Copy cURL" />
+                              </div>
+                              <CodeBlock actions={<CopyButton text={curlCmd} />}>{curlCmd}</CodeBlock>
                             </div>
-                          )}
 
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h5 className="text-sm font-semibold flex items-center gap-2">
-                                <Terminal className="h-3.5 w-3.5" />
-                                cURL Example
-                              </h5>
-                              <CopyButton text={buildCurl(baseUrl || "https://your-domain.com", ep)} />
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-sm font-semibold">Response Example</h5>
+                                <CopyButton text={ep.responseExample} />
+                              </div>
+                              <pre className="bg-muted/50 border p-4 rounded-lg font-mono text-[13px] leading-relaxed overflow-x-auto whitespace-pre-wrap text-foreground">
+                                {ep.responseExample}
+                              </pre>
                             </div>
-                            <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre-wrap">
-                              {buildCurl(baseUrl || "https://your-domain.com", ep)}
-                            </pre>
                           </div>
-
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h5 className="text-sm font-semibold">Response Example</h5>
-                              <CopyButton text={ep.responseExample} />
-                            </div>
-                            <pre className="bg-slate-50 border p-4 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre-wrap text-slate-800">
-                              {ep.responseExample}
-                            </pre>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
                 </Accordion>
               </CardContent>
             </Card>
 
-            {/* Error Codes */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">Error Codes</CardTitle>
+                <CardDescription>Standard HTTP error responses returned by the API</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Status</TableHead>
-                      <TableHead className="w-[180px]">Code</TableHead>
-                      <TableHead>Description</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[
-                      { status: "400", code: "BAD_REQUEST", desc: "Missing or invalid query parameters" },
-                      { status: "401", code: "UNAUTHORIZED", desc: "Missing or invalid API key" },
-                      { status: "403", code: "FORBIDDEN", desc: "API key does not have required scope, or origin not allowed" },
-                      { status: "404", code: "NOT_FOUND", desc: "Resource or endpoint not found" },
-                      { status: "429", code: "RATE_LIMITED", desc: "Rate limit exceeded — check X-RateLimit-Reset header" },
-                      { status: "500", code: "INTERNAL_ERROR", desc: "Server error — contact support if persistent" },
-                    ].map(e => (
-                      <TableRow key={e.status}>
-                        <TableCell>
-                          <StatusBadge variant={parseInt(e.status) < 400 ? "success" : parseInt(e.status) < 500 ? "warning" : "error"}>
-                            {e.status}
-                          </StatusBadge>
-                        </TableCell>
-                        <TableCell><code className="text-xs font-semibold">{e.code}</code></TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{e.desc}</TableCell>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="w-[80px] text-xs">Status</TableHead>
+                        <TableHead className="w-[180px] text-xs">Code</TableHead>
+                        <TableHead className="text-xs">Description</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {[
+                        { status: "400", code: "BAD_REQUEST", desc: "Missing or invalid query parameters" },
+                        { status: "401", code: "UNAUTHORIZED", desc: "Missing or invalid API key" },
+                        { status: "403", code: "FORBIDDEN", desc: "API key does not have required scope, or origin not allowed" },
+                        { status: "404", code: "NOT_FOUND", desc: "Resource or endpoint not found" },
+                        { status: "429", code: "RATE_LIMITED", desc: "Rate limit exceeded — retry after X-RateLimit-Reset" },
+                        { status: "500", code: "INTERNAL_ERROR", desc: "Server error — contact support if persistent" },
+                      ].map(e => (
+                        <TableRow key={e.status}>
+                          <TableCell>
+                            <StatusBadge variant={parseInt(e.status) < 400 ? "success" : parseInt(e.status) < 500 ? "warning" : "error"}>
+                              {e.status}
+                            </StatusBadge>
+                          </TableCell>
+                          <TableCell><code className="text-xs font-bold font-mono">{e.code}</code></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{e.desc}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
