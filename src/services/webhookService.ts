@@ -154,9 +154,10 @@ export function generateWebhookSecret(): string {
 
 // Build the delivery URL for a store's webhooks
 export function buildWebhookDeliveryUrl(storeId: string): string {
-  const baseUrl = typeof window !== "undefined"
-    ? window.location.origin
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
   return `${baseUrl}/api/webhooks/incoming/${storeId}`;
 }
 
