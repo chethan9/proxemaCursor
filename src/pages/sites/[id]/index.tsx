@@ -69,6 +69,7 @@ import {
   TrendingUp,
   Calendar,
   Loader2,
+  Archive,
 } from "lucide-react";
 import { getStore, updateStore, updateStoreStatus, deleteStore, type Store } from "@/services/storeService";
 import {
@@ -93,6 +94,8 @@ import {
 } from "@/services/webhookService";
 import { EntityHistory } from "@/components/EntityHistory";
 import { JsonTableView } from "@/components/JsonTableView";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SyncProgress {
   current: number;
@@ -117,6 +120,164 @@ const SYNC_INTERVALS = [
   { value: "720", label: "Every 12 hours" },
   { value: "1440", label: "Every 24 hours" },
 ];
+
+const ENTITY_TYPE_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "product", label: "Products" },
+  { value: "order", label: "Orders" },
+  { value: "customer", label: "Customers" },
+  { value: "category", label: "Categories" },
+  { value: "coupon", label: "Coupons" },
+];
+
+function DeletedRecordsArchive({ storeId }: { storeId: string }) {
+  const [records, setRecords] = useState<{
+    id: string;
+    entity_type: string;
+    entity_id: string;
+    woo_id: number | null;
+    entity_name: string | null;
+    snapshot: unknown;
+    source: string | null;
+    deleted_at: string | null;
+  }[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState<typeof records[0] | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      let query = supabase
+        .from("deleted_records")
+        .select("*")
+        .eq("store_id", storeId)
+        .order("deleted_at", { ascending: false })
+        .limit(200);
+
+      if (filter !== "all") {
+        query = query.eq("entity_type", filter);
+      }
+
+      const { data } = await query;
+      setRecords((data || []) as typeof records);
+      setLoading(false);
+    }
+    load();
+  }, [storeId, filter]);
+
+  const formatDate = (d: string | null) => {
+    if (!d) return "-";
+    return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const typeIcons: Record<string, typeof Package> = {
+    product: Package,
+    order: ShoppingCart,
+    customer: Users,
+    category: Layers,
+    coupon: Ticket,
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              Deleted Records Archive
+            </CardTitle>
+            <CardDescription>Records deleted from WooCommerce, preserved for audit trail</CardDescription>
+          </div>
+          <div className="flex items-center gap-1">
+            {ENTITY_TYPE_FILTERS.map((f) => (
+              <Button
+                key={f.value}
+                variant={filter === f.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f.value)}
+                className="text-xs"
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : records.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Archive className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p>No deleted records found</p>
+            <p className="text-sm">When items are deleted from WooCommerce via webhooks, they will appear here</p>
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>WooCommerce ID</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Deleted</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {records.map((rec) => {
+                  const IconComp = typeIcons[rec.entity_type] || Package;
+                  return (
+                    <TableRow key={rec.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <IconComp className="h-4 w-4 text-muted-foreground" />
+                          <span className="capitalize text-sm">{rec.entity_type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{rec.entity_name || "-"}</TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">#{rec.woo_id}</code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">{rec.source || "webhook"}</Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{formatDate(rec.deleted_at)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedRecord(rec)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+
+            <Dialog open={!!selectedRecord} onOpenChange={() => setSelectedRecord(null)}>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Deleted {selectedRecord?.entity_type} — {selectedRecord?.entity_name}</DialogTitle>
+                  <DialogDescription>
+                    Last known snapshot before deletion (WooCommerce ID: #{selectedRecord?.woo_id})
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4">
+                  <JsonTableView data={selectedRecord?.snapshot} />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 // Simple cache for site data
 const siteCache = new Map<string, { data: Store; timestamp: number }>();
@@ -590,6 +751,10 @@ export default function SiteWorkspacePage() {
             <TabsTrigger value="history" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               History
+            </TabsTrigger>
+            <TabsTrigger value="archive" className="flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              Deleted
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -1339,6 +1504,10 @@ export default function SiteWorkspacePage() {
                 <EntityHistory storeId={store.id} title="All Changes" />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="archive" className="space-y-6">
+            <DeletedRecordsArchive storeId={store.id} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

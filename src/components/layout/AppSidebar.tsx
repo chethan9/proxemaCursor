@@ -13,6 +13,7 @@ import {
   Zap,
   FileText,
   Activity,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/sync-runs", icon: RefreshCw, label: "Sync Runs" },
   { href: "/webhooks", icon: Webhook, label: "Webhooks" },
   { href: "/webhooks/activity", icon: Activity, label: "Activity Log" },
+  { href: "/api-management", icon: Key, label: "API Management" },
 ];
 
 export function AppSidebar({
