@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -35,6 +35,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      cron_logs: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          message: string | null
+          metadata: Json | null
+          started_at: string | null
+          status: string
+          store_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          message?: string | null
+          metadata?: Json | null
+          started_at?: string | null
+          status?: string
+          store_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          message?: string | null
+          metadata?: Json | null
+          started_at?: string | null
+          status?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cron_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
