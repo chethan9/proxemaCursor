@@ -8,6 +8,7 @@ import Link from "next/link";
 import { getClients, type ClientWithStats } from "@/services/clientService";
 import { getStores, type StoreWithClient } from "@/services/storeService";
 import { getSyncRuns, type SyncRunWithStore } from "@/services/syncService";
+import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 import {
   PieChart,
   Pie,
@@ -28,10 +29,40 @@ export default function Dashboard() {
   const [clients, setClients] = useState<ClientWithStats[]>([]);
   const [stores, setStores] = useState<StoreWithClient[]>([]);
   const [syncRuns, setSyncRuns] = useState<SyncRunWithStore[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function loadData() {
+      // Check cache FIRST - before any loading state
+      const cachedClients = browserCache.get<ClientWithStats[]>(CACHE_KEYS.CLIENTS);
+      const cachedStores = browserCache.get<StoreWithClient[]>(CACHE_KEYS.STORES);
+      const cachedSyncRuns = browserCache.get<SyncRunWithStore[]>(CACHE_KEYS.SYNC_RUNS);
+      
+      if (cachedClients && cachedStores && cachedSyncRuns) {
+        // Instant render from cache
+        setClients(cachedClients);
+        setStores(cachedStores);
+        setSyncRuns(cachedSyncRuns);
+        
+        // Background refresh
+        Promise.all([
+          getClients(),
+          getStores(),
+          getSyncRuns(100),
+        ]).then(([freshClients, freshStores, freshRuns]) => {
+          browserCache.set(CACHE_KEYS.CLIENTS, freshClients, CACHE_TTL.MEDIUM);
+          browserCache.set(CACHE_KEYS.STORES, freshStores, CACHE_TTL.MEDIUM);
+          browserCache.set(CACHE_KEYS.SYNC_RUNS, freshRuns, CACHE_TTL.SHORT);
+          setClients(freshClients);
+          setStores(freshStores);
+          setSyncRuns(freshRuns);
+        }).catch(console.error);
+        
+        return;
+      }
+
+      // No cache - show loading
+      setLoading(true);
       try {
         const [clientsData, storesData, runsData] = await Promise.all([
           getClients(),
@@ -41,6 +72,10 @@ export default function Dashboard() {
         setClients(clientsData);
         setStores(storesData);
         setSyncRuns(runsData);
+        // Cache results
+        browserCache.set(CACHE_KEYS.CLIENTS, clientsData, CACHE_TTL.MEDIUM);
+        browserCache.set(CACHE_KEYS.STORES, storesData, CACHE_TTL.MEDIUM);
+        browserCache.set(CACHE_KEYS.SYNC_RUNS, runsData, CACHE_TTL.SHORT);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
