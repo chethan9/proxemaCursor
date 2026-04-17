@@ -29,8 +29,8 @@ import {
   XCircle,
   Webhook,
 } from "lucide-react";
-import { getStoreById, updateStoreStatus, type Store } from "@/services/storeService";
-import { getSyncRunsByStoreId, createSyncRun, updateSyncRun, type SyncRun } from "@/services/syncService";
+import { getStore, updateStoreStatus, type Store } from "@/services/storeService";
+import { getSyncRunsByStore, createSyncRun, completeSyncRun, type SyncRun } from "@/services/syncService";
 
 const SYNC_ASPECTS = [
   { id: "products", label: "Products", icon: Package },
@@ -54,8 +54,8 @@ export default function SiteWorkspacePage() {
     setLoading(true);
     try {
       const [storeData, runsData] = await Promise.all([
-        getStoreById(id),
-        getSyncRunsByStoreId(id),
+        getStore(id),
+        getSyncRunsByStore(id),
       ]);
       setStore(storeData);
       setSyncRuns(runsData);
@@ -86,9 +86,8 @@ export default function SiteWorkspacePage() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const recordsProcessed = Math.floor(Math.random() * 100) + 10;
-      await updateSyncRun(run.id, {
+      await completeSyncRun(run.id, {
         status: "completed",
-        completed_at: new Date().toISOString(),
         records_processed: recordsProcessed,
       });
 

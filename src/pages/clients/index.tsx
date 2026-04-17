@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, Trash2 } from "lucide-react";
 import { getClients, createClient, deleteClient, type Client } from "@/services/clientService";
-import { getStoresByClientId } from "@/services/storeService";
+import { getStoresByClient } from "@/services/storeService";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<(Client & { siteCount: number })[]>([]);
@@ -39,7 +39,7 @@ export default function ClientsPage() {
       const data = await getClients();
       const clientsWithCounts = await Promise.all(
         data.map(async (client) => {
-          const stores = await getStoresByClientId(client.id);
+          const stores = await getStoresByClient(client.id);
           return { ...client, siteCount: stores.length };
         })
       );
