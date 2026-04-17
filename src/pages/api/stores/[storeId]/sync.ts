@@ -138,7 +138,7 @@ async function syncCustomers(store: StoreToSync, syncRunId: string): Promise<{ p
   const now = new Date().toISOString();
   const rows = items.map(c => ({
     store_id: store.id, woo_id: c.id, email: c.email, first_name: c.first_name, last_name: c.last_name,
-    username: c.username, billing: toJson(c.billing), shipping: toJson(c.shipping),
+    username: c.username, role: null as string | null, billing: toJson(c.billing), shipping: toJson(c.shipping),
     avatar_url: c.avatar_url || null, is_paying_customer: c.is_paying_customer || false,
     orders_count: c.orders_count || 0, total_spent: c.total_spent ? parseFloat(c.total_spent) : null,
     raw_data: toJson(c), date_created: c.date_created, synced_at: now,
