@@ -104,7 +104,7 @@ export async function createWebhookEvent(event: {
     .insert({
       store_id: event.store_id,
       topic: event.topic,
-      payload: event.payload,
+      payload: event.payload as unknown as Database["public"]["Tables"]["webhook_events"]["Insert"]["payload"],
       processing_status: "pending",
     })
     .select()
@@ -122,7 +122,7 @@ export async function updateWebhookEventStatus(
   status: "processing" | "completed" | "failed",
   errorMessage?: string
 ): Promise<void> {
-  const updates: Record<string, unknown> = {
+  const updates: Partial<Tables<"webhook_events">> = {
     processing_status: status,
     processed_at: status === "completed" ? new Date().toISOString() : null,
   };
