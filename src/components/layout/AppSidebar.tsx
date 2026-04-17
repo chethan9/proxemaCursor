@@ -11,6 +11,7 @@ import {
   Webhook,
   X,
   Zap,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
