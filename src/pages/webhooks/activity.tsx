@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,6 @@ import {
   Activity,
   Search,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   CheckCircle2,
   XCircle,
@@ -83,9 +81,13 @@ function topicLabel(topic: string): { entity: string; action: string } {
 export default function WebhookActivityLog() {
   const [events, setEvents] = useState<WebhookEvent[]>([]);
   const [stores, setStores] = useState<StoreInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
+  const pageRef = useRef(0);
+  const loadingRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const [filterStore, setFilterStore] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -97,6 +99,7 @@ export default function WebhookActivityLog() {
 
   const [stats, setStats] = useState({ total: 0, completed: 0, failed: 0, pending: 0, processing: 0 });
   const [polling, setPolling] = useState(true);
+  const [topics, setTopics] = useState<string[]>([]);
 
   const storeMap = new Map(stores.map(s => [s.id, s.name]));
 
@@ -108,12 +111,10 @@ export default function WebhookActivityLog() {
   const loadStats = useCallback(async () => {
     const now = new Date();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-
     const { data } = await supabase
       .from("webhook_events")
       .select("processing_status")
       .gte("created_at", dayAgo);
-
     if (data) {
       const s = { total: data.length, completed: 0, failed: 0, pending: 0, processing: 0 };
       for (const e of data) {
@@ -124,37 +125,80 @@ export default function WebhookActivityLog() {
     }
   }, []);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
+  const loadTopics = useCallback(async () => {
+    const { data } = await supabase.from("webhook_events").select("topic");
+    if (data) {
+      setTopics(Array.from(new Set(data.map(e => e.topic))).sort());
+    }
+  }, []);
 
+  const buildQuery = useCallback(() => {
     let query = supabase
       .from("webhook_events")
       .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
+      .order("created_at", { ascending: false });
     if (filterStore !== "all") query = query.eq("store_id", filterStore);
     if (filterStatus !== "all") query = query.eq("processing_status", filterStatus);
     if (filterTopic !== "all") query = query.eq("topic", filterTopic);
     if (search.trim()) query = query.or(`topic.ilike.%${search.trim()}%,error_message.ilike.%${search.trim()}%`);
+    return query;
+  }, [filterStore, filterStatus, filterTopic, search]);
 
-    const { data, count } = await query;
-    if (data) setEvents(data);
-    if (count !== null) setTotal(count);
-    setLoading(false);
-  }, [page, filterStore, filterStatus, filterTopic, search]);
+  const loadPage = useCallback(async (page: number, append: boolean) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    if (page === 0) setInitialLoading(true);
+    else setLoadingMore(true);
 
-  useEffect(() => { loadStores(); }, [loadStores]);
-  useEffect(() => { loadEvents(); loadStats(); }, [loadEvents, loadStats]);
+    try {
+      const query = buildQuery().range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      const { data, count } = await query;
+      if (data) {
+        setEvents(prev => append ? [...prev, ...data] : data);
+        setHasMore(data.length === PAGE_SIZE);
+        pageRef.current = page;
+      }
+      if (count !== null) setTotal(count);
+    } finally {
+      setInitialLoading(false);
+      setLoadingMore(false);
+      loadingRef.current = false;
+    }
+  }, [buildQuery]);
+
+  const resetAndLoad = useCallback(() => {
+    pageRef.current = 0;
+    setEvents([]);
+    setHasMore(true);
+    loadPage(0, false);
+  }, [loadPage]);
+
+  useEffect(() => { loadStores(); loadTopics(); }, [loadStores, loadTopics]);
+  useEffect(() => { loadStats(); }, [loadStats]);
+  useEffect(() => { resetAndLoad(); }, [resetAndLoad]);
 
   useEffect(() => {
     if (!polling) return;
-    const interval = setInterval(() => { loadEvents(); loadStats(); }, 5000);
+    const interval = setInterval(() => { loadStats(); }, 5000);
     return () => clearInterval(interval);
-  }, [polling, loadEvents, loadStats]);
+  }, [polling, loadStats]);
 
-  const topics = Array.from(new Set(events.map(e => e.topic))).sort();
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingRef.current && hasMore) {
+          loadPage(pageRef.current + 1, true);
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadPage]);
 
   const handleExportCSV = () => {
     const headers = ["Timestamp", "Store", "Topic", "Status", "Processed At", "Error"];
@@ -271,11 +315,11 @@ export default function WebhookActivityLog() {
                   <Input
                     placeholder="Search topic or error..."
                     value={search}
-                    onChange={e => { setSearch(e.target.value); setPage(0); }}
+                    onChange={e => setSearch(e.target.value)}
                     className="pl-8 h-9 w-56 text-sm"
                   />
                 </div>
-                <Select value={filterStore} onValueChange={v => { setFilterStore(v); setPage(0); }}>
+                <Select value={filterStore} onValueChange={setFilterStore}>
                   <SelectTrigger className="h-9 w-40 text-sm">
                     <SelectValue placeholder="All stores" />
                   </SelectTrigger>
@@ -286,7 +330,7 @@ export default function WebhookActivityLog() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(0); }}>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="h-9 w-36 text-sm">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
@@ -299,7 +343,7 @@ export default function WebhookActivityLog() {
                   </SelectContent>
                 </Select>
                 {topics.length > 1 && (
-                  <Select value={filterTopic} onValueChange={v => { setFilterTopic(v); setPage(0); }}>
+                  <Select value={filterTopic} onValueChange={setFilterTopic}>
                     <SelectTrigger className="h-9 w-44 text-sm">
                       <SelectValue placeholder="All topics" />
                     </SelectTrigger>
@@ -328,7 +372,7 @@ export default function WebhookActivityLog() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && events.length === 0 ? (
+                  {initialLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12">
                         <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-muted-foreground" />
@@ -405,33 +449,18 @@ export default function WebhookActivityLog() {
               </Table>
             </div>
 
-            {totalPages > 1 && (
-              <>
-                <Separator />
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-xs text-muted-foreground">
-                    Page {page + 1} of {totalPages} ({total.toLocaleString()} events)
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.max(0, p - 1))}
-                      disabled={page === 0}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                      disabled={page >= totalPages - 1}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
+            {/* Infinite scroll sentinel + loading indicator */}
+            <div ref={sentinelRef} className="py-1" />
+            {loadingMore && (
+              <div className="flex items-center justify-center py-4 border-t">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                <span className="text-sm text-muted-foreground">Loading more events...</span>
+              </div>
+            )}
+            {!hasMore && events.length > 0 && (
+              <div className="text-center py-3 border-t">
+                <span className="text-xs text-muted-foreground">All {total.toLocaleString()} events loaded</span>
+              </div>
             )}
           </CardContent>
         </Card>

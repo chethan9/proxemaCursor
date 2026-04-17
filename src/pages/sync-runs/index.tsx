@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,9 @@ import {
   Layers,
   Ticket,
   Tag,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   Download,
+  Loader2,
 } from "lucide-react";
 
 interface SyncRunRow {
@@ -88,15 +87,19 @@ const PAGE_SIZE = 50;
 export default function SyncRunsPage() {
   const [runs, setRuns] = useState<SyncRunRow[]>([]);
   const [stores, setStores] = useState<StoreOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [selectedRun, setSelectedRun] = useState<SyncRunRow | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageRef = useRef(0);
+  const loadingRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const [filterStore, setFilterStore] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterAspect, setFilterAspect] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
 
   const [stats, setStats] = useState({
     total: 0,
@@ -106,19 +109,15 @@ export default function SyncRunsPage() {
     totalRecords: 0,
   });
 
-  const loadStores = async () => {
-    const { data } = await supabase
-      .from("stores")
-      .select("id, name")
-      .order("name");
+  const loadStores = useCallback(async () => {
+    const { data } = await supabase.from("stores").select("id, name").order("name");
     setStores(data || []);
-  };
+  }, []);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     const { data: allRuns } = await supabase
       .from("sync_runs")
       .select("status, records_processed");
-
     if (allRuns) {
       setStats({
         total: allRuns.length,
@@ -128,22 +127,28 @@ export default function SyncRunsPage() {
         totalRecords: allRuns.reduce((s, r) => s + (r.records_processed || 0), 0),
       });
     }
-  };
+  }, []);
 
-  const loadRuns = async () => {
-    setLoading(true);
+  const buildQuery = useCallback(() => {
+    let query = supabase
+      .from("sync_runs")
+      .select("*", { count: "exact" })
+      .order("started_at", { ascending: false });
+    if (filterStore !== "all") query = query.eq("store_id", filterStore);
+    if (filterStatus !== "all") query = query.eq("status", filterStatus);
+    if (filterAspect !== "all") query = query.eq("aspect", filterAspect);
+    if (searchQuery) query = query.ilike("error_message", `%${searchQuery}%`);
+    return query;
+  }, [filterStore, filterStatus, filterAspect, searchQuery]);
+
+  const loadPage = useCallback(async (page: number, append: boolean) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    if (page === 0) setInitialLoading(true);
+    else setLoadingMore(true);
+
     try {
-      let query = supabase
-        .from("sync_runs")
-        .select("*", { count: "exact" })
-        .order("started_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      if (filterStore !== "all") query = query.eq("store_id", filterStore);
-      if (filterStatus !== "all") query = query.eq("status", filterStatus);
-      if (filterAspect !== "all") query = query.eq("aspect", filterAspect);
-      if (searchQuery) query = query.ilike("error_message", `%${searchQuery}%`);
-
+      const query = buildQuery().range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       const { data, count, error } = await query;
       if (error) throw error;
 
@@ -153,23 +158,44 @@ export default function SyncRunsPage() {
         store_name: storeMap.get(r.store_id) || r.store_id.substring(0, 8),
       }));
 
-      setRuns(enriched);
+      setRuns(prev => append ? [...prev, ...enriched] : enriched);
+      setHasMore((data || []).length === PAGE_SIZE);
       setTotalCount(count || 0);
+      pageRef.current = page;
     } catch (err) {
       console.error("Error loading sync runs:", err);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setLoadingMore(false);
+      loadingRef.current = false;
     }
-  };
+  }, [buildQuery, stores]);
 
-  useEffect(() => {
-    loadStores();
-    loadStats();
-  }, []);
+  const resetAndLoad = useCallback(() => {
+    pageRef.current = 0;
+    setRuns([]);
+    setHasMore(true);
+    loadPage(0, false);
+  }, [loadPage]);
 
+  useEffect(() => { loadStores(); loadStats(); }, [loadStores, loadStats]);
+  useEffect(() => { if (stores.length > 0) resetAndLoad(); }, [stores, resetAndLoad]);
+
+  // Intersection observer
   useEffect(() => {
-    if (stores.length > 0) loadRuns();
-  }, [stores, filterStore, filterStatus, filterAspect, searchQuery, page]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingRef.current && hasMore) {
+          loadPage(pageRef.current + 1, true);
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadPage]);
 
   const formatDuration = (start: string | null, end: string | null) => {
     if (!start || !end) return "—";
@@ -192,27 +218,19 @@ export default function SyncRunsPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "completed":
-        return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-      case "failed":
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case "running":
-        return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
-      default:
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
+      case "completed": return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      case "failed": return <XCircle className="h-4 w-4 text-red-500" />;
+      case "running": return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
+      default: return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "completed":
-        return "success" as const;
-      case "failed":
-        return "error" as const;
-      case "running":
-        return "info" as const;
-      default:
-        return "pending" as const;
+      case "completed": return "success" as const;
+      case "failed": return "error" as const;
+      case "running": return "info" as const;
+      default: return "pending" as const;
     }
   };
 
@@ -239,7 +257,6 @@ export default function SyncRunsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const failedRuns = runs.filter((r) => r.status === "failed");
 
   return (
@@ -257,21 +274,13 @@ export default function SyncRunsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                loadRuns();
-                loadStats();
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={() => { resetAndLoad(); loadStats(); }}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -340,7 +349,6 @@ export default function SyncRunsPage() {
           </Card>
         </div>
 
-        {/* Error Summary */}
         {failedRuns.length > 0 && (
           <Card className="border-red-200 bg-red-50/30">
             <CardHeader className="pb-2">
@@ -363,15 +371,11 @@ export default function SyncRunsPage() {
                       <div className="flex items-center gap-2">
                         <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
                         <span className="text-sm font-medium">{run.store_name}</span>
-                        <code className="text-xs bg-red-100 px-1.5 py-0.5 rounded text-red-700">
-                          {run.aspect}
-                        </code>
+                        <code className="text-xs bg-red-100 px-1.5 py-0.5 rounded text-red-700">{run.aspect}</code>
                       </div>
                       <span className="text-xs text-muted-foreground">{formatDate(run.started_at)}</span>
                     </div>
-                    <p className="text-xs text-red-600 mt-1 truncate pl-5">
-                      {run.error_message || "Unknown error"}
-                    </p>
+                    <p className="text-xs text-red-600 mt-1 truncate pl-5">{run.error_message || "Unknown error"}</p>
                   </button>
                 ))}
               </div>
@@ -379,7 +383,6 @@ export default function SyncRunsPage() {
           </Card>
         )}
 
-        {/* Filters */}
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -389,39 +392,22 @@ export default function SyncRunsPage() {
                 <Input
                   placeholder="Search error messages..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setPage(0);
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <Select
-                value={filterStore}
-                onValueChange={(v) => {
-                  setFilterStore(v);
-                  setPage(0);
-                }}
-              >
+              <Select value={filterStore} onValueChange={setFilterStore}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="All Stores" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stores</SelectItem>
                   {stores.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={filterStatus}
-                onValueChange={(v) => {
-                  setFilterStatus(v);
-                  setPage(0);
-                }}
-              >
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
@@ -432,13 +418,7 @@ export default function SyncRunsPage() {
                   <SelectItem value="running">Running</SelectItem>
                 </SelectContent>
               </Select>
-              <Select
-                value={filterAspect}
-                onValueChange={(v) => {
-                  setFilterAspect(v);
-                  setPage(0);
-                }}
-              >
+              <Select value={filterAspect} onValueChange={setFilterAspect}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="All Aspects" />
                 </SelectTrigger>
@@ -461,7 +441,6 @@ export default function SyncRunsPage() {
                     setFilterStatus("all");
                     setFilterAspect("all");
                     setSearchQuery("");
-                    setPage(0);
                   }}
                 >
                   Clear filters
@@ -471,10 +450,9 @@ export default function SyncRunsPage() {
           </CardContent>
         </Card>
 
-        {/* Table */}
         <Card>
           <CardContent className="p-0">
-            {loading ? (
+            {initialLoading ? (
               <div className="flex items-center justify-center py-12">
                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
@@ -517,38 +495,22 @@ export default function SyncRunsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <StatusBadge variant={getStatusVariant(run.status)}>
-                            {run.status}
-                          </StatusBadge>
+                          <StatusBadge variant={getStatusVariant(run.status)}>{run.status}</StatusBadge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">{run.records_processed ?? "—"}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {run.records_created != null ? <span className="text-emerald-600">+{run.records_created}</span> : "—"}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
-                          {run.records_processed ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {run.records_created != null ? (
-                            <span className="text-emerald-600">+{run.records_created}</span>
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {run.records_updated != null ? (
-                            <span className="text-blue-600">{run.records_updated}</span>
-                          ) : (
-                            "—"
-                          )}
+                          {run.records_updated != null ? <span className="text-blue-600">{run.records_updated}</span> : "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm text-muted-foreground">
                           {formatDuration(run.started_at, run.completed_at)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(run.started_at)}
-                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{formatDate(run.started_at)}</TableCell>
                         <TableCell className="max-w-[200px]">
                           {run.error_message ? (
-                            <span className="text-xs text-red-600 truncate block">
-                              {run.error_message}
-                            </span>
+                            <span className="text-xs text-red-600 truncate block">{run.error_message}</span>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
@@ -559,42 +521,23 @@ export default function SyncRunsPage() {
                 </TableBody>
               </Table>
             )}
-          </CardContent>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-muted-foreground">
-                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of{" "}
-                {totalCount}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {page + 1} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+            <div ref={sentinelRef} className="py-1" />
+            {loadingMore && (
+              <div className="flex items-center justify-center py-4 border-t">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                <span className="text-sm text-muted-foreground">Loading more runs...</span>
               </div>
-            </div>
-          )}
+            )}
+            {!hasMore && runs.length > 0 && (
+              <div className="text-center py-3 border-t">
+                <span className="text-xs text-muted-foreground">All {totalCount.toLocaleString()} runs loaded</span>
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
 
-      {/* Detail Modal */}
       <Dialog open={!!selectedRun} onOpenChange={() => setSelectedRun(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -611,33 +554,23 @@ export default function SyncRunsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Status</p>
-                  <StatusBadge variant={getStatusVariant(selectedRun.status)}>
-                    {selectedRun.status}
-                  </StatusBadge>
+                  <StatusBadge variant={getStatusVariant(selectedRun.status)}>{selectedRun.status}</StatusBadge>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Duration</p>
-                  <p className="text-sm font-mono font-medium">
-                    {formatDuration(selectedRun.started_at, selectedRun.completed_at)}
-                  </p>
+                  <p className="text-sm font-mono font-medium">{formatDuration(selectedRun.started_at, selectedRun.completed_at)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Records Processed</p>
-                  <p className="text-sm font-mono font-medium">
-                    {selectedRun.records_processed ?? 0}
-                  </p>
+                  <p className="text-sm font-mono font-medium">{selectedRun.records_processed ?? 0}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Records Created</p>
-                  <p className="text-sm font-mono font-medium text-emerald-600">
-                    +{selectedRun.records_created ?? 0}
-                  </p>
+                  <p className="text-sm font-mono font-medium text-emerald-600">+{selectedRun.records_created ?? 0}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Records Updated</p>
-                  <p className="text-sm font-mono font-medium text-blue-600">
-                    {selectedRun.records_updated ?? 0}
-                  </p>
+                  <p className="text-sm font-mono font-medium text-blue-600">{selectedRun.records_updated ?? 0}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Started At</p>
@@ -649,9 +582,7 @@ export default function SyncRunsPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Run ID</p>
-                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                    {selectedRun.id.substring(0, 12)}
-                  </code>
+                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{selectedRun.id.substring(0, 12)}</code>
                 </div>
               </div>
               {selectedRun.error_message && (
