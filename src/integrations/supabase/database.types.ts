@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -163,34 +163,90 @@ export type Database = {
       webhook_events: {
         Row: {
           created_at: string | null
+          error_message: string | null
           id: string
           payload: Json | null
           processed: boolean | null
           processed_at: string | null
+          processing_status: string | null
           store_id: string
           topic: string
         }
         Insert: {
           created_at?: string | null
+          error_message?: string | null
           id?: string
           payload?: Json | null
           processed?: boolean | null
           processed_at?: string | null
+          processing_status?: string | null
           store_id: string
           topic: string
         }
         Update: {
           created_at?: string | null
+          error_message?: string | null
           id?: string
           payload?: Json | null
           processed?: boolean | null
           processed_at?: string | null
+          processing_status?: string | null
           store_id?: string
           topic?: string
         }
         Relationships: [
           {
             foreignKeyName: "webhook_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string | null
+          delivery_url: string
+          failure_count: number | null
+          id: string
+          last_triggered_at: string | null
+          secret: string | null
+          status: string | null
+          store_id: string
+          topic: string
+          updated_at: string | null
+          woo_webhook_id: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_url: string
+          failure_count?: number | null
+          id?: string
+          last_triggered_at?: string | null
+          secret?: string | null
+          status?: string | null
+          store_id: string
+          topic: string
+          updated_at?: string | null
+          woo_webhook_id?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_url?: string
+          failure_count?: number | null
+          id?: string
+          last_triggered_at?: string | null
+          secret?: string | null
+          status?: string | null
+          store_id?: string
+          topic?: string
+          updated_at?: string | null
+          woo_webhook_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
