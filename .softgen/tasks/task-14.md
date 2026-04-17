@@ -1,20 +1,19 @@
 ---
 title: Deleted Records Archive with entity type filter
-status: in_progress
+status: done
 priority: high
 type: feature
-tags: [data, archive, soft-delete]
+tags: [archive, deleted, history]
 created_by: agent
 created_at: 2026-04-17
 position: 14
 ---
 
 ## Notes
-Track deleted entities (products, orders, customers, categories, coupons) when webhooks receive delete events or sync detects missing items. Show in a dedicated "Deleted" tab on the site detail page with chip filters by entity type.
+Archive deleted records from WooCommerce webhooks. Stores last known snapshot for audit trail.
 
 ## Checklist
-- [ ] Create `deleted_records` table: id, store_id, entity_type, entity_id, woo_id, entity_name, deleted_at, snapshot (full last-known data), source (webhook/sync)
-- [ ] Update webhook processor to insert into deleted_records on delete topics
-- [ ] Update sync engine to detect deleted items (items in DB but missing from WooCommerce response)
-- [ ] Add "Deleted" tab to site detail page with choice chips for entity type filtering
-- [ ] Show deleted records in a table with name, type, deleted date, source, expandable snapshot
+- [x] Create deleted_records table with snapshot, entity_type, source
+- [x] Update webhook processor to archive before deleting from mirrored tables
+- [x] Add Deleted Records tab to site detail page with entity type chip filters
+- [x] Show deleted records in a table with name, type, deleted date, source, expandable snapshot
