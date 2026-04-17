@@ -386,8 +386,19 @@ export default function SiteWorkspacePage() {
     }
   };
 
-  const handleCancelSync = () => {
+  const handleCancelSync = async () => {
+    if (!store) return;
     syncAbortRef.current = true;
+    setSyncStatus("Cancelling...");
+    try {
+      await fetch(`/api/stores/${store.id}/sync`, { method: "PATCH" });
+      await loadData();
+    } catch (error) {
+      console.error("Cancel error:", error);
+    } finally {
+      setSyncing(false);
+      setSyncProgress(null);
+    }
   };
 
   const handleRegisterWebhooks = async () => {
