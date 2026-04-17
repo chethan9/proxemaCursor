@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -10,67 +11,236 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { RefreshCw, CheckCircle2, XCircle, Clock, ExternalLink } from "lucide-react";
-import { getSyncRuns, type SyncRunWithStore } from "@/services/syncService";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  RefreshCw,
+  Search,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  Package,
+  ShoppingCart,
+  Users,
+  Layers,
+  Ticket,
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Download,
+} from "lucide-react";
+
+interface SyncRunRow {
+  id: string;
+  store_id: string;
+  aspect: string;
+  status: string;
+  records_processed: number | null;
+  records_created: number | null;
+  records_updated: number | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  store_name?: string;
+}
+
+interface StoreOption {
+  id: string;
+  name: string;
+}
+
+const ASPECT_ICONS: Record<string, typeof Package> = {
+  products: Package,
+  orders: ShoppingCart,
+  customers: Users,
+  categories: Layers,
+  coupons: Ticket,
+  tags: Tag,
+};
+
+const ASPECT_COLORS: Record<string, string> = {
+  products: "text-blue-500",
+  orders: "text-green-500",
+  customers: "text-purple-500",
+  categories: "text-orange-500",
+  coupons: "text-pink-500",
+  tags: "text-cyan-500",
+};
+
+const PAGE_SIZE = 50;
 
 export default function SyncRunsPage() {
-  const [syncRuns, setSyncRuns] = useState<SyncRunWithStore[]>([]);
+  const [runs, setRuns] = useState<SyncRunRow[]>([]);
+  const [stores, setStores] = useState<StoreOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRun, setSelectedRun] = useState<SyncRunRow | null>(null);
 
-  const loadData = async () => {
+  const [filterStore, setFilterStore] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterAspect, setFilterAspect] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const [stats, setStats] = useState({
+    total: 0,
+    completed: 0,
+    failed: 0,
+    running: 0,
+    totalRecords: 0,
+  });
+
+  const loadStores = async () => {
+    const { data } = await supabase
+      .from("stores")
+      .select("id, name")
+      .order("name");
+    setStores(data || []);
+  };
+
+  const loadStats = async () => {
+    const { data: allRuns } = await supabase
+      .from("sync_runs")
+      .select("status, records_processed");
+
+    if (allRuns) {
+      setStats({
+        total: allRuns.length,
+        completed: allRuns.filter((r) => r.status === "completed").length,
+        failed: allRuns.filter((r) => r.status === "failed").length,
+        running: allRuns.filter((r) => r.status === "running").length,
+        totalRecords: allRuns.reduce((s, r) => s + (r.records_processed || 0), 0),
+      });
+    }
+  };
+
+  const loadRuns = async () => {
     setLoading(true);
     try {
-      const data = await getSyncRuns(100);
-      setSyncRuns(data);
-    } catch (error) {
-      console.error("Error loading sync runs:", error);
+      let query = supabase
+        .from("sync_runs")
+        .select("*", { count: "exact" })
+        .order("started_at", { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (filterStore !== "all") query = query.eq("store_id", filterStore);
+      if (filterStatus !== "all") query = query.eq("status", filterStatus);
+      if (filterAspect !== "all") query = query.eq("aspect", filterAspect);
+      if (searchQuery) query = query.ilike("error_message", `%${searchQuery}%`);
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+
+      const storeMap = new Map(stores.map((s) => [s.id, s.name]));
+      const enriched = (data || []).map((r) => ({
+        ...r,
+        store_name: storeMap.get(r.store_id) || r.store_id.substring(0, 8),
+      }));
+
+      setRuns(enriched);
+      setTotalCount(count || 0);
+    } catch (err) {
+      console.error("Error loading sync runs:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadStores();
+    loadStats();
   }, []);
 
-  const formatDuration = (start: string, end: string | null) => {
-    if (!end) return "Running...";
+  useEffect(() => {
+    if (stores.length > 0) loadRuns();
+  }, [stores, filterStore, filterStatus, filterAspect, searchQuery, page]);
+
+  const formatDuration = (start: string | null, end: string | null) => {
+    if (!start || !end) return "—";
     const ms = new Date(end).getTime() - new Date(start).getTime();
     if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${(ms / 60000).toFixed(1)}m`;
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleString("en-US", {
+  const formatDate = (d: string | null) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     });
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle2 className="h-4 w-4 text-success" />;
+        return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
       case "failed":
-        return <XCircle className="h-4 w-4 text-destructive" />;
+        return <XCircle className="h-4 w-4 text-red-500" />;
       case "running":
-        return <RefreshCw className="h-4 w-4 text-primary animate-spin" />;
+        return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const stats = {
-    total: syncRuns.length,
-    completed: syncRuns.filter((r) => r.status === "completed").length,
-    failed: syncRuns.filter((r) => r.status === "failed").length,
-    running: syncRuns.filter((r) => r.status === "running").length,
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "success" as const;
+      case "failed":
+        return "error" as const;
+      case "running":
+        return "info" as const;
+      default:
+        return "pending" as const;
+    }
   };
+
+  const exportCsv = () => {
+    const headers = ["Store", "Aspect", "Status", "Processed", "Created", "Updated", "Error", "Started", "Duration"];
+    const rows = runs.map((r) => [
+      r.store_name || "",
+      r.aspect,
+      r.status,
+      r.records_processed ?? "",
+      r.records_created ?? "",
+      r.records_updated ?? "",
+      r.error_message || "",
+      r.started_at || "",
+      formatDuration(r.started_at, r.completed_at),
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sync-runs-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const failedRuns = runs.filter((r) => r.status === "failed");
 
   return (
     <AppLayout>
@@ -78,16 +248,31 @@ export default function SyncRunsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Sync Runs</h1>
-            <p className="text-muted-foreground">All sync operations across all sites</p>
+            <p className="text-sm text-muted-foreground">
+              Complete history of all sync operations across all sites
+            </p>
           </div>
-          <Button variant="outline" onClick={loadData} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                loadRuns();
+                loadStats();
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -104,8 +289,8 @@ export default function SyncRunsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-success" />
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.completed}</p>
@@ -117,8 +302,8 @@ export default function SyncRunsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                  <XCircle className="h-5 w-5 text-destructive" />
+                <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-red-500" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.failed}</p>
@@ -130,8 +315,8 @@ export default function SyncRunsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <RefreshCw className="h-5 w-5 text-primary" />
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.running}</p>
@@ -140,80 +325,350 @@ export default function SyncRunsPage() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold">{stats.totalRecords.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Records Processed</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Sync Runs Table */}
+        {/* Error Summary */}
+        {failedRuns.length > 0 && (
+          <Card className="border-red-200 bg-red-50/30">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <CardTitle className="text-sm font-medium text-red-700">
+                  Recent Errors ({failedRuns.length} on this page)
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {failedRuns.slice(0, 3).map((run) => (
+                  <button
+                    key={run.id}
+                    onClick={() => setSelectedRun(run)}
+                    className="w-full text-left p-2 rounded-lg bg-white/60 hover:bg-white transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                        <span className="text-sm font-medium">{run.store_name}</span>
+                        <code className="text-xs bg-red-100 px-1.5 py-0.5 rounded text-red-700">
+                          {run.aspect}
+                        </code>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{formatDate(run.started_at)}</span>
+                    </div>
+                    <p className="text-xs text-red-600 mt-1 truncate pl-5">
+                      {run.error_message || "Unknown error"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Sync Runs</CardTitle>
-            <CardDescription>History of sync operations across all connected sites</CardDescription>
-          </CardHeader>
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search error messages..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(0);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+              <Select
+                value={filterStore}
+                onValueChange={(v) => {
+                  setFilterStore(v);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Stores" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stores</SelectItem>
+                  {stores.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filterStatus}
+                onValueChange={(v) => {
+                  setFilterStatus(v);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="running">Running</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filterAspect}
+                onValueChange={(v) => {
+                  setFilterAspect(v);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Aspects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Aspects</SelectItem>
+                  <SelectItem value="products">Products</SelectItem>
+                  <SelectItem value="orders">Orders</SelectItem>
+                  <SelectItem value="customers">Customers</SelectItem>
+                  <SelectItem value="categories">Categories</SelectItem>
+                  <SelectItem value="tags">Tags</SelectItem>
+                  <SelectItem value="coupons">Coupons</SelectItem>
+                </SelectContent>
+              </Select>
+              {(filterStore !== "all" || filterStatus !== "all" || filterAspect !== "all" || searchQuery) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFilterStore("all");
+                    setFilterStatus("all");
+                    setFilterAspect("all");
+                    setSearchQuery("");
+                    setPage(0);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table */}
+        <Card>
           <CardContent className="p-0">
             {loading ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-12">
                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : syncRuns.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+            ) : runs.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
                 <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No sync runs yet</p>
-                <p className="text-sm">Go to a site and trigger a sync to see runs here</p>
+                <p>No sync runs found</p>
+                <p className="text-sm">Adjust your filters or trigger a sync from a site workspace</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Site</TableHead>
+                    <TableHead>Store</TableHead>
                     <TableHead>Aspect</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Records</TableHead>
+                    <TableHead className="text-right">Processed</TableHead>
+                    <TableHead className="text-right">Created</TableHead>
+                    <TableHead className="text-right">Updated</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Started</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead>Error</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {syncRuns.map((run) => (
-                    <TableRow key={run.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{run.store_name}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                            {run.store_url}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="capitalize">{run.aspect}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(run.status)}
+                  {runs.map((run) => {
+                    const AspectIcon = ASPECT_ICONS[run.aspect] || Package;
+                    const aspectColor = ASPECT_COLORS[run.aspect] || "text-muted-foreground";
+                    return (
+                      <TableRow
+                        key={run.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedRun(run)}
+                      >
+                        <TableCell className="font-medium text-sm">{run.store_name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <AspectIcon className={`h-3.5 w-3.5 ${aspectColor}`} />
+                            <span className="capitalize text-sm">{run.aspect}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <StatusBadge variant={getStatusVariant(run.status)}>
                             {run.status}
                           </StatusBadge>
-                        </div>
-                      </TableCell>
-                      <TableCell>{run.records_processed || "-"}</TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {formatDuration(run.started_at, run.completed_at)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(run.started_at)}
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/sites/${run.store_id}`}>
-                          <Button variant="ghost" size="sm">
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {run.records_processed ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {run.records_created != null ? (
+                            <span className="text-emerald-600">+{run.records_created}</span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {run.records_updated != null ? (
+                            <span className="text-blue-600">{run.records_updated}</span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {formatDuration(run.started_at, run.completed_at)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {formatDate(run.started_at)}
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          {run.error_message ? (
+                            <span className="text-xs text-red-600 truncate block">
+                              {run.error_message}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
           </CardContent>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of{" "}
+                {totalCount}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
+
+      {/* Detail Modal */}
+      <Dialog open={!!selectedRun} onOpenChange={() => setSelectedRun(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedRun && getStatusIcon(selectedRun.status)}
+              <span className="capitalize">{selectedRun?.aspect}</span> Sync Run
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRun?.store_name} — {formatDate(selectedRun?.started_at ?? null)}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRun && (
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <StatusBadge variant={getStatusVariant(selectedRun.status)}>
+                    {selectedRun.status}
+                  </StatusBadge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-mono font-medium">
+                    {formatDuration(selectedRun.started_at, selectedRun.completed_at)}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Records Processed</p>
+                  <p className="text-sm font-mono font-medium">
+                    {selectedRun.records_processed ?? 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Records Created</p>
+                  <p className="text-sm font-mono font-medium text-emerald-600">
+                    +{selectedRun.records_created ?? 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Records Updated</p>
+                  <p className="text-sm font-mono font-medium text-blue-600">
+                    {selectedRun.records_updated ?? 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Started At</p>
+                  <p className="text-sm">{formatDate(selectedRun.started_at)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Completed At</p>
+                  <p className="text-sm">{formatDate(selectedRun.completed_at)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Run ID</p>
+                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                    {selectedRun.id.substring(0, 12)}
+                  </code>
+                </div>
+              </div>
+              {selectedRun.error_message && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <XCircle className="h-4 w-4 text-red-500" />
+                    <p className="text-sm font-medium text-red-700">Error Details</p>
+                  </div>
+                  <pre className="text-xs text-red-600 whitespace-pre-wrap font-mono bg-white/60 rounded p-3">
+                    {selectedRun.error_message}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
