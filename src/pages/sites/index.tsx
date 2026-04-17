@@ -33,7 +33,7 @@ import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Plus, Search, Store, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { getStores, createStore, type Store as StoreType } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
-import { buildWooCommerceAuthUrl, validateStoreUrl } from "@/lib/woocommerce-auth";
+import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 
 export default function SitesPage() {
   const router = useRouter();
@@ -79,20 +79,23 @@ export default function SitesPage() {
   const handleCreateStore = async () => {
     if (!newStore.name.trim() || !newStore.url.trim()) return;
     
-    // Validate URL
+    // Validate and clean URL
     const validation = validateStoreUrl(newStore.url);
     if (!validation.valid) {
       setUrlError(validation.error || "Invalid URL");
       return;
     }
+    
+    // Use the cleaned URL
+    const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(newStore.url);
     setUrlError(null);
     
     setCreating(true);
     try {
-      // Create store record first
+      // Create store record first with cleaned URL
       const store = await createStore({
         name: newStore.name.trim(),
-        url: newStore.url.trim(),
+        url: cleanedUrl,
         consumer_key: authMode === "manual" ? newStore.consumer_key.trim() || null : null,
         consumer_secret: authMode === "manual" ? newStore.consumer_secret.trim() || null : null,
         client_id: newStore.client_id || null,
@@ -102,7 +105,7 @@ export default function SitesPage() {
       if (authMode === "oauth") {
         // Redirect to WooCommerce for OAuth approval
         const authUrl = buildWooCommerceAuthUrl({
-          storeUrl: newStore.url.trim(),
+          storeUrl: cleanedUrl,
           storeId: store.id,
         });
         window.location.href = authUrl;
@@ -218,6 +221,11 @@ export default function SitesPage() {
                   />
                   {urlError && (
                     <p className="text-sm text-destructive">{urlError}</p>
+                  )}
+                  {newStore.url.trim() && !urlError && (
+                    <p className="text-xs text-muted-foreground">
+                      Will connect to: <span className="font-mono text-foreground">{cleanStoreUrl(newStore.url)}</span>
+                    </p>
                   )}
                 </div>
 

@@ -8,19 +8,41 @@ export interface WooAuthParams {
   scope?: "read" | "write" | "read_write";
 }
 
+/**
+ * Cleans a store URL to extract only the base domain
+ * Examples:
+ *   https://new.vizsoft.in/wp-admin → https://new.vizsoft.in
+ *   new.vizsoft.in/shop/products → https://new.vizsoft.in
+ *   http://store.com/wp-admin/settings → http://store.com
+ */
+export function cleanStoreUrl(url: string): string {
+  let cleaned = url.trim();
+  
+  // Add protocol if missing
+  if (!cleaned.startsWith("http://") && !cleaned.startsWith("https://")) {
+    cleaned = `https://${cleaned}`;
+  }
+  
+  try {
+    const parsed = new URL(cleaned);
+    // Return only protocol + host (strips all paths, query params, hash)
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    // If parsing fails, try basic string cleanup
+    cleaned = cleaned.replace(/\/(wp-admin|shop|my-account|cart|checkout|product|products|wp-login\.php).*$/i, "");
+    cleaned = cleaned.replace(/\/+$/, ""); // Remove trailing slashes
+    return cleaned;
+  }
+}
+
 export function buildWooCommerceAuthUrl({
   storeUrl,
   storeId,
   appName = "WooSync",
   scope = "read_write",
 }: WooAuthParams): string {
-  // Normalize store URL
-  let normalizedUrl = storeUrl.trim();
-  if (!normalizedUrl.startsWith("http")) {
-    normalizedUrl = `https://${normalizedUrl}`;
-  }
-  // Remove trailing slash
-  normalizedUrl = normalizedUrl.replace(/\/$/, "");
+  // Clean and normalize store URL
+  const normalizedUrl = cleanStoreUrl(storeUrl);
 
   // Get the base URL for callbacks
   const baseUrl = typeof window !== "undefined" 
@@ -47,22 +69,19 @@ export function buildWooCommerceAuthUrl({
   return `${authEndpoint}?${params.toString()}`;
 }
 
-export function validateStoreUrl(url: string): { valid: boolean; error?: string } {
+export function validateStoreUrl(url: string): { valid: boolean; error?: string; cleanedUrl?: string } {
   if (!url || url.trim().length === 0) {
     return { valid: false, error: "Store URL is required" };
   }
 
-  let normalizedUrl = url.trim();
-  if (!normalizedUrl.startsWith("http")) {
-    normalizedUrl = `https://${normalizedUrl}`;
-  }
+  const cleaned = cleanStoreUrl(url);
 
   try {
-    const parsed = new URL(normalizedUrl);
+    const parsed = new URL(cleaned);
     if (!parsed.hostname.includes(".")) {
       return { valid: false, error: "Invalid domain" };
     }
-    return { valid: true };
+    return { valid: true, cleanedUrl: cleaned };
   } catch {
     return { valid: false, error: "Invalid URL format" };
   }
