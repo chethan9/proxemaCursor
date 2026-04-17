@@ -1,20 +1,28 @@
-// Simple in-memory cache with TTL for browser-side data caching
+// Enhanced browser cache with SWR (stale-while-revalidate) pattern
 type CacheEntry<T> = {
   data: T;
   timestamp: number;
   ttl: number;
 };
 
+type FetcherFn<T> = () => Promise<T>;
+type Subscriber<T> = (data: T) => void;
+
 class BrowserCache {
   private cache: Map<string, CacheEntry<unknown>> = new Map();
+  private subscribers: Map<string, Set<Subscriber<unknown>>> = new Map();
+  private pendingFetches: Map<string, Promise<unknown>> = new Map();
   private defaultTTL = 5 * 60 * 1000; // 5 minutes default
 
+  // Basic set/get operations
   set<T>(key: string, data: T, ttlMs?: number): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       ttl: ttlMs || this.defaultTTL,
     });
+    // Notify subscribers
+    this.notifySubscribers(key, data);
   }
 
   get<T>(key: string): T | null {
@@ -30,6 +38,15 @@ class BrowserCache {
     return entry.data as T;
   }
 
+  // Get even if stale (for SWR pattern)
+  getStale<T>(key: string): { data: T | null; isStale: boolean } {
+    const entry = this.cache.get(key);
+    if (!entry) return { data: null, isStale: true };
+
+    const isStale = Date.now() - entry.timestamp > entry.ttl;
+    return { data: entry.data as T, isStale };
+  }
+
   has(key: string): boolean {
     return this.get(key) !== null;
   }
@@ -42,7 +59,6 @@ class BrowserCache {
     this.cache.clear();
   }
 
-  // Clear all entries for a specific prefix (e.g., "store:abc123")
   clearPrefix(prefix: string): void {
     const keysToDelete: string[] = [];
     this.cache.forEach((_, key) => {
@@ -51,6 +67,96 @@ class BrowserCache {
       }
     });
     keysToDelete.forEach((key) => this.cache.delete(key));
+  }
+
+  // SWR Pattern: Get cached data immediately, revalidate in background
+  async swr<T>(
+    key: string,
+    fetcher: FetcherFn<T>,
+    options?: { ttl?: number; forceRefresh?: boolean }
+  ): Promise<{ data: T; fromCache: boolean }> {
+    const ttl = options?.ttl || this.defaultTTL;
+    const forceRefresh = options?.forceRefresh || false;
+
+    // Check cache first
+    const { data: cachedData, isStale } = this.getStale<T>(key);
+
+    // If we have fresh cached data and not forcing refresh, return immediately
+    if (cachedData !== null && !isStale && !forceRefresh) {
+      return { data: cachedData, fromCache: true };
+    }
+
+    // If we have stale data, return it but trigger background refresh
+    if (cachedData !== null && !forceRefresh) {
+      // Background refresh (don't await)
+      this.fetchAndCache(key, fetcher, ttl);
+      return { data: cachedData, fromCache: true };
+    }
+
+    // No cached data or force refresh - must fetch
+    const freshData = await this.fetchAndCache(key, fetcher, ttl);
+    return { data: freshData, fromCache: false };
+  }
+
+  // Deduplicated fetch with caching
+  private async fetchAndCache<T>(
+    key: string,
+    fetcher: FetcherFn<T>,
+    ttl: number
+  ): Promise<T> {
+    // Check if there's already a pending fetch for this key
+    const pending = this.pendingFetches.get(key);
+    if (pending) {
+      return pending as Promise<T>;
+    }
+
+    // Create new fetch promise
+    const fetchPromise = fetcher()
+      .then((data) => {
+        this.set(key, data, ttl);
+        this.pendingFetches.delete(key);
+        return data;
+      })
+      .catch((error) => {
+        this.pendingFetches.delete(key);
+        throw error;
+      });
+
+    this.pendingFetches.set(key, fetchPromise);
+    return fetchPromise;
+  }
+
+  // Prefetch data in background
+  prefetch<T>(key: string, fetcher: FetcherFn<T>, ttl?: number): void {
+    // Only prefetch if not already cached
+    if (!this.has(key)) {
+      this.fetchAndCache(key, fetcher, ttl || this.defaultTTL).catch(() => {
+        // Silently fail prefetch
+      });
+    }
+  }
+
+  // Subscribe to cache updates
+  subscribe<T>(key: string, callback: Subscriber<T>): () => void {
+    if (!this.subscribers.has(key)) {
+      this.subscribers.set(key, new Set());
+    }
+    this.subscribers.get(key)!.add(callback as Subscriber<unknown>);
+
+    // Return unsubscribe function
+    return () => {
+      this.subscribers.get(key)?.delete(callback as Subscriber<unknown>);
+    };
+  }
+
+  private notifySubscribers<T>(key: string, data: T): void {
+    this.subscribers.get(key)?.forEach((callback) => {
+      try {
+        callback(data);
+      } catch (e) {
+        console.error("Cache subscriber error:", e);
+      }
+    });
   }
 
   // Get cache stats for debugging
@@ -90,3 +196,8 @@ export const CACHE_TTL = {
   LONG: 5 * 60 * 1000,   // 5 minutes - for stable data
   EXTENDED: 15 * 60 * 1000, // 15 minutes - for rarely changing data
 };
+
+// Custom hook helper for SWR pattern
+export function createCacheKey(...parts: (string | number)[]): string {
+  return parts.join(":");
+}
