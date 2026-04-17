@@ -22,12 +22,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import {
@@ -51,8 +63,12 @@ import {
   Database,
   FileText,
   Timer,
+  Trash2,
+  Square,
+  Copy,
+  AlertTriangle,
 } from "lucide-react";
-import { getStore, updateStore, updateStoreStatus, type Store } from "@/services/storeService";
+import { getStore, updateStore, updateStoreStatus, deleteStore, type Store } from "@/services/storeService";
 import {
   getSyncRunsByStore,
   createSyncRun,
@@ -93,6 +109,10 @@ const SYNC_INTERVALS = [
   { value: "1440", label: "Every 24 hours" },
 ];
 
+// Simple cache for site data
+const siteCache = new Map<string, { data: Store; timestamp: number }>();
+const CACHE_TTL = 30000; // 30 seconds
+
 export default function SiteWorkspacePage() {
   const router = useRouter();
   const { id } = router.query;
@@ -131,12 +151,26 @@ export default function SiteWorkspacePage() {
   const [selectedItem, setSelectedItem] = useState<Product | Order | Customer | null>(null);
   const [detailType, setDetailType] = useState<"product" | "order" | "customer" | null>(null);
   
+  // Sync run detail modal
+  const [selectedSyncRun, setSelectedSyncRun] = useState<SyncRun | null>(null);
+  
   // Settings state
   const [syncInterval, setSyncInterval] = useState<string>("0");
   const [savingSettings, setSavingSettings] = useState(false);
+  
+  // Delete state
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = async () => {
     if (!id || typeof id !== "string") return;
+    
+    // Check cache first
+    const cached = siteCache.get(id);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      setStore(cached.data);
+    }
+    
     setLoading(true);
     try {
       const [storeData, runsData, webhooksData, eventsData, stats, counts] = await Promise.all([
@@ -154,6 +188,11 @@ export default function SiteWorkspacePage() {
       setWebhookStats(stats);
       setDataCounts(counts);
       setSyncInterval(storeData?.sync_interval?.toString() || "0");
+      
+      // Update cache
+      if (storeData) {
+        siteCache.set(id, { data: storeData, timestamp: Date.now() });
+      }
     } catch (error) {
       console.error("Error loading site data:", error);
     } finally {
@@ -264,6 +303,29 @@ export default function SiteWorkspacePage() {
     }
   };
 
+  const handleStopSync = async (runId: string) => {
+    try {
+      const { error } = await supabase
+        .from("sync_runs")
+        .update({
+          status: "failed",
+          error_message: "Manually stopped by user",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", runId);
+
+      if (error) throw error;
+      
+      if (store) {
+        await updateStoreStatus(store.id, "connected");
+      }
+      
+      await loadData();
+    } catch (error) {
+      console.error("Error stopping sync:", error);
+    }
+  };
+
   const handleRegisterWebhooks = async () => {
     if (!store) return;
     setRegisteringWebhooks(true);
@@ -301,6 +363,24 @@ export default function SiteWorkspacePage() {
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const handleDeleteStore = async () => {
+    if (!store || deleteConfirmation !== store.name) return;
+    setDeleting(true);
+    try {
+      await deleteStore(store.id);
+      siteCache.delete(store.id);
+      router.push("/sites");
+    } catch (error) {
+      console.error("Error deleting store:", error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
   const formatDuration = (start: string, end: string | null) => {
@@ -414,6 +494,12 @@ export default function SiteWorkspacePage() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold">{store.name}</h1>
               <StatusBadge variant={getStatusVariant(store.status)}>{store.status}</StatusBadge>
+              <code className="text-xs bg-muted px-2 py-1 rounded font-mono flex items-center gap-1">
+                {store.id.substring(0, 8).toUpperCase()}
+                <button onClick={() => copyToClipboard(store.id)} className="hover:text-primary">
+                  <Copy className="h-3 w-3" />
+                </button>
+              </code>
             </div>
             <p className="text-sm text-muted-foreground">{store.url}</p>
           </div>
@@ -512,31 +598,52 @@ export default function SiteWorkspacePage() {
                       <TableHead>Records</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Started</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {syncRuns.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           No sync runs yet. Click a sync button to start.
                         </TableCell>
                       </TableRow>
                     ) : (
                       syncRuns.slice(0, 20).map((run) => (
-                        <TableRow key={run.id}>
+                        <TableRow 
+                          key={run.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedSyncRun(run)}
+                        >
                           <TableCell className="font-medium capitalize">{run.aspect}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {getStatusIcon(run.status)}
+                              {getStatusIcon(run.status || "pending")}
                               <span className="capitalize">{run.status}</span>
                             </div>
                           </TableCell>
                           <TableCell>{run.records_processed || "-"}</TableCell>
                           <TableCell className="font-mono text-sm">
-                            {formatDuration(run.started_at, run.completed_at)}
+                            {formatDuration(run.started_at || "", run.completed_at)}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatDate(run.started_at)}
+                          </TableCell>
+                          <TableCell>
+                            {run.status === "running" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStopSync(run.id);
+                                }}
+                              >
+                                <Square className="h-3 w-3 mr-1" />
+                                Stop
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
@@ -1214,9 +1321,141 @@ export default function SiteWorkspacePage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Danger Zone */}
+            <Card className="border-destructive/50">
+              <CardHeader>
+                <CardTitle className="text-lg text-destructive flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Danger Zone
+                </CardTitle>
+                <CardDescription>
+                  Irreversible actions. Proceed with caution.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-destructive/10 rounded-lg p-4 space-y-4">
+                  <div>
+                    <p className="font-medium text-destructive">Delete this site</p>
+                    <p className="text-sm text-muted-foreground">
+                      This will permanently delete the site and all associated data including:
+                    </p>
+                    <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
+                      <li>All synced products, orders, and customers</li>
+                      <li>All sync run history</li>
+                      <li>All registered webhooks and events</li>
+                      <li>All cron job logs</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-confirm" className="text-destructive">
+                      Type <strong>{store.name}</strong> to confirm deletion
+                    </Label>
+                    <Input
+                      id="delete-confirm"
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      placeholder={store.name}
+                      className="max-w-xs"
+                    />
+                  </div>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        disabled={deleteConfirmation !== store.name || deleting}
+                      >
+                        {deleting ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-2" />
+                        )}
+                        Delete Site
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete{" "}
+                          <strong>{store.name}</strong> and remove all associated data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteStore}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Yes, delete permanently
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Sync Run Detail Modal */}
+      <Dialog open={!!selectedSyncRun} onOpenChange={() => setSelectedSyncRun(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              {selectedSyncRun?.aspect} Sync Details
+            </DialogTitle>
+            <DialogDescription>
+              Full sync run information and metadata
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium">Status</p>
+                <StatusBadge variant={getStatusVariant(selectedSyncRun?.status || "pending")}>
+                  {selectedSyncRun?.status}
+                </StatusBadge>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Records Processed</p>
+                <p className="text-sm text-muted-foreground">{selectedSyncRun?.records_processed || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Records Created</p>
+                <p className="text-sm text-muted-foreground">{selectedSyncRun?.records_created || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Records Updated</p>
+                <p className="text-sm text-muted-foreground">{selectedSyncRun?.records_updated || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Started</p>
+                <p className="text-sm text-muted-foreground">{formatDate(selectedSyncRun?.started_at || null)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Completed</p>
+                <p className="text-sm text-muted-foreground">{formatDate(selectedSyncRun?.completed_at || null)}</p>
+              </div>
+            </div>
+            {selectedSyncRun?.error_message && (
+              <div className="bg-destructive/10 rounded-lg p-3">
+                <p className="text-sm font-medium text-destructive">Error Message</p>
+                <p className="text-sm text-destructive">{selectedSyncRun.error_message}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium mb-2">Raw Data</p>
+              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono">
+                {JSON.stringify(selectedSyncRun, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Detail Modal */}
       <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
