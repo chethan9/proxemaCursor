@@ -30,7 +30,7 @@ interface WebhookEvent {
   id: string;
   store_id: string;
   topic: string;
-  payload: Record<string, unknown> | null;
+  payload: unknown;
   processed: boolean | null;
   processed_at: string | null;
   created_at: string | null;
@@ -45,11 +45,11 @@ interface StoreInfo {
 
 const PAGE_SIZE = 50;
 
-const statusConfig: Record<string, { variant: "success" | "destructive" | "warning" | "default" | "secondary"; icon: typeof CheckCircle2 }> = {
+const statusConfig: Record<string, { variant: "success" | "error" | "warning" | "default" | "pending"; icon: typeof CheckCircle2 }> = {
   completed: { variant: "success", icon: CheckCircle2 },
-  failed: { variant: "destructive", icon: XCircle },
+  failed: { variant: "error", icon: XCircle },
   processing: { variant: "warning", icon: Loader2 },
-  pending: { variant: "secondary", icon: Clock },
+  pending: { variant: "pending", icon: Clock },
 };
 
 function formatDate(d: string | null): string {
