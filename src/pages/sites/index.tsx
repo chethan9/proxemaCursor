@@ -145,11 +145,35 @@ export default function SitesPage() {
         setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
         setDialogOpen(false);
         await loadData(true);
+
+        // Auto-trigger initial sync + webhook registration for manual key stores
+        if (newStore.consumer_key && newStore.consumer_secret) {
+          triggerInitialSync(store.id);
+        }
       }
     } catch (error) {
       console.error("Error creating store:", error);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const triggerInitialSync = async (storeId: string) => {
+    try {
+      // Register webhooks first
+      fetch(`/api/stores/${storeId}/register-webhooks`, { method: "POST" }).catch(console.error);
+
+      // Trigger full sync
+      const res = await fetch(`/api/stores/${storeId}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Initial sync failed:", err.message);
+      }
+    } catch (error) {
+      console.error("Initial sync trigger error:", error);
     }
   };
 
