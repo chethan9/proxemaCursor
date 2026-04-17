@@ -91,6 +91,8 @@ import {
   type Webhook as WebhookType,
   type WebhookEventRow,
 } from "@/services/webhookService";
+import { EntityHistory } from "@/components/EntityHistory";
+import { JsonTableView } from "@/components/JsonTableView";
 
 interface SyncProgress {
   current: number;
@@ -575,6 +577,10 @@ export default function SiteWorkspacePage() {
             <TabsTrigger value="logs" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Logs
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              History
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -1312,6 +1318,20 @@ export default function SiteWorkspacePage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="history" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Entity Change History</CardTitle>
+                <CardDescription>
+                  All tracked changes to products, orders, customers, and coupons from webhooks and syncs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EntityHistory storeId={store.id} title="All Changes" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1522,9 +1542,7 @@ export default function SiteWorkspacePage() {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
-            <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono">
-              {JSON.stringify(selectedItem, null, 2)}
-            </pre>
+            <JsonTableView data={selectedItem} />
           </div>
         </DialogContent>
       </Dialog>

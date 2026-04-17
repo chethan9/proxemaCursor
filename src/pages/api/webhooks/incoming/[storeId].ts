@@ -168,7 +168,8 @@ export default async function handler(
       }
 
       if (changedFields.length > 0 || changeType === "created") {
-        await supabase.from("entity_changes").insert({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("entity_changes").insert({
           store_id: storeId,
           entity_type: entityType,
           entity_id: String(wooId),

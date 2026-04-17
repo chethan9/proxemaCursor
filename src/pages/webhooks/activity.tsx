@@ -23,6 +23,7 @@ import {
   Download,
   Zap,
 } from "lucide-react";
+import { JsonTableView } from "@/components/JsonTableView";
 
 interface WebhookEvent {
   id: string;
@@ -552,13 +553,7 @@ export default function WebhookActivityLog() {
 
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-medium">Payload</span>
-                  <ScrollArea className="h-[250px] rounded-lg border bg-slate-950 p-3">
-                    <pre className="text-xs text-slate-200 font-mono whitespace-pre-wrap">
-                      {selectedEvent.payload
-                        ? JSON.stringify(selectedEvent.payload, null, 2)
-                        : "No payload data"}
-                    </pre>
-                  </ScrollArea>
+                  <JsonTableView data={selectedEvent.payload} />
                 </div>
               </div>
             );
