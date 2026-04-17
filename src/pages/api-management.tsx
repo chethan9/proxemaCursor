@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Key, Plus, Trash2, Shield, Activity, BookOpen, Copy, CheckCircle2, XCircle, Eye, EyeOff, Clock, BarChart3 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Key, Plus, Trash2, Shield, Activity, BookOpen, Copy, EyeOff, ChevronRight, Terminal, Globe, Lock, Zap } from "lucide-react";
 import { getApiKeys, createApiKey, revokeApiKey, deleteApiKey, getApiCallLogs, getApiKeyStats, type ApiKey, type ApiCallLog } from "@/services/apiKeyService";
 import { getClients, type ClientWithStats } from "@/services/clientService";
 import { useToast } from "@/hooks/use-toast";
@@ -25,17 +26,163 @@ const AVAILABLE_SCOPES = [
   { id: "sync", label: "Sync", desc: "Trigger sync operations" },
 ];
 
-const API_ENDPOINTS = [
-  { method: "GET", path: "/api/v1/stores", desc: "List all stores for the client", scope: "read" },
-  { method: "GET", path: "/api/v1/products?store_id={id}", desc: "List products with pagination, search, filters", scope: "read" },
-  { method: "GET", path: "/api/v1/orders?store_id={id}", desc: "List orders with status filter", scope: "read" },
-  { method: "GET", path: "/api/v1/customers?store_id={id}", desc: "List customers with search", scope: "read" },
-  { method: "GET", path: "/api/v1/categories?store_id={id}", desc: "List product categories", scope: "read" },
+interface EndpointParam {
+  name: string;
+  type: string;
+  required: boolean;
+  desc: string;
+  example?: string;
+}
+
+interface EndpointDef {
+  method: "GET" | "POST" | "PATCH" | "DELETE";
+  path: string;
+  summary: string;
+  description: string;
+  scope: string;
+  params: EndpointParam[];
+  responseExample: string;
+}
+
+const API_ENDPOINTS: EndpointDef[] = [
+  {
+    method: "GET",
+    path: "/api/v1/stores",
+    summary: "List stores",
+    description: "Returns all WooCommerce stores belonging to the authenticated client. Use this to discover store IDs for subsequent API calls.",
+    scope: "read",
+    params: [],
+    responseExample: JSON.stringify({
+      data: [
+        { id: "uuid-1", name: "My Store", url: "https://store.example.com", status: "connected", last_sync_at: "2026-04-17T12:00:00Z" },
+      ],
+      total: 1,
+    }, null, 2),
+  },
+  {
+    method: "GET",
+    path: "/api/v1/products",
+    summary: "List products",
+    description: "Returns paginated products for a specific store. Supports search by name and filtering by status. Includes full product data with pricing, stock, and categories.",
+    scope: "read",
+    params: [
+      { name: "store_id", type: "uuid", required: true, desc: "Store UUID from /stores endpoint", example: "6aa04e65-..." },
+      { name: "page", type: "integer", required: false, desc: "Page number (default: 1)", example: "1" },
+      { name: "per_page", type: "integer", required: false, desc: "Items per page (default: 20, max: 100)", example: "20" },
+      { name: "search", type: "string", required: false, desc: "Search by product name", example: "T-Shirt" },
+      { name: "status", type: "string", required: false, desc: "Filter by status: publish, draft, pending", example: "publish" },
+    ],
+    responseExample: JSON.stringify({
+      data: [
+        { id: "uuid", woo_id: 123, name: "Premium T-Shirt", sku: "TSH-001", price: "29.99", regular_price: "39.99", status: "publish", stock_quantity: 45, categories: ["Apparel"] },
+      ],
+      total: 156,
+      page: 1,
+      per_page: 20,
+    }, null, 2),
+  },
+  {
+    method: "GET",
+    path: "/api/v1/orders",
+    summary: "List orders",
+    description: "Returns paginated orders for a specific store. Supports filtering by status (pending, processing, completed, cancelled, refunded) and search by order number.",
+    scope: "read",
+    params: [
+      { name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." },
+      { name: "page", type: "integer", required: false, desc: "Page number (default: 1)", example: "1" },
+      { name: "per_page", type: "integer", required: false, desc: "Items per page (default: 20, max: 100)", example: "20" },
+      { name: "status", type: "string", required: false, desc: "Filter by order status", example: "processing" },
+      { name: "search", type: "string", required: false, desc: "Search by order number or customer email", example: "1042" },
+    ],
+    responseExample: JSON.stringify({
+      data: [
+        { id: "uuid", woo_id: 1042, status: "processing", total: "89.97", currency: "USD", billing: { first_name: "John", last_name: "Doe", email: "john@example.com" }, line_items_count: 3, date_created: "2026-04-17T10:30:00Z" },
+      ],
+      total: 2110,
+      page: 1,
+      per_page: 20,
+    }, null, 2),
+  },
+  {
+    method: "GET",
+    path: "/api/v1/customers",
+    summary: "List customers",
+    description: "Returns paginated customers for a specific store. Supports search by name or email. Includes order count and total spent.",
+    scope: "read",
+    params: [
+      { name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." },
+      { name: "page", type: "integer", required: false, desc: "Page number (default: 1)", example: "1" },
+      { name: "per_page", type: "integer", required: false, desc: "Items per page (default: 20, max: 100)", example: "20" },
+      { name: "search", type: "string", required: false, desc: "Search by name or email", example: "john@example.com" },
+    ],
+    responseExample: JSON.stringify({
+      data: [
+        { id: "uuid", woo_id: 5, email: "john@example.com", first_name: "John", last_name: "Doe", orders_count: 12, total_spent: "1249.50", date_created: "2025-01-15T08:00:00Z" },
+      ],
+      total: 2981,
+      page: 1,
+      per_page: 20,
+    }, null, 2),
+  },
+  {
+    method: "GET",
+    path: "/api/v1/categories",
+    summary: "List categories",
+    description: "Returns all product categories for a specific store. Flat list with parent reference for building category trees.",
+    scope: "read",
+    params: [
+      { name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." },
+    ],
+    responseExample: JSON.stringify({
+      data: [
+        { id: "uuid", woo_id: 15, name: "Apparel", slug: "apparel", parent_id: null, count: 24 },
+        { id: "uuid", woo_id: 16, name: "T-Shirts", slug: "t-shirts", parent_id: 15, count: 8 },
+      ],
+      total: 12,
+    }, null, 2),
+  },
 ];
+
+const METHOD_COLORS: Record<string, string> = {
+  GET: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  POST: "bg-blue-100 text-blue-800 border-blue-200",
+  PATCH: "bg-amber-100 text-amber-800 border-amber-200",
+  DELETE: "bg-rose-100 text-rose-800 border-rose-200",
+};
 
 function formatDate(d: string | null) {
   if (!d) return "Never";
   return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function CopyButton({ text }: { text: string }) {
+  const { toast } = useToast();
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2 text-xs gap-1"
+      onClick={() => {
+        navigator.clipboard.writeText(text);
+        toast({ title: "Copied to clipboard" });
+      }}
+    >
+      <Copy className="h-3 w-3" />
+      Copy
+    </Button>
+  );
+}
+
+function buildCurl(baseUrl: string, endpoint: EndpointDef): string {
+  let url = baseUrl + endpoint.path;
+  const requiredParams = endpoint.params.filter(p => p.required);
+  const optionalParams = endpoint.params.filter(p => !p.required).slice(0, 2);
+  const allParams = [...requiredParams, ...optionalParams];
+  if (allParams.length > 0) {
+    const qs = allParams.map(p => p.name + "=" + (p.example || "{value}")).join("&");
+    url += (url.includes("?") ? "&" : "?") + qs;
+  }
+  return "curl -X " + endpoint.method + " \\\n  -H \"Authorization: Bearer wsk_YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  \"" + url + "\"";
 }
 
 export default function ApiManagementPage() {
@@ -48,6 +195,7 @@ export default function ApiManagementPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newKeyRevealed, setNewKeyRevealed] = useState<string | null>(null);
   const [selectedKeyStats, setSelectedKeyStats] = useState<Record<string, { totalCalls: number; last24h: number; avgResponseTime: number; errorRate: number }>>({});
+  const [baseUrl, setBaseUrl] = useState("");
 
   const [formName, setFormName] = useState("");
   const [formClient, setFormClient] = useState("");
@@ -55,6 +203,12 @@ export default function ApiManagementPage() {
   const [formRateLimit, setFormRateLimit] = useState("1000");
   const [formOrigins, setFormOrigins] = useState("");
   const [formExpiry, setFormExpiry] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -368,79 +522,213 @@ export default function ApiManagementPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="docs" className="mt-4">
+          <TabsContent value="docs" className="mt-4 space-y-6">
+            {/* Getting Started */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">API Reference</CardTitle>
-                <CardDescription>REST API v1 endpoints for downstream app integration</CardDescription>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Getting Started
+                </CardTitle>
+                <CardDescription>Quick start guide for integrating with the WooSync REST API v1</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Authentication</h3>
-                  <div className="bg-muted p-4 rounded-lg font-mono text-sm">
-                    <p className="text-muted-foreground mb-1"># Include in every request header:</p>
-                    <p>Authorization: Bearer wsk_xxxxxxxxxxxx...</p>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</div>
+                      Create an API Key
+                    </div>
+                    <p className="text-sm text-muted-foreground">Go to the API Keys tab and create a key scoped to your client.</p>
+                  </div>
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</div>
+                      Add Authorization Header
+                    </div>
+                    <p className="text-sm text-muted-foreground">Include your API key as a Bearer token in every request.</p>
+                  </div>
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</div>
+                      Start Querying Data
+                    </div>
+                    <p className="text-sm text-muted-foreground">Fetch stores, products, orders, customers — all from your synced data.</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Base URL</h3>
-                  <div className="bg-muted p-4 rounded-lg font-mono text-sm">
-                    {typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Base URL
+                    </h4>
+                    <CopyButton text={baseUrl + "/api/v1"} />
                   </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-semibold">Endpoints</h3>
-                  <div className="space-y-2">
-                    {API_ENDPOINTS.map((ep, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
-                        <Badge variant={ep.method === "GET" ? "default" : "secondary"} className="w-14 justify-center text-xs">
-                          {ep.method}
-                        </Badge>
-                        <code className="font-mono text-sm flex-1">{ep.path}</code>
-                        <span className="text-sm text-muted-foreground">{ep.desc}</span>
-                        <Badge variant="outline" className="text-xs">{ep.scope}</Badge>
-                      </div>
-                    ))}
+                  <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-sm">
+                    {baseUrl || "https://your-domain.com"}/api/v1
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Query Parameters</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { param: "page", desc: "Page number (default: 1)" },
-                      { param: "per_page", desc: "Items per page (default: 20, max: 100)" },
-                      { param: "search", desc: "Search by name/email/order number" },
-                      { param: "status", desc: "Filter by status" },
-                      { param: "store_id", desc: "Filter by store UUID" },
-                      { param: "sort", desc: "Sort field (default: created_at)" },
-                    ].map(p => (
-                      <div key={p.param} className="flex items-baseline gap-2 p-2 bg-muted/50 rounded">
-                        <code className="text-sm font-semibold">{p.param}</code>
-                        <span className="text-xs text-muted-foreground">{p.desc}</span>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Authentication
+                    </h4>
+                    <CopyButton text="Authorization: Bearer wsk_YOUR_API_KEY" />
+                  </div>
+                  <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-sm space-y-1">
+                    <span className="text-slate-400"># Include in every request header:</span>
+                    <br />
+                    <span className="text-emerald-400">Authorization</span>: Bearer <span className="text-amber-300">wsk_YOUR_API_KEY</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Rate Limiting</h3>
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Rate Limiting
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Rate limits are configured per API key. Default: 1,000 requests/hour.
-                    Response headers include <code className="bg-muted px-1 rounded">X-RateLimit-Remaining</code> and <code className="bg-muted px-1 rounded">X-RateLimit-Reset</code>.
+                    Rate limits are configured per API key (default: 1,000 req/hour).
+                    Check response headers for current usage:
                   </p>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Example Request</h3>
-                  <div className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-sm space-y-1">
-                    <p className="text-slate-400"># Fetch products for a store</p>
-                    <p>curl -H &quot;Authorization: Bearer wsk_abc123...&quot; \</p>
-                    <p className="pl-4">&quot;{typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/products?store_id=UUID&amp;page=1&amp;per_page=20&quot;</p>
+                  <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-xs space-y-1">
+                    <div><span className="text-slate-400">X-RateLimit-Limit:</span> <span className="text-emerald-400">1000</span></div>
+                    <div><span className="text-slate-400">X-RateLimit-Remaining:</span> <span className="text-emerald-400">987</span></div>
+                    <div><span className="text-slate-400">X-RateLimit-Reset:</span> <span className="text-emerald-400">1713400000</span></div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Endpoints */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Terminal className="h-5 w-5" />
+                  Endpoints
+                </CardTitle>
+                <CardDescription>Complete reference for all available v1 API endpoints</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="multiple" className="w-full">
+                  {API_ENDPOINTS.map((ep, i) => (
+                    <AccordionItem key={i} value={"ep-" + i}>
+                      <AccordionTrigger className="hover:no-underline py-3">
+                        <div className="flex items-center gap-3 text-left">
+                          <span className={"px-2.5 py-1 rounded text-xs font-bold border " + METHOD_COLORS[ep.method]}>
+                            {ep.method}
+                          </span>
+                          <code className="font-mono text-sm">{ep.path}</code>
+                          <span className="text-sm text-muted-foreground hidden md:inline">{ep.summary}</span>
+                          <Badge variant="outline" className="text-xs ml-auto mr-4">{ep.scope}</Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-2 pl-1">
+                          <p className="text-sm text-muted-foreground">{ep.description}</p>
+
+                          {ep.params.length > 0 && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-semibold">Parameters</h5>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-[140px]">Name</TableHead>
+                                    <TableHead className="w-[80px]">Type</TableHead>
+                                    <TableHead className="w-[80px]">Required</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead className="w-[120px]">Example</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {ep.params.map(p => (
+                                    <TableRow key={p.name}>
+                                      <TableCell><code className="text-xs font-semibold">{p.name}</code></TableCell>
+                                      <TableCell><Badge variant="outline" className="text-xs">{p.type}</Badge></TableCell>
+                                      <TableCell>
+                                        {p.required ? (
+                                          <Badge variant="default" className="text-xs bg-rose-100 text-rose-800 border-rose-200">required</Badge>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">optional</span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="text-sm">{p.desc}</TableCell>
+                                      <TableCell><code className="text-xs bg-muted px-1.5 py-0.5 rounded">{p.example}</code></TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-sm font-semibold flex items-center gap-2">
+                                <Terminal className="h-3.5 w-3.5" />
+                                cURL Example
+                              </h5>
+                              <CopyButton text={buildCurl(baseUrl || "https://your-domain.com", ep)} />
+                            </div>
+                            <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre-wrap">
+                              {buildCurl(baseUrl || "https://your-domain.com", ep)}
+                            </pre>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-sm font-semibold">Response Example</h5>
+                              <CopyButton text={ep.responseExample} />
+                            </div>
+                            <pre className="bg-slate-50 border p-4 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre-wrap text-slate-800">
+                              {ep.responseExample}
+                            </pre>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+
+            {/* Error Codes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">Error Codes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="w-[180px]">Code</TableHead>
+                      <TableHead>Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { status: "400", code: "BAD_REQUEST", desc: "Missing or invalid query parameters" },
+                      { status: "401", code: "UNAUTHORIZED", desc: "Missing or invalid API key" },
+                      { status: "403", code: "FORBIDDEN", desc: "API key does not have required scope, or origin not allowed" },
+                      { status: "404", code: "NOT_FOUND", desc: "Resource or endpoint not found" },
+                      { status: "429", code: "RATE_LIMITED", desc: "Rate limit exceeded — check X-RateLimit-Reset header" },
+                      { status: "500", code: "INTERNAL_ERROR", desc: "Server error — contact support if persistent" },
+                    ].map(e => (
+                      <TableRow key={e.status}>
+                        <TableCell>
+                          <StatusBadge variant={parseInt(e.status) < 400 ? "success" : parseInt(e.status) < 500 ? "warning" : "error"}>
+                            {e.status}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell><code className="text-xs font-semibold">{e.code}</code></TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{e.desc}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
