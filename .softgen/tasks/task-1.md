@@ -1,6 +1,6 @@
 ---
 title: Database Schema Setup
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [database, schema, supabase]
@@ -14,8 +14,8 @@ Set up the complete Postgres schema for the multi-tenant WooCommerce integration
 
 ## Checklist
 - [x] Create clients table (id, name, created_at)
-- [ ] Create stores table (id, client_id FK, name, url, consumer_key, consumer_secret, status, last_sync_at)
-- [ ] Create sync_runs table (id, store_id FK, aspect, status, started_at, completed_at, records_processed, error_message)
-- [ ] Create webhook_events table (id, store_id FK, topic, payload, processed_at, created_at)
-- [ ] Set up RLS policies (public read/write for MVP, auth later)
-- [ ] Generate TypeScript types
+- [x] Create stores table (id, client_id FK, name, url, consumer_key, consumer_secret, status, last_sync_at)
+- [x] Create sync_runs table (id, store_id FK, aspect, status, started_at, completed_at, records_processed, error_message)
+- [x] Create webhook_events table (id, store_id FK, topic, payload, processed_at, created_at)
+- [x] Set up RLS policies (public read/write for MVP, auth later)
+- [x] Generate TypeScript types
