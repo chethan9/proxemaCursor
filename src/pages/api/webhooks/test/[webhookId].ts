@@ -42,8 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Log test result
     await supabase.from("webhook_test_results").insert({
       webhook_id: webhook.id,
+      store_id: webhook.store_id,
       success,
-      status_code: statusCode,
+      response_status: statusCode,
       duration_ms: duration,
       error_message: errorMessage || null,
     });
