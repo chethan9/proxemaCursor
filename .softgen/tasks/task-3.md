@@ -1,6 +1,6 @@
 ---
 title: Client Management
-status: todo
+status: done
 priority: high
 type: feature
 tags: [clients, crud]
@@ -13,7 +13,7 @@ position: 3
 Build client listing and creation functionality. Clients are the top-level organizational unit that contain multiple sites.
 
 ## Checklist
-- [ ] Create clientService.ts with CRUD operations
-- [ ] Create ClientsPage with data table (name, site count, created date)
-- [ ] Create AddClientDialog modal for new client creation
-- [ ] Add client filtering and search
+- [x] Create clientService.ts with CRUD operations
+- [x] Create ClientsPage with data table (name, site count, created date)
+- [x] Create AddClientDialog modal for new client creation
+- [x] Add client filtering and search

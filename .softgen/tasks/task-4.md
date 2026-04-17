@@ -1,6 +1,6 @@
 ---
 title: Site/Store Management
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sites, stores, onboarding]
@@ -13,8 +13,8 @@ position: 4
 Store listing, filtering, and onboarding flow. Stores connect to WooCommerce via API keys.
 
 ## Checklist
-- [ ] Create storeService.ts with CRUD and connection testing
-- [ ] Create SitesPage with filterable data table
-- [ ] Create AddSiteDialog with WooCommerce credentials form (URL, consumer key/secret)
-- [ ] Create SiteWorkspace modal/page for individual site operations
-- [ ] Add site status indicators (connected, syncing, error)
+- [x] Create storeService.ts with CRUD and connection testing
+- [x] Create SitesPage with filterable data table
+- [x] Create AddSiteDialog with WooCommerce credentials form (URL, consumer key/secret)
+- [x] Create SiteWorkspace modal/page for individual site operations
+- [x] Add site status indicators (connected, syncing, error)
