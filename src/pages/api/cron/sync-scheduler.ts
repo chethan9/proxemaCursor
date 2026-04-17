@@ -303,7 +303,9 @@ async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
 
   if (missingTopics.length === 0) return;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  // Build the webhook delivery URL
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL 
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   const deliveryUrl = `${baseUrl}/api/webhooks/incoming/${store.id}`;
   const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
 
