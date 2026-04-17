@@ -15,6 +15,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          description: string | null
+          display: string | null
+          id: string
+          image: Json | null
+          menu_order: number | null
+          name: string
+          parent_id: number | null
+          raw_data: Json | null
+          slug: string | null
+          store_id: string
+          synced_at: string | null
+          woo_id: number
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          display?: string | null
+          id?: string
+          image?: Json | null
+          menu_order?: number | null
+          name: string
+          parent_id?: number | null
+          raw_data?: Json | null
+          slug?: string | null
+          store_id: string
+          synced_at?: string | null
+          woo_id: number
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          display?: string | null
+          id?: string
+          image?: Json | null
+          menu_order?: number | null
+          name?: string
+          parent_id?: number | null
+          raw_data?: Json | null
+          slug?: string | null
+          store_id?: string
+          synced_at?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string | null
@@ -35,6 +94,86 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      coupons: {
+        Row: {
+          amount: number | null
+          code: string
+          created_at: string | null
+          date_created: string | null
+          date_expires: string | null
+          description: string | null
+          discount_type: string | null
+          excluded_product_ids: Json | null
+          free_shipping: boolean | null
+          id: string
+          individual_use: boolean | null
+          maximum_amount: number | null
+          minimum_amount: number | null
+          product_ids: Json | null
+          raw_data: Json | null
+          store_id: string
+          synced_at: string | null
+          usage_count: number | null
+          usage_limit: number | null
+          usage_limit_per_user: number | null
+          woo_id: number
+        }
+        Insert: {
+          amount?: number | null
+          code: string
+          created_at?: string | null
+          date_created?: string | null
+          date_expires?: string | null
+          description?: string | null
+          discount_type?: string | null
+          excluded_product_ids?: Json | null
+          free_shipping?: boolean | null
+          id?: string
+          individual_use?: boolean | null
+          maximum_amount?: number | null
+          minimum_amount?: number | null
+          product_ids?: Json | null
+          raw_data?: Json | null
+          store_id: string
+          synced_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+          usage_limit_per_user?: number | null
+          woo_id: number
+        }
+        Update: {
+          amount?: number | null
+          code?: string
+          created_at?: string | null
+          date_created?: string | null
+          date_expires?: string | null
+          description?: string | null
+          discount_type?: string | null
+          excluded_product_ids?: Json | null
+          free_shipping?: boolean | null
+          id?: string
+          individual_use?: boolean | null
+          maximum_amount?: number | null
+          minimum_amount?: number | null
+          product_ids?: Json | null
+          raw_data?: Json | null
+          store_id?: string
+          synced_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+          usage_limit_per_user?: number | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cron_logs: {
         Row: {
