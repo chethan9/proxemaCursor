@@ -13,6 +13,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import {
   ArrowLeft,
@@ -30,9 +45,24 @@ import {
   Webhook,
   Zap,
   AlertCircle,
+  Eye,
+  Settings,
+  Database,
 } from "lucide-react";
-import { getStore, updateStoreStatus, type Store } from "@/services/storeService";
-import { getSyncRunsByStore, createSyncRun, completeSyncRun, type SyncRun } from "@/services/syncService";
+import { getStore, updateStore, updateStoreStatus, type Store } from "@/services/storeService";
+import {
+  getSyncRunsByStore,
+  createSyncRun,
+  completeSyncRun,
+  getProductsByStore,
+  getOrdersByStore,
+  getCustomersByStore,
+  getDataCounts,
+  type SyncRun,
+  type Product,
+  type Order,
+  type Customer,
+} from "@/services/syncService";
 import {
   getWebhooksByStore,
   getWebhookEventsByStore,
@@ -50,6 +80,16 @@ const SYNC_ASPECTS = [
   { id: "tags", label: "Tags", icon: Tag },
 ] as const;
 
+const SYNC_INTERVALS = [
+  { value: "0", label: "Manual only" },
+  { value: "15", label: "Every 15 minutes" },
+  { value: "30", label: "Every 30 minutes" },
+  { value: "60", label: "Every hour" },
+  { value: "360", label: "Every 6 hours" },
+  { value: "720", label: "Every 12 hours" },
+  { value: "1440", label: "Every 24 hours" },
+];
+
 export default function SiteWorkspacePage() {
   const router = useRouter();
   const { id } = router.query;
@@ -61,23 +101,42 @@ export default function SiteWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [registeringWebhooks, setRegisteringWebhooks] = useState(false);
+  
+  // Data tab state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [dataCounts, setDataCounts] = useState({ products: 0, orders: 0, customers: 0 });
+  const [dataTab, setDataTab] = useState<"products" | "orders" | "customers">("products");
+  const [loadingData, setLoadingData] = useState(false);
+  
+  // Detail modal state
+  const [selectedItem, setSelectedItem] = useState<Product | Order | Customer | null>(null);
+  const [detailType, setDetailType] = useState<"product" | "order" | "customer" | null>(null);
+  
+  // Settings state
+  const [syncInterval, setSyncInterval] = useState<string>("0");
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const loadData = async () => {
     if (!id || typeof id !== "string") return;
     setLoading(true);
     try {
-      const [storeData, runsData, webhooksData, eventsData, stats] = await Promise.all([
+      const [storeData, runsData, webhooksData, eventsData, stats, counts] = await Promise.all([
         getStore(id),
         getSyncRunsByStore(id),
         getWebhooksByStore(id),
         getWebhookEventsByStore(id, 50),
         getWebhookStats(id),
+        getDataCounts(id),
       ]);
       setStore(storeData);
       setSyncRuns(runsData);
       setWebhooks(webhooksData);
       setWebhookEvents(eventsData);
       setWebhookStats(stats);
+      setDataCounts(counts);
+      setSyncInterval(storeData?.sync_interval?.toString() || "0");
     } catch (error) {
       console.error("Error loading site data:", error);
     } finally {
@@ -85,9 +144,40 @@ export default function SiteWorkspacePage() {
     }
   };
 
+  const loadDataTab = async (tab: "products" | "orders" | "customers") => {
+    if (!id || typeof id !== "string") return;
+    setLoadingData(true);
+    try {
+      switch (tab) {
+        case "products":
+          const productsData = await getProductsByStore(id);
+          setProducts(productsData);
+          break;
+        case "orders":
+          const ordersData = await getOrdersByStore(id);
+          setOrders(ordersData);
+          break;
+        case "customers":
+          const customersData = await getCustomersByStore(id);
+          setCustomers(customersData);
+          break;
+      }
+    } catch (error) {
+      console.error(`Error loading ${tab}:`, error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadDataTab(dataTab);
+    }
+  }, [dataTab, id]);
 
   const handleSync = async (aspect: string) => {
     if (!store || syncing) return;
@@ -145,6 +235,28 @@ export default function SiteWorkspacePage() {
     }
   };
 
+  const handleSaveSettings = async () => {
+    if (!store) return;
+    setSavingSettings(true);
+    try {
+      const interval = parseInt(syncInterval, 10);
+      const nextSync = interval > 0 
+        ? new Date(Date.now() + interval * 60 * 1000).toISOString()
+        : null;
+      
+      await updateStore(store.id, {
+        sync_interval: interval || null,
+        next_sync_at: nextSync,
+      });
+      
+      await loadData();
+    } catch (error) {
+      console.error("Error saving settings:", error);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return "Running...";
     const ms = new Date(end).getTime() - new Date(start).getTime();
@@ -152,7 +264,8 @@ export default function SiteWorkspacePage() {
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
@@ -171,6 +284,14 @@ export default function SiteWorkspacePage() {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
+  };
+
+  const formatCurrency = (amount: number | null, currency = "USD") => {
+    if (amount === null) return "-";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(amount);
   };
 
   const getStatusIcon = (status: string) => {
@@ -200,6 +321,11 @@ export default function SiteWorkspacePage() {
       default:
         return "pending";
     }
+  };
+
+  const openDetail = (item: Product | Order | Customer, type: "product" | "order" | "customer") => {
+    setSelectedItem(item);
+    setDetailType(type);
   };
 
   if (loading) {
@@ -254,6 +380,15 @@ export default function SiteWorkspacePage() {
         <Tabs defaultValue="sync" className="space-y-6">
           <TabsList>
             <TabsTrigger value="sync">Sync Engine</TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Data
+              {dataCounts.products + dataCounts.orders + dataCounts.customers > 0 && (
+                <span className="bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full">
+                  {dataCounts.products + dataCounts.orders + dataCounts.customers}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="webhooks" className="flex items-center gap-2">
               Webhooks
               {webhookStats.active > 0 && (
@@ -262,7 +397,10 @@ export default function SiteWorkspacePage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="sync" className="space-y-6">
@@ -355,6 +493,219 @@ export default function SiteWorkspacePage() {
                     )}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="data" className="space-y-6">
+            {/* Data Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <Card 
+                className={`cursor-pointer transition-colors ${dataTab === "products" ? "ring-2 ring-primary" : ""}`}
+                onClick={() => setDataTab("products")}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Package className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{dataCounts.products}</p>
+                      <p className="text-xs text-muted-foreground">Products</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card 
+                className={`cursor-pointer transition-colors ${dataTab === "orders" ? "ring-2 ring-primary" : ""}`}
+                onClick={() => setDataTab("orders")}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                      <ShoppingCart className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{dataCounts.orders}</p>
+                      <p className="text-xs text-muted-foreground">Orders</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card 
+                className={`cursor-pointer transition-colors ${dataTab === "customers" ? "ring-2 ring-primary" : ""}`}
+                onClick={() => setDataTab("customers")}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-warning" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{dataCounts.customers}</p>
+                      <p className="text-xs text-muted-foreground">Customers</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Data Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg capitalize">{dataTab}</CardTitle>
+                <CardDescription>Synced {dataTab} from WooCommerce</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {loadingData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : dataTab === "products" ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Synced</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No products synced yet. Run a products sync to fetch data.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        products.map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell className="font-mono text-sm">{product.sku || "-"}</TableCell>
+                            <TableCell>{formatCurrency(Number(product.price))}</TableCell>
+                            <TableCell>{product.stock_quantity ?? "-"}</TableCell>
+                            <TableCell>
+                              <StatusBadge variant={product.status === "publish" ? "success" : "warning"}>
+                                {product.status}
+                              </StatusBadge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatRelativeTime(product.synced_at)}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => openDetail(product, "product")}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                ) : dataTab === "orders" ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order #</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No orders synced yet. Run an orders sync to fetch data.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        orders.map((order) => (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-mono">#{order.order_number || order.woo_id}</TableCell>
+                            <TableCell>
+                              <StatusBadge variant={getStatusVariant(order.status || "pending")}>
+                                {order.status}
+                              </StatusBadge>
+                            </TableCell>
+                            <TableCell>
+                              {(order.billing as { first_name?: string; last_name?: string } | null)?.first_name || ""}{" "}
+                              {(order.billing as { first_name?: string; last_name?: string } | null)?.last_name || "Guest"}
+                            </TableCell>
+                            <TableCell>{formatCurrency(Number(order.total), order.currency || "USD")}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatDate(order.date_created)}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => openDetail(order, "order")}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Orders</TableHead>
+                        <TableHead>Total Spent</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No customers synced yet. Run a customers sync to fetch data.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        customers.map((customer) => (
+                          <TableRow key={customer.id}>
+                            <TableCell className="font-medium">
+                              {customer.first_name} {customer.last_name}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{customer.email}</TableCell>
+                            <TableCell>{customer.orders_count ?? 0}</TableCell>
+                            <TableCell>{formatCurrency(Number(customer.total_spent))}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatDate(customer.date_created)}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => openDetail(customer, "customer")}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -524,8 +875,8 @@ export default function SiteWorkspacePage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {getStatusIcon(event.processed ? "completed" : "pending")}
-                              <span>{event.processed ? "Processed" : "Pending"}</span>
+                              {getStatusIcon(event.processing_status || "pending")}
+                              <span className="capitalize">{event.processing_status || "pending"}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
@@ -546,8 +897,8 @@ export default function SiteWorkspacePage() {
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Site Settings</CardTitle>
-                <CardDescription>Configure connection and sync preferences</CardDescription>
+                <CardTitle className="text-lg">Connection Details</CardTitle>
+                <CardDescription>API connection and sync configuration</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -574,9 +925,71 @@ export default function SiteWorkspacePage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Scheduled Sync</CardTitle>
+                <CardDescription>Configure automatic data synchronization</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sync-interval">Sync Interval</Label>
+                  <Select value={syncInterval} onValueChange={setSyncInterval}>
+                    <SelectTrigger id="sync-interval" className="w-full max-w-xs">
+                      <SelectValue placeholder="Select interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SYNC_INTERVALS.map((interval) => (
+                        <SelectItem key={interval.value} value={interval.value}>
+                          {interval.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Even without webhook events, data will sync at this interval.
+                  </p>
+                </div>
+
+                {store.next_sync_at && parseInt(syncInterval) > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-sm">
+                      <span className="font-medium">Next scheduled sync:</span>{" "}
+                      <span className="text-muted-foreground">{formatDate(store.next_sync_at)}</span>
+                    </p>
+                  </div>
+                )}
+
+                <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                  {savingSettings ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Settings className="h-4 w-4 mr-2" />
+                  )}
+                  Save Settings
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Detail Modal */}
+      <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="capitalize">{detailType} Details</DialogTitle>
+            <DialogDescription>
+              Complete synced data from WooCommerce
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono">
+              {JSON.stringify(selectedItem, null, 2)}
+            </pre>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

@@ -3,6 +3,9 @@ import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 export type SyncRun = Tables<"sync_runs">;
 export type SyncRunInsert = TablesInsert<"sync_runs">;
+export type Product = Tables<"products">;
+export type Order = Tables<"orders">;
+export type Customer = Tables<"customers">;
 
 export type SyncAspect =
   | "products"
@@ -133,4 +136,115 @@ export async function getRecentSyncStats(storeId: string) {
   };
 
   return stats;
+}
+
+// Products
+export async function getProductsByStore(storeId: string, limit = 100): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("synced_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching products:", error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function getProduct(id: string): Promise<Product | null> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching product:", error);
+    return null;
+  }
+
+  return data;
+}
+
+// Orders
+export async function getOrdersByStore(storeId: string, limit = 100): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("date_created", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching orders:", error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function getOrder(id: string): Promise<Order | null> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching order:", error);
+    return null;
+  }
+
+  return data;
+}
+
+// Customers
+export async function getCustomersByStore(storeId: string, limit = 100): Promise<Customer[]> {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("synced_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching customers:", error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function getCustomer(id: string): Promise<Customer | null> {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching customer:", error);
+    return null;
+  }
+
+  return data;
+}
+
+// Data counts
+export async function getDataCounts(storeId: string) {
+  const [products, orders, customers] = await Promise.all([
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+    supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+    supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+  ]);
+
+  return {
+    products: products.count || 0,
+    orders: orders.count || 0,
+    customers: customers.count || 0,
+  };
 }

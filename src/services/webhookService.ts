@@ -5,6 +5,18 @@ export type Webhook = Tables<"webhooks">;
 export type WebhookEvent = Tables<"webhook_events">;
 export type WebhookInsert = TablesInsert<"webhooks">;
 
+export interface WebhookEvent {
+  id: string;
+  store_id: string;
+  topic: string;
+  payload: unknown;
+  processing_status: string | null;
+  processed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+  processed?: boolean;
+}
+
 // Topics we want to register for each store
 export const WEBHOOK_TOPICS = [
   { topic: "product.created", name: "Product Created" },
