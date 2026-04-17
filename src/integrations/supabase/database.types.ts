@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -15,6 +15,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_tokens: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: Json | null
+          token: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: Json | null
+          token: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: Json | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           count: number | null
@@ -498,6 +542,9 @@ export type Database = {
           consumer_key: string | null
           consumer_secret: string | null
           created_at: string | null
+          health_checked_at: string | null
+          health_issues: Json | null
+          health_score: number | null
           id: string
           last_sync_at: string | null
           name: string
@@ -513,6 +560,9 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret?: string | null
           created_at?: string | null
+          health_checked_at?: string | null
+          health_issues?: Json | null
+          health_score?: number | null
           id?: string
           last_sync_at?: string | null
           name: string
@@ -528,6 +578,9 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret?: string | null
           created_at?: string | null
+          health_checked_at?: string | null
+          health_issues?: Json | null
+          health_score?: number | null
           id?: string
           last_sync_at?: string | null
           name?: string
@@ -598,6 +651,53 @@ export type Database = {
           },
         ]
       }
+      tags: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          raw_data: Json | null
+          slug: string | null
+          store_id: string
+          synced_at: string | null
+          woo_id: number
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          raw_data?: Json | null
+          slug?: string | null
+          store_id: string
+          synced_at?: string | null
+          woo_id: number
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          raw_data?: Json | null
+          slug?: string | null
+          store_id?: string
+          synced_at?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_events: {
         Row: {
           created_at: string | null
@@ -638,6 +738,54 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_test_results: {
+        Row: {
+          id: string
+          response_body: string | null
+          response_status: number | null
+          store_id: string
+          success: boolean | null
+          test_payload: Json | null
+          tested_at: string | null
+          webhook_id: string
+        }
+        Insert: {
+          id?: string
+          response_body?: string | null
+          response_status?: number | null
+          store_id: string
+          success?: boolean | null
+          test_payload?: Json | null
+          tested_at?: string | null
+          webhook_id: string
+        }
+        Update: {
+          id?: string
+          response_body?: string | null
+          response_status?: number | null
+          store_id?: string
+          success?: boolean | null
+          test_payload?: Json | null
+          tested_at?: string | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_test_results_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_test_results_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
             referencedColumns: ["id"]
           },
         ]

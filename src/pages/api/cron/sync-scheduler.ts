@@ -100,6 +100,14 @@ interface WooCoupon {
   date_modified: string;
 }
 
+interface WooTag {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  count: number;
+}
+
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
@@ -231,29 +239,58 @@ async function syncCategories(store: StoreToSync): Promise<{ processed: number; 
   return { processed: categories.length, created, updated };
 }
 
+async function syncTags(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const tags = await fetchAllFromWooCommerce<WooTag>(store.url, store.consumer_key, store.consumer_secret, "products/tags");
+  let created = 0, updated = 0;
+
+  for (const tag of tags) {
+    const data = {
+      store_id: store.id, woo_id: tag.id, name: tag.name, slug: tag.slug,
+      description: tag.description || "", count: tag.count || 0,
+      raw_data: toJson(tag), synced_at: new Date().toISOString(),
+    };
+    const { data: existing } = await supabase.from("tags").select("id").eq("store_id", store.id).eq("woo_id", tag.id).maybeSingle();
+    if (existing) { await supabase.from("tags").update(data).eq("id", existing.id); updated++; }
+    else { await supabase.from("tags").insert(data); created++; }
+  }
+  return { processed: tags.length, created, updated };
+}
+
 async function syncCoupons(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
   const coupons = await fetchAllFromWooCommerce<WooCoupon>(store.url, store.consumer_key, store.consumer_secret, "coupons");
+  console.log(`[Sync] Fetched ${coupons.length} coupons for ${store.name}`);
   let created = 0, updated = 0;
 
   for (const coupon of coupons) {
-    const data = {
-      store_id: store.id, woo_id: coupon.id, code: coupon.code,
-      amount: coupon.amount ? parseFloat(coupon.amount) : null,
-      discount_type: coupon.discount_type, description: coupon.description,
-      date_expires: coupon.date_expires, usage_count: coupon.usage_count || 0,
-      individual_use: coupon.individual_use || false,
-      product_ids: toJson(coupon.product_ids || []),
-      excluded_product_ids: toJson(coupon.excluded_product_ids || []),
-      usage_limit: coupon.usage_limit, usage_limit_per_user: coupon.usage_limit_per_user,
-      free_shipping: coupon.free_shipping || false,
-      minimum_amount: coupon.minimum_amount ? parseFloat(coupon.minimum_amount) : null,
-      maximum_amount: coupon.maximum_amount ? parseFloat(coupon.maximum_amount) : null,
-      raw_data: toJson(coupon), date_created: coupon.date_created,
-      synced_at: new Date().toISOString(),
-    };
-    const { data: existing } = await supabase.from("coupons").select("id").eq("store_id", store.id).eq("woo_id", coupon.id).single();
-    if (existing) { await supabase.from("coupons").update(data).eq("id", existing.id); updated++; }
-    else { await supabase.from("coupons").insert(data); created++; }
+    try {
+      const data = {
+        store_id: store.id, woo_id: coupon.id, code: coupon.code,
+        amount: coupon.amount ? parseFloat(coupon.amount) : null,
+        discount_type: coupon.discount_type, description: coupon.description || "",
+        date_expires: coupon.date_expires, usage_count: coupon.usage_count || 0,
+        individual_use: coupon.individual_use || false,
+        product_ids: toJson(coupon.product_ids || []),
+        excluded_product_ids: toJson(coupon.excluded_product_ids || []),
+        usage_limit: coupon.usage_limit, usage_limit_per_user: coupon.usage_limit_per_user,
+        free_shipping: coupon.free_shipping || false,
+        minimum_amount: coupon.minimum_amount ? parseFloat(coupon.minimum_amount) : null,
+        maximum_amount: coupon.maximum_amount ? parseFloat(coupon.maximum_amount) : null,
+        raw_data: toJson(coupon), date_created: coupon.date_created,
+        synced_at: new Date().toISOString(),
+      };
+      const { data: existing } = await supabase.from("coupons").select("id").eq("store_id", store.id).eq("woo_id", coupon.id).maybeSingle();
+      if (existing) {
+        const { error } = await supabase.from("coupons").update(data).eq("id", existing.id);
+        if (error) console.error(`[Sync] Coupon update error for ${coupon.code}:`, error.message);
+        else updated++;
+      } else {
+        const { error } = await supabase.from("coupons").insert(data);
+        if (error) console.error(`[Sync] Coupon insert error for ${coupon.code}:`, error.message);
+        else created++;
+      }
+    } catch (err) {
+      console.error(`[Sync] Coupon exception for ${coupon.code}:`, err);
+    }
   }
   return { processed: coupons.length, created, updated };
 }
@@ -318,7 +355,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       try {
         await ensureWebhooksRegistered(store);
-        const syncFunctions: Record<string, (s: StoreToSync) => Promise<{ processed: number; created: number; updated: number }>> = { products: syncProducts, orders: syncOrders, customers: syncCustomers, categories: syncCategories, coupons: syncCoupons };
+        const syncFunctions: Record<string, (s: StoreToSync) => Promise<{ processed: number; created: number; updated: number }>> = { products: syncProducts, orders: syncOrders, customers: syncCustomers, categories: syncCategories, tags: syncTags, coupons: syncCoupons };
         let totalRecords = 0, totalCreated = 0, totalUpdated = 0;
 
         for (const [aspect, syncFn] of Object.entries(syncFunctions)) {
