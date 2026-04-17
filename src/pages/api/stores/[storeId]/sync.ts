@@ -98,6 +98,14 @@ interface WooCoupon {
   date_modified: string;
 }
 
+interface WooTag {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  count: number;
+}
+
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
@@ -373,6 +381,40 @@ async function syncCoupons(store: StoreToSync): Promise<{ processed: number; cre
   return { processed: coupons.length, created, updated };
 }
 
+async function syncTags(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const tags = await fetchAllFromWooCommerce<WooTag>(
+    store.url, store.consumer_key, store.consumer_secret, "products/tags"
+  );
+
+  let created = 0, updated = 0;
+
+  for (const tag of tags) {
+    const tagData = {
+      store_id: store.id,
+      woo_id: tag.id,
+      name: tag.name,
+      slug: tag.slug,
+      description: tag.description || "",
+      count: tag.count || 0,
+      raw_data: toJson(tag),
+      synced_at: new Date().toISOString(),
+    };
+
+    const { data: existing } = await supabase
+      .from("tags").select("id").eq("store_id", store.id).eq("woo_id", tag.id).maybeSingle();
+
+    if (existing) {
+      await supabase.from("tags").update(tagData).eq("id", existing.id);
+      updated++;
+    } else {
+      await supabase.from("tags").insert(tagData);
+      created++;
+    }
+  }
+
+  return { processed: tags.length, created, updated };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -409,6 +451,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       orders: syncOrders,
       customers: syncCustomers,
       categories: syncCategories,
+      tags: syncTags,
       coupons: syncCoupons,
     };
 
