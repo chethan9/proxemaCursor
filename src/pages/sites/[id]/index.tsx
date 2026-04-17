@@ -1175,7 +1175,6 @@ export default function SiteWorkspacePage() {
                       <TableRow>
                         <TableHead>Topic</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Resource ID</TableHead>
                         <TableHead>Received</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1192,9 +1191,6 @@ export default function SiteWorkspacePage() {
                               {getStatusIcon(event.processing_status || "pending")}
                               <span className="capitalize">{event.processing_status || "pending"}</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {event.resource_id || "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatDate(event.created_at)}
