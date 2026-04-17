@@ -15,6 +15,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_request_logs: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          ip_address: string | null
+          method: string
+          response_time_ms: number | null
+          status_code: number
+          token_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          ip_address?: string | null
+          method: string
+          response_time_ms?: number | null
+          status_code: number
+          token_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          ip_address?: string | null
+          method?: string
+          response_time_ms?: number | null
+          status_code?: number
+          token_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_request_logs_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "api_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_tokens: {
         Row: {
           client_id: string
@@ -23,9 +77,11 @@ export type Database = {
           id: string
           last_used_at: string | null
           name: string
+          prefix: string | null
           revoked_at: string | null
           scopes: Json | null
           token: string
+          token_hash: string | null
         }
         Insert: {
           client_id: string
@@ -34,9 +90,11 @@ export type Database = {
           id?: string
           last_used_at?: string | null
           name: string
+          prefix?: string | null
           revoked_at?: string | null
           scopes?: Json | null
           token: string
+          token_hash?: string | null
         }
         Update: {
           client_id?: string
@@ -45,9 +103,11 @@ export type Database = {
           id?: string
           last_used_at?: string | null
           name?: string
+          prefix?: string | null
           revoked_at?: string | null
           scopes?: Json | null
           token?: string
+          token_hash?: string | null
         }
         Relationships: [
           {
@@ -744,30 +804,36 @@ export type Database = {
       }
       webhook_test_results: {
         Row: {
+          duration_ms: number | null
+          error_message: string | null
           id: string
           response_body: string | null
           response_status: number | null
-          store_id: string
+          store_id: string | null
           success: boolean | null
           test_payload: Json | null
           tested_at: string | null
           webhook_id: string
         }
         Insert: {
+          duration_ms?: number | null
+          error_message?: string | null
           id?: string
           response_body?: string | null
           response_status?: number | null
-          store_id: string
+          store_id?: string | null
           success?: boolean | null
           test_payload?: Json | null
           tested_at?: string | null
           webhook_id: string
         }
         Update: {
+          duration_ms?: number | null
+          error_message?: string | null
           id?: string
           response_body?: string | null
           response_status?: number | null
-          store_id?: string
+          store_id?: string | null
           success?: boolean | null
           test_payload?: Json | null
           tested_at?: string | null
