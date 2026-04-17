@@ -301,89 +301,72 @@ export default function SiteWorkspacePage() {
     if (!store || syncing) return;
     
     setSyncing(true);
-    setSyncProgress(0);
-    setSyncStatus("Starting sync...");
-    syncAbortRef.current = false;
+    setSyncProgress({ current: 0, total: 5, aspect: "Starting sync..." });
     
     try {
-      await updateStoreStatus(store.id, "syncing");
+      // Call the sync API endpoint
+      const response = await fetch(`/api/stores/${store.id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
       
-      const totalAspects = SYNC_ASPECTS.length;
-      
-      for (let i = 0; i < SYNC_ASPECTS.length; i++) {
-        if (syncAbortRef.current) {
-          setSyncStatus("Sync cancelled");
-          break;
-        }
-        
-        const aspect = SYNC_ASPECTS[i];
-        setCurrentAspect(aspect.id);
-        setSyncStatus(`Syncing ${aspect.label}...`);
-        setSyncProgress(((i) / totalAspects) * 100);
-        
-        // Create sync run
-        const run = await createSyncRun({
-          store_id: store.id,
-          aspect: aspect.id,
-          status: "running",
-          started_at: new Date().toISOString(),
-        });
-        
-        try {
-          // Call the actual sync API
-          const response = await fetch(`/api/sync/${store.id}/${aspect.id}`, {
-            method: "POST",
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            await completeSyncRun(run.id, {
-              status: "completed",
-              records_processed: result.processed || 0,
-              records_created: result.created || 0,
-              records_updated: result.updated || 0,
-            });
-          } else {
-            // Fallback: trigger via cron scheduler for this aspect
-            await completeSyncRun(run.id, {
-              status: "completed",
-              records_processed: 0,
-            });
-          }
-        } catch {
-          await completeSyncRun(run.id, {
-            status: "failed",
-            error_message: "Sync failed",
-          });
-        }
-        
-        setSyncProgress(((i + 1) / totalAspects) * 100);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Sync failed");
       }
       
-      setSyncStatus("Sync complete!");
-      setSyncProgress(100);
+      // Poll for progress updates
+      const aspects = ["products", "orders", "customers", "categories", "coupons"];
+      const completedAspects = 0;
       
-      await updateStoreStatus(store.id, "connected");
+      const pollProgress = async () => {
+        // Get latest sync runs
+        const { data: runs } = await supabase
+          .from("sync_runs")
+          .select("*")
+          .eq("store_id", store.id)
+          .gte("started_at", new Date(Date.now() - 60000).toISOString())
+          .order("started_at", { ascending: false });
+        
+        if (runs) {
+          const completed = runs.filter(r => r.status === "completed").length;
+          const running = runs.find(r => r.status === "running");
+          
+          if (running) {
+            setSyncProgress({
+              current: completed,
+              total: 5,
+              aspect: `Syncing ${running.aspect}...`
+            });
+          } else if (completed >= 5) {
+            setSyncProgress({ current: 5, total: 5, aspect: "Sync complete!" });
+            return true; // Done
+          }
+        }
+        return false; // Not done
+      };
       
-      // Refresh data after short delay
-      setTimeout(() => {
-        loadData();
-        setSyncing(false);
-        setSyncProgress(0);
-        setSyncStatus("");
-        setCurrentAspect("");
-      }, 1500);
+      // Poll every 2 seconds for up to 5 minutes
+      for (let i = 0; i < 150; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const done = await pollProgress();
+        if (done) break;
+      }
+      
+      // Refresh data
+      await loadData();
       
     } catch (error) {
       console.error("Sync error:", error);
-      setSyncStatus("Sync failed");
-      if (store) {
-        await updateStoreStatus(store.id, "error");
-      }
+      setSyncProgress({ 
+        current: 0, 
+        total: 5, 
+        aspect: error instanceof Error ? error.message : "Sync failed" 
+      });
+    } finally {
       setTimeout(() => {
         setSyncing(false);
-        setSyncProgress(0);
-        setSyncStatus("");
+        setSyncProgress(null);
       }, 2000);
     }
   };
