@@ -609,43 +609,13 @@ export default function SiteWorkspacePage() {
                     </div>
                     
                     {/* Progress Bar */}
-                    {syncing && (
+                    {syncing && syncProgress && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{syncStatus}</span>
-                          <span className="font-medium">{Math.round(syncProgress)}%</span>
+                          <span className="text-muted-foreground">{syncProgress.aspect}</span>
+                          <span className="font-medium">{Math.round((syncProgress.current / syncProgress.total) * 100)}%</span>
                         </div>
-                        <Progress value={syncProgress} className="h-2" />
-                        {currentAspect && (
-                          <div className="flex gap-2 mt-3">
-                            {SYNC_ASPECTS.map((aspect) => {
-                              const AspectIcon = aspect.icon;
-                              const isComplete = SYNC_ASPECTS.findIndex(a => a.id === currentAspect) > SYNC_ASPECTS.findIndex(a => a.id === aspect.id);
-                              const isCurrent = aspect.id === currentAspect;
-                              return (
-                                <div
-                                  key={aspect.id}
-                                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                                    isComplete 
-                                      ? "bg-success/10 text-success" 
-                                      : isCurrent 
-                                        ? "bg-primary/10 text-primary" 
-                                        : "bg-muted text-muted-foreground"
-                                  }`}
-                                >
-                                  {isComplete ? (
-                                    <CheckCircle2 className="h-3 w-3" />
-                                  ) : isCurrent ? (
-                                    <RefreshCw className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <AspectIcon className="h-3 w-3" />
-                                  )}
-                                  {aspect.label}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <Progress value={(syncProgress.current / syncProgress.total) * 100} className="h-2" />
                       </div>
                     )}
                   </div>

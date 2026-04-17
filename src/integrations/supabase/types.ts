@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export * from "./database.types";
 import type { Database } from "./database.types";
 
