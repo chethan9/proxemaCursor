@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -387,6 +387,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_changes: {
+        Row: {
+          change_type: string
+          changed_fields: Json | null
+          created_at: string | null
+          entity_id: string
+          entity_name: string | null
+          entity_type: string
+          id: string
+          snapshot_after: Json | null
+          snapshot_before: Json | null
+          source: string
+          store_id: string
+          woo_id: number | null
+        }
+        Insert: {
+          change_type: string
+          changed_fields?: Json | null
+          created_at?: string | null
+          entity_id: string
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          snapshot_after?: Json | null
+          snapshot_before?: Json | null
+          source?: string
+          store_id: string
+          woo_id?: number | null
+        }
+        Update: {
+          change_type?: string
+          changed_fields?: Json | null
+          created_at?: string | null
+          entity_id?: string
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          snapshot_after?: Json | null
+          snapshot_before?: Json | null
+          source?: string
+          store_id?: string
+          woo_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_changes_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
