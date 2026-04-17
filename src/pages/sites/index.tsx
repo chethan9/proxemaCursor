@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -31,16 +31,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Plus, Search, Store, ExternalLink, Eye, EyeOff } from "lucide-react";
-import { getStores, createStore, type Store as StoreType } from "@/services/storeService";
+import { getStores, getStore, createStore, type StoreWithClient } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 export default function SitesPage() {
   const router = useRouter();
-  const [stores, setStores] = useState<StoreType[]>([]);
+  const [stores, setStores] = useState<StoreWithClient[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,19 +57,29 @@ export default function SitesPage() {
     client_id: "",
   });
 
-  const loadData = async (skipCache = false) => {
-    // Check cache first
-    if (!skipCache) {
-      const cachedStores = browserCache.get<StoreType[]>(CACHE_KEYS.STORES);
-      const cachedClients = browserCache.get<Client[]>(CACHE_KEYS.CLIENTS);
-      if (cachedStores && cachedClients) {
-        setStores(cachedStores);
-        setClients(cachedClients);
-        setLoading(false);
-        return;
-      }
+  // Cache-first data loading
+  const loadData = useCallback(async (forceRefresh = false) => {
+    // Check cache FIRST - before any loading state
+    const cachedStores = browserCache.get<StoreWithClient[]>(CACHE_KEYS.STORES);
+    const cachedClients = browserCache.get<Client[]>(CACHE_KEYS.CLIENTS);
+    
+    if (cachedStores && cachedClients && !forceRefresh) {
+      // Instant render from cache - no loading state
+      setStores(cachedStores);
+      setClients(cachedClients);
+      
+      // Background refresh (SWR pattern)
+      Promise.all([getStores(), getClients()]).then(([freshStores, freshClients]) => {
+        browserCache.set(CACHE_KEYS.STORES, freshStores, CACHE_TTL.MEDIUM);
+        browserCache.set(CACHE_KEYS.CLIENTS, freshClients, CACHE_TTL.MEDIUM);
+        setStores(freshStores);
+        setClients(freshClients);
+      }).catch(console.error);
+      
+      return;
     }
 
+    // No cache - show loading
     setLoading(true);
     try {
       const [storesData, clientsData] = await Promise.all([
@@ -78,7 +88,6 @@ export default function SitesPage() {
       ]);
       setStores(storesData);
       setClients(clientsData);
-      // Cache the results
       browserCache.set(CACHE_KEYS.STORES, storesData, CACHE_TTL.MEDIUM);
       browserCache.set(CACHE_KEYS.CLIENTS, clientsData, CACHE_TTL.MEDIUM);
     } catch (error) {
@@ -86,29 +95,34 @@ export default function SitesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Prefetch a specific store's data on hover
+  const prefetchStore = useCallback((storeId: string) => {
+    const cacheKey = CACHE_KEYS.store(storeId);
+    if (!browserCache.has(cacheKey)) {
+      browserCache.prefetch(cacheKey, () => getStore(storeId), CACHE_TTL.MEDIUM);
+    }
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleCreateStore = async () => {
     if (!newStore.name.trim() || !newStore.url.trim()) return;
     
-    // Validate and clean URL
     const validation = validateStoreUrl(newStore.url);
     if (!validation.valid) {
       setUrlError(validation.error || "Invalid URL");
       return;
     }
     
-    // Use the cleaned URL
     const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(newStore.url);
     setUrlError(null);
     
     setCreating(true);
     try {
-      // Create store record first with cleaned URL
       const store = await createStore({
         name: newStore.name.trim(),
         url: cleanedUrl,
@@ -118,18 +132,16 @@ export default function SitesPage() {
         status: authMode === "manual" && newStore.consumer_key && newStore.consumer_secret ? "connected" : "pending",
       });
 
-      // Clear cache after creating
+      // Invalidate cache
       browserCache.delete(CACHE_KEYS.STORES);
 
       if (authMode === "oauth") {
-        // Redirect to WooCommerce for OAuth approval
         const authUrl = buildWooCommerceAuthUrl({
           storeUrl: cleanedUrl,
           storeId: store.id,
         });
         window.location.href = authUrl;
       } else {
-        // Manual mode - just close dialog and refresh
         setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
         setDialogOpen(false);
         await loadData(true);
@@ -379,7 +391,7 @@ export default function SitesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {loading && stores.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       Loading sites...
@@ -399,6 +411,7 @@ export default function SitesPage() {
                       key={store.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => router.push(`/sites/${store.id}`)}
+                      onMouseEnter={() => prefetchStore(store.id)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
