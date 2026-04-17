@@ -24,12 +24,23 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { Progress } from "@/components/ui/progress";
+
+interface ActiveSync {
+  store_id: string;
+  store_name: string;
+  aspects: { aspect: string; status: string; records_processed: number | null }[];
+  total_aspects: number;
+  completed_aspects: number;
+  started_at: string;
+}
 
 export default function Dashboard() {
   const [clients, setClients] = useState<ClientWithStats[]>([]);
   const [stores, setStores] = useState<StoreWithClient[]>([]);
   const [syncRuns, setSyncRuns] = useState<SyncRunWithStore[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeSyncs, setActiveSyncs] = useState<ActiveSync[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -84,6 +95,58 @@ export default function Dashboard() {
     }
     loadData();
   }, []);
+
+  // Poll for active syncs
+  useEffect(() => {
+    let mounted = true;
+
+    const pollActiveSyncs = async () => {
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+      const { data: recentRuns } = await supabase
+        .from("sync_runs")
+        .select("*")
+        .gte("started_at", fiveMinAgo)
+        .order("started_at", { ascending: true });
+
+      if (!recentRuns || !mounted) return;
+
+      const storeMap = new Map(stores.map(s => [s.id, s.name]));
+      const grouped = new Map<string, ActiveSync>();
+
+      for (const run of recentRuns) {
+        if (!grouped.has(run.store_id)) {
+          grouped.set(run.store_id, {
+            store_id: run.store_id,
+            store_name: storeMap.get(run.store_id) || run.store_id.substring(0, 8),
+            aspects: [],
+            total_aspects: 6,
+            completed_aspects: 0,
+            started_at: run.started_at || "",
+          });
+        }
+        const sync = grouped.get(run.store_id)!;
+        sync.aspects.push({
+          aspect: run.aspect,
+          status: run.status,
+          records_processed: run.records_processed,
+        });
+        if (run.status === "completed" || run.status === "failed") {
+          sync.completed_aspects++;
+        }
+      }
+
+      const active = Array.from(grouped.values()).filter(
+        s => s.aspects.some(a => a.status === "running") || (s.completed_aspects > 0 && s.completed_aspects < s.total_aspects)
+      );
+
+      if (mounted) setActiveSyncs(active);
+    };
+
+    pollActiveSyncs();
+    const interval = setInterval(pollActiveSyncs, 3000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, [stores]);
 
   // Calculate stats
   const stats = {
@@ -229,6 +292,62 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Active Syncs Progress */}
+        {activeSyncs.length > 0 && (
+          <div className="space-y-3">
+            {activeSyncs.map(sync => {
+              const pct = Math.round((sync.completed_aspects / sync.total_aspects) * 100);
+              const runningAspect = sync.aspects.find(a => a.status === "running");
+              const failedCount = sync.aspects.filter(a => a.status === "failed").length;
+              const elapsed = Math.round((Date.now() - new Date(sync.started_at).getTime()) / 1000);
+              const elapsedStr = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+
+              return (
+                <Card key={sync.store_id} className="border-primary/30 bg-primary/5">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 text-primary animate-spin" />
+                        <span className="font-medium text-sm">{sync.store_name}</span>
+                        <span className="text-xs text-muted-foreground">Initial sync</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">{elapsedStr}</span>
+                        <span className="text-sm font-bold text-primary">{pct}%</span>
+                      </div>
+                    </div>
+                    <Progress value={pct} className="h-2 mb-2" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        {runningAspect ? (
+                          <span className="text-xs text-primary font-medium">
+                            Syncing {runningAspect.aspect}...
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {sync.completed_aspects}/{sync.total_aspects} aspects done
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {sync.aspects.filter(a => a.status === "completed").map(a => (
+                          <span key={a.aspect} className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {a.aspect}
+                          </span>
+                        ))}
+                        {failedCount > 0 && (
+                          <span className="text-xs text-red-500">{failedCount} failed</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         {/* Fleet Health + Attention */}
         {avgHealth !== null && (
