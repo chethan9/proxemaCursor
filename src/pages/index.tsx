@@ -3,11 +3,26 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Users, Store, RefreshCw, Webhook, ArrowRight, Clock } from "lucide-react";
+import { Users, Store, RefreshCw, Webhook, ArrowRight, Clock, TrendingUp, TrendingDown, CheckCircle2, XCircle, Activity } from "lucide-react";
 import Link from "next/link";
 import { getClients, type ClientWithStats } from "@/services/clientService";
 import { getStores, type StoreWithClient } from "@/services/storeService";
 import { getSyncRuns, type SyncRunWithStore } from "@/services/syncService";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  LineChart,
+  Line,
+} from "recharts";
 
 export default function Dashboard() {
   const [clients, setClients] = useState<ClientWithStats[]>([]);
@@ -21,7 +36,7 @@ export default function Dashboard() {
         const [clientsData, storesData, runsData] = await Promise.all([
           getClients(),
           getStores(),
-          getSyncRuns(10),
+          getSyncRuns(100),
         ]);
         setClients(clientsData);
         setStores(storesData);
@@ -35,13 +50,63 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  // Calculate stats
   const stats = {
     clients: clients.length,
     stores: stores.length,
     connectedStores: stores.filter((s) => s.status === "connected").length,
-    recentSyncs: syncRuns.length,
+    totalSyncs: syncRuns.length,
+    successfulSyncs: syncRuns.filter((r) => r.status === "completed").length,
     failedSyncs: syncRuns.filter((r) => r.status === "failed").length,
+    runningSyncs: syncRuns.filter((r) => r.status === "running").length,
+    totalRecords: syncRuns.reduce((sum, r) => sum + (r.records_processed || 0), 0),
   };
+
+  const successRate = stats.totalSyncs > 0 
+    ? Math.round((stats.successfulSyncs / stats.totalSyncs) * 100) 
+    : 0;
+
+  // Pie chart data for sync status
+  const syncStatusData = [
+    { name: "Successful", value: stats.successfulSyncs, color: "#10b981" },
+    { name: "Failed", value: stats.failedSyncs, color: "#ef4444" },
+    { name: "Running", value: stats.runningSyncs, color: "#3b82f6" },
+  ].filter(d => d.value > 0);
+
+  // Bar chart data for syncs by aspect
+  const syncsByAspect = syncRuns.reduce((acc, run) => {
+    const aspect = run.aspect || "unknown";
+    if (!acc[aspect]) {
+      acc[aspect] = { aspect, successful: 0, failed: 0 };
+    }
+    if (run.status === "completed") {
+      acc[aspect].successful++;
+    } else if (run.status === "failed") {
+      acc[aspect].failed++;
+    }
+    return acc;
+  }, {} as Record<string, { aspect: string; successful: number; failed: number }>);
+
+  const aspectChartData = Object.values(syncsByAspect);
+
+  // Line chart data for syncs over time (last 7 days)
+  const syncsByDay = syncRuns.reduce((acc, run) => {
+    const date = new Date(run.started_at || "").toLocaleDateString("en-US", { 
+      month: "short", 
+      day: "numeric" 
+    });
+    if (!acc[date]) {
+      acc[date] = { date, successful: 0, failed: 0 };
+    }
+    if (run.status === "completed") {
+      acc[date].successful++;
+    } else if (run.status === "failed") {
+      acc[date].failed++;
+    }
+    return acc;
+  }, {} as Record<string, { date: string; successful: number; failed: number }>);
+
+  const timelineData = Object.values(syncsByDay).slice(0, 7).reverse();
 
   return (
     <AppLayout>
@@ -50,7 +115,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your WooCommerce integrations
+            Overview of your WooCommerce sync operations
           </p>
         </div>
 
@@ -89,33 +154,191 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Recent Syncs</CardTitle>
-              <RefreshCw className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              {successRate >= 90 ? (
+                <TrendingUp className="h-4 w-4 text-success" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-destructive" />
+              )}
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.recentSyncs}</div>
+              <div className="text-2xl font-bold">
+                {successRate}%
+              </div>
               <p className="text-xs text-muted-foreground">
-                {stats.failedSyncs > 0 && (
-                  <span className="text-destructive">
-                    {stats.failedSyncs} failed •{" "}
-                  </span>
-                )}
-                Last 24 hours
+                {stats.successfulSyncs} of {stats.totalSyncs} syncs
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Webhooks</CardTitle>
-              <Webhook className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Records Synced</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">—</div>
-              <p className="text-xs text-muted-foreground">Events today</p>
+              <div className="text-2xl font-bold">
+                {stats.totalRecords.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total records processed
+              </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Charts Row */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Sync Status Pie Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Sync Status Distribution</CardTitle>
+              <CardDescription>Breakdown of sync run outcomes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : syncStatusData.length === 0 ? (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No sync data yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={syncStatusData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {syncStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              <div className="flex justify-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-success" />
+                  <span className="text-sm text-muted-foreground">Success</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-destructive" />
+                  <span className="text-sm text-muted-foreground">Failed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-primary" />
+                  <span className="text-sm text-muted-foreground">Running</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Syncs by Aspect Bar Chart */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-lg">Syncs by Data Type</CardTitle>
+              <CardDescription>Successful vs failed syncs per aspect</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : aspectChartData.length === 0 ? (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No sync data yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={aspectChartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" />
+                      <YAxis 
+                        type="category" 
+                        dataKey="aspect" 
+                        width={80}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sync Timeline */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Sync Activity Timeline</CardTitle>
+            <CardDescription>Daily sync outcomes over the past week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-[200px] flex items-center justify-center">
+                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : timelineData.length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No sync activity yet</p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={timelineData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="successful" 
+                      name="Successful" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      dot={{ fill: "#10b981" }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="failed" 
+                      name="Failed" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      dot={{ fill: "#ef4444" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Activity */}
         <div className="grid gap-6 lg:grid-cols-2">
