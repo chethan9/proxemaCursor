@@ -2,9 +2,6 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/database.types";
 
-// Vercel Cron job - runs every minute to check for stores needing sync
-// Configure in vercel.json: { "crons": [{ "path": "/api/cron/sync-scheduler", "schedule": "* * * * *" }] }
-
 interface StoreToSync {
   id: string;
   name: string;
@@ -71,233 +68,236 @@ interface WooCustomer {
   date_modified: string;
 }
 
-// Helper to convert objects to Json type safely
+interface WooCategory {
+  id: number;
+  name: string;
+  slug: string;
+  parent: number;
+  description: string;
+  display: string;
+  image: { id: number; src: string; name: string; alt: string } | null;
+  menu_order: number;
+  count: number;
+}
+
+interface WooCoupon {
+  id: number;
+  code: string;
+  amount: string;
+  discount_type: string;
+  description: string;
+  date_expires: string | null;
+  usage_count: number;
+  individual_use: boolean;
+  product_ids: number[];
+  excluded_product_ids: number[];
+  usage_limit: number | null;
+  usage_limit_per_user: number | null;
+  free_shipping: boolean;
+  minimum_amount: string;
+  maximum_amount: string;
+  date_created: string;
+  date_modified: string;
+}
+
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
-async function fetchFromWooCommerce<T>(
+async function fetchAllFromWooCommerce<T>(
   storeUrl: string,
   consumerKey: string,
   consumerSecret: string,
-  endpoint: string,
-  params: Record<string, string> = {}
+  endpoint: string
 ): Promise<T[]> {
-  const url = new URL(`${storeUrl}/wp-json/wc/v3/${endpoint}`);
-  url.searchParams.set("per_page", "100");
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.set(key, value);
-  });
-
+  const allItems: T[] = [];
+  let page = 1;
+  const perPage = 100;
+  let hasMore = true;
   const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
-  
-  const response = await fetch(url.toString(), {
-    headers: {
-      "Authorization": `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-  });
 
-  if (!response.ok) {
-    throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}`);
+  while (hasMore) {
+    const url = new URL(`${storeUrl}/wp-json/wc/v3/${endpoint}`);
+    url.searchParams.set("per_page", perPage.toString());
+    url.searchParams.set("page", page.toString());
+
+    const response = await fetch(url.toString(), {
+      headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      if (response.status === 400 || response.status === 404) break;
+      throw new Error(`WooCommerce API error: ${response.status}`);
+    }
+
+    const items: T[] = await response.json();
+    if (items.length === 0) {
+      hasMore = false;
+    } else {
+      allItems.push(...items);
+      if (items.length < perPage) hasMore = false;
+      else page++;
+    }
+    if (page > 50) hasMore = false;
   }
-
-  return response.json();
+  return allItems;
 }
 
 async function syncProducts(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const products = await fetchFromWooCommerce<WooProduct>(
-    store.url,
-    store.consumer_key,
-    store.consumer_secret,
-    "products"
-  );
-
-  let created = 0;
-  let updated = 0;
+  const products = await fetchAllFromWooCommerce<WooProduct>(store.url, store.consumer_key, store.consumer_secret, "products");
+  let created = 0, updated = 0;
 
   for (const product of products) {
-    const productData = {
-      store_id: store.id,
-      woo_id: product.id,
-      name: product.name,
-      slug: product.slug,
-      sku: product.sku || null,
-      price: product.price ? parseFloat(product.price) : null,
+    const data = {
+      store_id: store.id, woo_id: product.id, name: product.name, slug: product.slug,
+      sku: product.sku || null, price: product.price ? parseFloat(product.price) : null,
       regular_price: product.regular_price ? parseFloat(product.regular_price) : null,
       sale_price: product.sale_price ? parseFloat(product.sale_price) : null,
-      stock_quantity: product.stock_quantity,
-      stock_status: product.stock_status,
-      status: product.status,
-      type: product.type,
-      description: product.description,
-      short_description: product.short_description,
-      categories: toJson(product.categories),
-      images: toJson(product.images),
-      attributes: toJson(product.attributes || []),
-      raw_data: toJson(product),
-      synced_at: new Date().toISOString(),
+      stock_quantity: product.stock_quantity, stock_status: product.stock_status,
+      status: product.status, type: product.type, description: product.description,
+      short_description: product.short_description, categories: toJson(product.categories),
+      images: toJson(product.images), attributes: toJson(product.attributes || []),
+      raw_data: toJson(product), synced_at: new Date().toISOString(),
     };
-
-    // Upsert - check if exists first
-    const { data: existing } = await supabase
-      .from("products")
-      .select("id")
-      .eq("store_id", store.id)
-      .eq("woo_id", product.id)
-      .single();
-
-    if (existing) {
-      await supabase
-        .from("products")
-        .update(productData)
-        .eq("id", existing.id);
-      updated++;
-    } else {
-      await supabase
-        .from("products")
-        .insert(productData);
-      created++;
-    }
+    const { data: existing } = await supabase.from("products").select("id").eq("store_id", store.id).eq("woo_id", product.id).single();
+    if (existing) { await supabase.from("products").update(data).eq("id", existing.id); updated++; }
+    else { await supabase.from("products").insert(data); created++; }
   }
-
   return { processed: products.length, created, updated };
 }
 
 async function syncOrders(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const orders = await fetchFromWooCommerce<WooOrder>(
-    store.url,
-    store.consumer_key,
-    store.consumer_secret,
-    "orders"
-  );
-
-  let created = 0;
-  let updated = 0;
+  const orders = await fetchAllFromWooCommerce<WooOrder>(store.url, store.consumer_key, store.consumer_secret, "orders");
+  let created = 0, updated = 0;
 
   for (const order of orders) {
-    const orderData = {
-      store_id: store.id,
-      woo_id: order.id,
-      order_number: order.number,
-      status: order.status,
-      currency: order.currency,
-      total: order.total ? parseFloat(order.total) : null,
+    const data = {
+      store_id: store.id, woo_id: order.id, order_number: order.number, status: order.status,
+      currency: order.currency, total: order.total ? parseFloat(order.total) : null,
       discount_total: order.discount_total ? parseFloat(order.discount_total) : null,
       shipping_total: order.shipping_total ? parseFloat(order.shipping_total) : null,
-      customer_id: order.customer_id || null,
-      billing: toJson(order.billing),
-      shipping: toJson(order.shipping),
-      line_items: toJson(order.line_items),
-      shipping_lines: toJson(order.shipping_lines || []),
-      fee_lines: toJson(order.fee_lines || []),
-      coupon_lines: toJson(order.coupon_lines || []),
-      raw_data: toJson(order),
-      date_created: order.date_created,
-      date_modified: order.date_modified,
+      customer_id: order.customer_id || null, billing: toJson(order.billing),
+      shipping: toJson(order.shipping), line_items: toJson(order.line_items),
+      shipping_lines: toJson(order.shipping_lines || []), fee_lines: toJson(order.fee_lines || []),
+      coupon_lines: toJson(order.coupon_lines || []), raw_data: toJson(order),
+      date_created: order.date_created, date_modified: order.date_modified,
       synced_at: new Date().toISOString(),
     };
-
-    const { data: existing } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("store_id", store.id)
-      .eq("woo_id", order.id)
-      .single();
-
-    if (existing) {
-      await supabase
-        .from("orders")
-        .update(orderData)
-        .eq("id", existing.id);
-      updated++;
-    } else {
-      await supabase
-        .from("orders")
-        .insert(orderData);
-      created++;
-    }
+    const { data: existing } = await supabase.from("orders").select("id").eq("store_id", store.id).eq("woo_id", order.id).single();
+    if (existing) { await supabase.from("orders").update(data).eq("id", existing.id); updated++; }
+    else { await supabase.from("orders").insert(data); created++; }
   }
-
   return { processed: orders.length, created, updated };
 }
 
 async function syncCustomers(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const customers = await fetchFromWooCommerce<WooCustomer>(
-    store.url,
-    store.consumer_key,
-    store.consumer_secret,
-    "customers"
-  );
-
-  let created = 0;
-  let updated = 0;
+  const customers = await fetchAllFromWooCommerce<WooCustomer>(store.url, store.consumer_key, store.consumer_secret, "customers");
+  let created = 0, updated = 0;
 
   for (const customer of customers) {
-    const customerData = {
-      store_id: store.id,
-      woo_id: customer.id,
-      email: customer.email,
-      first_name: customer.first_name,
-      last_name: customer.last_name,
-      username: customer.username,
-      billing: toJson(customer.billing),
-      shipping: toJson(customer.shipping),
-      avatar_url: customer.avatar_url || null,
+    const data = {
+      store_id: store.id, woo_id: customer.id, email: customer.email,
+      first_name: customer.first_name, last_name: customer.last_name,
+      username: customer.username, billing: toJson(customer.billing),
+      shipping: toJson(customer.shipping), avatar_url: customer.avatar_url || null,
       is_paying_customer: customer.is_paying_customer || false,
       orders_count: customer.orders_count || 0,
       total_spent: customer.total_spent ? parseFloat(customer.total_spent) : null,
-      raw_data: toJson(customer),
-      date_created: customer.date_created,
+      raw_data: toJson(customer), date_created: customer.date_created,
       synced_at: new Date().toISOString(),
     };
-
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("store_id", store.id)
-      .eq("woo_id", customer.id)
-      .single();
-
-    if (existing) {
-      await supabase
-        .from("customers")
-        .update(customerData)
-        .eq("id", existing.id);
-      updated++;
-    } else {
-      await supabase
-        .from("customers")
-        .insert(customerData);
-      created++;
-    }
+    const { data: existing } = await supabase.from("customers").select("id").eq("store_id", store.id).eq("woo_id", customer.id).single();
+    if (existing) { await supabase.from("customers").update(data).eq("id", existing.id); updated++; }
+    else { await supabase.from("customers").insert(data); created++; }
   }
-
   return { processed: customers.length, created, updated };
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Verify cron secret for security (Vercel sets this header)
-  const authHeader = req.headers.authorization;
-  const cronSecret = process.env.CRON_SECRET;
-  
-  // In production, verify the cron secret
-  if (process.env.NODE_ENV === "production" && cronSecret) {
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.log("[Cron] Unauthorized request");
-      return res.status(401).json({ error: "Unauthorized" });
+async function syncCategories(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const categories = await fetchAllFromWooCommerce<WooCategory>(store.url, store.consumer_key, store.consumer_secret, "products/categories");
+  let created = 0, updated = 0;
+
+  for (const cat of categories) {
+    const data = {
+      store_id: store.id, woo_id: cat.id, name: cat.name, slug: cat.slug,
+      parent_id: cat.parent || null, description: cat.description, display: cat.display,
+      image: toJson(cat.image), menu_order: cat.menu_order, count: cat.count,
+      raw_data: toJson(cat), synced_at: new Date().toISOString(),
+    };
+    const { data: existing } = await supabase.from("categories").select("id").eq("store_id", store.id).eq("woo_id", cat.id).single();
+    if (existing) { await supabase.from("categories").update(data).eq("id", existing.id); updated++; }
+    else { await supabase.from("categories").insert(data); created++; }
+  }
+  return { processed: categories.length, created, updated };
+}
+
+async function syncCoupons(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const coupons = await fetchAllFromWooCommerce<WooCoupon>(store.url, store.consumer_key, store.consumer_secret, "coupons");
+  let created = 0, updated = 0;
+
+  for (const coupon of coupons) {
+    const data = {
+      store_id: store.id, woo_id: coupon.id, code: coupon.code,
+      amount: coupon.amount ? parseFloat(coupon.amount) : null,
+      discount_type: coupon.discount_type, description: coupon.description,
+      date_expires: coupon.date_expires, usage_count: coupon.usage_count || 0,
+      individual_use: coupon.individual_use || false,
+      product_ids: toJson(coupon.product_ids || []),
+      excluded_product_ids: toJson(coupon.excluded_product_ids || []),
+      usage_limit: coupon.usage_limit, usage_limit_per_user: coupon.usage_limit_per_user,
+      free_shipping: coupon.free_shipping || false,
+      minimum_amount: coupon.minimum_amount ? parseFloat(coupon.minimum_amount) : null,
+      maximum_amount: coupon.maximum_amount ? parseFloat(coupon.maximum_amount) : null,
+      raw_data: toJson(coupon), date_created: coupon.date_created,
+      synced_at: new Date().toISOString(),
+    };
+    const { data: existing } = await supabase.from("coupons").select("id").eq("store_id", store.id).eq("woo_id", coupon.id).single();
+    if (existing) { await supabase.from("coupons").update(data).eq("id", existing.id); updated++; }
+    else { await supabase.from("coupons").insert(data); created++; }
+  }
+  return { processed: coupons.length, created, updated };
+}
+
+async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
+  const { data: existingWebhooks } = await supabase.from("webhooks").select("topic, status").eq("store_id", store.id);
+  const activeWebhooks = existingWebhooks?.filter(w => w.status === "active") || [];
+  const requiredTopics = ["product.created", "product.updated", "product.deleted", "order.created", "order.updated", "customer.created", "customer.updated"];
+  const missingTopics = requiredTopics.filter(topic => !activeWebhooks.some(w => w.topic === topic));
+
+  if (missingTopics.length === 0) return;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const deliveryUrl = `${baseUrl}/api/webhooks/incoming/${store.id}`;
+  const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
+
+  for (const topic of missingTopics) {
+    try {
+      const response = await fetch(`${store.url}/wp-json/wc/v3/webhooks`, {
+        method: "POST",
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: `WooSync - ${topic}`, topic, delivery_url: deliveryUrl, status: "active", secret: `woosync_${store.id}_${Date.now()}` }),
+      });
+      if (response.ok) {
+        const wooWebhook = await response.json();
+        await supabase.from("webhooks").upsert({ store_id: store.id, topic, woo_webhook_id: wooWebhook.id, delivery_url: deliveryUrl, status: "active", secret: wooWebhook.secret }, { onConflict: "store_id,topic" });
+      } else {
+        await supabase.from("webhooks").upsert({ store_id: store.id, topic, delivery_url: deliveryUrl, status: "failed" }, { onConflict: "store_id,topic" });
+      }
+    } catch (error) {
+      console.error(`[Sync] Error registering webhook ${topic}:`, error);
     }
   }
+}
 
-  console.log("[Cron] Sync scheduler started at", new Date().toISOString());
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const authHeader = req.headers.authorization;
+  const cronSecret = process.env.CRON_SECRET;
+  if (process.env.NODE_ENV === "production" && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   try {
-    // Find all stores with sync_interval set and next_sync_at in the past (or null)
     const now = new Date().toISOString();
-    
     const { data: stores, error: storesError } = await supabase
       .from("stores")
       .select("id, name, url, consumer_key, consumer_secret, sync_interval, next_sync_at")
@@ -307,203 +307,46 @@ export default async function handler(
       .eq("status", "connected")
       .or(`next_sync_at.is.null,next_sync_at.lte.${now}`);
 
-    if (storesError) {
-      console.error("[Cron] Error fetching stores:", storesError);
-      throw storesError;
-    }
-
+    if (storesError) throw storesError;
     if (!stores || stores.length === 0) {
-      console.log("[Cron] No stores due for sync");
-      return res.status(200).json({ 
-        message: "No stores due for sync",
-        checked_at: now,
-        stores_synced: 0 
-      });
+      return res.status(200).json({ message: "No stores due for sync", checked_at: now, stores_synced: 0 });
     }
-
-    console.log(`[Cron] Found ${stores.length} store(s) due for sync`);
 
     const results = [];
-
     for (const store of stores as StoreToSync[]) {
-      // Create cron log entry
-      const { data: cronLog, error: logError } = await supabase
-        .from("cron_logs")
-        .insert({
-          job_type: "scheduled_sync",
-          store_id: store.id,
-          status: "started",
-          message: `Scheduled sync started for ${store.name}`,
-          metadata: { 
-            sync_interval: store.sync_interval,
-            trigger: "cron"
-          }
-        })
-        .select()
-        .single();
-
-      if (logError) {
-        console.error("[Cron] Error creating log:", logError);
-      }
+      const { data: cronLog } = await supabase.from("cron_logs").insert({ job_type: "scheduled_sync", store_id: store.id, status: "started", message: `Sync started for ${store.name}`, metadata: { sync_interval: store.sync_interval, trigger: "cron" } }).select().single();
 
       try {
-        const syncFunctions: Record<string, (s: StoreToSync) => Promise<{ processed: number; created: number; updated: number }>> = {
-          products: syncProducts,
-          orders: syncOrders,
-          customers: syncCustomers,
-        };
-
-        let totalRecords = 0;
-        let totalCreated = 0;
-        let totalUpdated = 0;
+        await ensureWebhooksRegistered(store);
+        const syncFunctions: Record<string, (s: StoreToSync) => Promise<{ processed: number; created: number; updated: number }>> = { products: syncProducts, orders: syncOrders, customers: syncCustomers, categories: syncCategories, coupons: syncCoupons };
+        let totalRecords = 0, totalCreated = 0, totalUpdated = 0;
 
         for (const [aspect, syncFn] of Object.entries(syncFunctions)) {
-          // Create sync run record
-          const { data: syncRun, error: syncError } = await supabase
-            .from("sync_runs")
-            .insert({
-              store_id: store.id,
-              aspect,
-              status: "running",
-              started_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (syncError) {
-            console.error(`[Cron] Error creating sync run for ${aspect}:`, syncError);
-            continue;
-          }
-
+          const { data: syncRun } = await supabase.from("sync_runs").insert({ store_id: store.id, aspect, status: "running", started_at: new Date().toISOString() }).select().single();
           try {
-            // Actually sync the data
             const result = await syncFn(store);
             totalRecords += result.processed;
             totalCreated += result.created;
             totalUpdated += result.updated;
-
-            // Update sync run as completed
-            await supabase
-              .from("sync_runs")
-              .update({
-                status: "completed",
-                completed_at: new Date().toISOString(),
-                records_processed: result.processed,
-                records_created: result.created,
-                records_updated: result.updated,
-              })
-              .eq("id", syncRun.id);
-
-            console.log(`[Cron] Synced ${aspect} for ${store.name}: ${result.processed} processed, ${result.created} created, ${result.updated} updated`);
-
+            if (syncRun) await supabase.from("sync_runs").update({ status: "completed", completed_at: new Date().toISOString(), records_processed: result.processed, records_created: result.created, records_updated: result.updated }).eq("id", syncRun.id);
           } catch (aspectError) {
-            console.error(`[Cron] Error syncing ${aspect} for ${store.name}:`, aspectError);
-            
-            await supabase
-              .from("sync_runs")
-              .update({
-                status: "failed",
-                completed_at: new Date().toISOString(),
-                error_message: aspectError instanceof Error ? aspectError.message : "Unknown error",
-              })
-              .eq("id", syncRun.id);
+            if (syncRun) await supabase.from("sync_runs").update({ status: "failed", completed_at: new Date().toISOString(), error_message: aspectError instanceof Error ? aspectError.message : "Unknown error" }).eq("id", syncRun.id);
           }
         }
 
-        // Calculate next sync time
         const nextSyncAt = new Date();
         nextSyncAt.setMinutes(nextSyncAt.getMinutes() + (store.sync_interval || 60));
-
-        // Update store's next_sync_at and last_sync_at
-        await supabase
-          .from("stores")
-          .update({
-            last_sync_at: new Date().toISOString(),
-            next_sync_at: nextSyncAt.toISOString(),
-          })
-          .eq("id", store.id);
-
-        // Update cron log as completed
-        if (cronLog) {
-          await supabase
-            .from("cron_logs")
-            .update({
-              status: "completed",
-              message: `Scheduled sync completed for ${store.name}. Processed ${totalRecords} records (${totalCreated} created, ${totalUpdated} updated).`,
-              completed_at: new Date().toISOString(),
-              metadata: {
-                sync_interval: store.sync_interval,
-                trigger: "cron",
-                records_processed: totalRecords,
-                records_created: totalCreated,
-                records_updated: totalUpdated,
-                next_sync_at: nextSyncAt.toISOString()
-              }
-            })
-            .eq("id", cronLog.id);
-        }
-
-        results.push({
-          store_id: store.id,
-          store_name: store.name,
-          status: "completed",
-          records_processed: totalRecords,
-          records_created: totalCreated,
-          records_updated: totalUpdated,
-          next_sync_at: nextSyncAt.toISOString()
-        });
-
-        console.log(`[Cron] Completed sync for ${store.name}, next sync at ${nextSyncAt.toISOString()}`);
-
+        await supabase.from("stores").update({ last_sync_at: new Date().toISOString(), next_sync_at: nextSyncAt.toISOString() }).eq("id", store.id);
+        if (cronLog) await supabase.from("cron_logs").update({ status: "completed", message: `Sync completed. ${totalRecords} records (${totalCreated} created, ${totalUpdated} updated).`, completed_at: new Date().toISOString(), metadata: { records_processed: totalRecords, records_created: totalCreated, records_updated: totalUpdated, next_sync_at: nextSyncAt.toISOString() } }).eq("id", cronLog.id);
+        results.push({ store_id: store.id, store_name: store.name, status: "completed", records_processed: totalRecords, records_created: totalCreated, records_updated: totalUpdated, next_sync_at: nextSyncAt.toISOString() });
       } catch (syncError) {
-        console.error(`[Cron] Error syncing store ${store.name}:`, syncError);
-
-        // Update cron log as failed
-        if (cronLog) {
-          await supabase
-            .from("cron_logs")
-            .update({
-              status: "failed",
-              error_message: syncError instanceof Error ? syncError.message : "Unknown error",
-              completed_at: new Date().toISOString(),
-            })
-            .eq("id", cronLog.id);
-        }
-
-        results.push({
-          store_id: store.id,
-          store_name: store.name,
-          status: "failed",
-          error: syncError instanceof Error ? syncError.message : "Unknown error"
-        });
+        if (cronLog) await supabase.from("cron_logs").update({ status: "failed", error_message: syncError instanceof Error ? syncError.message : "Unknown error", completed_at: new Date().toISOString() }).eq("id", cronLog.id);
+        results.push({ store_id: store.id, store_name: store.name, status: "failed", error: syncError instanceof Error ? syncError.message : "Unknown error" });
       }
     }
 
-    console.log("[Cron] Sync scheduler completed", results);
-
-    return res.status(200).json({
-      message: "Sync scheduler completed",
-      checked_at: now,
-      stores_synced: results.length,
-      results
-    });
-
+    return res.status(200).json({ message: "Sync completed", checked_at: now, stores_synced: results.length, results });
   } catch (error) {
-    console.error("[Cron] Sync scheduler error:", error);
-    
-    // Log the error
-    await supabase
-      .from("cron_logs")
-      .insert({
-        job_type: "scheduled_sync",
-        status: "failed",
-        error_message: error instanceof Error ? error.message : "Unknown error",
-        message: "Sync scheduler failed",
-      });
-
-    return res.status(500).json({ 
-      error: "Internal server error",
-      message: error instanceof Error ? error.message : "Unknown error"
-    });
+    return res.status(500).json({ error: "Internal server error", message: error instanceof Error ? error.message : "Unknown error" });
   }
 }
