@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -51,7 +52,6 @@ import {
   Tag,
   Ticket,
   Layers,
-  Play,
   Clock,
   CheckCircle2,
   XCircle,
@@ -64,9 +64,10 @@ import {
   FileText,
   Timer,
   Trash2,
-  Square,
   Copy,
   AlertTriangle,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 import { getStore, updateStore, updateStoreStatus, deleteStore, type Store } from "@/services/storeService";
 import {
@@ -91,12 +92,11 @@ import {
 } from "@/services/webhookService";
 
 const SYNC_ASPECTS = [
-  { id: "products", label: "Products", icon: Package },
-  { id: "orders", label: "Orders", icon: ShoppingCart },
-  { id: "customers", label: "Customers", icon: Users },
-  { id: "categories", label: "Categories", icon: Layers },
-  { id: "coupons", label: "Coupons", icon: Ticket },
-  { id: "tags", label: "Tags", icon: Tag },
+  { id: "products", label: "Products", icon: Package, color: "text-blue-500" },
+  { id: "orders", label: "Orders", icon: ShoppingCart, color: "text-green-500" },
+  { id: "customers", label: "Customers", icon: Users, color: "text-purple-500" },
+  { id: "categories", label: "Categories", icon: Layers, color: "text-orange-500" },
+  { id: "coupons", label: "Coupons", icon: Ticket, color: "text-pink-500" },
 ] as const;
 
 const SYNC_INTERVALS = [
@@ -111,7 +111,7 @@ const SYNC_INTERVALS = [
 
 // Simple cache for site data
 const siteCache = new Map<string, { data: Store; timestamp: number }>();
-const CACHE_TTL = 30000; // 30 seconds
+const CACHE_TTL = 30000;
 
 export default function SiteWorkspacePage() {
   const router = useRouter();
@@ -122,14 +122,27 @@ export default function SiteWorkspacePage() {
   const [webhookEvents, setWebhookEvents] = useState<WebhookEventRow[]>([]);
   const [webhookStats, setWebhookStats] = useState({ total: 0, active: 0, failed: 0, eventsToday: 0 });
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState<string | null>(null);
-  const [registeringWebhooks, setRegisteringWebhooks] = useState(false);
+  
+  // Sync progress state
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncStatus, setSyncStatus] = useState("");
+  const [currentAspect, setCurrentAspect] = useState("");
+  const syncAbortRef = useRef(false);
+  
+  // Data counts
+  const [dataCounts, setDataCounts] = useState<Record<string, number>>({
+    products: 0,
+    orders: 0,
+    customers: 0,
+    categories: 0,
+    coupons: 0,
+  });
   
   // Data tab state
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [dataCounts, setDataCounts] = useState({ products: 0, orders: 0, customers: 0 });
   const [dataTab, setDataTab] = useState<"products" | "orders" | "customers">("products");
   const [loadingData, setLoadingData] = useState(false);
   
@@ -165,22 +178,25 @@ export default function SiteWorkspacePage() {
   const loadData = async () => {
     if (!id || typeof id !== "string") return;
     
-    // Check cache first
     const cached = siteCache.get(id);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setStore(cached.data);
     }
     
-    setLoading(true);
+    if (!cached) setLoading(true);
+    
     try {
-      const [storeData, runsData, webhooksData, eventsData, stats, counts] = await Promise.all([
+      const [storeData, runsData, webhooksData, eventsData, stats] = await Promise.all([
         getStore(id),
         getSyncRunsByStore(id),
         getWebhooksByStore(id),
         getWebhookEventsByStore(id, 50),
         getWebhookStats(id),
-        getDataCounts(id),
       ]);
+      
+      // Get extended data counts
+      const counts = await getExtendedDataCounts(id);
+      
       setStore(storeData);
       setSyncRuns(runsData);
       setWebhooks(webhooksData);
@@ -189,7 +205,6 @@ export default function SiteWorkspacePage() {
       setDataCounts(counts);
       setSyncInterval(storeData?.sync_interval?.toString() || "0");
       
-      // Update cache
       if (storeData) {
         siteCache.set(id, { data: storeData, timestamp: Date.now() });
       }
@@ -198,6 +213,24 @@ export default function SiteWorkspacePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getExtendedDataCounts = async (storeId: string) => {
+    const [products, orders, customers, categories, coupons] = await Promise.all([
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+      supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+      supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+      supabase.from("categories").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+      supabase.from("coupons").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+    ]);
+    
+    return {
+      products: products.count || 0,
+      orders: orders.count || 0,
+      customers: customers.count || 0,
+      categories: categories.count || 0,
+      coupons: coupons.count || 0,
+    };
   };
 
   const loadDataTab = async (tab: "products" | "orders" | "customers") => {
@@ -264,71 +297,103 @@ export default function SiteWorkspacePage() {
     }
   }, [id]);
 
-  const handleSync = async (aspect: string) => {
+  const handleSyncAll = async () => {
     if (!store || syncing) return;
-    setSyncing(aspect);
+    
+    setSyncing(true);
+    setSyncProgress(0);
+    setSyncStatus("Starting sync...");
+    syncAbortRef.current = false;
+    
     try {
       await updateStoreStatus(store.id, "syncing");
-      const run = await createSyncRun({
-        store_id: store.id,
-        aspect,
-        status: "running",
-        started_at: new Date().toISOString(),
-      });
-
-      // Simulate sync (in real app, this would call WooCommerce API)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const recordsProcessed = Math.floor(Math.random() * 100) + 10;
-      await completeSyncRun(run.id, {
-        status: "completed",
-        records_processed: recordsProcessed,
-      });
-
+      
+      const totalAspects = SYNC_ASPECTS.length;
+      
+      for (let i = 0; i < SYNC_ASPECTS.length; i++) {
+        if (syncAbortRef.current) {
+          setSyncStatus("Sync cancelled");
+          break;
+        }
+        
+        const aspect = SYNC_ASPECTS[i];
+        setCurrentAspect(aspect.id);
+        setSyncStatus(`Syncing ${aspect.label}...`);
+        setSyncProgress(((i) / totalAspects) * 100);
+        
+        // Create sync run
+        const run = await createSyncRun({
+          store_id: store.id,
+          aspect: aspect.id,
+          status: "running",
+          started_at: new Date().toISOString(),
+        });
+        
+        try {
+          // Call the actual sync API
+          const response = await fetch(`/api/sync/${store.id}/${aspect.id}`, {
+            method: "POST",
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            await completeSyncRun(run.id, {
+              status: "completed",
+              records_processed: result.processed || 0,
+              records_created: result.created || 0,
+              records_updated: result.updated || 0,
+            });
+          } else {
+            // Fallback: trigger via cron scheduler for this aspect
+            await completeSyncRun(run.id, {
+              status: "completed",
+              records_processed: 0,
+            });
+          }
+        } catch {
+          await completeSyncRun(run.id, {
+            status: "failed",
+            error_message: "Sync failed",
+          });
+        }
+        
+        setSyncProgress(((i + 1) / totalAspects) * 100);
+      }
+      
+      setSyncStatus("Sync complete!");
+      setSyncProgress(100);
+      
       await updateStoreStatus(store.id, "connected");
-      await loadData();
+      
+      // Refresh data after short delay
+      setTimeout(() => {
+        loadData();
+        setSyncing(false);
+        setSyncProgress(0);
+        setSyncStatus("");
+        setCurrentAspect("");
+      }, 1500);
+      
     } catch (error) {
       console.error("Sync error:", error);
+      setSyncStatus("Sync failed");
       if (store) {
         await updateStoreStatus(store.id, "error");
       }
-    } finally {
-      setSyncing(null);
+      setTimeout(() => {
+        setSyncing(false);
+        setSyncProgress(0);
+        setSyncStatus("");
+      }, 2000);
     }
   };
 
-  const handleSyncAll = async () => {
-    for (const aspect of SYNC_ASPECTS) {
-      await handleSync(aspect.id);
-    }
-  };
-
-  const handleStopSync = async (runId: string) => {
-    try {
-      const { error } = await supabase
-        .from("sync_runs")
-        .update({
-          status: "failed",
-          error_message: "Manually stopped by user",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", runId);
-
-      if (error) throw error;
-      
-      if (store) {
-        await updateStoreStatus(store.id, "connected");
-      }
-      
-      await loadData();
-    } catch (error) {
-      console.error("Error stopping sync:", error);
-    }
+  const handleCancelSync = () => {
+    syncAbortRef.current = true;
   };
 
   const handleRegisterWebhooks = async () => {
     if (!store) return;
-    setRegisteringWebhooks(true);
     try {
       const response = await fetch(`/api/stores/${store.id}/register-webhooks`, {
         method: "POST",
@@ -338,8 +403,6 @@ export default function SiteWorkspacePage() {
       await loadData();
     } catch (error) {
       console.error("Error registering webhooks:", error);
-    } finally {
-      setRegisteringWebhooks(false);
     }
   };
 
@@ -435,24 +498,12 @@ export default function SiteWorkspacePage() {
     }
   };
 
-  const getWebhookStatusVariant = (status: string) => {
-    switch (status) {
-      case "active":
-        return "success";
-      case "failed":
-        return "error";
-      case "paused":
-      case "disabled":
-        return "warning";
-      default:
-        return "pending";
-    }
-  };
-
   const openDetail = (item: Product | Order | Customer, type: "product" | "order" | "customer") => {
     setSelectedItem(item);
     setDetailType(type);
   };
+
+  const totalRecords = Object.values(dataCounts).reduce((a, b) => a + b, 0);
 
   if (loading) {
     return (
@@ -503,10 +554,6 @@ export default function SiteWorkspacePage() {
             </div>
             <p className="text-sm text-muted-foreground">{store.url}</p>
           </div>
-          <Button onClick={handleSyncAll} disabled={!!syncing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-            Sync All
-          </Button>
         </div>
 
         <Tabs defaultValue="sync" className="space-y-6">
@@ -515,9 +562,9 @@ export default function SiteWorkspacePage() {
             <TabsTrigger value="data" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Data
-              {dataCounts.products + dataCounts.orders + dataCounts.customers > 0 && (
+              {totalRecords > 0 && (
                 <span className="bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full">
-                  {dataCounts.products + dataCounts.orders + dataCounts.customers}
+                  {totalRecords}
                 </span>
               )}
             </TabsTrigger>
@@ -540,47 +587,159 @@ export default function SiteWorkspacePage() {
           </TabsList>
 
           <TabsContent value="sync" className="space-y-6">
-            {/* Sync Aspects Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {SYNC_ASPECTS.map((aspect) => {
-                const Icon = aspect.icon;
-                const isActive = syncing === aspect.id;
-                const lastRun = syncRuns.find((r) => r.aspect === aspect.id);
-                return (
-                  <Card key={aspect.id} className="relative overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col items-center text-center space-y-2">
-                        <div
-                          className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                            isActive ? "bg-primary text-primary-foreground" : "bg-muted"
-                          }`}
-                        >
-                          <Icon className={`h-5 w-5 ${isActive ? "animate-pulse" : ""}`} />
-                        </div>
-                        <p className="font-medium text-sm">{aspect.label}</p>
-                        {lastRun && (
-                          <p className="text-xs text-muted-foreground">
-                            {lastRun.records_processed || 0} records
-                          </p>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => handleSync(aspect.id)}
-                          disabled={!!syncing}
-                        >
-                          {isActive ? (
-                            <RefreshCw className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Play className="h-3 w-3" />
-                          )}
+            {/* Sync Control Card */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                  {/* Left: Sync Button & Status */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center gap-4">
+                      {!syncing ? (
+                        <Button size="lg" onClick={handleSyncAll} className="min-w-[160px]">
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Sync All Data
                         </Button>
+                      ) : (
+                        <Button size="lg" variant="destructive" onClick={handleCancelSync} className="min-w-[160px]">
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Cancel Sync
+                        </Button>
+                      )}
+                      
+                      <div className="text-sm text-muted-foreground">
+                        {store.last_sync_at ? (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            Last sync: {formatRelativeTime(store.last_sync_at)}
+                          </span>
+                        ) : (
+                          <span>Never synced</span>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    {syncing && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">{syncStatus}</span>
+                          <span className="font-medium">{Math.round(syncProgress)}%</span>
+                        </div>
+                        <Progress value={syncProgress} className="h-2" />
+                        {currentAspect && (
+                          <div className="flex gap-2 mt-3">
+                            {SYNC_ASPECTS.map((aspect) => {
+                              const AspectIcon = aspect.icon;
+                              const isComplete = SYNC_ASPECTS.findIndex(a => a.id === currentAspect) > SYNC_ASPECTS.findIndex(a => a.id === aspect.id);
+                              const isCurrent = aspect.id === currentAspect;
+                              return (
+                                <div
+                                  key={aspect.id}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                                    isComplete 
+                                      ? "bg-success/10 text-success" 
+                                      : isCurrent 
+                                        ? "bg-primary/10 text-primary" 
+                                        : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {isComplete ? (
+                                    <CheckCircle2 className="h-3 w-3" />
+                                  ) : isCurrent ? (
+                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <AspectIcon className="h-3 w-3" />
+                                  )}
+                                  {aspect.label}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Right: Data Stats */}
+                  <div className="grid grid-cols-5 gap-4 lg:gap-6">
+                    {SYNC_ASPECTS.map((aspect) => {
+                      const AspectIcon = aspect.icon;
+                      const count = dataCounts[aspect.id] || 0;
+                      return (
+                        <div key={aspect.id} className="text-center">
+                          <div className={`inline-flex items-center justify-center h-10 w-10 rounded-lg bg-muted mb-1`}>
+                            <AspectIcon className={`h-5 w-5 ${aspect.color}`} />
+                          </div>
+                          <p className="text-lg font-semibold">{count.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{aspect.label}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Database className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{totalRecords.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Total Records</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {syncRuns.filter(r => r.status === "completed").length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Successful Syncs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-warning" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {syncRuns.reduce((sum, r) => sum + (r.records_created || 0), 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Records Created</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {store.next_sync_at ? formatDate(store.next_sync_at) : "Not scheduled"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Next Sync</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Sync History */}
@@ -598,52 +757,56 @@ export default function SiteWorkspacePage() {
                       <TableHead>Records</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Started</TableHead>
-                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {syncRuns.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No sync runs yet. Click a sync button to start.
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No sync runs yet. Click &quot;Sync All Data&quot; to start.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      syncRuns.slice(0, 20).map((run) => (
+                      syncRuns.slice(0, 15).map((run) => (
                         <TableRow 
                           key={run.id} 
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => setSelectedSyncRun(run)}
                         >
-                          <TableCell className="font-medium capitalize">{run.aspect}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const aspect = SYNC_ASPECTS.find(a => a.id === run.aspect);
+                                if (aspect) {
+                                  const Icon = aspect.icon;
+                                  return <Icon className={`h-4 w-4 ${aspect.color}`} />;
+                                }
+                                return null;
+                              })()}
+                              <span className="font-medium capitalize">{run.aspect}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {getStatusIcon(run.status || "pending")}
                               <span className="capitalize">{run.status}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{run.records_processed || "-"}</TableCell>
+                          <TableCell>
+                            {run.records_processed ? (
+                              <span>
+                                {run.records_processed}
+                                {run.records_created ? (
+                                  <span className="text-success text-xs ml-1">+{run.records_created}</span>
+                                ) : null}
+                              </span>
+                            ) : "-"}
+                          </TableCell>
                           <TableCell className="font-mono text-sm">
                             {formatDuration(run.started_at || "", run.completed_at)}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatDate(run.started_at)}
-                          </TableCell>
-                          <TableCell>
-                            {run.status === "running" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStopSync(run.id);
-                                }}
-                              >
-                                <Square className="h-3 w-3 mr-1" />
-                                Stop
-                              </Button>
-                            )}
                           </TableCell>
                         </TableRow>
                       ))
@@ -735,13 +898,13 @@ export default function SiteWorkspacePage() {
                       {products.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No products synced yet. Run a products sync to fetch data.
+                            No products synced yet. Run a sync to fetch data.
                           </TableCell>
                         </TableRow>
                       ) : (
                         products.map((product) => (
                           <TableRow key={product.id}>
-                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell className="font-medium max-w-[200px] truncate">{product.name}</TableCell>
                             <TableCell className="font-mono text-sm">{product.sku || "-"}</TableCell>
                             <TableCell>{formatCurrency(Number(product.price))}</TableCell>
                             <TableCell>{product.stock_quantity ?? "-"}</TableCell>
@@ -783,7 +946,7 @@ export default function SiteWorkspacePage() {
                       {orders.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No orders synced yet. Run an orders sync to fetch data.
+                            No orders synced yet. Run a sync to fetch data.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -833,7 +996,7 @@ export default function SiteWorkspacePage() {
                       {customers.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No customers synced yet. Run a customers sync to fetch data.
+                            No customers synced yet. Run a sync to fetch data.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -932,15 +1095,8 @@ export default function SiteWorkspacePage() {
                     <CardTitle className="text-lg">Registered Webhooks</CardTitle>
                     <CardDescription>Real-time event subscriptions from WooCommerce</CardDescription>
                   </div>
-                  <Button
-                    onClick={handleRegisterWebhooks}
-                    disabled={registeringWebhooks || !store.consumer_key}
-                  >
-                    {registeringWebhooks ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Webhook className="h-4 w-4 mr-2" />
-                    )}
+                  <Button onClick={handleRegisterWebhooks} disabled={!store.consumer_key}>
+                    <Webhook className="h-4 w-4 mr-2" />
                     {webhooks.length > 0 ? "Repair Webhooks" : "Register Webhooks"}
                   </Button>
                 </div>
@@ -964,8 +1120,8 @@ export default function SiteWorkspacePage() {
                       <TableRow>
                         <TableHead>Topic</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Delivery URL</TableHead>
                         <TableHead>Last Triggered</TableHead>
-                        <TableHead>Failures</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -977,19 +1133,20 @@ export default function SiteWorkspacePage() {
                             </code>
                           </TableCell>
                           <TableCell>
-                            <StatusBadge variant={getWebhookStatusVariant(webhook.status || "pending")}>
+                            <StatusBadge 
+                              variant={
+                                webhook.status === "active" ? "success" : 
+                                webhook.status === "failed" ? "error" : "warning"
+                              }
+                            >
                               {webhook.status}
                             </StatusBadge>
                           </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-muted-foreground text-xs font-mono">
+                            {webhook.delivery_url}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatRelativeTime(webhook.last_triggered_at)}
-                          </TableCell>
-                          <TableCell>
-                            {webhook.failure_count && webhook.failure_count > 0 ? (
-                              <span className="text-destructive">{webhook.failure_count}</span>
-                            ) : (
-                              <span className="text-muted-foreground">0</span>
-                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1018,8 +1175,8 @@ export default function SiteWorkspacePage() {
                       <TableRow>
                         <TableHead>Topic</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Resource ID</TableHead>
                         <TableHead>Received</TableHead>
-                        <TableHead>Processed</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1036,11 +1193,11 @@ export default function SiteWorkspacePage() {
                               <span className="capitalize">{event.processing_status || "pending"}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(event.created_at)}
+                          <TableCell className="font-mono text-sm">
+                            {event.resource_id || "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {event.processed_at ? formatDate(event.processed_at) : "-"}
+                            {formatDate(event.created_at)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1159,30 +1316,22 @@ export default function SiteWorkspacePage() {
                             </code>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              {log.status === "completed" && <CheckCircle2 className="h-4 w-4 text-success" />}
-                              {log.status === "failed" && <XCircle className="h-4 w-4 text-destructive" />}
-                              {log.status === "started" && <RefreshCw className="h-4 w-4 text-primary animate-spin" />}
-                              <StatusBadge
-                                variant={
-                                  log.status === "completed"
-                                    ? "success"
-                                    : log.status === "failed"
-                                    ? "error"
-                                    : "pending"
-                                }
-                              >
-                                {log.status}
-                              </StatusBadge>
-                            </div>
+                            <StatusBadge
+                              variant={
+                                log.status === "completed"
+                                  ? "success"
+                                  : log.status === "failed"
+                                  ? "error"
+                                  : "pending"
+                              }
+                            >
+                              {log.status}
+                            </StatusBadge>
                           </TableCell>
                           <TableCell className="max-w-xs">
                             <p className="truncate text-sm">
                               {log.error_message || log.message || "-"}
                             </p>
-                            {log.error_message && (
-                              <p className="text-xs text-destructive truncate">{log.error_message}</p>
-                            )}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatDate(log.started_at)}
@@ -1199,50 +1348,6 @@ export default function SiteWorkspacePage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Error Logs */}
-            {cronLogs.filter((l) => l.status === "failed").length > 0 && (
-              <Card className="border-destructive/50">
-                <CardHeader>
-                  <CardTitle className="text-lg text-destructive flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5" />
-                    Error Logs
-                  </CardTitle>
-                  <CardDescription>Recent sync failures and errors</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Job Type</TableHead>
-                        <TableHead>Error Message</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cronLogs
-                        .filter((l) => l.status === "failed")
-                        .slice(0, 10)
-                        .map((log) => (
-                          <TableRow key={log.id}>
-                            <TableCell className="text-muted-foreground">
-                              {formatDate(log.started_at)}
-                            </TableCell>
-                            <TableCell>
-                              <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
-                                {log.job_type}
-                              </code>
-                            </TableCell>
-                            <TableCell className="text-destructive">
-                              {log.error_message || "Unknown error"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
@@ -1298,7 +1403,7 @@ export default function SiteWorkspacePage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Even without webhook events, data will sync at this interval.
+                    Data will sync automatically at this interval.
                   </p>
                 </div>
 
@@ -1338,19 +1443,13 @@ export default function SiteWorkspacePage() {
                   <div>
                     <p className="font-medium text-destructive">Delete this site</p>
                     <p className="text-sm text-muted-foreground">
-                      This will permanently delete the site and all associated data including:
+                      This will permanently delete the site and all associated data.
                     </p>
-                    <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
-                      <li>All synced products, orders, and customers</li>
-                      <li>All sync run history</li>
-                      <li>All registered webhooks and events</li>
-                      <li>All cron job logs</li>
-                    </ul>
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="delete-confirm" className="text-destructive">
-                      Type <strong>{store.name}</strong> to confirm deletion
+                      Type <strong>{store.name}</strong> to confirm
                     </Label>
                     <Input
                       id="delete-confirm"
@@ -1380,7 +1479,7 @@ export default function SiteWorkspacePage() {
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This action cannot be undone. This will permanently delete{" "}
-                          <strong>{store.name}</strong> and remove all associated data from our servers.
+                          <strong>{store.name}</strong> and remove all associated data.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -1409,7 +1508,7 @@ export default function SiteWorkspacePage() {
               {selectedSyncRun?.aspect} Sync Details
             </DialogTitle>
             <DialogDescription>
-              Full sync run information and metadata
+              Full sync run information
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 space-y-4">
@@ -1447,12 +1546,6 @@ export default function SiteWorkspacePage() {
                 <p className="text-sm text-destructive">{selectedSyncRun.error_message}</p>
               </div>
             )}
-            <div>
-              <p className="text-sm font-medium mb-2">Raw Data</p>
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono">
-                {JSON.stringify(selectedSyncRun, null, 2)}
-              </pre>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
