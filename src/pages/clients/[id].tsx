@@ -11,19 +11,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { generateApiToken } from "@/lib/api-auth";
-import { ArrowLeft, Copy, Check, Plus, Trash2, Key, Store, Eye, EyeOff, RefreshCw, Shield } from "lucide-react";
+import { ArrowLeft, Copy, Check, Plus, Trash2, Key, Store, RefreshCw, Shield } from "lucide-react";
 
 interface Client {
   id: string;
   name: string;
-  slug: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface ApiToken {
   id: string;
   name: string;
-  token_prefix: string;
+  prefix: string | null;
   created_at: string;
   last_used_at: string | null;
   expires_at: string | null;
@@ -60,8 +60,8 @@ export default function ClientDetailPage() {
   async function loadClientData(clientId: string) {
     setLoading(true);
     const [clientRes, tokensRes, storesRes] = await Promise.all([
-      supabase.from("clients").select("*").eq("id", clientId).single(),
-      supabase.from("api_tokens").select("id, name, token_prefix, created_at, last_used_at, expires_at, revoked_at").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase.from("clients").select("id, name, created_at, updated_at").eq("id", clientId).single(),
+      supabase.from("api_tokens").select("id, name, prefix, created_at, last_used_at, expires_at, revoked_at").eq("client_id", clientId).order("created_at", { ascending: false }),
       supabase.from("stores").select("id, name, url, status, last_sync_at").eq("client_id", clientId).order("created_at", { ascending: false }),
     ]);
     if (clientRes.data) setClient(clientRes.data);
@@ -80,8 +80,9 @@ export default function ClientDetailPage() {
       const { error } = await supabase.from("api_tokens").insert({
         client_id: id as string,
         name: newTokenName.trim(),
+        token: plain,
         token_hash: hash,
-        token_prefix: prefix,
+        prefix: prefix,
       });
 
       if (error) throw error;
@@ -144,7 +145,6 @@ export default function ClientDetailPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>
             <ArrowLeft className="h-4 w-4" />
@@ -157,7 +157,6 @@ export default function ClientDetailPage() {
           </div>
         </div>
 
-        {/* Sites */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -194,9 +193,7 @@ export default function ClientDetailPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">{formatDate(store.last_sync_at)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => router.push(`/sites/${store.id}`)}>
-                          View
-                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => router.push(`/sites/${store.id}`)}>View</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -206,7 +203,6 @@ export default function ClientDetailPage() {
           </CardContent>
         </Card>
 
-        {/* API Tokens */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -218,9 +214,7 @@ export default function ClientDetailPage() {
               </div>
               <Dialog open={showCreateToken} onOpenChange={(open) => { setShowCreateToken(open); if (!open) setCreatedToken(null); }}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" /> Create Token
-                  </Button>
+                  <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Create Token</Button>
                 </DialogTrigger>
                 <DialogContent>
                   {createdToken ? (
@@ -237,9 +231,7 @@ export default function ClientDetailPage() {
                           </AlertDescription>
                         </Alert>
                         <div className="flex items-center gap-2">
-                          <code className="flex-1 text-xs bg-muted p-3 rounded-md font-mono break-all select-all">
-                            {createdToken}
-                          </code>
+                          <code className="flex-1 text-xs bg-muted p-3 rounded-md font-mono break-all select-all">{createdToken}</code>
                           <Button variant="outline" size="icon" onClick={copyToken}>
                             {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                           </Button>
@@ -298,7 +290,7 @@ export default function ClientDetailPage() {
                         <TableRow key={token.id}>
                           <TableCell className="font-medium">{token.name}</TableCell>
                           <TableCell>
-                            <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{token.token_prefix}...</code>
+                            <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{token.prefix || "—"}...</code>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{formatDate(token.created_at)}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{token.last_used_at ? formatDate(token.last_used_at) : "Never"}</TableCell>
@@ -313,7 +305,6 @@ export default function ClientDetailPage() {
                     </TableBody>
                   </Table>
                 )}
-
                 {revokedTokens.length > 0 && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Revoked Tokens</p>
@@ -322,7 +313,7 @@ export default function ClientDetailPage() {
                         {revokedTokens.map((token) => (
                           <TableRow key={token.id} className="opacity-50">
                             <TableCell className="font-medium line-through">{token.name}</TableCell>
-                            <TableCell><code className="text-xs bg-muted px-2 py-1 rounded font-mono">{token.token_prefix}...</code></TableCell>
+                            <TableCell><code className="text-xs bg-muted px-2 py-1 rounded font-mono">{token.prefix || "—"}...</code></TableCell>
                             <TableCell className="text-sm text-muted-foreground">Revoked {formatDate(token.revoked_at)}</TableCell>
                           </TableRow>
                         ))}
@@ -333,7 +324,6 @@ export default function ClientDetailPage() {
               </div>
             )}
 
-            {/* API Usage Guide */}
             <div className="mt-6 p-4 bg-muted/50 rounded-lg">
               <h4 className="text-sm font-semibold mb-2">API Usage</h4>
               <p className="text-xs text-muted-foreground mb-2">Use the token in the Authorization header:</p>
