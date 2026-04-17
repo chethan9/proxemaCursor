@@ -51,7 +51,7 @@ async function fetchAllFromWooCommerce<T>(
   return allItems;
 }
 
-async function batchUpsert(table: string, rows: Record<string, unknown>[], conflictColumns: string) {
+async function batchUpsert(tableName: string, rows: Record<string, unknown>[], conflictColumns: string) {
   if (rows.length === 0) return { created: 0, updated: 0 };
 
   const BATCH_SIZE = 200;
@@ -61,21 +61,23 @@ async function batchUpsert(table: string, rows: Record<string, unknown>[], confl
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
 
-    const { data: existing } = await supabase
-      .from(table)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase as any)
+      .from(tableName)
       .select("store_id, woo_id")
       .in("woo_id", batch.map(r => r.woo_id as number))
       .eq("store_id", batch[0].store_id as string);
 
-    const existingSet = new Set((existing || []).map(e => `${e.store_id}_${e.woo_id}`));
+    const existingSet = new Set((existing || []).map((e: { store_id: string; woo_id: number }) => `${e.store_id}_${e.woo_id}`));
     const newCount = batch.filter(r => !existingSet.has(`${r.store_id}_${r.woo_id}`)).length;
 
-    const { error } = await supabase
-      .from(table)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from(tableName)
       .upsert(batch, { onConflict: conflictColumns, ignoreDuplicates: false });
 
     if (error) {
-      console.error(`[Sync] Batch upsert error on ${table}:`, error.message);
+      console.error(`[Sync] Batch upsert error on ${tableName}:`, error.message);
       throw error;
     }
 
