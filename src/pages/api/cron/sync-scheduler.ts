@@ -14,6 +14,242 @@ interface StoreToSync {
   next_sync_at: string | null;
 }
 
+interface WooProduct {
+  id: number;
+  name: string;
+  slug: string;
+  sku: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  stock_quantity: number | null;
+  stock_status: string;
+  status: string;
+  type: string;
+  description: string;
+  short_description: string;
+  categories: Array<{ id: number; name: string }>;
+  images: Array<{ id: number; src: string }>;
+  date_created: string;
+  date_modified: string;
+}
+
+interface WooOrder {
+  id: number;
+  number: string;
+  status: string;
+  currency: string;
+  total: string;
+  customer_id: number;
+  billing: Record<string, unknown>;
+  shipping: Record<string, unknown>;
+  line_items: Array<Record<string, unknown>>;
+  date_created: string;
+  date_modified: string;
+}
+
+interface WooCustomer {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  billing: Record<string, unknown>;
+  shipping: Record<string, unknown>;
+  date_created: string;
+  date_modified: string;
+}
+
+async function fetchFromWooCommerce<T>(
+  storeUrl: string,
+  consumerKey: string,
+  consumerSecret: string,
+  endpoint: string,
+  params: Record<string, string> = {}
+): Promise<T[]> {
+  const url = new URL(`${storeUrl}/wp-json/wc/v3/${endpoint}`);
+  url.searchParams.set("per_page", "100");
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+  
+  const response = await fetch(url.toString(), {
+    headers: {
+      "Authorization": `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+async function syncProducts(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const products = await fetchFromWooCommerce<WooProduct>(
+    store.url,
+    store.consumer_key,
+    store.consumer_secret,
+    "products"
+  );
+
+  let created = 0;
+  let updated = 0;
+
+  for (const product of products) {
+    const productData = {
+      store_id: store.id,
+      woo_id: product.id,
+      name: product.name,
+      slug: product.slug,
+      sku: product.sku || null,
+      price: product.price ? parseFloat(product.price) : null,
+      regular_price: product.regular_price ? parseFloat(product.regular_price) : null,
+      sale_price: product.sale_price ? parseFloat(product.sale_price) : null,
+      stock_quantity: product.stock_quantity,
+      stock_status: product.stock_status,
+      status: product.status,
+      type: product.type,
+      description: product.description,
+      short_description: product.short_description,
+      categories: product.categories,
+      images: product.images,
+      raw_data: product,
+      synced_at: new Date().toISOString(),
+    };
+
+    // Upsert - insert or update on conflict
+    const { data: existing } = await supabase
+      .from("products")
+      .select("id")
+      .eq("store_id", store.id)
+      .eq("woo_id", product.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from("products")
+        .update(productData)
+        .eq("id", existing.id);
+      updated++;
+    } else {
+      await supabase
+        .from("products")
+        .insert(productData);
+      created++;
+    }
+  }
+
+  return { processed: products.length, created, updated };
+}
+
+async function syncOrders(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const orders = await fetchFromWooCommerce<WooOrder>(
+    store.url,
+    store.consumer_key,
+    store.consumer_secret,
+    "orders"
+  );
+
+  let created = 0;
+  let updated = 0;
+
+  for (const order of orders) {
+    const orderData = {
+      store_id: store.id,
+      woo_id: order.id,
+      order_number: order.number,
+      status: order.status,
+      currency: order.currency,
+      total: order.total ? parseFloat(order.total) : null,
+      customer_id: order.customer_id || null,
+      billing: order.billing,
+      shipping: order.shipping,
+      line_items: order.line_items,
+      raw_data: order,
+      date_created: order.date_created,
+      date_modified: order.date_modified,
+      synced_at: new Date().toISOString(),
+    };
+
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("store_id", store.id)
+      .eq("woo_id", order.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from("orders")
+        .update(orderData)
+        .eq("id", existing.id);
+      updated++;
+    } else {
+      await supabase
+        .from("orders")
+        .insert(orderData);
+      created++;
+    }
+  }
+
+  return { processed: orders.length, created, updated };
+}
+
+async function syncCustomers(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
+  const customers = await fetchFromWooCommerce<WooCustomer>(
+    store.url,
+    store.consumer_key,
+    store.consumer_secret,
+    "customers"
+  );
+
+  let created = 0;
+  let updated = 0;
+
+  for (const customer of customers) {
+    const customerData = {
+      store_id: store.id,
+      woo_id: customer.id,
+      email: customer.email,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      username: customer.username,
+      billing: customer.billing,
+      shipping: customer.shipping,
+      raw_data: customer,
+      date_created: customer.date_created,
+      synced_at: new Date().toISOString(),
+    };
+
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("store_id", store.id)
+      .eq("woo_id", customer.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from("customers")
+        .update(customerData)
+        .eq("id", existing.id);
+      updated++;
+    } else {
+      await supabase
+        .from("customers")
+        .insert(customerData);
+      created++;
+    }
+  }
+
+  return { processed: customers.length, created, updated };
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -40,6 +276,8 @@ export default async function handler(
       .from("stores")
       .select("id, name, url, consumer_key, consumer_secret, sync_interval, next_sync_at")
       .not("sync_interval", "is", null)
+      .not("consumer_key", "is", null)
+      .not("consumer_secret", "is", null)
       .eq("status", "connected")
       .or(`next_sync_at.is.null,next_sync_at.lte.${now}`);
 
@@ -83,11 +321,18 @@ export default async function handler(
       }
 
       try {
-        // Create sync run for each aspect
-        const aspects = ["products", "orders", "customers"];
-        let totalRecords = 0;
+        const syncFunctions: Record<string, (s: StoreToSync) => Promise<{ processed: number; created: number; updated: number }>> = {
+          products: syncProducts,
+          orders: syncOrders,
+          customers: syncCustomers,
+        };
 
-        for (const aspect of aspects) {
+        let totalRecords = 0;
+        let totalCreated = 0;
+        let totalUpdated = 0;
+
+        for (const [aspect, syncFn] of Object.entries(syncFunctions)) {
+          // Create sync run record
           const { data: syncRun, error: syncError } = await supabase
             .from("sync_runs")
             .insert({
@@ -104,19 +349,39 @@ export default async function handler(
             continue;
           }
 
-          // Simulate sync (in real implementation, this would call WooCommerce API)
-          // For now, we'll mark as completed with simulated data
-          const recordsProcessed = Math.floor(Math.random() * 50) + 5;
-          totalRecords += recordsProcessed;
+          try {
+            // Actually sync the data
+            const result = await syncFn(store);
+            totalRecords += result.processed;
+            totalCreated += result.created;
+            totalUpdated += result.updated;
 
-          await supabase
-            .from("sync_runs")
-            .update({
-              status: "completed",
-              completed_at: new Date().toISOString(),
-              records_processed: recordsProcessed,
-            })
-            .eq("id", syncRun.id);
+            // Update sync run as completed
+            await supabase
+              .from("sync_runs")
+              .update({
+                status: "completed",
+                completed_at: new Date().toISOString(),
+                records_processed: result.processed,
+                records_created: result.created,
+                records_updated: result.updated,
+              })
+              .eq("id", syncRun.id);
+
+            console.log(`[Cron] Synced ${aspect} for ${store.name}: ${result.processed} processed, ${result.created} created, ${result.updated} updated`);
+
+          } catch (aspectError) {
+            console.error(`[Cron] Error syncing ${aspect} for ${store.name}:`, aspectError);
+            
+            await supabase
+              .from("sync_runs")
+              .update({
+                status: "failed",
+                completed_at: new Date().toISOString(),
+                error_message: aspectError instanceof Error ? aspectError.message : "Unknown error",
+              })
+              .eq("id", syncRun.id);
+          }
         }
 
         // Calculate next sync time
@@ -138,12 +403,14 @@ export default async function handler(
             .from("cron_logs")
             .update({
               status: "completed",
-              message: `Scheduled sync completed for ${store.name}. Processed ${totalRecords} records.`,
+              message: `Scheduled sync completed for ${store.name}. Processed ${totalRecords} records (${totalCreated} created, ${totalUpdated} updated).`,
               completed_at: new Date().toISOString(),
               metadata: {
                 sync_interval: store.sync_interval,
                 trigger: "cron",
                 records_processed: totalRecords,
+                records_created: totalCreated,
+                records_updated: totalUpdated,
                 next_sync_at: nextSyncAt.toISOString()
               }
             })
@@ -155,6 +422,8 @@ export default async function handler(
           store_name: store.name,
           status: "completed",
           records_processed: totalRecords,
+          records_created: totalCreated,
+          records_updated: totalUpdated,
           next_sync_at: nextSyncAt.toISOString()
         });
 
