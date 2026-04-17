@@ -1,6 +1,6 @@
 ---
 title: Add site health score system + dashboard health indicators
-status: in_progress
+status: done
 priority: medium
 type: feature
 tags: [health, dashboard, monitoring]
