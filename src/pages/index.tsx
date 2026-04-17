@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Users, Store, RefreshCw, Webhook, ArrowRight, Clock, TrendingUp, TrendingDown, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Users, Store, RefreshCw, Webhook, ArrowRight, Clock, TrendingUp, TrendingDown, CheckCircle2, XCircle, Activity, Heart, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { getClients, type ClientWithStats } from "@/services/clientService";
 import { getStores, type StoreWithClient } from "@/services/storeService";
@@ -100,6 +100,14 @@ export default function Dashboard() {
   const successRate = stats.totalSyncs > 0 
     ? Math.round((stats.successfulSyncs / stats.totalSyncs) * 100) 
     : 0;
+
+  // Health stats
+  const healthyStores = stores.filter(s => (s.health_score ?? 0) >= 80);
+  const attentionStores = stores.filter(s => s.health_score != null && s.health_score < 80)
+    .sort((a, b) => (a.health_score ?? 0) - (b.health_score ?? 0));
+  const avgHealth = stores.length > 0 && stores.some(s => s.health_score != null)
+    ? Math.round(stores.filter(s => s.health_score != null).reduce((sum, s) => sum + (s.health_score ?? 0), 0) / stores.filter(s => s.health_score != null).length)
+    : null;
 
   // Pie chart data for sync status
   const syncStatusData = [
@@ -221,6 +229,49 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Fleet Health + Attention */}
+        {avgHealth !== null && (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Fleet Health</CardTitle>
+                <Heart className={`h-4 w-4 ${avgHealth >= 80 ? "text-emerald-500 fill-emerald-500" : avgHealth >= 50 ? "text-amber-500 fill-amber-500" : "text-red-500 fill-red-500"}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{avgHealth}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {healthyStores.length} healthy, {attentionStores.length} need attention
+                </p>
+              </CardContent>
+            </Card>
+            {attentionStores.length > 0 && (
+              <Card className="lg:col-span-2 border-amber-200 bg-amber-50/30">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <CardTitle className="text-sm font-medium">Sites Needing Attention</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {attentionStores.slice(0, 4).map(store => (
+                      <Link key={store.id} href={`/sites/${store.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-100/50 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <Store className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{store.name}</span>
+                        </div>
+                        <span className={`text-sm font-bold ${(store.health_score ?? 0) < 50 ? "text-red-600" : "text-amber-600"}`}>
+                          {store.health_score}%
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* Charts Row */}
         <div className="grid gap-6 lg:grid-cols-3">

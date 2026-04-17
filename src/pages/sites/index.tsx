@@ -30,7 +30,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { Plus, Search, Store, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, Store, ExternalLink, Eye, EyeOff, Heart } from "lucide-react";
 import { getStores, getStore, createStore, type StoreWithClient } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
@@ -386,6 +386,7 @@ export default function SitesPage() {
                   <TableHead>Site</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Health</TableHead>
                   <TableHead>Last Sync</TableHead>
                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
@@ -393,13 +394,13 @@ export default function SitesPage() {
               <TableBody>
                 {loading && stores.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Loading sites...
                     </TableCell>
                   </TableRow>
                 ) : filteredStores.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {searchQuery || statusFilter !== "all"
                         ? "No sites match your filters"
                         : "No sites yet. Add your first site to get started."}
@@ -433,6 +434,24 @@ export default function SitesPage() {
                         <StatusBadge variant={getStatusVariant(store.status)}>
                           {store.status}
                         </StatusBadge>
+                      </TableCell>
+                      <TableCell>
+                        {store.health_score != null ? (
+                          <div className="flex items-center gap-2">
+                            <Heart className={`h-3.5 w-3.5 ${
+                              store.health_score >= 80 ? "text-emerald-500 fill-emerald-500" :
+                              store.health_score >= 50 ? "text-amber-500 fill-amber-500" :
+                              "text-red-500 fill-red-500"
+                            }`} />
+                            <span className={`text-sm font-medium ${
+                              store.health_score >= 80 ? "text-emerald-600" :
+                              store.health_score >= 50 ? "text-amber-600" :
+                              "text-red-600"
+                            }`}>{store.health_score}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {formatDate(store.last_sync_at)}
