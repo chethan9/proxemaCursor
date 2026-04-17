@@ -20,10 +20,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Search, Building2, Trash2 } from "lucide-react";
 import { getClients, createClient, deleteClient, type Client } from "@/services/clientService";
 import { getStoresByClient } from "@/services/storeService";
+import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<(Client & { siteCount: number })[]>([]);
@@ -33,7 +34,17 @@ export default function ClientsPage() {
   const [newClientName, setNewClientName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const loadClients = async () => {
+  const loadClients = async (skipCache = false) => {
+    // Check cache first
+    if (!skipCache) {
+      const cachedClients = browserCache.get<(Client & { siteCount: number })[]>(CACHE_KEYS.CLIENTS + ":with_counts");
+      if (cachedClients) {
+        setClients(cachedClients);
+        setLoading(false);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const data = await getClients();
@@ -44,6 +55,8 @@ export default function ClientsPage() {
         })
       );
       setClients(clientsWithCounts);
+      // Cache the results
+      browserCache.set(CACHE_KEYS.CLIENTS + ":with_counts", clientsWithCounts, CACHE_TTL.MEDIUM);
     } catch (error) {
       console.error("Error loading clients:", error);
     } finally {
@@ -62,7 +75,10 @@ export default function ClientsPage() {
       await createClient({ name: newClientName.trim() });
       setNewClientName("");
       setDialogOpen(false);
-      await loadClients();
+      // Clear cache and reload
+      browserCache.delete(CACHE_KEYS.CLIENTS);
+      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
+      await loadClients(true);
     } catch (error) {
       console.error("Error creating client:", error);
     } finally {
@@ -74,7 +90,10 @@ export default function ClientsPage() {
     if (!confirm("Are you sure you want to delete this client?")) return;
     try {
       await deleteClient(id);
-      await loadClients();
+      // Clear cache and reload
+      browserCache.delete(CACHE_KEYS.CLIENTS);
+      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
+      await loadClients(true);
     } catch (error) {
       console.error("Error deleting client:", error);
     }

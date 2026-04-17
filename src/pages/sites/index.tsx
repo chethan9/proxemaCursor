@@ -34,6 +34,7 @@ import { Plus, Search, Store, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { getStores, createStore, type Store as StoreType } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
+import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 export default function SitesPage() {
   const router = useRouter();
@@ -56,7 +57,19 @@ export default function SitesPage() {
     client_id: "",
   });
 
-  const loadData = async () => {
+  const loadData = async (skipCache = false) => {
+    // Check cache first
+    if (!skipCache) {
+      const cachedStores = browserCache.get<StoreType[]>(CACHE_KEYS.STORES);
+      const cachedClients = browserCache.get<Client[]>(CACHE_KEYS.CLIENTS);
+      if (cachedStores && cachedClients) {
+        setStores(cachedStores);
+        setClients(cachedClients);
+        setLoading(false);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const [storesData, clientsData] = await Promise.all([
@@ -65,6 +78,9 @@ export default function SitesPage() {
       ]);
       setStores(storesData);
       setClients(clientsData);
+      // Cache the results
+      browserCache.set(CACHE_KEYS.STORES, storesData, CACHE_TTL.MEDIUM);
+      browserCache.set(CACHE_KEYS.CLIENTS, clientsData, CACHE_TTL.MEDIUM);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -102,6 +118,9 @@ export default function SitesPage() {
         status: authMode === "manual" && newStore.consumer_key && newStore.consumer_secret ? "connected" : "pending",
       });
 
+      // Clear cache after creating
+      browserCache.delete(CACHE_KEYS.STORES);
+
       if (authMode === "oauth") {
         // Redirect to WooCommerce for OAuth approval
         const authUrl = buildWooCommerceAuthUrl({
@@ -113,7 +132,7 @@ export default function SitesPage() {
         // Manual mode - just close dialog and refresh
         setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
         setDialogOpen(false);
-        await loadData();
+        await loadData(true);
       }
     } catch (error) {
       console.error("Error creating store:", error);
