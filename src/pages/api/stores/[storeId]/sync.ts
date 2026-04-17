@@ -192,6 +192,46 @@ async function syncTags(store: StoreToSync, syncRunId: string): Promise<{ proces
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "PATCH") {
+    const { storeId } = req.query;
+    if (!storeId || typeof storeId !== "string") {
+      return res.status(400).json({ error: "Store ID required" });
+    }
+
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: staleRuns } = await supabase
+      .from("sync_runs")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("status", "running")
+      .lt("started_at", tenMinAgo);
+
+    const runningIds = (staleRuns || []).map(r => r.id);
+
+    const { data: allRunning } = await supabase
+      .from("sync_runs")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("status", "running");
+
+    const cancelIds = (allRunning || []).map(r => r.id);
+
+    if (cancelIds.length > 0) {
+      await supabase
+        .from("sync_runs")
+        .update({
+          status: "failed",
+          error_message: "Manually cancelled",
+          completed_at: new Date().toISOString(),
+        })
+        .in("id", cancelIds);
+    }
+
+    await supabase.from("stores").update({ status: "connected" }).eq("id", storeId);
+
+    return res.status(200).json({ cancelled: cancelIds.length });
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -204,6 +244,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Auto-timeout: mark stuck running syncs (>10 min) as failed
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    await supabase
+      .from("sync_runs")
+      .update({
+        status: "failed",
+        error_message: "Auto-timeout: sync exceeded 10 minute limit",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("store_id", storeId)
+      .eq("status", "running")
+      .lt("started_at", tenMinAgo);
+
+    // Also reset store status if it was stuck in "syncing"
+    const { data: stuckStore } = await supabase
+      .from("stores")
+      .select("status, last_sync_at")
+      .eq("id", storeId)
+      .single();
+
+    if (stuckStore?.status === "syncing") {
+      const noRunning = await supabase
+        .from("sync_runs")
+        .select("id")
+        .eq("store_id", storeId)
+        .eq("status", "running")
+        .limit(1);
+      if (!noRunning.data?.length) {
+        await supabase.from("stores").update({ status: "connected" }).eq("id", storeId);
+      }
+    }
+
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id, name, url, consumer_key, consumer_secret")
