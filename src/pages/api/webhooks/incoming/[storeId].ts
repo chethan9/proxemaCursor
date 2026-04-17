@@ -180,6 +180,24 @@ async function upsertEntityFromWebhook(
 
   if (changeType === "deleted") {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase as any)
+      .from(tableName)
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("woo_id", payload.id as number)
+      .maybeSingle();
+
+    await supabase.from("deleted_records").insert({
+      store_id: storeId,
+      entity_type: entityType,
+      entity_id: String(payload.id),
+      woo_id: payload.id as number,
+      entity_name: extractEntityName(entityType, existing?.raw_data || payload),
+      snapshot: existing?.raw_data || payload,
+      source: "webhook",
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from(tableName)
       .delete()
