@@ -28,7 +28,7 @@ import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<(Client & { siteCount: number })[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
