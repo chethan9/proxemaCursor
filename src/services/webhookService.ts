@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, Database } from "@/integrations/supabase/types";
 
 export type Webhook = Tables<"webhooks">;
 export type WebhookEvent = Tables<"webhook_events">;
