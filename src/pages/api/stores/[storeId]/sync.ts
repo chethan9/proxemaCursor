@@ -103,7 +103,7 @@ async function batchUpsert(tableName: string, rows: Record<string, unknown>[], c
 }
 
 interface WooProduct { id: number; name: string; slug: string; sku: string; price: string; regular_price: string; sale_price: string; stock_quantity: number | null; stock_status: string; status: string; type: string; description: string; short_description: string; categories: unknown[]; images: unknown[]; attributes: unknown[]; date_created: string; date_modified: string; }
-interface WooOrder { id: number; number: string; status: string; currency: string; total: string; discount_total: string; shipping_total: string; customer_id: number; billing: Record<string, unknown>; shipping: Record<string, unknown>; line_items: unknown[]; shipping_lines: unknown[]; fee_lines: unknown[]; coupon_lines: unknown[]; date_created: string; date_modified: string; }
+interface WooOrder { id: number; number: string; status: string; currency: string; total: string; discount_total: string; shipping_total: string; customer_id: number; billing: Record<string, unknown>; shipping: Record<string, unknown>; line_items: unknown[]; shipping_lines: unknown[]; fee_lines: unknown[]; coupon_lines: unknown[]; payment_method: string; payment_method_title: string; date_created: string; date_modified: string; }
 interface WooCustomer { id: number; email: string; first_name: string; last_name: string; username: string; billing: Record<string, unknown>; shipping: Record<string, unknown>; avatar_url: string; is_paying_customer: boolean; orders_count: number; total_spent: string; date_created: string; date_modified: string; }
 interface WooCategory { id: number; name: string; slug: string; parent: number; description: string; display: string; image: unknown; menu_order: number; count: number; }
 interface WooCoupon { id: number; code: string; amount: string; discount_type: string; description: string; date_expires: string | null; usage_count: number; individual_use: boolean; product_ids: number[]; excluded_product_ids: number[]; usage_limit: number | null; usage_limit_per_user: number | null; free_shipping: boolean; minimum_amount: string; maximum_amount: string; date_created: string; date_modified: string; }
@@ -137,6 +137,7 @@ async function syncOrders(store: StoreToSync, syncRunId: string): Promise<{ proc
     store_id: store.id, woo_id: o.id, order_number: o.number, status: o.status, currency: o.currency,
     total: o.total ? parseFloat(o.total) : null, discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
     shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null, customer_id: o.customer_id || null,
+    payment_method: o.payment_method || null, payment_method_title: o.payment_method_title || null,
     billing: toJson(o.billing), shipping: toJson(o.shipping), line_items: toJson(o.line_items),
     shipping_lines: toJson(o.shipping_lines || []), fee_lines: toJson(o.fee_lines || []),
     coupon_lines: toJson(o.coupon_lines || []), raw_data: toJson(o),

@@ -109,6 +109,8 @@ function buildOrderRow(storeId: string, o: Record<string, unknown>) {
     discount_total: o.discount_total ? parseFloat(o.discount_total as string) : null,
     shipping_total: o.shipping_total ? parseFloat(o.shipping_total as string) : null,
     customer_id: (o.customer_id as number) || null,
+    payment_method: (o.payment_method as string) || null,
+    payment_method_title: (o.payment_method_title as string) || null,
     billing: toJson(o.billing),
     shipping: toJson(o.shipping),
     line_items: toJson(o.line_items),
