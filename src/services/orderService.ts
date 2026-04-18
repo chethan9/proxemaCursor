@@ -82,3 +82,14 @@ export function getItemCount(lineItems: unknown): number {
     return sum + qty;
   }, 0);
 }
+
+export async function updateOrderStatus(id: string, status: string): Promise<OrderRow> {
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as OrderRow;
+}

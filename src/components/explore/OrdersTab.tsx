@@ -25,6 +25,7 @@ import {
   type OrderSortField,
   type SortDirection,
 } from "@/services/orderService";
+import { OrderRowExpanded } from "./OrderRowExpanded";
 
 type ColumnKey = "order_number" | "status" | "customer" | "email" | "items" | "total" | "payment" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount";
 
@@ -70,9 +71,10 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
-export function OrdersTab({ storeId }: { storeId: string }) {
+export function OrdersTab({ storeId, storeUrl }: { storeId: string; storeUrl?: string | null }) {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [orderCount, setOrderCount] = useState(0);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -505,68 +507,84 @@ export function OrdersTab({ storeId }: { storeId: string }) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  orders.map((o) => (
-                    <TableRow key={o.id} className="hover:bg-muted/30">
-                      {visibleColList.map((c) => {
-                        if (c.key === "order_number") {
-                          return <TableCell key={c.key} className="font-mono font-medium">#{o.order_number || o.woo_id}</TableCell>;
-                        }
-                        if (c.key === "woo_id") {
-                          return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.woo_id}</TableCell>;
-                        }
-                        if (c.key === "status") {
-                          const cls = STATUS_COLORS[o.status || ""] || "bg-muted text-muted-foreground border-border";
-                          return (
-                            <TableCell key={c.key}>
-                              <Badge variant="outline" className={`capitalize text-[10px] ${cls}`}>
-                                {o.status || "—"}
-                              </Badge>
+                  orders.map((o) => {
+                    const isExpanded = expandedRowId === o.id;
+                    return (
+                      <>
+                        <TableRow key={o.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
+                          {visibleColList.map((c) => {
+                            if (c.key === "order_number") {
+                              return <TableCell key={c.key} className="font-mono font-medium">#{o.order_number || o.woo_id}</TableCell>;
+                            }
+                            if (c.key === "woo_id") {
+                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.woo_id}</TableCell>;
+                            }
+                            if (c.key === "status") {
+                              const cls = STATUS_COLORS[o.status || ""] || "bg-muted text-muted-foreground border-border";
+                              return (
+                                <TableCell key={c.key}>
+                                  <Badge variant="outline" className={`capitalize text-[10px] ${cls}`}>
+                                    {o.status || "—"}
+                                  </Badge>
+                                </TableCell>
+                              );
+                            }
+                            if (c.key === "customer") {
+                              return <TableCell key={c.key} className="max-w-[200px] truncate">{getCustomerName(o.billing)}</TableCell>;
+                            }
+                            if (c.key === "email") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{getCustomerEmail(o.billing) || "—"}</TableCell>;
+                            }
+                            if (c.key === "items") {
+                              return <TableCell key={c.key} className="text-sm">{getItemCount(o.line_items)}</TableCell>;
+                            }
+                            if (c.key === "total") {
+                              return <TableCell key={c.key} className="font-mono text-sm font-semibold">{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
+                            }
+                            if (c.key === "subtotal") {
+                              return <TableCell key={c.key} className="font-mono text-sm">{o.subtotal || "—"}</TableCell>;
+                            }
+                            if (c.key === "tax") {
+                              return <TableCell key={c.key} className="font-mono text-sm">{o.total_tax || "—"}</TableCell>;
+                            }
+                            if (c.key === "shipping") {
+                              return <TableCell key={c.key} className="font-mono text-sm">{o.shipping_total || "—"}</TableCell>;
+                            }
+                            if (c.key === "discount") {
+                              return <TableCell key={c.key} className="font-mono text-sm">{o.discount_total || "—"}</TableCell>;
+                            }
+                            if (c.key === "currency") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.currency || "—"}</TableCell>;
+                            }
+                            if (c.key === "payment") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[160px] truncate">{o.payment_method_title || o.payment_method || "—"}</TableCell>;
+                            }
+                            if (c.key === "date_created") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_created ? new Date(o.date_created).toLocaleString() : "—"}</TableCell>;
+                            }
+                            if (c.key === "date_modified") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_modified ? new Date(o.date_modified).toLocaleString() : "—"}</TableCell>;
+                            }
+                            if (c.key === "synced_at") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.synced_at ? new Date(o.synced_at).toLocaleString() : "—"}</TableCell>;
+                            }
+                            return <TableCell key={c.key}>—</TableCell>;
+                          })}
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow key={`${o.id}-exp`} className="hover:bg-transparent">
+                            <TableCell colSpan={visibleColList.length} className="p-0">
+                              <OrderRowExpanded
+                                order={o}
+                                storeUrl={storeUrl}
+                                onSaved={(updated) => setOrders((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+                              />
                             </TableCell>
-                          );
-                        }
-                        if (c.key === "customer") {
-                          return <TableCell key={c.key} className="max-w-[200px] truncate">{getCustomerName(o.billing)}</TableCell>;
-                        }
-                        if (c.key === "email") {
-                          return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{getCustomerEmail(o.billing) || "—"}</TableCell>;
-                        }
-                        if (c.key === "items") {
-                          return <TableCell key={c.key} className="text-sm">{getItemCount(o.line_items)}</TableCell>;
-                        }
-                        if (c.key === "total") {
-                          return <TableCell key={c.key} className="font-mono text-sm font-semibold">{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
-                        }
-                        if (c.key === "subtotal") {
-                          return <TableCell key={c.key} className="font-mono text-sm">{o.subtotal || "—"}</TableCell>;
-                        }
-                        if (c.key === "tax") {
-                          return <TableCell key={c.key} className="font-mono text-sm">{o.total_tax || "—"}</TableCell>;
-                        }
-                        if (c.key === "shipping") {
-                          return <TableCell key={c.key} className="font-mono text-sm">{o.shipping_total || "—"}</TableCell>;
-                        }
-                        if (c.key === "discount") {
-                          return <TableCell key={c.key} className="font-mono text-sm">{o.discount_total || "—"}</TableCell>;
-                        }
-                        if (c.key === "currency") {
-                          return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.currency || "—"}</TableCell>;
-                        }
-                        if (c.key === "payment") {
-                          return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[160px] truncate">{o.payment_method_title || o.payment_method || "—"}</TableCell>;
-                        }
-                        if (c.key === "date_created") {
-                          return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_created ? new Date(o.date_created).toLocaleString() : "—"}</TableCell>;
-                        }
-                        if (c.key === "date_modified") {
-                          return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_modified ? new Date(o.date_modified).toLocaleString() : "—"}</TableCell>;
-                        }
-                        if (c.key === "synced_at") {
-                          return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.synced_at ? new Date(o.synced_at).toLocaleString() : "—"}</TableCell>;
-                        }
-                        return <TableCell key={c.key}>—</TableCell>;
-                      })}
-                    </TableRow>
-                  ))
+                          </TableRow>
+                        )}
+                      </>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
