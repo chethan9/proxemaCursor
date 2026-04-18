@@ -381,11 +381,13 @@
     border-color: hsl(22 100% 50%);
   }
 
-  [data-theme-preset="modern"] [data-slot="select-item"][data-highlighted],
-  [data-theme-preset="modern"] [data-slot="select-item"][data-state="checked"],
-  [data-theme-preset="modern"] [data-slot="dropdown-menu-item"][data-highlighted],
-  [data-theme-preset="modern"] [data-slot="command-item"][data-selected="true"] {
-    background-color: hsl(220 14% 94%);
-    color: hsl(222 47% 11%);
+  [data-theme-preset="modern"] [role="option"][data-highlighted],
+  [data-theme-preset="modern"] [role="option"][data-state="checked"],
+  [data-theme-preset="modern"] [role="menuitem"][data-highlighted],
+  [data-theme-preset="modern"] [cmdk-item][data-selected="true"],
+  [data-theme-preset="modern"] [role="option"]:focus,
+  [data-theme-preset="modern"] [role="menuitem"]:focus {
+    background-color: hsl(220 14% 94%) !important;
+    color: hsl(222 47% 11%) !important;
   }
 }
