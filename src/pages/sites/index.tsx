@@ -30,9 +30,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { Plus, Search, Store, ExternalLink, Eye, EyeOff, Heart, AlertTriangle } from "lucide-react";
+import { Plus, Search, Store, ExternalLink, Eye, EyeOff, Heart, AlertTriangle, Pencil, Copy, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getStores, getStore, createStore, type StoreWithClient } from "@/services/storeService";
+import { getStores, getStore, createStore, updateStore, type StoreWithClient } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
@@ -51,7 +51,72 @@ export default function SitesPage() {
   const [urlError, setUrlError] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<"oauth" | "manual">("oauth");
   const [showSecrets, setShowSecrets] = useState(false);
-  
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editStore, setEditStoreState] = useState<StoreWithClient | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editUrlError, setEditUrlError] = useState<string | null>(null);
+  const [editShowSecrets, setEditShowSecrets] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
+
+  const openEditDialog = (store: StoreWithClient) => {
+    setEditStoreState(store);
+    setEditForm({
+      name: store.name,
+      url: store.url,
+      consumer_key: store.consumer_key || "",
+      consumer_secret: store.consumer_secret || "",
+      client_id: store.client_id || "",
+    });
+    setEditUrlError(null);
+    setEditShowSecrets(false);
+    setEditOpen(true);
+  };
+
+  const copyToClipboard = async (value: string, field: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch (e) {
+      console.error("Copy failed:", e);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editStore) return;
+    if (!editForm.name.trim() || !editForm.url.trim()) return;
+    const validation = validateStoreUrl(editForm.url);
+    if (!validation.valid) {
+      setEditUrlError(validation.error || "Invalid URL");
+      return;
+    }
+    const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(editForm.url);
+    setEditUrlError(null);
+    setEditSaving(true);
+    try {
+      await updateStore(editStore.id, {
+        name: editForm.name.trim(),
+        url: cleanedUrl,
+        consumer_key: editForm.consumer_key.trim() || null,
+        consumer_secret: editForm.consumer_secret.trim() || null,
+        client_id: editForm.client_id || null,
+      });
+      browserCache.delete(CACHE_KEYS.STORES);
+      browserCache.delete(CACHE_KEYS.store(editStore.id));
+      setEditOpen(false);
+      setEditStoreState(null);
+      await loadData(true);
+    } catch (error) {
+      console.error("[EditSite] Error:", error);
+      alert(`Error updating site: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const [newStore, setNewStore] = useState({
     name: "",
     url: "",
@@ -517,17 +582,31 @@ export default function SitesPage() {
                         {formatDate(store.last_sync_at)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(store.url, "_blank");
-                          }}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 gap-1.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(store);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="text-xs">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(store.url, "_blank");
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -536,6 +615,73 @@ export default function SitesPage() {
             </Table>
           </CardContent>
         </Card>
+
+        <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditStoreState(null); }}>
+          <DialogContent className="sm:max-w-[520px]">
+            <DialogHeader>
+              <DialogTitle>Edit Site</DialogTitle>
+              <DialogDescription>Update site details and API credentials.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className={isSuperAdmin ? "space-y-2" : "space-y-2 col-span-2"}>
+                  <Label htmlFor="edit-name">Site Name</Label>
+                  <Input id="edit-name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                </div>
+                {isSuperAdmin && (
+                  <div className="space-y-2">
+                    <Label>Client</Label>
+                    <Select value={editForm.client_id || "none"} onValueChange={(v) => setEditForm({ ...editForm, client_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-url">Store URL</Label>
+                <Input id="edit-url" value={editForm.url} onChange={(e) => { setEditForm({ ...editForm, url: e.target.value }); setEditUrlError(null); }} className={editUrlError ? "border-destructive" : ""} />
+                {editUrlError && <p className="text-sm text-destructive">{editUrlError}</p>}
+                <p className="text-xs text-muted-foreground">Changing the URL may break the connection — you may need to re-authorize.</p>
+              </div>
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label>API Credentials</Label>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setEditShowSecrets(!editShowSecrets)} className="h-8 px-2">
+                    {editShowSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ck" className="text-xs text-muted-foreground">Consumer Key</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="edit-ck" type={editShowSecrets ? "text" : "password"} value={editForm.consumer_key} onChange={(e) => setEditForm({ ...editForm, consumer_key: e.target.value })} placeholder="ck_..." className="font-mono text-xs" />
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => copyToClipboard(editForm.consumer_key, "ck")} disabled={!editForm.consumer_key} title="Copy">
+                      {copiedField === "ck" ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cs" className="text-xs text-muted-foreground">Consumer Secret</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="edit-cs" type={editShowSecrets ? "text" : "password"} value={editForm.consumer_secret} onChange={(e) => setEditForm({ ...editForm, consumer_secret: e.target.value })} placeholder="cs_..." className="font-mono text-xs" />
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => copyToClipboard(editForm.consumer_secret, "cs")} disabled={!editForm.consumer_secret} title="Copy">
+                      {copiedField === "cs" ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={handleEditSave} disabled={editSaving || !editForm.name.trim() || !editForm.url.trim()}>
+                {editSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
