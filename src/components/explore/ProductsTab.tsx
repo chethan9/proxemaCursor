@@ -447,9 +447,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 {!embedHeader && (
                   <>
                     <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
-                      <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
-                      <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
-                      <Button variant={viewMode === "compact" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "grid" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "compact" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -462,7 +462,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         <DropdownMenuLabel>Sort by</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {SORT_OPTIONS.map((opt, i) => (
-                          <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
+                          <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
