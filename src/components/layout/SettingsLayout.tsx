@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, UserCog, Shield, Key, RefreshCw, Webhook, Activity } from "lucide-react";
+import { User, Palette, CreditCard, UserCog, Shield, Key, RefreshCw, Webhook, Activity, ListTree } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,7 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
     {
       label: "Admin",
       items: [
+        { href: "/settings/menu-editor", icon: ListTree, label: "Menu Editor", show: isSuperAdmin },
         { href: "/settings/payment-methods", icon: CreditCard, label: "Payment Methods", show: isSuperAdmin },
         { href: "/settings/users", icon: UserCog, label: "Users", show: can(PERMISSIONS.USERS_VIEW) },
         { href: "/settings/roles", icon: Shield, label: "Roles & Permissions", show: can(PERMISSIONS.ROLES_VIEW) },
