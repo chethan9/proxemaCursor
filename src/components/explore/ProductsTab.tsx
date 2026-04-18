@@ -307,6 +307,19 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     <div className="space-y-2">
       {embedHeader && (
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-9 w-[180px] text-xs">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categoryOptions.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex-1" />
           <div className="w-full max-w-[480px]">
             <div className="relative">
@@ -406,23 +419,25 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 <Switch checked={excludeOutOfStock} onCheckedChange={(v) => setExcludeOutOfStock(!!v)} />
                 <span>Exclude out of stock</span>
               </label>
+              {!embedHeader && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-9 w-[180px] text-xs">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {categoryOptions.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {(excludeOutOfStock || statusFilter !== "all" || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
                 <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => {
                   setStatusFilter("all"); setExcludeOutOfStock(false); setCategoryFilter("all");
                   setStockStatusFilter("all"); setPriceMin(""); setPriceMax("");
                 }}>Clear</Button>
               )}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="h-9 w-[180px] text-xs">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {categoryOptions.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <div className="flex-1" />
               <div className="flex items-center gap-2 ml-auto">
                 {!embedHeader && (
