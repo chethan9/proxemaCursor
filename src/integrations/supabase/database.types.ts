@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -579,10 +579,13 @@ export type Database = {
           entity_id: string
           entity_name: string | null
           entity_type: string
+          error_message: string | null
           id: string
+          retry_payload: Json | null
           snapshot_after: Json | null
           snapshot_before: Json | null
           source: string
+          status: string | null
           store_id: string
           woo_id: number | null
         }
@@ -593,10 +596,13 @@ export type Database = {
           entity_id: string
           entity_name?: string | null
           entity_type: string
+          error_message?: string | null
           id?: string
+          retry_payload?: Json | null
           snapshot_after?: Json | null
           snapshot_before?: Json | null
           source?: string
+          status?: string | null
           store_id: string
           woo_id?: number | null
         }
@@ -607,10 +613,13 @@ export type Database = {
           entity_id?: string
           entity_name?: string | null
           entity_type?: string
+          error_message?: string | null
           id?: string
+          retry_payload?: Json | null
           snapshot_after?: Json | null
           snapshot_before?: Json | null
           source?: string
+          status?: string | null
           store_id?: string
           woo_id?: number | null
         }
