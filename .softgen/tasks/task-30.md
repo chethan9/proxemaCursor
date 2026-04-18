@@ -1,6 +1,6 @@
 ---
 title: Create SiteSidebar component with site switcher
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [sidebar, layout, navigation]
