@@ -108,6 +108,9 @@ export default function ExploreStorePage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [outOfStockOnly, setOutOfStockOnly] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
@@ -193,7 +196,7 @@ export default function ExploreStorePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, outOfStockOnly, pageSize]);
+  }, [debouncedSearch, statusFilter, sort, storeId, outOfStockOnly, pageSize, categoryFilter, priceMin, priceMax]);
 
   const loadProducts = useCallback(async () => {
     if (!storeId) return;
@@ -208,6 +211,9 @@ export default function ExploreStorePage() {
         sortDirection: sort.direction,
         statusFilter,
         outOfStockOnly,
+        categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+        priceMin: priceMin ? parseFloat(priceMin) : undefined,
+        priceMax: priceMax ? parseFloat(priceMax) : undefined,
       });
       setProductCount(count);
       setProducts(data);
@@ -216,7 +222,7 @@ export default function ExploreStorePage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, outOfStockOnly]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, outOfStockOnly, categoryFilter, priceMin, priceMax]);
 
   useEffect(() => {
     if (storeId) loadProducts();
@@ -278,6 +284,31 @@ export default function ExploreStorePage() {
     URL.revokeObjectURL(url);
   }, [products, visibleColList, storeId]);
 
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      supabase
+        .from("products")
+        .select("categories")
+        .eq("store_id", storeId)
+        .limit(500)
+        .then(({ data }) => {
+          const set = new Set<string>();
+          (data || []).forEach((r: { categories: unknown }) => {
+            if (Array.isArray(r.categories)) {
+              r.categories.forEach((c: unknown) => {
+                const obj = c as { name?: string };
+                if (obj?.name) set.add(obj.name);
+              });
+            }
+          });
+          setCategoryOptions(Array.from(set).sort());
+        });
+    });
+  }, [storeId]);
+
   if (storeLoading) {
     return (
       <AuthGuard>
@@ -329,233 +360,321 @@ export default function ExploreStorePage() {
 
           <Tabs defaultValue="products" className="space-y-4">
             <TabsContent value="products" className="space-y-3 mt-0">
-              {/* Unified toolbar: search + status filter + actions */}
-              <Card>
-                <CardContent className="p-3 space-y-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative w-[220px] max-w-full">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search name or SKU..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-9 h-9"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
-                      {["all", "publish", "draft", "pending", "private"].map((s) => (
-                        <Button
-                          key={s}
-                          variant={statusFilter === s ? "secondary" : "ghost"}
-                          size="sm"
-                          className="h-7 text-xs capitalize px-2.5"
-                          onClick={() => setStatusFilter(s)}
-                        >
-                          {s === "all" ? "All" : s}
-                        </Button>
-                      ))}
-                    </div>
-
-                    <Button
-                      variant={outOfStockOnly ? "secondary" : "outline"}
-                      size="sm"
-                      className="h-9 text-xs gap-1.5"
-                      onClick={() => setOutOfStockOnly((v) => !v)}
-                      title="Show only out-of-stock products"
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${outOfStockOnly ? "bg-destructive" : "bg-muted-foreground/40"}`} />
-                      Out of stock
-                    </Button>
-
-                    <div className="ml-auto flex items-center gap-2">
-                      <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
-                        <Button
-                          variant={viewMode === "table" ? "secondary" : "ghost"}
-                          size="sm"
-                          className="h-7 px-2"
-                          onClick={() => setViewMode("table")}
-                          title="Table view"
-                        >
-                          <List className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant={viewMode === "grid" ? "secondary" : "ghost"}
-                          size="sm"
-                          className="h-7 px-2"
-                          onClick={() => setViewMode("grid")}
-                          title="Grid view"
-                        >
-                          <LayoutGrid className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant={viewMode === "compact" ? "secondary" : "ghost"}
-                          size="sm"
-                          className="h-7 px-2"
-                          onClick={() => setViewMode("compact")}
-                          title="Compact grid"
-                        >
-                          <Grid3x3 className="h-3.5 w-3.5" />
-                        </Button>
+              {/* Sticky toolbar: filters + pagination */}
+              <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
+                <Card>
+                  <CardContent className="p-3 space-y-2">
+                    {/* Row 1: search + filters + actions */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative w-[220px] max-w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search name or SKU..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="pl-9 h-9"
+                        />
                       </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}>
-                            <ArrowUpDown className="h-3.5 w-3.5" />
+                      <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
+                        {["all", "publish", "draft", "pending", "private"].map((s) => (
+                          <Button
+                            key={s}
+                            variant={statusFilter === s ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-7 text-xs capitalize px-2.5"
+                            onClick={() => setStatusFilter(s)}
+                          >
+                            {s === "all" ? "All" : s}
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {SORT_OPTIONS.map((opt, i) => (
-                            <DropdownMenuItem
-                              key={i}
-                              onClick={() => setSort(opt)}
-                              className={sort === opt ? "bg-accent" : ""}
-                            >
-                              {opt.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        ))}
+                      </div>
 
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
-                            <Columns3 className="h-3.5 w-3.5" />
-                            <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6}>
-                          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                            <div>
-                              <div className="text-sm font-medium">Customize columns</div>
-                              <div className="text-[11px] text-muted-foreground">Drag to reorder • Click to show/hide</div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => {
-                                  const all: Record<string, boolean> = {};
-                                  COLUMNS.forEach((c) => { all[c.key] = true; });
-                                  setVisibleCols(all as Record<ColumnKey, boolean>);
-                                }}
-                              >
-                                Select all
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => {
-                                  const none: Record<string, boolean> = {};
-                                  COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
-                                  setVisibleCols(none as Record<ColumnKey, boolean>);
-                                  setColumnOrder(COLUMNS.map((c) => c.key));
-                                }}
-                              >
-                                Reset
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="px-4 py-3 border-b border-border bg-muted/30">
-                            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
-                              Active order ({visibleColList.length}) — drag to rearrange
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {visibleColList.length === 0 ? (
-                                <span className="text-xs text-muted-foreground italic">No columns selected</span>
-                              ) : (
-                                visibleColList.map((c) => (
-                                  <div
-                                    key={c.key}
-                                    draggable
-                                    onDragStart={() => setDragKey(c.key)}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={() => {
-                                      if (!dragKey || dragKey === c.key) return;
-                                      setColumnOrder((prev) => {
-                                        const next = prev.filter((k) => k !== dragKey);
-                                        const idx = next.indexOf(c.key);
-                                        next.splice(idx, 0, dragKey);
-                                        return next;
-                                      });
-                                      setDragKey(null);
-                                    }}
-                                    onDragEnd={() => setDragKey(null)}
-                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-background text-xs cursor-move hover:border-primary/50 hover:bg-accent transition ${dragKey === c.key ? "opacity-40" : ""}`}
-                                  >
-                                    <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="3" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="3" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="13" r="1.2"/></svg>
-                                    <span>{c.label || c.key}</span>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="max-h-[380px] overflow-y-auto p-4">
-                            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
-                              {(() => {
-                                const groupMap: Record<string, string> = {
-                                  "Basic": "Basic",
-                                  "Pricing": "Pricing & Inventory",
-                                  "Inventory": "Pricing & Inventory",
-                                  "Tax & Shipping": "Tax, Taxonomy & Content",
-                                  "Taxonomy": "Tax, Taxonomy & Content",
-                                  "Content": "Tax, Taxonomy & Content",
-                                  "Dates": "Dates",
-                                };
-                                const grouped: Record<string, typeof COLUMNS> = {};
-                                COLUMNS.forEach((c) => {
-                                  const g = groupMap[c.group] || c.group;
-                                  if (!grouped[g]) grouped[g] = [];
-                                  grouped[g].push(c);
-                                });
-                                return Object.entries(grouped).map(([group, cols]) => (
-                                  <div key={group}>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
-                                      {group}
-                                    </div>
-                                    <div className="flex flex-col gap-0.5">
-                                      {cols.map((c) => (
-                                        <label
-                                          key={c.key}
-                                          className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]"
-                                        >
-                                          <Checkbox
-                                            checked={visibleCols[c.key]}
-                                            onCheckedChange={(v) =>
-                                              setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
-                                            }
-                                          />
-                                          <span className="truncate">{c.label}</span>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ));
-                              })()}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-
-                      <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
-                        <Download className="h-3.5 w-3.5" />
+                      <Button
+                        variant={outOfStockOnly ? "secondary" : "outline"}
+                        size="sm"
+                        className="h-9 text-xs gap-1.5"
+                        onClick={() => setOutOfStockOnly((v) => !v)}
+                        title="Show only out-of-stock products"
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${outOfStockOnly ? "bg-destructive" : "bg-muted-foreground/40"}`} />
+                        Out of stock
                       </Button>
 
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
-                        <Package className="h-3.5 w-3.5" />
-                        <span className="font-medium">{productCount.toLocaleString()}</span>
+                      {categoryOptions.length > 0 && (
+                        <select
+                          value={categoryFilter}
+                          onChange={(e) => setCategoryFilter(e.target.value)}
+                          className="h-9 rounded-md border border-border bg-background px-2 text-xs max-w-[180px]"
+                          title="Filter by category"
+                        >
+                          <option value="all">All categories</option>
+                          {categoryOptions.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      )}
+
+                      <div className="flex items-center gap-1 h-9 rounded-md border border-border bg-background px-1.5">
+                        <span className="text-[11px] text-muted-foreground">Price</span>
+                        <Input
+                          type="number"
+                          placeholder="min"
+                          value={priceMin}
+                          onChange={(e) => setPriceMin(e.target.value)}
+                          className="h-7 w-16 text-xs border-0 p-0 focus-visible:ring-0 shadow-none"
+                        />
+                        <span className="text-muted-foreground">–</span>
+                        <Input
+                          type="number"
+                          placeholder="max"
+                          value={priceMax}
+                          onChange={(e) => setPriceMax(e.target.value)}
+                          className="h-7 w-16 text-xs border-0 p-0 focus-visible:ring-0 shadow-none"
+                        />
+                      </div>
+
+                      {(categoryFilter !== "all" || priceMin || priceMax || outOfStockOnly || statusFilter !== "all" || search) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 text-xs"
+                          onClick={() => {
+                            setSearch("");
+                            setStatusFilter("all");
+                            setOutOfStockOnly(false);
+                            setCategoryFilter("all");
+                            setPriceMin("");
+                            setPriceMax("");
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      )}
+
+                      <div className="ml-auto flex items-center gap-2">
+                        <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
+                          <Button
+                            variant={viewMode === "table" ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => setViewMode("table")}
+                            title="Table view"
+                          >
+                            <List className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant={viewMode === "grid" ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => setViewMode("grid")}
+                            title="Grid view"
+                          >
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant={viewMode === "compact" ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => setViewMode("compact")}
+                            title="Compact grid"
+                          >
+                            <Grid3x3 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}>
+                              <ArrowUpDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {SORT_OPTIONS.map((opt, i) => (
+                              <DropdownMenuItem
+                                key={i}
+                                onClick={() => setSort(opt)}
+                                className={sort === opt ? "bg-accent" : ""}
+                              >
+                                {opt.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
+                              <Columns3 className="h-3.5 w-3.5" />
+                              <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6}>
+                            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                              <div>
+                                <div className="text-sm font-medium">Customize columns</div>
+                                <div className="text-[11px] text-muted-foreground">Drag to reorder • Click to show/hide</div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    const all: Record<string, boolean> = {};
+                                    COLUMNS.forEach((c) => { all[c.key] = true; });
+                                    setVisibleCols(all as Record<ColumnKey, boolean>);
+                                  }}
+                                >
+                                  Select all
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    const none: Record<string, boolean> = {};
+                                    COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
+                                    setVisibleCols(none as Record<ColumnKey, boolean>);
+                                    setColumnOrder(COLUMNS.map((c) => c.key));
+                                  }}
+                                >
+                                  Reset
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="px-4 py-3 border-b border-border bg-muted/30">
+                              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
+                                Active order ({visibleColList.length}) — drag to rearrange
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {visibleColList.length === 0 ? (
+                                  <span className="text-xs text-muted-foreground italic">No columns selected</span>
+                                ) : (
+                                  visibleColList.map((c) => (
+                                    <div
+                                      key={c.key}
+                                      draggable
+                                      onDragStart={() => setDragKey(c.key)}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={() => {
+                                        if (!dragKey || dragKey === c.key) return;
+                                        setColumnOrder((prev) => {
+                                          const next = prev.filter((k) => k !== dragKey);
+                                          const idx = next.indexOf(c.key);
+                                          next.splice(idx, 0, dragKey);
+                                          return next;
+                                        });
+                                        setDragKey(null);
+                                      }}
+                                      onDragEnd={() => setDragKey(null)}
+                                      className={`flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-background text-xs cursor-move hover:border-primary/50 hover:bg-accent transition ${dragKey === c.key ? "opacity-40" : ""}`}
+                                    >
+                                      <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="3" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="3" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="13" r="1.2"/></svg>
+                                      <span>{c.label || c.key}</span>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="max-h-[380px] overflow-y-auto p-4">
+                              <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                                {(() => {
+                                  const groupMap: Record<string, string> = {
+                                    "Basic": "Basic",
+                                    "Pricing": "Pricing & Inventory",
+                                    "Inventory": "Pricing & Inventory",
+                                    "Tax & Shipping": "Tax, Taxonomy & Content",
+                                    "Taxonomy": "Tax, Taxonomy & Content",
+                                    "Content": "Tax, Taxonomy & Content",
+                                    "Dates": "Dates",
+                                  };
+                                  const grouped: Record<string, typeof COLUMNS> = {};
+                                  COLUMNS.forEach((c) => {
+                                    const g = groupMap[c.group] || c.group;
+                                    if (!grouped[g]) grouped[g] = [];
+                                    grouped[g].push(c);
+                                  });
+                                  return Object.entries(grouped).map(([group, cols]) => (
+                                    <div key={group}>
+                                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
+                                        {group}
+                                      </div>
+                                      <div className="flex flex-col gap-0.5">
+                                        {cols.map((c) => (
+                                          <label
+                                            key={c.key}
+                                            className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]"
+                                          >
+                                            <Checkbox
+                                              checked={visibleCols[c.key]}
+                                              onCheckedChange={(v) =>
+                                                setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                              }
+                                            />
+                                            <span className="truncate">{c.label}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
+                          <Package className="h-3.5 w-3.5" />
+                          <span className="font-medium">{productCount.toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+
+                    {/* Row 2: pagination (only shown when there are results) */}
+                    {productCount > 0 && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <span>Per page:</span>
+                          <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
+                            {PAGE_SIZE_OPTIONS.map((n) => (
+                              <Button
+                                key={n}
+                                variant={pageSize === n ? "secondary" : "ghost"}
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => setPageSize(n)}
+                              >
+                                {n}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-muted-foreground">
+                            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, productCount)} of {productCount.toLocaleString()}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(0)} disabled={page === 0}>First</Button>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Prev</Button>
+                            <span className="px-2 font-medium">Page {page + 1} / {Math.max(1, Math.ceil(productCount / pageSize))}</span>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}>Next</Button>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(Math.max(0, Math.ceil(productCount / pageSize) - 1))} disabled={(page + 1) * pageSize >= productCount}>Last</Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Products table or grid */}
               <Card>
@@ -947,47 +1066,8 @@ export default function ExploreStorePage() {
                   )}
 
                   {/* Pagination controls */}
-                  {!productsLoading && productCount > 0 && (
-                    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border text-xs">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <span>Per page:</span>
-                        <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
-                          {PAGE_SIZE_OPTIONS.map((n) => (
-                            <Button
-                              key={n}
-                              variant={pageSize === n ? "secondary" : "ghost"}
-                              size="sm"
-                              className="h-6 px-2 text-[11px]"
-                              onClick={() => setPageSize(n)}
-                            >
-                              {n}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground">
-                          {page * pageSize + 1}–{Math.min((page + 1) * pageSize, productCount)} of {productCount.toLocaleString()}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(0)} disabled={page === 0}>
-                            First
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
-                            Prev
-                          </Button>
-                          <span className="px-2 font-medium">
-                            Page {page + 1} / {Math.max(1, Math.ceil(productCount / pageSize))}
-                          </span>
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}>
-                            Next
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(Math.max(0, Math.ceil(productCount / pageSize) - 1))} disabled={(page + 1) * pageSize >= productCount}>
-                            Last
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                  {false && !productsLoading && productCount > 0 && (
+                    <div />
                   )}
                 </CardContent>
               </Card>
