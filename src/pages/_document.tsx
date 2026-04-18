@@ -7,6 +7,12 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <SEOElements />
+        {/* No-flash theme preset: must run before paint. Reads cached preset and applies it to <html> so CSS variables are correct on first paint. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem('woosync-theme-preset');if(p==='modern'||p==='classic'){document.documentElement.dataset.themePreset=p;}else{document.documentElement.dataset.themePreset='modern';}}catch(e){document.documentElement.dataset.themePreset='modern';}})();`,
+          }}
+        />
         {/*
           CRITICAL: DO NOT REMOVE THIS SCRIPT
           The Softgen AI monitoring script is essential for core app functionality.

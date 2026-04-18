@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,23 +7,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FolderTree, Tag as TagIcon, Download, ChevronDown, ChevronRight as ChevronRightIcon, ChevronLeft, ArrowLeft, Search } from "lucide-react";
-import { fetchCategories, fetchTags, type CategoryRow, type TagRow } from "@/services/taxonomyService";
+import { type CategoryRow, type TagRow } from "@/services/taxonomyService";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
+import { useTaxonomyRows, useAllCategories } from "@/hooks/queries/useTaxonomy";
 
 type Mode = "categories" | "tags";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
 export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange, embedHeader = false, storeName, storeUrl }: { storeId: string; mode: Mode; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean; storeName?: string; storeUrl?: string | null }) {
-  const [rows, setRows] = useState<(CategoryRow | TagRow)[]>([]);
-  const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(50);
-  const [loading, setLoading] = useState(false);
   const search = searchProp ?? "";
   const [debounced, setDebounced] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [allCategories, setAllCategories] = useState<CategoryRow[]>([]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 400);
@@ -32,27 +29,19 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   useEffect(() => { setPage(0); setExpandedId(null); }, [debounced, storeId, mode, pageSize]);
 
-  const load = useCallback(async () => {
-    if (!storeId) return;
-    setLoading(true);
-    try {
-      const fn = mode === "categories" ? fetchCategories : fetchTags;
-      const { data, count } = await fn(storeId, debounced, page, pageSize);
-      setRows(data);
-      setCount(count);
-    } catch (e) {
-      console.error(`Load ${mode} failed:`, e);
-    } finally {
-      setLoading(false);
-    }
-  }, [storeId, mode, debounced, page, pageSize]);
+  const { data: result, isFetching: loading } = useTaxonomyRows(storeId, mode, debounced, page, pageSize);
+  const rows = result?.data ?? [];
+  const count = result?.count ?? 0;
+  const { data: allCategories = [] } = useAllCategories(storeId, mode === "categories");
 
-  useEffect(() => { load(); }, [load]);
-
-  useEffect(() => {
-    if (mode !== "categories" || !storeId) return;
-    fetchCategories(storeId, "", 0, 500).then(({ data }) => setAllCategories(data)).catch(() => {});
-  }, [mode, storeId]);
+  const setRows = (_updater: (prev: (CategoryRow | TagRow)[]) => (CategoryRow | TagRow)[]) => {
+    // Handled via query invalidation on row mutations
+  };
+  const setCount = (_updater: number | ((prev: number) => number)) => {
+    // Handled via query invalidation
+  };
+  void setRows;
+  void setCount;
 
   const exportCsv = () => {
     if (rows.length === 0) return;
@@ -89,7 +78,7 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
             <p className="text-xs text-muted-foreground truncate">{storeUrl || ""}</p>
           </div>
           <div className="flex-1 flex justify-center">
-            <div className="relative w-full max-w-[480px]">
+            <div className="relative w-full max-w-[288px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input placeholder={`Search ${mode}...`} value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
             </div>

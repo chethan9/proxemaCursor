@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,69 +24,35 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Search, Building2, Trash2, Pencil, ExternalLink } from "lucide-react";
 import { useRouter } from "next/router";
-import { getClients, createClient, updateClient, deleteClient, type Client } from "@/services/clientService";
+import { type Client } from "@/services/clientService";
+import { useClientsWithCounts, useCreateClient, useUpdateClient, useDeleteClient } from "@/hooks/queries/useClients";
 import { getStoresByClient } from "@/services/storeService";
-import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 export default function ClientsPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<(Client & { siteCount: number })[]>([]);
-  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+  const { data: clients = [], isLoading: loading } = useClientsWithCounts();
+  const createMutation = useCreateClient();
+  const updateMutation = useUpdateClient();
+  const deleteMutation = useDeleteClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
-  const [creating, setCreating] = useState(false);
-
   const [editOpen, setEditOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editName, setEditName] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
 
-  const loadClients = async (skipCache = false) => {
-    if (!skipCache) {
-      const cached = browserCache.get<(Client & { siteCount: number })[]>(CACHE_KEYS.CLIENTS + ":with_counts");
-      if (cached) {
-        setClients(cached);
-        setLoading(false);
-        return;
-      }
-    }
-    setLoading(true);
-    try {
-      const data = await getClients();
-      const withCounts = await Promise.all(
-        data.map(async (c) => {
-          const stores = await getStoresByClient(c.id);
-          return { ...c, siteCount: stores.length };
-        })
-      );
-      setClients(withCounts);
-      browserCache.set(CACHE_KEYS.CLIENTS + ":with_counts", withCounts, CACHE_TTL.MEDIUM);
-    } catch (error) {
-      console.error("Error loading clients:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadClients();
-  }, []);
+  const creating = createMutation.isPending;
+  const savingEdit = updateMutation.isPending;
 
   const handleCreateClient = async () => {
     if (!newClientName.trim()) return;
-    setCreating(true);
     try {
-      await createClient({ name: newClientName.trim() });
+      await createMutation.mutateAsync({ name: newClientName.trim() });
       setNewClientName("");
       setDialogOpen(false);
-      browserCache.delete(CACHE_KEYS.CLIENTS);
-      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
-      await loadClients(true);
     } catch (error) {
       console.error("Error creating client:", error);
-    } finally {
-      setCreating(false);
     }
   };
 
@@ -97,28 +64,19 @@ export default function ClientsPage() {
 
   const handleSaveEdit = async () => {
     if (!editingClient || !editName.trim()) return;
-    setSavingEdit(true);
     try {
-      await updateClient(editingClient.id, { name: editName.trim() });
+      await updateMutation.mutateAsync({ id: editingClient.id, patch: { name: editName.trim() } });
       setEditOpen(false);
       setEditingClient(null);
-      browserCache.delete(CACHE_KEYS.CLIENTS);
-      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
-      await loadClients(true);
     } catch (error) {
       console.error("Error updating client:", error);
-    } finally {
-      setSavingEdit(false);
     }
   };
 
   const handleDeleteClient = async (id: string) => {
     if (!confirm("Are you sure you want to delete this client? Linked sites will be unassigned.")) return;
     try {
-      await deleteClient(id);
-      browserCache.delete(CACHE_KEYS.CLIENTS);
-      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
-      await loadClients(true);
+      await deleteMutation.mutateAsync(id);
     } catch (error) {
       console.error("Error deleting client:", error);
     }

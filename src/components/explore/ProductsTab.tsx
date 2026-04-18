@@ -19,7 +19,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Link from "next/link";
 import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search } from "lucide-react";
 import {
-  fetchProducts,
   getProductThumbnail,
   getCategoryNames,
   type ProductRow,
@@ -30,6 +29,7 @@ import { fetchPreferences, savePreferences } from "@/services/viewPreferencesSer
 import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useProducts, useProductCategoryOptions } from "@/hooks/queries/useProducts";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -89,24 +89,12 @@ interface ProductsTabProps {
 }
 
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [productCount, setProductCount] = useState(0);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
     const v = parseInt(localStorage.getItem("explore-page-size") || "50", 10);
     return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
   });
-  const [loading, setLoading] = useState(false);
-
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
-  const [priceMin, setPriceMin] = useState<string>("");
-  const [priceMax, setPriceMax] = useState<string>("");
-  const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
@@ -143,6 +131,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   });
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
 
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [sort, setSort] = useState(SORT_OPTIONS[0]);
+
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
   }, [columnOrder]);
@@ -158,38 +155,29 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
-  const loadProducts = useCallback(async () => {
-    if (!storeId) return;
-    setLoading(true);
-    try {
-      const { data, count } = await fetchProducts({
-        storeId,
-        page,
-        pageSize,
-        search: debouncedSearch,
-        sortField: sort.field,
-        sortDirection: sort.direction,
-        statusFilter,
-        excludeOutOfStock,
-        categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-        stockStatusFilter,
-        priceMin: priceMin ? parseFloat(priceMin) : undefined,
-        priceMax: priceMax ? parseFloat(priceMax) : undefined,
-      });
-      setProductCount(count);
-      setProducts(data);
-    } catch (e) {
-      console.error("Load products failed:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  const { data: productsResult, isFetching: loading } = useProducts({
+    storeId,
+    page,
+    pageSize,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+    statusFilter,
+    excludeOutOfStock,
+    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+    stockStatusFilter,
+    priceMin: priceMin ? parseFloat(priceMin) : undefined,
+    priceMax: priceMax ? parseFloat(priceMax) : undefined,
+  });
+  const products = productsResult?.data ?? [];
+  const productCount = productsResult?.count ?? 0;
 
-  useEffect(() => {
-    if (storeId) loadProducts();
-  }, [storeId, loadProducts]);
+  const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
+    // Inline mutations should invalidate query; placeholder no-op.
+  };
+  void setProducts;
 
   const visibleColList = useMemo(
     () => columnOrder
@@ -247,7 +235,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     URL.revokeObjectURL(url);
   }, [products, visibleColList, storeId]);
 
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -280,29 +268,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
 
-  useEffect(() => {
-    if (!storeId) return;
-    import("@/integrations/supabase/client").then(({ supabase }) => {
-      supabase
-        .from("products")
-        .select("categories")
-        .eq("store_id", storeId)
-        .limit(500)
-        .then(({ data }) => {
-          const set = new Set<string>();
-          (data || []).forEach((r: { categories: unknown }) => {
-            if (Array.isArray(r.categories)) {
-              r.categories.forEach((c: unknown) => {
-                const obj = c as { name?: string };
-                if (obj?.name) set.add(obj.name);
-              });
-            }
-          });
-          setCategoryOptions(Array.from(set).sort());
-        });
-    });
-  }, [storeId]);
-
   return (
     <div className="space-y-2">
       {embedHeader && (
@@ -321,7 +286,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </Select>
           </div>
           <div className="flex-1" />
-          <div className="w-full max-w-[480px]">
+          <div className="w-full max-w-[288px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input placeholder="Search products by name or SKU..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />

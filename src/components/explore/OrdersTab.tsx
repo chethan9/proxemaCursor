@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Link from "next/link";
 import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft } from "lucide-react";
 import {
-  fetchOrders,
   getCustomerName,
   getCustomerEmail,
   getCustomerPhone,
@@ -31,8 +30,10 @@ import {
   type OrderSortField,
   type SortDirection,
 } from "@/services/orderService";
-import { listPaymentMethods, type PaymentMethodRow } from "@/services/paymentMethodService";
+import { type PaymentMethodRow } from "@/services/paymentMethodService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
+import { useOrders, useOrderPaymentOptions } from "@/hooks/queries/useOrders";
+import { usePaymentMethods } from "@/hooks/queries/usePaymentMethods";
 import { OrderRowExpanded } from "./OrderRowExpanded";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
@@ -89,8 +90,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [orderCount, setOrderCount] = useState(0);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
@@ -98,7 +97,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     const v = parseInt(localStorage.getItem("orders-page-size") || "50", 10);
     return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
   });
-  const [loading, setLoading] = useState(false);
 
   const search = searchProp ?? "";
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -108,35 +106,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [totalMax, setTotalMax] = useState("");
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
 
-  const [paymentOptions, setPaymentOptions] = useState<string[]>([]);
-  const [pmRegistry, setPmRegistry] = useState<Record<string, PaymentMethodRow>>({});
+  const { data: paymentOptions = [] } = useOrderPaymentOptions(storeId);
+  const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    listPaymentMethods().then((list) => {
-      const map: Record<string, PaymentMethodRow> = {};
-      list.forEach((r) => { map[r.key] = r; });
-      setPmRegistry(map);
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (prefsLoaded.current) return;
-    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("orders-col-order") || localStorage.getItem("orders-page-size"));
-    if (hasLocal) { prefsLoaded.current = true; return; }
-    fetchPreferences("orders").then((remote) => {
-      if (remote) {
-        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
-        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
-        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
-        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
-        if (typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
-        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
-      }
-      prefsLoaded.current = true;
-    }).catch(() => { prefsLoaded.current = true; });
-  }, []);
 
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     id: false,
@@ -184,6 +157,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
 
   useEffect(() => {
+    if (prefsLoaded.current) return;
     if (typeof window !== "undefined") localStorage.setItem("orders-col-order", JSON.stringify(columnOrder));
   }, [columnOrder]);
 
@@ -200,59 +174,33 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     setPage(0);
   }, [debouncedSearch, statusFilter, sort, storeId, pageSize, paymentFilter, totalMin, totalMax]);
 
-  const load = useCallback(async () => {
-    if (!storeId) return;
-    setLoading(true);
-    try {
-      const { data, count } = await fetchOrders({
-        storeId,
-        page,
-        pageSize,
-        search: debouncedSearch,
-        sortField: sort.field,
-        sortDirection: sort.direction,
-        statusFilter,
-        paymentMethodFilter: paymentFilter,
-        totalMin: totalMin ? parseFloat(totalMin) : undefined,
-        totalMax: totalMax ? parseFloat(totalMax) : undefined,
-      });
-      setOrderCount(count);
-      setOrders(data);
-    } catch (e) {
-      console.error("Load orders failed:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, paymentFilter, totalMin, totalMax]);
-
-  useEffect(() => {
-    if (storeId) load();
-  }, [storeId, load]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    import("@/integrations/supabase/client").then(({ supabase }) => {
-      supabase
-        .from("orders")
-        .select("payment_method")
-        .eq("store_id", storeId)
-        .limit(500)
-        .then(({ data }) => {
-          const set = new Set<string>();
-          (data || []).forEach((r: { payment_method: string | null }) => {
-            if (r.payment_method) set.add(r.payment_method);
-          });
-          setPaymentOptions(Array.from(set).sort());
-        });
-    });
-  }, [storeId]);
-
   const visibleColList = useMemo(
     () => columnOrder
       .map((k) => COLUMNS.find((c) => c.key === k))
       .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
     [visibleCols, columnOrder]
   );
+
+  const { data: ordersResult, isFetching: loading, isPlaceholderData } = useOrders({
+    storeId,
+    page,
+    pageSize,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+    statusFilter,
+    paymentMethodFilter: paymentFilter,
+    totalMin: totalMin ? parseFloat(totalMin) : undefined,
+    totalMax: totalMax ? parseFloat(totalMax) : undefined,
+  });
+  const orders = ordersResult?.data ?? [];
+  const orderCount = ordersResult?.count ?? 0;
+  void isPlaceholderData;
+
+  const setOrders = (_updater: (prev: OrderRow[]) => OrderRow[]) => {
+    // Optimistic update handled via React Query cache elsewhere; no-op placeholder for inline edits.
+  };
+  void setOrders;
 
   const exportCsv = useCallback(() => {
     if (orders.length === 0) return;
@@ -345,7 +293,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             )}
           </div>
           <div className="flex-1 flex justify-center min-w-0">
-            <div className="w-full max-w-[480px]">
+            <div className="w-full max-w-[288px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />

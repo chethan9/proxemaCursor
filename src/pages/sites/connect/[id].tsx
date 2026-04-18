@@ -6,7 +6,6 @@ import { CheckCircle2, Loader2, AlertTriangle, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
-import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
 type StepStatus = "pending" | "active" | "done" | "error";
 
@@ -107,9 +106,6 @@ export default function ConnectSuccessPage() {
 
       if (cancelled) return;
       advanceFrom("redirect");
-
-      browserCache.delete(CACHE_KEYS.STORES);
-      browserCache.delete(CACHE_KEYS.store(id));
 
       await new Promise((r) => setTimeout(r, 800));
       setStep("redirect", "done");

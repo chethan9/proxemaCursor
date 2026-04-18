@@ -14,11 +14,21 @@ interface AuthGuardProps {
 export function AuthGuard({ children, requirePermission, requireSuperAdmin }: AuthGuardProps) {
   const router = useRouter();
   const { user, profile, loading, can, isSuperAdmin } = useAuth();
-  const [checking, setChecking] = useState(true);
+
+  // Fast-path: if auth already resolved and user passes checks, don't show loader.
+  const fastPassed =
+    !loading &&
+    !!user &&
+    (!profile || profile.is_active) &&
+    (!requireSuperAdmin || isSuperAdmin) &&
+    (!requirePermission || can(requirePermission));
+
+  const [checking, setChecking] = useState(!fastPassed);
   const [needsBootstrap, setNeedsBootstrap] = useState(false);
 
   useEffect(() => {
     if (loading) return;
+    if (fastPassed) { setChecking(false); return; }
     (async () => {
       if (!user) {
         const { data } = await supabase.rpc("can_bootstrap_super_admin");
@@ -45,9 +55,9 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
       }
       setChecking(false);
     })();
-  }, [loading, user, profile, requirePermission, requireSuperAdmin, isSuperAdmin, router, can]);
+  }, [loading, user, profile, requirePermission, requireSuperAdmin, isSuperAdmin, router, can, fastPassed]);
 
-  if (loading || checking || needsBootstrap) {
+  if (!fastPassed && (loading || checking || needsBootstrap)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

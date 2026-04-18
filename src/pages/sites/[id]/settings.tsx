@@ -16,7 +16,6 @@ import {
 import { ArrowLeft, RefreshCw, Settings as SettingsIcon, Zap, AlertTriangle, Trash2, Clock } from "lucide-react";
 import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
 import { supabase } from "@/integrations/supabase/client";
-import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
 const SYNC_INTERVALS = [
   { value: "0", label: "Manual only" },
@@ -96,8 +95,6 @@ function SettingsInner() {
     setDeleting(true);
     try {
       await deleteStore(store.id);
-      browserCache.delete(CACHE_KEYS.STORES);
-      browserCache.delete(CACHE_KEYS.DASHBOARD_STATS);
       router.push("/sites");
     } finally {
       setDeleting(false);

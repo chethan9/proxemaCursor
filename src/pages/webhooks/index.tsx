@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,58 +26,22 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useAllWebhooks, useAllWebhookEvents } from "@/hooks/queries/useWebhooks";
 
 type WebhookRow = Tables<"webhooks"> & { store_name?: string; store_url?: string };
 type WebhookEventRow = Tables<"webhook_events"> & { store_name?: string };
 
 export default function WebhooksPage() {
-  const [webhooks, setWebhooks] = useState<WebhookRow[]>([]);
-  const [events, setEvents] = useState<WebhookEventRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [webhooksRes, eventsRes] = await Promise.all([
-        supabase
-          .from("webhooks")
-          .select("*, stores(name, url)")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("webhook_events")
-          .select("*, stores(name)")
-          .order("created_at", { ascending: false })
-          .limit(100),
-      ]);
-
-      if (webhooksRes.data) {
-        setWebhooks(
-          webhooksRes.data.map((w) => ({
-            ...w,
-            store_name: (w.stores as { name: string; url: string } | null)?.name || "Unknown",
-            store_url: (w.stores as { name: string; url: string } | null)?.url || "",
-          }))
-        );
-      }
-
-      if (eventsRes.data) {
-        setEvents(
-          eventsRes.data.map((e) => ({
-            ...e,
-            store_name: (e.stores as { name: string } | null)?.name || "Unknown",
-          }))
-        );
-      }
-    } catch (error) {
-      console.error("Error loading webhooks:", error);
-    } finally {
-      setLoading(false);
-    }
+  const qc = useQueryClient();
+  const { data: webhooks = [], isLoading: whLoading, isFetching: whFetching } = useAllWebhooks();
+  const { data: events = [], isLoading: evLoading, isFetching: evFetching } = useAllWebhookEvents();
+  const loading = whLoading || evLoading;
+  const fetching = whFetching || evFetching;
+  void fetching;
+  const loadData = () => {
+    qc.invalidateQueries({ queryKey: ["webhooks", "all"] });
+    qc.invalidateQueries({ queryKey: ["webhook-events", "all"] });
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";

@@ -239,11 +239,11 @@ export default function SitesPage() {
   };
 
   return (
-    <AppLayout title="Sites">
+    <AppLayout title="Projects">
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Sites</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Projects</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Manage WooCommerce store connections and sync status
             </p>
@@ -494,7 +494,7 @@ export default function SitesPage() {
                     <TableRow
                       key={store.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => router.push(`/sites/${store.id}`)}
+                      onClick={() => router.push(`/projects/${store.id}`)}
                       onMouseEnter={() => prefetchStore(store.id)}
                     >
                       <TableCell>

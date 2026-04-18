@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { generateApiToken } from "@/lib/api-auth";
 import { ArrowLeft, Copy, Check, Plus, Trash2, Key, Store, RefreshCw, Shield, Pencil, Link2, Unlink } from "lucide-react";
-import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
 interface Client {
   id: string;
@@ -114,9 +113,6 @@ export default function ClientDetailPage() {
         .update({ client_id: id as string, updated_at: new Date().toISOString() })
         .eq("id", selectedSiteId);
       if (error) throw error;
-      browserCache.delete(CACHE_KEYS.CLIENTS);
-      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
-      browserCache.delete(CACHE_KEYS.STORES);
       setLinkOpen(false);
       setSelectedSiteId("");
       await loadClientData(id as string);
@@ -135,9 +131,6 @@ export default function ClientDetailPage() {
         .update({ client_id: null, updated_at: new Date().toISOString() })
         .eq("id", siteId);
       if (error) throw error;
-      browserCache.delete(CACHE_KEYS.CLIENTS);
-      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
-      browserCache.delete(CACHE_KEYS.STORES);
       if (id) await loadClientData(id as string);
     } catch (err) {
       console.error("Unlink site error:", err);

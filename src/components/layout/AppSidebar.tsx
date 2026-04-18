@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getStores, type StoreWithClient } from "@/services/storeService";
+import { useQueryClient } from "@tanstack/react-query";
+import { getStores, getStore, type StoreWithClient } from "@/services/storeService";
 import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
@@ -20,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Zap, ChevronsLeft, ChevronsRight, LogOut, CornerDownRight, Store, Lock, Unlock } from "lucide-react";
+import { queryKeys } from "@/lib/query-client";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -75,6 +77,10 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
 export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
+  const qc = useQueryClient();
+  const prefetchStore = (id: string) => {
+    qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
+  };
   const { profile, role, can, isSuperAdmin, signOut, permissions } = useAuth();
   const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -248,7 +254,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                           <li key={site.id}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Link href={href} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
+                                <Link href={href} onMouseEnter={() => prefetchStore(site.id)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                                   isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
                                   <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
@@ -262,7 +268,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                       }
                       return (
                         <li key={site.id}>
-                          <Link href={href} aria-current={isActive ? "page" : undefined} className={cn(
+                          <Link href={href} onMouseEnter={() => prefetchStore(site.id)} aria-current={isActive ? "page" : undefined} className={cn(
                             "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
                             isActive
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"

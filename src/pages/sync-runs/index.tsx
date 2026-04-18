@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSyncRunsPaged, useStoreOptions, useSyncRunsStats } from "@/hooks/queries/useSyncRuns";
 
 interface SyncRunRow {
   id: string;
@@ -99,15 +101,10 @@ const PAGE_SIZE = 50;
 
 export default function SyncRunsPage() {
   const { isSuperAdmin } = useAuth();
-  const [runs, setRuns] = useState<SyncRunRow[]>([]);
-  const [stores, setStores] = useState<StoreOption[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const qc = useQueryClient();
   const [selectedRun, setSelectedRun] = useState<SyncRunRow | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const pageRef = useRef(0);
-  const loadingRef = useRef(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [accumulated, setAccumulated] = useState<SyncRunRow[]>([]);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const [filterStore, setFilterStore] = useState<string>("all");
@@ -115,101 +112,77 @@ export default function SyncRunsPage() {
   const [filterAspect, setFilterAspect] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [stats, setStats] = useState({
-    total: 0,
-    completed: 0,
-    failed: 0,
-    running: 0,
-    totalRecords: 0,
-  });
+  const { data: stores = [] } = useStoreOptions();
+  const { data: stats = { total: 0, completed: 0, failed: 0, running: 0, totalRecords: 0 } } = useSyncRunsStats();
 
-  const loadStores = useCallback(async () => {
-    const { data } = await supabase.from("stores").select("id, name").order("name");
-    setStores(data || []);
-  }, []);
+  const filters = useMemo(() => ({
+    store: filterStore,
+    status: filterStatus,
+    aspect: filterAspect,
+    search: searchQuery,
+  }), [filterStore, filterStatus, filterAspect, searchQuery]);
 
-  const loadStats = useCallback(async () => {
-    const { data: allRuns } = await supabase
-      .from("sync_runs")
-      .select("status, records_processed");
-    if (allRuns) {
-      setStats({
-        total: allRuns.length,
-        completed: allRuns.filter((r) => r.status === "completed").length,
-        failed: allRuns.filter((r) => r.status === "failed").length,
-        running: allRuns.filter((r) => r.status === "running").length,
-        totalRecords: allRuns.reduce((s, r) => s + (r.records_processed || 0), 0),
+  const hasActiveRuns = stats.running > 0;
+
+  const { data: pageData, isLoading: pageLoading, isFetching } = useSyncRunsPaged(
+    currentPage,
+    PAGE_SIZE,
+    filters,
+    stores,
+    hasActiveRuns ? 5000 : false,
+  );
+
+  // Accumulate pages for infinite scroll
+  useEffect(() => {
+    if (!pageData) return;
+    if (currentPage === 0) {
+      setAccumulated(pageData.data);
+    } else {
+      setAccumulated(prev => {
+        const existing = new Set(prev.map(r => r.id));
+        const newOnes = pageData.data.filter(r => !existing.has(r.id));
+        return [...prev, ...newOnes];
       });
     }
-  }, []);
+  }, [pageData, currentPage]);
 
-  const buildQuery = useCallback(() => {
-    let query = supabase
-      .from("sync_runs")
-      .select("*", { count: "exact" })
-      .order("started_at", { ascending: false });
-    if (filterStore !== "all") query = query.eq("store_id", filterStore);
-    if (filterStatus !== "all") query = query.eq("status", filterStatus);
-    if (filterAspect !== "all") query = query.eq("aspect", filterAspect);
-    if (searchQuery) query = query.ilike("error_message", `%${searchQuery}%`);
-    return query;
+  // Reset page 0 on filter change
+  useEffect(() => {
+    setCurrentPage(0);
+    setAccumulated([]);
   }, [filterStore, filterStatus, filterAspect, searchQuery]);
 
-  const loadPage = useCallback(async (page: number, append: boolean) => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    if (page === 0) setInitialLoading(true);
-    else setLoadingMore(true);
-
-    try {
-      const query = buildQuery().range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      const { data, count, error } = await query;
-      if (error) throw error;
-
-      const storeMap = new Map(stores.map((s) => [s.id, s.name]));
-      const enriched = (data || []).map((r) => ({
-        ...r,
-        store_name: storeMap.get(r.store_id) || r.store_id.substring(0, 8),
-      }));
-
-      setRuns(prev => append ? [...prev, ...enriched] : enriched);
-      setHasMore((data || []).length === PAGE_SIZE);
-      setTotalCount(count || 0);
-      pageRef.current = page;
-    } catch (err) {
-      console.error("Error loading sync runs:", err);
-    } finally {
-      setInitialLoading(false);
-      setLoadingMore(false);
-      loadingRef.current = false;
-    }
-  }, [buildQuery, stores]);
+  const runs = accumulated;
+  const totalCount = pageData?.count ?? 0;
+  const hasMore = pageData ? pageData.data.length === PAGE_SIZE : false;
+  const initialLoading = pageLoading && currentPage === 0 && accumulated.length === 0;
+  const loadingMore = isFetching && currentPage > 0;
 
   const resetAndLoad = useCallback(() => {
-    pageRef.current = 0;
-    setRuns([]);
-    setHasMore(true);
-    loadPage(0, false);
-  }, [loadPage]);
+    setCurrentPage(0);
+    setAccumulated([]);
+    qc.invalidateQueries({ queryKey: ["sync-runs"] });
+  }, [qc]);
 
-  useEffect(() => { loadStores(); loadStats(); }, [loadStores, loadStats]);
-  useEffect(() => { if (stores.length > 0) resetAndLoad(); }, [stores, resetAndLoad]);
+  const loadStats = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["sync-runs-stats"] });
+  }, [qc]);
 
   // Intersection observer
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || !hasMore) return;
+    if (!sentinel || !hasMore || loadingMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingRef.current && hasMore) {
-          loadPage(pageRef.current + 1, true);
+        if (entries[0].isIntersecting && hasMore && !isFetching) {
+          setCurrentPage(p => p + 1);
         }
       },
       { rootMargin: "300px" }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loadPage]);
+  }, [hasMore, loadingMore, isFetching]);
 
   const formatDuration = (start: string | null, end: string | null) => {
     if (!start || !end) return "—";
@@ -276,9 +249,8 @@ export default function SyncRunsPage() {
   const handleClearAll = async () => {
     const { error } = await supabase.from("sync_runs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     if (!error) {
-      setRuns([]);
-      setStats({ total: 0, completed: 0, failed: 0, running: 0, totalRecords: 0 });
-      setTotalCount(0);
+      resetAndLoad();
+      loadStats();
     }
   };
 

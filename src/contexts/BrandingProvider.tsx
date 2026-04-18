@@ -24,7 +24,7 @@ const DEFAULTS: BrandingSettings = {
   primaryColor: "#008060",
   sidebarColor: "#1a1a1a",
   accentColor: "#008060",
-  themePreset: "classic",
+  themePreset: "modern",
 };
 
 const BrandingContext = createContext<BrandingContextValue | null>(null);
@@ -54,6 +54,8 @@ function applyTheme(settings: BrandingSettings) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
 
+  try { localStorage.setItem("woosync-theme-preset", settings.themePreset); } catch {}
+
   if (settings.themePreset === "classic") {
     // FROZEN Classic baseline — do not modify. Any redesign must go through "modern" preset.
     root.style.setProperty("--primary", "166 100% 25%");
@@ -79,7 +81,16 @@ function applyTheme(settings: BrandingSettings) {
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<BrandingSettings>(DEFAULTS);
+  const [settings, setSettings] = useState<BrandingSettings>(() => {
+    if (typeof window === "undefined") return DEFAULTS;
+    try {
+      const cached = localStorage.getItem("woosync-theme-preset");
+      if (cached === "modern" || cached === "classic") {
+        return { ...DEFAULTS, themePreset: cached };
+      }
+    } catch {}
+    return DEFAULTS;
+  });
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
