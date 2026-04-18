@@ -115,3 +115,14 @@ export function getCategoryNames(categories: unknown): string {
   if (!Array.isArray(categories) || categories.length === 0) return "";
   return (categories as { name?: string }[]).map((c) => c.name || "").filter(Boolean).join(", ");
 }
+
+export async function updateProduct(id: string, updates: Record<string, unknown>): Promise<ProductRow> {
+  const { data, error } = await supabase
+    .from("products")
+    .update(updates)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as unknown as ProductRow;
+}
