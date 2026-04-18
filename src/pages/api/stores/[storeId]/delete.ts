@@ -48,27 +48,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select("*")
     .eq("store_id", storeId);
 
-  const webhookResults: { id: string; remote_id: number | null; ok: boolean; error?: string }[] = [];
+  const webhookResults: { id: string; woo_webhook_id: number | null; ok: boolean; error?: string }[] = [];
   if (webhooks && store.consumer_key && store.consumer_secret && store.url) {
     const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
     for (const wh of webhooks) {
-      if (!wh.remote_id) {
-        webhookResults.push({ id: wh.id, remote_id: null, ok: true });
+      if (!wh.woo_webhook_id) {
+        webhookResults.push({ id: wh.id, woo_webhook_id: null, ok: true });
         continue;
       }
       try {
         const resp = await fetch(
-          `${store.url.replace(/\/$/, "")}/wp-json/wc/v3/webhooks/${wh.remote_id}?force=true`,
+          `${store.url.replace(/\/$/, "")}/wp-json/wc/v3/webhooks/${wh.woo_webhook_id}?force=true`,
           {
             method: "DELETE",
             headers: { Authorization: `Basic ${auth}` },
           }
         );
-        webhookResults.push({ id: wh.id, remote_id: wh.remote_id, ok: resp.ok });
+        webhookResults.push({ id: wh.id, woo_webhook_id: wh.woo_webhook_id, ok: resp.ok });
       } catch (e) {
         webhookResults.push({
           id: wh.id,
-          remote_id: wh.remote_id,
+          woo_webhook_id: wh.woo_webhook_id,
           ok: false,
           error: e instanceof Error ? e.message : "Unknown error",
         });
