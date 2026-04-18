@@ -1,4 +1,4 @@
-import { MENU_REGISTRY, DEFAULT_GROUPS, SITE_MENU_REGISTRY, SITE_MENU_DEFAULT_GROUPS, type MenuRegistryItem, type SiteMenuRegistryItem } from "@/lib/menu-registry";
+import { MENU_REGISTRY, DEFAULT_GROUPS, type MenuRegistryItem } from "@/lib/menu-registry";
 import type { MenuNode } from "@/services/menuConfigService";
 import type { Permission } from "@/lib/permissions";
 
@@ -17,12 +17,6 @@ export interface ResolvedMenuNode {
 function registryMap(): Map<string, MenuRegistryItem> {
   const m = new Map<string, MenuRegistryItem>();
   MENU_REGISTRY.forEach((r) => m.set(r.id, r));
-  return m;
-}
-
-function siteRegistryMap(): Map<string, SiteMenuRegistryItem> {
-  const m = new Map<string, SiteMenuRegistryItem>();
-  SITE_MENU_REGISTRY.forEach((r) => m.set(r.id, r));
   return m;
 }
 
@@ -46,26 +40,9 @@ export function buildDefaultTree(): MenuNode[] {
   return Array.from(groups.values()).filter((g) => (g.children?.length ?? 0) > 0);
 }
 
-export function buildSiteDefaultTree(): MenuNode[] {
-  const groups = new Map<string, MenuNode>();
-  for (const g of SITE_MENU_DEFAULT_GROUPS) {
-    groups.set(g, { id: `group-site-${g.toLowerCase()}`, type: "group", label: g, icon: "Folder", children: [] });
-  }
-  const sorted = [...SITE_MENU_REGISTRY].sort((a, b) => a.defaultOrder - b.defaultOrder);
-  for (const r of sorted) {
-    const g = groups.get(r.defaultGroup);
-    if (g) g.children!.push({ id: r.id, type: "item", label: r.defaultLabel, icon: r.defaultIcon, hidden: false });
-  }
-  return Array.from(groups.values()).filter((g) => (g.children?.length ?? 0) > 0);
-}
-
-function mergeGeneric(
-  config: MenuNode[],
-  reg: Map<string, { defaultLabel: string; defaultIcon: string }>,
-  allIds: string[],
-  defaultTreeBuilder: () => MenuNode[]
-): { tree: MenuNode[]; unassignedIds: string[] } {
-  const source = config.length > 0 ? config : defaultTreeBuilder();
+export function mergeMenu(config: MenuNode[]): { tree: MenuNode[]; unassignedIds: string[] } {
+  const reg = registryMap();
+  const source = config.length > 0 ? config : buildDefaultTree();
 
   const prune = (nodes: MenuNode[]): MenuNode[] =>
     nodes
@@ -83,8 +60,8 @@ function mergeGeneric(
   const existing = new Set<string>();
   collectIdsFromTree(pruned, existing);
   const unassignedIds: string[] = [];
-  for (const id of allIds) {
-    if (!existing.has(id)) unassignedIds.push(id);
+  for (const r of MENU_REGISTRY) {
+    if (!existing.has(r.id)) unassignedIds.push(r.id);
   }
 
   if (unassignedIds.length > 0) {
@@ -106,16 +83,6 @@ function mergeGeneric(
   return { tree: pruned, unassignedIds };
 }
 
-export function mergeMenu(config: MenuNode[]): { tree: MenuNode[]; unassignedIds: string[] } {
-  const reg = registryMap();
-  return mergeGeneric(config, reg, MENU_REGISTRY.map((r) => r.id), buildDefaultTree);
-}
-
-export function mergeSiteMenu(config: MenuNode[]): { tree: MenuNode[]; unassignedIds: string[] } {
-  const reg = siteRegistryMap();
-  return mergeGeneric(config, reg, SITE_MENU_REGISTRY.map((r) => r.id), buildSiteDefaultTree);
-}
-
 export function resolveForSidebar(
   tree: MenuNode[],
   can: (p: Permission) => boolean,
@@ -135,37 +102,6 @@ export function resolveForSidebar(
         out.push({
           id: n.id, type: "item", label: n.label, icon: n.icon, iconColor: n.iconColor,
           href: r.href, permission: r.permission, superAdminOnly: r.superAdminOnly,
-        });
-      } else {
-        const children = depth < 1 ? resolve(n.children || [], depth + 1) : [];
-        if (children.length === 0) continue;
-        out.push({ id: n.id, type: "group", label: n.label, icon: n.icon, iconColor: n.iconColor, children });
-      }
-    }
-    return out;
-  };
-
-  return resolve(tree, 0);
-}
-
-export function resolveForSiteSidebar(
-  tree: MenuNode[],
-  siteId: string,
-  can: (p: Permission) => boolean
-): ResolvedMenuNode[] {
-  const reg = siteRegistryMap();
-
-  const resolve = (nodes: MenuNode[], depth: number): ResolvedMenuNode[] => {
-    const out: ResolvedMenuNode[] = [];
-    for (const n of nodes) {
-      if (n.hidden) continue;
-      if (n.type === "item") {
-        const r = reg.get(n.id);
-        if (!r) continue;
-        if (r.permission && !can(r.permission)) continue;
-        out.push({
-          id: n.id, type: "item", label: n.label, icon: n.icon, iconColor: n.iconColor,
-          href: `/sites/${siteId}${r.path}`, permission: r.permission,
         });
       } else {
         const children = depth < 1 ? resolve(n.children || [], depth + 1) : [];

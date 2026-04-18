@@ -72,15 +72,14 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
   return "staff";
 }
 
-export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
+export function AppSidebar() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
   const { profile, role, can, isSuperAdmin, signOut, permissions } = useAuth();
-  const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
   });
-  const collapsed = forceCollapsed || collapsedPref;
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     const roleKey = roleKeyFor(undefined, false);
@@ -111,9 +110,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, [profile?.role, isSuperAdmin, permissions.join(",")]);
 
   const toggle = () => {
-    if (forceCollapsed) return;
-    const next = !collapsedPref;
-    setCollapsedPref(next);
+    const next = !collapsed;
+    setCollapsed(next);
     if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
   };
 
@@ -139,9 +137,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       >
         {active && !collapsed && (
           <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
-        )}
-        {active && collapsed && (
-          <span aria-hidden="true" className="absolute inset-0 rounded-md ring-2 ring-sidebar-primary/70 pointer-events-none" />
         )}
         <Icon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden="true" />
         {!collapsed && <span className="truncate">{node.label}</span>}
@@ -208,8 +203,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 <ul className="space-y-0.5">
                   {node.children?.map(renderItem)}
                   {isStoresGroup && can(PERMISSIONS.SITES_VIEW) && sites.map((site) => {
-                    const href = `/sites/${site.id}`;
-                    const isActive = router.asPath.startsWith(`/sites/${site.id}`);
+                    const href = `/explore/${site.id}`;
+                    const isActive = router.asPath.startsWith(`/explore/${site.id}`);
                     if (collapsed) {
                       return (
                         <li key={site.id}>
@@ -257,7 +252,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 {!collapsed && (
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-xs font-medium truncate">{profile?.full_name || profile?.email}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{role?.name || profile?.role}</p>
+                    <p className="text-[10px] text-sidebar-foreground/50 truncate">{role?.name || profile?.role}</p>
                   </div>
                 )}
               </button>
@@ -276,7 +271,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {collapsed && !forceCollapsed && (
+          {collapsed && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={toggle} aria-label="Expand sidebar"

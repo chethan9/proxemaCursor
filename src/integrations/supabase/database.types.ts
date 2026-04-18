@@ -639,40 +639,23 @@ export type Database = {
       menu_configs: {
         Row: {
           config: Json
-          id: string
           role: string
-          scope: string
-          site_id: string | null
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
           config?: Json
-          id?: string
           role: string
-          scope?: string
-          site_id?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
           config?: Json
-          id?: string
           role?: string
-          scope?: string
-          site_id?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "menu_configs_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       orders: {
         Row: {

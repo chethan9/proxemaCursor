@@ -29,10 +29,6 @@ import {
   Clock,
   Home,
   Folder,
-  Ticket,
-  History,
-  Archive,
-  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
@@ -79,10 +75,6 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Clock,
   Home,
   Folder,
-  Ticket,
-  History,
-  Archive,
-  ScrollText,
 };
 
 export function resolveIcon(name: string): LucideIcon {
@@ -93,7 +85,7 @@ export const ICON_NAMES = Object.keys(ICON_MAP);
 
 export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "dashboard", defaultLabel: "Dashboard", defaultIcon: "LayoutDashboard", href: "/", defaultGroup: "Overview", defaultOrder: 0 },
-  { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW, superAdminOnly: true },
+  { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW },
   { id: "sites", defaultLabel: "Sites", defaultIcon: "Store", href: "/sites", defaultGroup: "Stores", defaultOrder: 0, permission: PERMISSIONS.SITES_VIEW },
   { id: "sync-runs", defaultLabel: "Sync Runs", defaultIcon: "RefreshCw", href: "/sync-runs", defaultGroup: "Operations", defaultOrder: 0, permission: PERMISSIONS.SYNC_VIEW },
   { id: "webhooks", defaultLabel: "Webhooks", defaultIcon: "Webhook", href: "/webhooks", defaultGroup: "Operations", defaultOrder: 1, permission: PERMISSIONS.WEBHOOKS_VIEW },
@@ -105,26 +97,3 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
 ];
 
 export const DEFAULT_GROUPS = ["Overview", "Management", "Stores", "Operations", "Developer", "Administration", "System"];
-
-export type SiteMenuRegistryItem = {
-  id: string;
-  defaultLabel: string;
-  defaultIcon: string;
-  path: string;
-  defaultGroup: string;
-  defaultOrder: number;
-  permission?: Permission;
-};
-
-export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
-  { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "", defaultGroup: "Main", defaultOrder: 0 },
-  { id: "site-orders", defaultLabel: "Orders", defaultIcon: "ShoppingCart", path: "/orders", defaultGroup: "Main", defaultOrder: 1 },
-  { id: "site-products", defaultLabel: "Products", defaultIcon: "Package", path: "/products", defaultGroup: "Main", defaultOrder: 2 },
-  { id: "site-customers", defaultLabel: "Customers", defaultIcon: "Users", path: "/customers", defaultGroup: "Main", defaultOrder: 3 },
-  { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 4 },
-  { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 5 },
-  { id: "site-coupons", defaultLabel: "Coupons", defaultIcon: "Ticket", path: "/coupons", defaultGroup: "Main", defaultOrder: 6 },
-  { id: "site-settings", defaultLabel: "Settings", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 0 },
-];
-
-export const SITE_MENU_DEFAULT_GROUPS = ["Main", "Manage"];
