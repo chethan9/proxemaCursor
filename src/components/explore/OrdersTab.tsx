@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,7 @@ import {
   type SortDirection,
 } from "@/services/orderService";
 import { listPaymentMethods, type PaymentMethodRow } from "@/services/paymentMethodService";
+import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { OrderRowExpanded } from "./OrderRowExpanded";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
@@ -108,6 +109,8 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
 
   const [paymentOptions, setPaymentOptions] = useState<string[]>([]);
   const [pmRegistry, setPmRegistry] = useState<Record<string, PaymentMethodRow>>({});
+  const prefsLoaded = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     listPaymentMethods().then((list) => {
@@ -116,6 +119,32 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
       setPmRegistry(map);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (prefsLoaded.current) return;
+    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("orders-col-order") || localStorage.getItem("orders-page-size"));
+    if (hasLocal) { prefsLoaded.current = true; return; }
+    fetchPreferences("orders").then((remote) => {
+      if (remote) {
+        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
+        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
+        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
+        if (typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
+        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+      }
+      prefsLoaded.current = true;
+    }).catch(() => { prefsLoaded.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      savePreferences("orders", { columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort }).catch(() => {});
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort]);
 
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     id: false,

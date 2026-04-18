@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from "next/image";
@@ -32,6 +32,7 @@ import {
   type ProductSortField,
   type SortDirection,
 } from "@/services/productService";
+import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OrdersTab } from "@/components/explore/OrdersTab";
 import { TaxonomyTab } from "@/components/explore/TaxonomyTab";
@@ -292,6 +293,37 @@ export default function ExploreStorePage() {
   }, [products, visibleColList, storeId]);
 
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const prefsLoaded = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (prefsLoaded.current) return;
+    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("explore-col-order") || localStorage.getItem("explore-page-size") || localStorage.getItem("explore-view-mode"));
+    if (hasLocal) { prefsLoaded.current = true; return; }
+    fetchPreferences("products").then((remote) => {
+      if (remote) {
+        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
+        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
+        if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
+        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
+        if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
+        if (typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
+        if (typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
+        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+      }
+      prefsLoaded.current = true;
+    }).catch(() => { prefsLoaded.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      savePreferences("products", { columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort }).catch(() => {});
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
 
   useEffect(() => {
     if (!storeId) return;
