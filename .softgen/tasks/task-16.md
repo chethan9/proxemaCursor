@@ -1,6 +1,6 @@
 ---
 title: Rework UI with Shopify Polaris design language
-status: in_progress
+status: done
 priority: high
 type: chore
 tags: [ui, design-system, accessibility]
