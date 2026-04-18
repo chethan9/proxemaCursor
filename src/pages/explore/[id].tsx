@@ -109,10 +109,6 @@ export default function ExploreStorePage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
-  const [priceMin, setPriceMin] = useState<string>("");
-  const [priceMax, setPriceMax] = useState<string>("");
-
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
@@ -198,7 +194,7 @@ export default function ExploreStorePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter]);
 
   const loadProducts = useCallback(async () => {
     if (!storeId) return;
@@ -214,9 +210,6 @@ export default function ExploreStorePage() {
         statusFilter,
         excludeOutOfStock,
         categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-        stockStatusFilter,
-        priceMin: priceMin ? parseFloat(priceMin) : undefined,
-        priceMax: priceMax ? parseFloat(priceMax) : undefined,
       });
       setProductCount(count);
       setProducts(data);
@@ -225,7 +218,7 @@ export default function ExploreStorePage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter]);
 
   useEffect(() => {
     if (storeId) loadProducts();
@@ -404,7 +397,21 @@ export default function ExploreStorePage() {
                         EOS
                       </Button>
 
-                      {(excludeOutOfStock || statusFilter !== "all" || search || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
+                      {categoryOptions.length > 0 && (
+                        <select
+                          value={categoryFilter}
+                          onChange={(e) => setCategoryFilter(e.target.value)}
+                          className="h-9 rounded-md border border-border bg-background px-2 text-xs max-w-[180px]"
+                          title="Filter by category"
+                        >
+                          <option value="all">All categories</option>
+                          {categoryOptions.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      )}
+
+                      {(categoryFilter !== "all" || excludeOutOfStock || statusFilter !== "all" || search) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -414,9 +421,6 @@ export default function ExploreStorePage() {
                             setStatusFilter("all");
                             setExcludeOutOfStock(false);
                             setCategoryFilter("all");
-                            setStockStatusFilter("all");
-                            setPriceMin("");
-                            setPriceMax("");
                           }}
                         >
                           Clear
@@ -761,168 +765,14 @@ export default function ExploreStorePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30">
-                          {visibleColList.map((c) => {
-                            const baseCls = c.key === "image" ? "w-14" : "";
-                            if (c.key === "status") {
-                              return (
-                                <TableHead key={c.key} className={baseCls}>
-                                  <div className="flex items-center gap-1.5">
-                                    <span>{c.label}</span>
-                                    <select
-                                      value={statusFilter}
-                                      onChange={(e) => setStatusFilter(e.target.value)}
-                                      className="h-6 rounded border border-input bg-background px-1 text-[11px] font-normal"
-                                    >
-                                      <option value="all">All</option>
-                                      <option value="publish">Publish</option>
-                                      <option value="draft">Draft</option>
-                                      <option value="pending">Pending</option>
-                                      <option value="private">Private</option>
-                                    </select>
-                                  </div>
-                                </TableHead>
-                              );
-                            }
-                            if (c.key === "price") {
-                              return (
-                                <TableHead key={c.key} className={baseCls}>
-                                  <div className="flex items-center gap-1">
-                                    <span>{c.label}</span>
-                                    <Input
-                                      type="number"
-                                      value={priceMin}
-                                      onChange={(e) => setPriceMin(e.target.value)}
-                                      placeholder="min"
-                                      className="h-6 text-[11px] w-16 px-1.5 font-normal"
-                                    />
-                                    <Input
-                                      type="number"
-                                      value={priceMax}
-                                      onChange={(e) => setPriceMax(e.target.value)}
-                                      placeholder="max"
-                                      className="h-6 text-[11px] w-16 px-1.5 font-normal"
-                                    />
-                                  </div>
-                                </TableHead>
-                              );
-                            }
-                            if (c.key === "stock" || c.key === "stock_status") {
-                              return (
-                                <TableHead key={c.key} className={baseCls}>
-                                  <div className="flex items-center gap-1.5">
-                                    <span>{c.label}</span>
-                                    <select
-                                      value={stockStatusFilter}
-                                      onChange={(e) => setStockStatusFilter(e.target.value)}
-                                      className="h-6 rounded border border-input bg-background px-1 text-[11px] font-normal"
-                                    >
-                                      <option value="all">All</option>
-                                      <option value="instock">In stock</option>
-                                      <option value="outofstock">Out of stock</option>
-                                      <option value="onbackorder">Backorder</option>
-                                    </select>
-                                  </div>
-                                </TableHead>
-                              );
-                            }
-                            if (c.key === "category") {
-                              return (
-                                <TableHead key={c.key} className={baseCls}>
-                                  <div className="flex items-center gap-1.5">
-                                    <span>{c.label}</span>
-                                    <select
-                                      value={categoryFilter}
-                                      onChange={(e) => setCategoryFilter(e.target.value)}
-                                      className="h-6 rounded border border-input bg-background px-1 text-[11px] font-normal max-w-[120px]"
-                                    >
-                                      <option value="all">All categories</option>
-                                      {categoryOptions.map((cat) => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </TableHead>
-                              );
-                            }
-                            return <TableHead key={`f-${c.key}`} className="py-1.5" />;
-                          })}
-                        </TableRow>
-                        <TableRow className="bg-background border-b">
-                          {visibleColList.map((c) => {
-                            if (c.key === "status") {
-                              return (
-                                <TableHead key={`f-${c.key}`} className="py-1.5">
-                                  <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
-                                  >
-                                    <option value="all">All</option>
-                                    <option value="publish">Publish</option>
-                                    <option value="draft">Draft</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="private">Private</option>
-                                  </select>
-                                </TableHead>
-                              );
-                            }
-                            if (c.key === "price") {
-                              return (
-                                <TableHead key={`f-${c.key}`} className="py-1.5">
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      value={priceMin}
-                                      onChange={(e) => setPriceMin(e.target.value)}
-                                      placeholder="min"
-                                      className="h-7 text-xs w-16 px-1.5"
-                                    />
-                                    <span className="text-muted-foreground text-xs">–</span>
-                                    <Input
-                                      type="number"
-                                      value={priceMax}
-                                      onChange={(e) => setPriceMax(e.target.value)}
-                                      placeholder="max"
-                                      className="h-7 text-xs w-16 px-1.5"
-                                    />
-                                  </div>
-                                </TableHead>
-                              );
-                            }
-                            if (c.key === "stock" || c.key === "stock_status") {
-                              return (
-                                <TableHead key={`f-${c.key}`} className="py-1.5">
-                                  <select
-                                    value={stockStatusFilter}
-                                    onChange={(e) => setStockStatusFilter(e.target.value)}
-                                    className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
-                                  >
-                                    <option value="all">All</option>
-                                    <option value="instock">In stock</option>
-                                    <option value="outofstock">Out of stock</option>
-                                    <option value="onbackorder">On backorder</option>
-                                  </select>
-                                </TableHead>
-                              );
-                            }
-                            if (c.key === "category") {
-                              return (
-                                <TableHead key={`f-${c.key}`} className="py-1.5">
-                                  <select
-                                    value={categoryFilter}
-                                    onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
-                                  >
-                                    <option value="all">All categories</option>
-                                    {categoryOptions.map((cat) => (
-                                      <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                  </select>
-                                </TableHead>
-                              );
-                            }
-                            return <TableHead key={`f-${c.key}`} className="py-1.5" />;
-                          })}
+                          {visibleColList.map((c) => (
+                            <TableHead
+                              key={c.key}
+                              className={c.key === "image" ? "w-14" : ""}
+                            >
+                              {c.label}
+                            </TableHead>
+                          ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
