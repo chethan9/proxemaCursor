@@ -1169,7 +1169,7 @@ export default function ExploreStorePage() {
             </TabsContent>
 
             <TabsContent value="orders">
-              <OrdersTab storeId={storeId} />
+              <OrdersTab storeId={storeId} storeUrl={store?.url} />
             </TabsContent>
             <TabsContent value="tags">
               <TaxonomyTab storeId={storeId} mode="tags" />
