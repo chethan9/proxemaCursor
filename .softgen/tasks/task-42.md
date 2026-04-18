@@ -1,6 +1,6 @@
 ---
 title: Refactor projects/index.tsx into modular components
-status: todo
+status: done
 priority: high
 type: chore
 tags: [refactor]
@@ -21,9 +21,8 @@ Extract into `src/components/projects/`:
 Page becomes thin orchestrator under 300 lines.
 
 ## Checklist
-- [ ] Create src/components/projects/ProjectCard.tsx
-- [ ] Create src/components/projects/ProjectFilters.tsx
-- [ ] Create src/components/projects/CreateProjectDialog.tsx
-- [ ] Create src/components/projects/ProjectsGrid.tsx
-- [ ] Rewrite src/pages/projects/index.tsx (<300 lines)
-- [ ] check_for_errors
+- [x] Extract AddSiteDialog to src/components/project/AddSiteDialog.tsx
+- [x] Extract EditSiteDialog to src/components/project/EditSiteDialog.tsx
+- [x] Extract SitesTable to src/components/project/SitesTable.tsx
+- [x] Rewrite src/pages/projects/index.tsx (<300 lines)
+- [x] check_for_errors
