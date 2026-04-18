@@ -322,7 +322,7 @@ export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
                 }}>Clear</Button>
               )}
               <div className="flex-1" />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
                 <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
                   <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
                   <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
@@ -330,7 +330,10 @@ export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}><ArrowUpDown className="h-3.5 w-3.5" /></Button>
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      <span className="text-xs">Sort</span>
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>Sort by</DropdownMenuLabel>
@@ -342,9 +345,10 @@ export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
                 </DropdownMenu>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
                       <Columns3 className="h-3.5 w-3.5" />
-                      <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
+                      <span className="text-xs">Columns</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6}>
@@ -399,7 +403,10 @@ export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
                     </div>
                   </PopoverContent>
                 </Popover>
-                <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={products.length === 0} title="Export CSV"><Download className="h-3.5 w-3.5" /></Button>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="text-xs">Export</span>
+                </Button>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
                   <Package className="h-3.5 w-3.5" />
                   <span className="font-medium">{productCount.toLocaleString()}</span>

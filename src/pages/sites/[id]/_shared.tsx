@@ -51,11 +51,9 @@ export function SiteSectionHeader({ store, searchPlaceholder, search, onSearchCh
         <h1 className="text-xl font-semibold truncate leading-tight">{store?.name || "—"}</h1>
         <p className="text-xs text-muted-foreground truncate">{store?.url || ""}</p>
       </div>
-      <div className="flex-1 flex justify-center min-w-[240px] px-4">
-        <div className="relative w-full max-w-[560px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input placeholder={searchPlaceholder} value={search} onChange={(e) => onSearchChange(e.target.value)} className="pl-9 h-9" />
-        </div>
+      <div className="relative w-full max-w-[320px] ml-auto">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input placeholder={searchPlaceholder} value={search} onChange={(e) => onSearchChange(e.target.value)} className="pl-9 h-9" />
       </div>
     </div>
   );
