@@ -56,6 +56,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthProvider";
 
 interface SyncRunRow {
   id: string;
@@ -97,6 +98,7 @@ const ASPECT_COLORS: Record<string, string> = {
 const PAGE_SIZE = 50;
 
 export default function SyncRunsPage() {
+  const { isSuperAdmin } = useAuth();
   const [runs, setRuns] = useState<SyncRunRow[]>([]);
   const [stores, setStores] = useState<StoreOption[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -303,7 +305,7 @@ export default function SyncRunsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            {stats.failed > 0 && (
+            {stats.failed > 0 && isSuperAdmin && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
@@ -327,28 +329,30 @@ export default function SyncRunsPage() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear All
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Clear all sync runs?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete all {stats.total} sync run records across all sites. This cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Delete All Runs
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {isSuperAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear all sync runs?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all {stats.total} sync run records across all sites. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Delete All Runs
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button variant="outline" size="sm" onClick={() => { resetAndLoad(); loadStats(); }}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
