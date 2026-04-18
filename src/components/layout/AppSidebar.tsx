@@ -197,7 +197,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             const isStoresGroup = node.id === "group-stores";
             return (
               <div key={node.id} className={cn("mb-3", collapsed ? "px-1.5" : "px-2")}>
-                {!collapsed && (
+                {!collapsed && node.id === "group-stores" && (
                   <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
                     {node.label}
                   </p>
