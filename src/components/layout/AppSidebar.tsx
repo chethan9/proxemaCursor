@@ -75,7 +75,7 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
 export function AppSidebar() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
-  const { profile, role, can, isSuperAdmin, signOut } = useAuth();
+  const { profile, role, can, isSuperAdmin, signOut, permissions } = useAuth();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
@@ -107,7 +107,7 @@ export function AppSidebar() {
       setMenuTree(resolved);
     }).catch(() => { if (!cached) setMenuTree([]); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.role, isSuperAdmin]);
+  }, [profile?.role, isSuperAdmin, permissions.join(",")]);
 
   const toggle = () => {
     const next = !collapsed;
