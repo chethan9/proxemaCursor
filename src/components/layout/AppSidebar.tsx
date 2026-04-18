@@ -117,8 +117,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
   };
 
-  const isItemActive = (href: string) =>
-    href === "/" ? router.pathname === "/" : router.pathname === href || router.pathname.startsWith(href + "/");
+  const isItemActive = (href: string) => router.pathname === href;
 
   const renderItem = (node: ResolvedMenuNode) => {
     if (node.type !== "item" || !node.href) return null;
