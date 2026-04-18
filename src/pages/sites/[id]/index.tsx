@@ -608,6 +608,8 @@ export default function SiteWorkspacePage() {
     try {
       await deleteStore(store.id);
       siteCache.delete(store.id);
+      browserCache.delete(CACHE_KEYS.STORES);
+      browserCache.delete(CACHE_KEYS.DASHBOARD_STATS);
       router.push("/sites");
     } catch (error) {
       console.error("Error deleting store:", error);
