@@ -181,7 +181,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     [visibleCols, columnOrder]
   );
 
-  const { data: ordersResult, isFetching: loading, isPlaceholderData } = useOrders({
+  const { data: ordersResult, isLoading: loading, isPlaceholderData } = useOrders({
     storeId,
     page,
     pageSize,

@@ -29,7 +29,7 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   useEffect(() => { setPage(0); setExpandedId(null); }, [debounced, storeId, mode, pageSize]);
 
-  const { data: result, isFetching: loading } = useTaxonomyRows(storeId, mode, debounced, page, pageSize);
+  const { data: result, isLoading: loading } = useTaxonomyRows(storeId, mode, debounced, page, pageSize);
   const rows = result?.data ?? [];
   const count = result?.count ?? 0;
   const { data: allCategories = [] } = useAllCategories(storeId, mode === "categories");
