@@ -98,7 +98,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
 interface SyncProgress {
   current: number;
@@ -614,8 +613,6 @@ export default function SiteWorkspacePage() {
     try {
       await deleteStore(store.id);
       siteCache.delete(store.id);
-      browserCache.delete(CACHE_KEYS.STORES);
-      browserCache.delete(CACHE_KEYS.DASHBOARD_STATS);
       router.push("/projects");
     } catch (error) {
       console.error("Error deleting store:", error);
