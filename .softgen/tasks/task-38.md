@@ -1,6 +1,6 @@
 ---
-title: Restore Sync Engine page at /sites/[id]
-status: todo
+title: Rename Sites → Projects and restore Sync Engine page at /projects/[id]
+status: done
 priority: urgent
 type: bug
 tags: [sites, restore, regression]

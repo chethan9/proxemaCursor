@@ -1,6 +1,6 @@
 ---
 title: Delete unused src/lib/cache.ts
-status: todo
+status: done
 priority: low
 type: chore
 tags: [cleanup]
