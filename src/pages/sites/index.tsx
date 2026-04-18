@@ -111,6 +111,12 @@ export default function SitesPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const onFocus = () => loadData(true);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadData]);
+
   const handleCreateStore = async () => {
     if (!newStore.name.trim() || !newStore.url.trim()) return;
     
