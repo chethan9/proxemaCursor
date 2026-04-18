@@ -35,9 +35,11 @@ import { getStores, getStore, createStore, type StoreWithClient } from "@/servic
 import { getClients, type Client } from "@/services/clientService";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export default function SitesPage() {
   const router = useRouter();
+  const { isSuperAdmin } = useAuth();
   const [stores, setStores] = useState<StoreWithClient[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
@@ -245,7 +247,7 @@ export default function SitesPage() {
               </div>
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className={isSuperAdmin ? "space-y-2" : "space-y-2 col-span-2"}>
                     <Label htmlFor="store-name">Site Name</Label>
                     <Input
                       id="store-name"
@@ -254,24 +256,26 @@ export default function SitesPage() {
                       onChange={(e) => setNewStore({ ...newStore, name: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="client">Client (Optional)</Label>
-                    <Select
-                      value={newStore.client_id}
-                      onValueChange={(value) => setNewStore({ ...newStore, client_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {isSuperAdmin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="client">Client (Optional)</Label>
+                      <Select
+                        value={newStore.client_id}
+                        onValueChange={(value) => setNewStore({ ...newStore, client_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="store-url">Store URL</Label>
