@@ -109,6 +109,11 @@ export default function ExploreStorePage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [skuFilter, setSkuFilter] = useState("");
+  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
+
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
@@ -194,7 +199,7 @@ export default function ExploreStorePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter, skuFilter, stockStatusFilter, priceMin, priceMax]);
 
   const loadProducts = useCallback(async () => {
     if (!storeId) return;
@@ -210,6 +215,10 @@ export default function ExploreStorePage() {
         statusFilter,
         excludeOutOfStock,
         categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+        skuFilter: skuFilter.trim() || undefined,
+        stockStatusFilter,
+        priceMin: priceMin ? parseFloat(priceMin) : undefined,
+        priceMax: priceMax ? parseFloat(priceMax) : undefined,
       });
       setProductCount(count);
       setProducts(data);
@@ -218,7 +227,7 @@ export default function ExploreStorePage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter, skuFilter, stockStatusFilter, priceMin, priceMax]);
 
   useEffect(() => {
     if (storeId) loadProducts();
@@ -397,21 +406,7 @@ export default function ExploreStorePage() {
                         EOS
                       </Button>
 
-                      {categoryOptions.length > 0 && (
-                        <select
-                          value={categoryFilter}
-                          onChange={(e) => setCategoryFilter(e.target.value)}
-                          className="h-9 rounded-md border border-border bg-background px-2 text-xs max-w-[180px]"
-                          title="Filter by category"
-                        >
-                          <option value="all">All categories</option>
-                          {categoryOptions.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      )}
-
-                      {(categoryFilter !== "all" || excludeOutOfStock || statusFilter !== "all" || search) && (
+                      {(excludeOutOfStock || statusFilter !== "all" || search || categoryFilter !== "all" || skuFilter || stockStatusFilter !== "all" || priceMin || priceMax) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -421,6 +416,10 @@ export default function ExploreStorePage() {
                             setStatusFilter("all");
                             setExcludeOutOfStock(false);
                             setCategoryFilter("all");
+                            setSkuFilter("");
+                            setStockStatusFilter("all");
+                            setPriceMin("");
+                            setPriceMax("");
                           }}
                         >
                           Clear
@@ -773,6 +772,95 @@ export default function ExploreStorePage() {
                               {c.label}
                             </TableHead>
                           ))}
+                        </TableRow>
+                        <TableRow className="bg-background border-b">
+                          {visibleColList.map((c) => {
+                            if (c.key === "sku") {
+                              return (
+                                <TableHead key={`f-${c.key}`} className="py-1.5">
+                                  <Input
+                                    value={skuFilter}
+                                    onChange={(e) => setSkuFilter(e.target.value)}
+                                    placeholder="Filter SKU..."
+                                    className="h-7 text-xs"
+                                  />
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "status") {
+                              return (
+                                <TableHead key={`f-${c.key}`} className="py-1.5">
+                                  <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                  >
+                                    <option value="all">All</option>
+                                    <option value="publish">Publish</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="private">Private</option>
+                                  </select>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "price") {
+                              return (
+                                <TableHead key={`f-${c.key}`} className="py-1.5">
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      value={priceMin}
+                                      onChange={(e) => setPriceMin(e.target.value)}
+                                      placeholder="min"
+                                      className="h-7 text-xs w-16 px-1.5"
+                                    />
+                                    <span className="text-muted-foreground text-xs">–</span>
+                                    <Input
+                                      type="number"
+                                      value={priceMax}
+                                      onChange={(e) => setPriceMax(e.target.value)}
+                                      placeholder="max"
+                                      className="h-7 text-xs w-16 px-1.5"
+                                    />
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "stock" || c.key === "stock_status") {
+                              return (
+                                <TableHead key={`f-${c.key}`} className="py-1.5">
+                                  <select
+                                    value={stockStatusFilter}
+                                    onChange={(e) => setStockStatusFilter(e.target.value)}
+                                    className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                  >
+                                    <option value="all">All</option>
+                                    <option value="instock">In stock</option>
+                                    <option value="outofstock">Out of stock</option>
+                                    <option value="onbackorder">On backorder</option>
+                                  </select>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "category") {
+                              return (
+                                <TableHead key={`f-${c.key}`} className="py-1.5">
+                                  <select
+                                    value={categoryFilter}
+                                    onChange={(e) => setCategoryFilter(e.target.value)}
+                                    className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                  >
+                                    <option value="all">All categories</option>
+                                    {categoryOptions.map((cat) => (
+                                      <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                  </select>
+                                </TableHead>
+                              );
+                            }
+                            return <TableHead key={`f-${c.key}`} className="py-1.5" />;
+                          })}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
