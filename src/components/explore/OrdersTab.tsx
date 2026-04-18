@@ -30,6 +30,7 @@ import {
   type OrderSortField,
   type SortDirection,
 } from "@/services/orderService";
+import { listPaymentMethods, type PaymentMethodRow } from "@/services/paymentMethodService";
 import { OrderRowExpanded } from "./OrderRowExpanded";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
@@ -106,6 +107,15 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
 
   const [paymentOptions, setPaymentOptions] = useState<string[]>([]);
+  const [pmRegistry, setPmRegistry] = useState<Record<string, PaymentMethodRow>>({});
+
+  useEffect(() => {
+    listPaymentMethods().then((list) => {
+      const map: Record<string, PaymentMethodRow> = {};
+      list.forEach((r) => { map[r.key] = r; });
+      setPmRegistry(map);
+    }).catch(() => {});
+  }, []);
 
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     id: false,
@@ -650,10 +660,33 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
                               return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.currency || "—"}</TableCell>;
                             }
                             if (c.key === "payment") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[160px] truncate">{o.payment_method_title || "—"}</TableCell>;
+                              const pm = o.payment_method ? pmRegistry[o.payment_method] : null;
+                              const display = pm?.label || o.payment_method_title || o.payment_method || "";
+                              return (
+                                <TableCell key={c.key} className="max-w-[180px]">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    {pm?.icon_url && (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={pm.icon_url} alt="" className="h-4 w-4 rounded object-contain bg-white flex-shrink-0" />
+                                    )}
+                                    <span className="text-xs text-muted-foreground truncate">{display || "—"}</span>
+                                  </div>
+                                </TableCell>
+                              );
                             }
                             if (c.key === "payment_method") {
-                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.payment_method || "—"}</TableCell>;
+                              const pm = o.payment_method ? pmRegistry[o.payment_method] : null;
+                              return (
+                                <TableCell key={c.key}>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    {pm?.icon_url && (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={pm.icon_url} alt="" className="h-4 w-4 rounded object-contain bg-white flex-shrink-0" />
+                                    )}
+                                    <span className="font-mono text-xs text-muted-foreground">{o.payment_method || "—"}</span>
+                                  </div>
+                                </TableCell>
+                              );
                             }
                             if (c.key === "source") {
                               const src = getOrderSource(o);

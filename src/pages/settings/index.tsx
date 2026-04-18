@@ -1,12 +1,12 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Palette, UserCog, Shield, ChevronRight, User } from "lucide-react";
+import { Palette, UserCog, Shield, ChevronRight, User, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 
 export default function SettingsIndex() {
-  const { can } = useAuth();
+  const { can, isSuperAdmin } = useAuth();
 
   const sections = [
     {
@@ -22,6 +22,13 @@ export default function SettingsIndex() {
       title: "Theme & Branding",
       description: "Customize logo, app name, and color palette",
       show: true,
+    },
+    {
+      href: "/settings/payment-methods",
+      icon: CreditCard,
+      title: "Payment Methods",
+      description: "Register payment gateways to render icons on orders",
+      show: isSuperAdmin,
     },
     {
       href: "/settings/users",
