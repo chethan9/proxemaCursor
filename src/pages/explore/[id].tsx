@@ -109,6 +109,9 @@ export default function ExploreStorePage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
@@ -194,7 +197,7 @@ export default function ExploreStorePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
   const loadProducts = useCallback(async () => {
     if (!storeId) return;
@@ -210,6 +213,9 @@ export default function ExploreStorePage() {
         statusFilter,
         excludeOutOfStock,
         categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+        stockStatusFilter,
+        priceMin: priceMin ? parseFloat(priceMin) : undefined,
+        priceMax: priceMax ? parseFloat(priceMax) : undefined,
       });
       setProductCount(count);
       setProducts(data);
@@ -218,7 +224,7 @@ export default function ExploreStorePage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
   useEffect(() => {
     if (storeId) loadProducts();
