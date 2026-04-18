@@ -82,21 +82,21 @@ export function AppSidebar() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
   const { profile, role, can, isSuperAdmin, signOut } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("sidebar-collapsed") === "1";
+  });
   const [sites, setSites] = useState<StoreWithClient[]>([]);
-  const [sitesExpanded, setSitesExpanded] = useState(true);
-
-  useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("sidebar-collapsed") : null;
-    if (stored === "1") setCollapsed(true);
-    const sitesStored = typeof window !== "undefined" ? localStorage.getItem("sidebar-sites-expanded") : null;
-    if (sitesStored === "0") setSitesExpanded(false);
-  }, []);
+  const [sitesExpanded, setSitesExpanded] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("sidebar-sites-expanded") !== "0";
+  });
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
     getStores().then(setSites).catch(() => setSites([]));
-  }, [can]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggle = () => {
     const next = !collapsed;
