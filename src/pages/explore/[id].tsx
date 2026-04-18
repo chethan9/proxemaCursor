@@ -1230,7 +1230,6 @@ export default function ExploreStorePage() {
                                       onSaved={(updated) => {
                                         setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
                                       }}
-                                      products={products}
                                     />
                                   </TableCell>
                                 </TableRow>
