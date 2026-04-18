@@ -383,9 +383,14 @@
 
   [data-theme-preset="modern"] [role="option"][data-highlighted],
   [data-theme-preset="modern"] [role="option"][data-state="checked"],
+  [data-theme-preset="modern"] [role="option"][aria-selected="true"],
   [data-theme-preset="modern"] [role="menuitem"][data-highlighted],
+  [data-theme-preset="modern"] [role="menuitemcheckbox"][data-highlighted],
+  [data-theme-preset="modern"] [role="menuitemradio"][data-highlighted],
   [data-theme-preset="modern"] [cmdk-item][data-selected="true"],
+  [data-theme-preset="modern"] [role="option"]:hover,
   [data-theme-preset="modern"] [role="option"]:focus,
+  [data-theme-preset="modern"] [role="menuitem"]:hover,
   [data-theme-preset="modern"] [role="menuitem"]:focus {
     background-color: hsl(220 14% 94%) !important;
     color: hsl(222 47% 11%) !important;
