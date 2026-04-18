@@ -32,32 +32,43 @@ import {
   type ProductSortField,
   type SortDirection,
 } from "@/services/productService";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
-type ColumnKey = "image" | "name" | "status" | "sku" | "price" | "stock" | "category" | "sales" | "created";
+type ColumnKey = "image" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "category" | "type" | "slug" | "wooId" | "short_desc" | "description" | "attributes" | "sales" | "created" | "updated";
 
-const COLUMNS: { key: ColumnKey; label: string; sortable?: ProductSortField }[] = [
-  { key: "image", label: "" },
-  { key: "name", label: "Product", sortable: "name" },
-  { key: "status", label: "Status" },
-  { key: "sku", label: "SKU" },
-  { key: "price", label: "Price", sortable: "price" },
-  { key: "stock", label: "Stock", sortable: "stock_quantity" },
-  { key: "category", label: "Category" },
-  { key: "sales", label: "Sales", sortable: "total_sales" },
-  { key: "created", label: "Created", sortable: "date_created" },
+const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: ProductSortField }[] = [
+  { key: "image", label: "Image", group: "Basic" },
+  { key: "name", label: "Product name", group: "Basic", sortable: "name" },
+  { key: "status", label: "Status", group: "Basic" },
+  { key: "sku", label: "SKU", group: "Basic" },
+  { key: "wooId", label: "Woo ID", group: "Basic" },
+  { key: "slug", label: "Slug", group: "Basic" },
+  { key: "type", label: "Type", group: "Basic" },
+  { key: "price", label: "Price", group: "Pricing", sortable: "price" },
+  { key: "regular_price", label: "Regular price", group: "Pricing" },
+  { key: "sale_price", label: "Sale price", group: "Pricing" },
+  { key: "stock", label: "Stock qty", group: "Inventory", sortable: "stock_quantity" },
+  { key: "stock_status", label: "Stock status", group: "Inventory" },
+  { key: "category", label: "Categories", group: "Taxonomy" },
+  { key: "attributes", label: "Attributes", group: "Taxonomy" },
+  { key: "short_desc", label: "Short description", group: "Content" },
+  { key: "description", label: "Description", group: "Content" },
+  { key: "sales", label: "Last synced", group: "Dates", sortable: "synced_at" },
+  { key: "created", label: "Created at", group: "Dates", sortable: "created_at" },
+  { key: "updated", label: "Updated at", group: "Dates", sortable: "updated_at" },
 ];
 
 const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: string }[] = [
-  { field: "date_created", direction: "desc", label: "Newest first" },
-  { field: "date_created", direction: "asc", label: "Oldest first" },
+  { field: "created_at", direction: "desc", label: "Newest first" },
+  { field: "created_at", direction: "asc", label: "Oldest first" },
   { field: "name", direction: "asc", label: "Name A-Z" },
   { field: "name", direction: "desc", label: "Name Z-A" },
   { field: "price", direction: "desc", label: "Price high to low" },
   { field: "price", direction: "asc", label: "Price low to high" },
   { field: "stock_quantity", direction: "desc", label: "Stock high to low" },
-  { field: "total_sales", direction: "desc", label: "Best selling" },
+  { field: "synced_at", direction: "desc", label: "Recently synced" },
 ];
 
 const PAGE_SIZE = 50;
@@ -88,10 +99,20 @@ export default function ExploreStorePage() {
     status: true,
     sku: true,
     price: true,
+    regular_price: false,
+    sale_price: false,
     stock: true,
+    stock_status: false,
     category: true,
+    type: false,
+    slug: false,
+    wooId: false,
+    short_desc: false,
+    description: false,
+    attributes: false,
     sales: false,
     created: false,
+    updated: false,
   });
 
   useEffect(() => {
@@ -175,11 +196,21 @@ export default function ExploreStorePage() {
             case "name": v = p.name || ""; break;
             case "status": v = p.status || ""; break;
             case "sku": v = p.sku || ""; break;
-            case "price": v = p.price || ""; break;
+            case "price": v = (p.price as string) || ""; break;
+            case "regular_price": v = (p.regular_price as string) || ""; break;
+            case "sale_price": v = (p.sale_price as string) || ""; break;
             case "stock": v = p.stock_quantity ?? ""; break;
+            case "stock_status": v = p.stock_status || ""; break;
             case "category": v = getCategoryNames(p.categories); break;
-            case "sales": v = p.total_sales ?? 0; break;
-            case "created": v = p.date_created || ""; break;
+            case "type": v = p.type || ""; break;
+            case "slug": v = p.slug || ""; break;
+            case "wooId": v = p.woo_id ?? ""; break;
+            case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
+            case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
+            case "attributes": v = JSON.stringify(p.attributes || []); break;
+            case "sales": v = p.synced_at || ""; break;
+            case "created": v = p.created_at || ""; break;
+            case "updated": v = p.updated_at || ""; break;
           }
           const s = String(v).replace(/"/g, '""');
           return `"${s}"`;
@@ -287,29 +318,78 @@ export default function ExploreStorePage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    <Popover>
+                      <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="h-9 gap-2">
                           <Columns3 className="h-3.5 w-3.5" />
-                          Columns
+                          Columns ({Object.values(visibleCols).filter(Boolean).length})
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {COLUMNS.filter((c) => c.key !== "image").map((c) => (
-                          <DropdownMenuCheckboxItem
-                            key={c.key}
-                            checked={visibleCols[c.key]}
-                            onCheckedChange={(v) =>
-                              setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
-                            }
-                          >
-                            {c.label}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-[720px] p-0" sideOffset={6}>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                          <div>
+                            <div className="text-sm font-medium">Visible columns</div>
+                            <div className="text-[11px] text-muted-foreground">Toggle columns to show in the table</div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                const all: Record<string, boolean> = {};
+                                COLUMNS.forEach((c) => { all[c.key] = true; });
+                                setVisibleCols(all as Record<ColumnKey, boolean>);
+                              }}
+                            >
+                              Select all
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                const none: Record<string, boolean> = {};
+                                COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
+                                setVisibleCols(none as Record<ColumnKey, boolean>);
+                              }}
+                            >
+                              Reset
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="max-h-[460px] overflow-y-auto p-4">
+                          <div className="grid grid-cols-4 gap-x-5 gap-y-4">
+                            {Array.from(new Set(COLUMNS.map((c) => c.group))).map((group) => {
+                              const groupCols = COLUMNS.filter((c) => c.group === group);
+                              return (
+                                <div key={group}>
+                                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
+                                    {group}
+                                  </div>
+                                  <div className="flex flex-col gap-0.5">
+                                    {groupCols.map((c) => (
+                                      <label
+                                        key={c.key}
+                                        className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]"
+                                      >
+                                        <Checkbox
+                                          checked={visibleCols[c.key]}
+                                          onCheckedChange={(v) =>
+                                            setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                          }
+                                        />
+                                        <span className="truncate">{c.label}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
 
                     <Button variant="outline" size="sm" className="h-9 gap-2" onClick={exportCsv} disabled={products.length === 0}>
                       <Download className="h-3.5 w-3.5" />
@@ -470,14 +550,69 @@ export default function ExploreStorePage() {
                                     return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{cats || "—"}</TableCell>;
                                   }
                                   if (c.key === "sales") {
-                                    return <TableCell key={c.key} className="text-sm">{p.total_sales ?? 0}</TableCell>;
+                                    return (
+                                      <TableCell key={c.key} className="text-xs text-muted-foreground">
+                                        {p.synced_at ? new Date(p.synced_at).toLocaleString() : "—"}
+                                      </TableCell>
+                                    );
                                   }
                                   if (c.key === "created") {
                                     return (
                                       <TableCell key={c.key} className="text-xs text-muted-foreground">
-                                        {p.date_created ? new Date(p.date_created).toLocaleDateString() : "—"}
+                                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}
                                       </TableCell>
                                     );
+                                  }
+                                  if (c.key === "updated") {
+                                    return (
+                                      <TableCell key={c.key} className="text-xs text-muted-foreground">
+                                        {p.updated_at ? new Date(p.updated_at).toLocaleString() : "—"}
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "regular_price") {
+                                    return <TableCell key={c.key} className="font-mono text-sm">{p.regular_price || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "sale_price") {
+                                    return <TableCell key={c.key} className="font-mono text-sm">{p.sale_price || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "stock_status") {
+                                    const s = p.stock_status;
+                                    return (
+                                      <TableCell key={c.key} className="text-xs">
+                                        <span className={s === "instock" ? "text-success" : s === "outofstock" ? "text-destructive" : "text-muted-foreground"}>
+                                          {s || "—"}
+                                        </span>
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "type") {
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{p.type || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "slug") {
+                                    return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground max-w-[200px] truncate">{p.slug || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "wooId") {
+                                    return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{p.woo_id ?? "—"}</TableCell>;
+                                  }
+                                  if (c.key === "short_desc") {
+                                    const txt = (p.short_description || "").replace(/<[^>]+>/g, "");
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate">{txt || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "description") {
+                                    const txt = (p.description || "").replace(/<[^>]+>/g, "");
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[320px] truncate">{txt || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "attributes") {
+                                    const attrs = Array.isArray(p.attributes) ? p.attributes : [];
+                                    const summary = attrs
+                                      .map((a: unknown) => {
+                                        const obj = a as { name?: string; options?: string[] };
+                                        return obj.name ? `${obj.name}${obj.options?.length ? `: ${obj.options.slice(0,2).join(", ")}` : ""}` : "";
+                                      })
+                                      .filter(Boolean)
+                                      .join(" • ");
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[260px] truncate">{summary || "—"}</TableCell>;
                                   }
                                   return <TableCell key={c.key}>—</TableCell>;
                                 })}

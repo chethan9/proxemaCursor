@@ -3,28 +3,28 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ProductRow {
   id: string;
   store_id: string;
-  woo_id: number;
+  woo_id: number | null;
   name: string | null;
   slug: string | null;
   sku: string | null;
+  price: string | number | null;
+  regular_price: string | number | null;
+  sale_price: string | number | null;
+  stock_quantity: number | null;
+  stock_status: string | null;
   status: string | null;
   type: string | null;
-  price: string | null;
-  regular_price: string | null;
-  sale_price: string | null;
-  stock_status: string | null;
-  stock_quantity: number | null;
+  description: string | null;
+  short_description: string | null;
   categories: unknown;
-  tags: unknown;
   images: unknown;
-  featured: boolean | null;
-  total_sales: number | null;
-  date_created: string | null;
-  date_modified: string | null;
-  raw_data: unknown;
+  attributes: unknown;
+  synced_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-export type ProductSortField = "name" | "date_created" | "date_modified" | "price" | "stock_quantity" | "total_sales";
+export type ProductSortField = "name" | "created_at" | "updated_at" | "synced_at" | "price" | "stock_quantity";
 export type SortDirection = "asc" | "desc";
 
 export interface FetchProductsOptions {
@@ -42,7 +42,7 @@ export async function fetchProducts({
   page,
   pageSize = 50,
   search,
-  sortField = "date_created",
+  sortField = "created_at",
   sortDirection = "desc",
   statusFilter,
 }: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number }> {
