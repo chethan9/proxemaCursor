@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List } from "lucide-react";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3 } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -150,9 +150,9 @@ export default function ExploreStorePage() {
     return COLUMNS.map((c) => c.key);
   });
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "grid">(() => {
+  const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
-    return (localStorage.getItem("explore-view-mode") as "table" | "grid") || "table";
+    return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
 
   useEffect(() => {
@@ -389,6 +389,15 @@ export default function ExploreStorePage() {
                         >
                           <LayoutGrid className="h-3.5 w-3.5" />
                         </Button>
+                        <Button
+                          variant={viewMode === "compact" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setViewMode("compact")}
+                          title="Compact grid"
+                        >
+                          <Grid3x3 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
 
                       <DropdownMenu>
@@ -554,83 +563,146 @@ export default function ExploreStorePage() {
               {/* Products table or grid */}
               <Card>
                 <CardContent className="p-0">
-                  {viewMode === "grid" ? (
+                  {viewMode !== "table" ? (
                     <div className="p-4">
-                      {initialProductsLoad ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          {Array.from({ length: 10 }).map((_, i) => (
-                            <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden">
-                              <Skeleton className="h-36 w-full rounded-none" />
-                              <div className="p-2.5 space-y-1.5">
-                                <Skeleton className="h-3.5 w-full" />
-                                <Skeleton className="h-3 w-2/3" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : products.length === 0 ? (
-                        <div className="py-16 text-center">
-                          <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                          <p className="text-sm text-muted-foreground">No products found</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          {products.map((p) => {
-                            const thumb = getProductThumbnail(p.images);
-                            const cats = getCategoryNames(p.categories);
-                            const statusColor: Record<string, string> = {
-                              publish: "bg-success/10 text-success border-success/20",
-                              draft: "bg-muted text-muted-foreground border-border",
-                              pending: "bg-warning/10 text-warning border-warning/20",
-                              private: "bg-secondary text-secondary-foreground border-border",
-                            };
-                            const cls = statusColor[p.status || ""] || "bg-muted text-muted-foreground border-border";
-                            return (
-                              <div key={p.id} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-sm transition bg-card">
-                                <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                  {thumb ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                  ) : (
-                                    <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                      {(() => {
+                        const isCompact = viewMode === "compact";
+                        const gridCls = isCompact
+                          ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2"
+                          : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3";
+
+                        if (initialProductsLoad) {
+                          return (
+                            <div className={gridCls}>
+                              {Array.from({ length: isCompact ? 24 : 10 }).map((_, i) => (
+                                <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden">
+                                  <Skeleton className="aspect-square w-full rounded-none" />
+                                  {!isCompact && (
+                                    <div className="p-2.5 space-y-1.5">
+                                      <Skeleton className="h-3.5 w-full" />
+                                      <Skeleton className="h-3 w-2/3" />
+                                    </div>
                                   )}
-                                  <Badge variant="outline" className={`absolute top-1.5 left-1.5 capitalize text-[10px] ${cls}`}>
-                                    {p.status === "publish" ? "Active" : p.status || "—"}
-                                  </Badge>
                                 </div>
-                                <div className="p-2.5 space-y-1">
-                                  <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
-                                  <div className="flex items-center justify-between gap-2 text-xs">
-                                    <span className="font-mono text-muted-foreground truncate">{p.sku || "—"}</span>
-                                    <span className="font-mono font-medium">
-                                      {p.sale_price && p.sale_price !== p.regular_price ? (
-                                        <>
-                                          <span>{p.sale_price}</span>
-                                          <span className="ml-1 line-through text-muted-foreground text-xs">{p.regular_price}</span>
-                                        </>
+                              ))}
+                            </div>
+                          );
+                        }
+
+                        if (products.length === 0) {
+                          return (
+                            <div className="py-16 text-center">
+                              <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                              <p className="text-sm text-muted-foreground">No products found</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className={gridCls}>
+                            {products.map((p) => {
+                              const thumb = getProductThumbnail(p.images);
+                              const cats = getCategoryNames(p.categories);
+                              const statusColor: Record<string, string> = {
+                                publish: "bg-success/10 text-success border-success/20",
+                                draft: "bg-muted text-muted-foreground border-border",
+                                pending: "bg-warning/10 text-warning border-warning/20",
+                                private: "bg-secondary text-secondary-foreground border-border",
+                              };
+                              const cls = statusColor[p.status || ""] || "bg-muted text-muted-foreground border-border";
+
+                              if (isCompact) {
+                                const stockLow = p.stock_quantity != null && p.stock_quantity < 5;
+                                const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
+                                return (
+                                  <div
+                                    key={p.id}
+                                    className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer"
+                                    title={`${p.name || "—"}${p.sku ? ` · ${p.sku}` : ""}${p.price ? ` · ${p.price}` : ""}`}
+                                  >
+                                    <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                                      {thumb ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
                                       ) : (
-                                        p.price || "—"
+                                        <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
                                       )}
-                                    </span>
+                                      {stockOut && (
+                                        <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                                          <span className="text-[9px] font-semibold uppercase text-destructive">Out</span>
+                                        </div>
+                                      )}
+                                      {!stockOut && stockLow && (
+                                        <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
+                                      )}
+                                    </div>
+                                    <div className="absolute inset-x-0 bottom-0 px-1.5 py-1 bg-gradient-to-t from-background/95 via-background/80 to-transparent opacity-0 group-hover:opacity-100 transition">
+                                      <div className="text-[10px] font-medium leading-tight line-clamp-2">{p.name || "—"}</div>
+                                      <div className="flex items-center justify-between text-[9px] text-muted-foreground mt-0.5">
+                                        <span className="font-mono truncate">{p.sku || "—"}</span>
+                                        <span className="font-mono font-medium text-foreground">{p.price || "—"}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                                    <span className="truncate">{cats || "No category"}</span>
-                                    {p.stock_quantity != null ? (
-                                      <span className={p.stock_quantity === 0 ? "text-destructive" : p.stock_quantity < 5 ? "text-warning" : ""}>
-                                        {p.stock_quantity} qty
-                                      </span>
-                                    ) : p.stock_status === "instock" ? (
-                                      <span className="text-success">In stock</span>
-                                    ) : p.stock_status === "outofstock" ? (
-                                      <span className="text-destructive">Out</span>
-                                    ) : null}
+                                );
+                              }
+
+                              return (
+                                <div key={p.id} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col">
+                                  <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                                    {thumb ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                                    ) : (
+                                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                                    )}
+                                    <Badge variant="outline" className={`absolute top-1.5 left-1.5 capitalize text-[10px] ${cls} backdrop-blur-sm`}>
+                                      {p.status === "publish" ? "Active" : p.status || "—"}
+                                    </Badge>
+                                    {p.sale_price && p.sale_price !== p.regular_price && p.regular_price && (
+                                      <Badge className="absolute top-1.5 right-1.5 bg-destructive text-destructive-foreground text-[10px]">
+                                        Sale
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="p-2.5 space-y-1 flex-1 flex flex-col">
+                                    <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
+                                    <div className="text-[11px] text-muted-foreground truncate">{cats || "No category"}</div>
+                                    <div className="flex items-end justify-between gap-2 pt-1 mt-auto border-t border-border/50">
+                                      <div className="min-w-0">
+                                        <div className="text-[10px] text-muted-foreground font-mono truncate">{p.sku || "—"}</div>
+                                        <div className="text-xs font-semibold font-mono">
+                                          {p.sale_price && p.sale_price !== p.regular_price ? (
+                                            <>
+                                              <span className="text-destructive">{p.sale_price}</span>
+                                              <span className="ml-1 line-through text-muted-foreground text-[10px] font-normal">{p.regular_price}</span>
+                                            </>
+                                          ) : (
+                                            <span>{p.price || "—"}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-[10px] text-right shrink-0">
+                                        {p.stock_quantity != null ? (
+                                          <span className={p.stock_quantity === 0 ? "text-destructive font-medium" : p.stock_quantity < 5 ? "text-warning font-medium" : "text-muted-foreground"}>
+                                            {p.stock_quantity} qty
+                                          </span>
+                                        ) : p.stock_status === "instock" ? (
+                                          <span className="text-success">In stock</span>
+                                        ) : p.stock_status === "outofstock" ? (
+                                          <span className="text-destructive">Out</span>
+                                        ) : (
+                                          <span className="text-muted-foreground">—</span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                   <div className="overflow-x-auto">
