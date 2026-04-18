@@ -853,9 +853,9 @@ export default function SiteWorkspacePage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">{syncProgress.aspect}</span>
-                          <span className="font-medium">{Math.round((syncProgress.current / syncProgress.total) * 100)}%</span>
+                          <span className="font-medium">{Math.min(100, Math.round((syncProgress.current / syncProgress.total) * 100))}%</span>
                         </div>
-                        <Progress value={(syncProgress.current / syncProgress.total) * 100} className="h-2" />
+                        <Progress value={Math.min(100, (syncProgress.current / syncProgress.total) * 100)} className="h-2" />
                       </div>
                     )}
                   </div>
