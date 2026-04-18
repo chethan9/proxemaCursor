@@ -307,34 +307,85 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     <div className="space-y-2">
       {embedHeader && (
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex-1 min-w-0 max-w-[480px]">
+          <div className="flex-1" />
+          <div className="w-full max-w-[480px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input placeholder="Search products by name or SKU..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
             </div>
           </div>
           <div className="flex-1" />
-          <div className="flex items-center gap-2 ml-auto">
-            <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
-              <Switch checked={excludeOutOfStock} onCheckedChange={(v) => setExcludeOutOfStock(!!v)} />
-              <span>Exclude out of stock</span>
-            </label>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 w-[180px] text-xs">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categoryOptions.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
+              <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "grid" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "compact" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  <span className="text-xs">Sort</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {SORT_OPTIONS.map((opt, i) => (
+                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
-            <div className="flex-1" />
-            <Button variant="ghost" size="sm" className="h-9 text-xs ml-auto" onClick={() => {
-              setStatusFilter("all"); setExcludeOutOfStock(false); setCategoryFilter("all");
-              setStockStatusFilter("all"); setPriceMin(""); setPriceMax("");
-            }}>Clear filters</Button>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                  <Columns3 className="h-3.5 w-3.5" />
+                  <span className="text-xs">Columns</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[560px] p-0" sideOffset={6}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                  <div className="text-sm font-medium">Customize columns</div>
+                </div>
+                <div className="max-h-[420px] overflow-y-auto p-4">
+                  <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                    {(() => {
+                      const groupMap: Record<string, string> = {
+                        Basic: "Product", Pricing: "Pricing & Inventory", Inventory: "Pricing & Inventory",
+                        "Tax & Shipping": "Pricing & Inventory", Taxonomy: "Content & Dates", Content: "Content & Dates", Dates: "Content & Dates",
+                      };
+                      const grouped: Record<string, typeof COLUMNS> = {};
+                      COLUMNS.forEach((c) => {
+                        const g = groupMap[c.group] || c.group;
+                        if (!grouped[g]) grouped[g] = [];
+                        grouped[g].push(c);
+                      });
+                      return Object.entries(grouped).map(([group, cols]) => (
+                        <div key={group}>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                          <div className="flex flex-col gap-0.5">
+                            {cols.map((c) => (
+                              <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                <Checkbox
+                                  checked={visibleCols[c.key]}
+                                  onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
+                                />
+                                <span className="truncate">{c.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">Export</span>
+            </Button>
           </div>
         </div>
       )}
@@ -404,7 +455,43 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6} />
+                      <PopoverContent align="end" className="w-[560px] p-0" sideOffset={6}>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                          <div className="text-sm font-medium">Customize columns</div>
+                        </div>
+                        <div className="max-h-[420px] overflow-y-auto p-4">
+                          <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                            {(() => {
+                              const groupMap: Record<string, string> = {
+                                Basic: "Product", Pricing: "Pricing & Inventory", Inventory: "Pricing & Inventory",
+                                "Tax & Shipping": "Pricing & Inventory", Taxonomy: "Content & Dates", Content: "Content & Dates", Dates: "Content & Dates",
+                              };
+                              const grouped: Record<string, typeof COLUMNS> = {};
+                              COLUMNS.forEach((c) => {
+                                const g = groupMap[c.group] || c.group;
+                                if (!grouped[g]) grouped[g] = [];
+                                grouped[g].push(c);
+                              });
+                              return Object.entries(grouped).map(([group, cols]) => (
+                                <div key={group}>
+                                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                                  <div className="flex flex-col gap-0.5">
+                                    {cols.map((c) => (
+                                      <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                        <Checkbox
+                                          checked={visibleCols[c.key]}
+                                          onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
+                                        />
+                                        <span className="truncate">{c.label}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                        </div>
+                      </PopoverContent>
                     </Popover>
                     <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
                       <Download className="h-3.5 w-3.5" />
