@@ -49,7 +49,7 @@ export function Breadcrumbs() {
   if (crumbs.length <= 1) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="border-b border-border bg-background/50 px-6 py-2.5">
+    <nav aria-label="Breadcrumb" className="h-12 flex items-center border-b border-border bg-background px-6">
       <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;
