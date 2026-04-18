@@ -238,7 +238,30 @@ export default async function handler(
   }
 
   try {
-    const topic = (req.headers["x-wc-webhook-topic"] as string) || "unknown";
+    const headers = req.headers;
+    let topic = (headers["x-wc-webhook-topic"] as string) || "";
+
+    if (!topic) {
+      const resource = (headers["x-wc-webhook-resource"] as string) || "";
+      const event = (headers["x-wc-webhook-event"] as string) || "";
+      if (resource && event) topic = `${resource}.${event}`;
+    }
+
+    if (!topic) {
+      const payload = (req.body || {}) as Record<string, unknown>;
+      const keys = Object.keys(payload);
+      let resource = "";
+      if ("line_items" in payload || "billing" in payload) resource = "order";
+      else if ("sku" in payload || "regular_price" in payload) resource = "product";
+      else if ("email" in payload && ("first_name" in payload || "username" in payload)) resource = "customer";
+      else if ("code" in payload && "discount_type" in payload) resource = "coupon";
+
+      if (resource) {
+        const action = (payload.date_modified && payload.date_created && payload.date_modified !== payload.date_created) ? "updated" : "created";
+        topic = `${resource}.${action}`;
+      }
+      if (!topic) topic = keys.length === 0 ? "ping" : "unknown";
+    }
 
     const { data: store } = await supabase
       .from("stores")
