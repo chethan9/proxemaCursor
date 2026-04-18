@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { getMenuConfig, saveMenuConfig, resetMenuConfig, type MenuNode, type RoleKey } from "@/services/menuConfigService";
+import { getMenuConfig, saveMenuConfig, resetMenuConfig, type MenuNode } from "@/services/menuConfigService";
+import { listRoles, type RoleRow } from "@/services/userService";
 import { mergeMenu } from "@/lib/menu-merge";
 import { IconPicker } from "@/components/menu-editor/IconPicker";
 import { ColorPicker } from "@/components/menu-editor/ColorPicker";
@@ -23,15 +24,12 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Eye, EyeOff, Trash2, FolderPlus, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { GripVertical, Eye, EyeOff, Trash2, FolderPlus, ChevronDown, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ROLES: { key: RoleKey; label: string }[] = [
-  { key: "super_admin", label: "Super Admin" },
-  { key: "admin", label: "Admin" },
-  { key: "staff", label: "Staff" },
-  { key: "readonly", label: "Read-only" },
-];
+function humanizeRole(name: string): string {
+  return name.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
 
 function SortableRow({ node, depth, onUpdate, onDelete, onToggleHidden, onAddChild, expanded, onToggleExpand }: {
   node: MenuNode;
@@ -46,7 +44,6 @@ function SortableRow({ node, depth, onUpdate, onDelete, onToggleHidden, onAddChi
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const hasChildren = node.type === "group" || (node.children && node.children.length > 0);
-  const Icon = resolveIcon(node.icon);
 
   return (
     <div ref={setNodeRef} style={style} className={cn("flex items-center gap-2 py-1.5 px-2 rounded-md bg-card border border-border", node.hidden && "opacity-50")}>
@@ -81,7 +78,8 @@ function SortableRow({ node, depth, onUpdate, onDelete, onToggleHidden, onAddChi
 
 function MenuEditorInner() {
   const { isSuperAdmin } = useAuth();
-  const [role, setRole] = useState<RoleKey>("super_admin");
+  const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [role, setRole] = useState<string>("");
   const [tree, setTree] = useState<MenuNode[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -90,7 +88,16 @@ function MenuEditorInner() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-  const load = useCallback(async (r: RoleKey) => {
+  useEffect(() => {
+    listRoles().then((rs) => {
+      setRoles(rs);
+      if (rs.length > 0 && !role) setRole(rs[0].name);
+    }).catch((e) => toast({ title: "Failed to load roles", description: (e as Error).message, variant: "destructive" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const load = useCallback(async (r: string) => {
+    if (!r) return;
     setLoading(true);
     try {
       const cfg = await getMenuConfig(r);
@@ -104,7 +111,7 @@ function MenuEditorInner() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(role); }, [role, load]);
+  useEffect(() => { if (role) load(role); }, [role, load]);
 
   const handleTopDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -157,18 +164,22 @@ function MenuEditorInner() {
     setSaving(true);
     try {
       await saveMenuConfig(role, tree);
-      toast({ title: "Saved", description: `Menu for ${role} updated.` });
+      toast({ title: "Saved", description: `Menu for ${humanizeRole(role)} updated.` });
     } catch (err) {
       toast({ title: "Save failed", description: (err as Error).message, variant: "destructive" });
     } finally { setSaving(false); }
   };
 
   const handleReset = async () => {
-    if (!confirm(`Reset menu for ${role} to defaults?`)) return;
+    if (!confirm(`Reset menu for ${humanizeRole(role)} to defaults?`)) return;
     await resetMenuConfig(role);
     await load(role);
     toast({ title: "Reset", description: "Menu restored to defaults." });
   };
+
+  if (roles.length === 0 && !loading) {
+    return <div className="p-6 text-sm text-muted-foreground">No roles found. Create roles in Settings → Roles first.</div>;
+  }
 
   return (
     <div className="p-6 max-w-5xl">
@@ -177,11 +188,13 @@ function MenuEditorInner() {
         <p className="text-sm text-muted-foreground">Customize sidebar menu per role. Changes apply on next reload.</p>
       </div>
 
-      <Tabs value={role} onValueChange={(v) => setRole(v as RoleKey)} className="mb-4">
-        <TabsList>
-          {ROLES.map((r) => <TabsTrigger key={r.key} value={r.key}>{r.label}</TabsTrigger>)}
-        </TabsList>
-      </Tabs>
+      {roles.length > 0 && (
+        <Tabs value={role} onValueChange={setRole} className="mb-4">
+          <TabsList className="flex-wrap h-auto">
+            {roles.map((r) => <TabsTrigger key={r.id} value={r.name}>{humanizeRole(r.name)}</TabsTrigger>)}
+          </TabsList>
+        </Tabs>
+      )}
 
       {unassignedCount > 0 && (
         <div className="mb-4 p-3 rounded-md bg-warning/10 border border-warning/30 text-sm">
@@ -199,7 +212,7 @@ function MenuEditorInner() {
       <Card>
         <CardContent className="p-4">
           {loading ? (
-            <div className="text-sm text-muted-foreground py-8 text-center">Loading...</div>
+            <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTopDragEnd}>
               <SortableContext items={tree.map((n) => n.id)} strategy={verticalListSortingStrategy}>
