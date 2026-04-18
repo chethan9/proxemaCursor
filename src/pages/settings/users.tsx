@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { listUsers, updateUserRole, updateUserClient, updateUserActive, type UserProfile, listRoles, type RoleRow } from "@/services/userService";
-import { listClients } from "@/services/clientService";
+import { getClients } from "@/services/clientService";
 import { Loader2, UserPlus, Shield, ShieldAlert } from "lucide-react";
 
 export default function UsersPage() {
@@ -30,7 +30,7 @@ export default function UsersPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [u, r, c] = await Promise.all([listUsers(), listRoles(), listClients()]);
+      const [u, r, c] = await Promise.all([listUsers(), listRoles(), getClients()]);
       setUsers(u);
       setRoles(r);
       setClients(c.map(x => ({ id: x.id, name: x.name })));
