@@ -1,11 +1,8 @@
-<![CDATA[
-import type { Database as DB } from './database.types';
+import type { Database as DB } from "./database.types";
 
 export type Database = DB;
 
-expor
-...
-export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 534 chars.]
+export type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
+export type TablesInsert<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"];
+export type TablesUpdate<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"];
+export type Enums<T extends keyof Database["public"]["Enums"]> = Database["public"]["Enums"][T];
