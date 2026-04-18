@@ -620,7 +620,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
                             )}
                             <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
-                              <span className={`h-1.5 w-1.5 rounded-full ${dotColor[p.status || ""] || "bg-muted-foreground/50"}`} />
+                              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
                               <span className="capitalize">{label}</span>
                             </div>
                           </div>
