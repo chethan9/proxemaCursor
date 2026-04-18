@@ -72,14 +72,15 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
   return "staff";
 }
 
-export function AppSidebar() {
+export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
   const { profile, role, can, isSuperAdmin, signOut, permissions } = useAuth();
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
+  const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
   });
+  const collapsed = forceCollapsed || collapsedPref;
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     const roleKey = roleKeyFor(undefined, false);
@@ -110,8 +111,9 @@ export function AppSidebar() {
   }, [profile?.role, isSuperAdmin, permissions.join(",")]);
 
   const toggle = () => {
-    const next = !collapsed;
-    setCollapsed(next);
+    if (forceCollapsed) return;
+    const next = !collapsedPref;
+    setCollapsedPref(next);
     if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
   };
 
@@ -271,7 +273,7 @@ export function AppSidebar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {collapsed && (
+          {collapsed && !forceCollapsed && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={toggle} aria-label="Expand sidebar"

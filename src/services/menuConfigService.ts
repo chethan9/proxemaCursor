@@ -20,6 +20,7 @@ export async function getMenuConfig(role: string): Promise<MenuNode[]> {
     .from("menu_configs")
     .select("config")
     .eq("role", role)
+    .is("site_id", null)
     .maybeSingle();
   if (error) { console.error("getMenuConfig", error); return []; }
   const cfg = data?.config as unknown;
@@ -30,14 +31,45 @@ export async function saveMenuConfig(role: string, config: MenuNode[]): Promise<
   const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.from("menu_configs").upsert({
     role,
+    scope: "global",
+    site_id: null,
     config: config as unknown as Json,
     updated_at: new Date().toISOString(),
     updated_by: user?.id ?? null,
-  }, { onConflict: "role" });
+  }, { onConflict: "role,scope,site_id" });
   if (error) throw error;
 }
 
 export async function resetMenuConfig(role: string): Promise<void> {
-  const { error } = await supabase.from("menu_configs").delete().eq("role", role);
+  const { error } = await supabase.from("menu_configs").delete().eq("role", role).is("site_id", null);
+  if (error) throw error;
+}
+
+export async function getSiteMenuConfig(role: string, siteId: string | null): Promise<MenuNode[]> {
+  let query = supabase.from("menu_configs").select("config").eq("role", role).eq("scope", "site");
+  query = siteId ? query.eq("site_id", siteId) : query.is("site_id", null);
+  const { data, error } = await query.maybeSingle();
+  if (error) { console.error("getSiteMenuConfig", error); return []; }
+  const cfg = data?.config as unknown;
+  return Array.isArray(cfg) ? (cfg as MenuNode[]) : [];
+}
+
+export async function saveSiteMenuConfig(role: string, siteId: string | null, config: MenuNode[]): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from("menu_configs").upsert({
+    role,
+    scope: "site",
+    site_id: siteId,
+    config: config as unknown as Json,
+    updated_at: new Date().toISOString(),
+    updated_by: user?.id ?? null,
+  }, { onConflict: "role,scope,site_id" });
+  if (error) throw error;
+}
+
+export async function resetSiteMenuConfig(role: string, siteId: string | null): Promise<void> {
+  let query = supabase.from("menu_configs").delete().eq("role", role).eq("scope", "site");
+  query = siteId ? query.eq("site_id", siteId) : query.is("site_id", null);
+  const { error } = await query;
   if (error) throw error;
 }
