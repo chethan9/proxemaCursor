@@ -1,0 +1,21 @@
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+DROP POLICY IF EXISTS "select_own" ON profiles;
+DROP POLICY IF EXISTS "insert_own" ON profiles;
+DROP POLICY IF EXISTS "update_own" ON profiles;
+DROP POLICY IF EXISTS "delete_own" ON profiles;
+DROP POLICY IF EXISTS "profiles_select" ON profiles;
+DROP POLICY IF EXISTS "profiles_insert" ON profiles;
+DROP POLICY IF EXISTS "profiles_update" ON profiles;
+DROP POLICY IF EXISTS "profiles_delete" ON profiles;
+DROP POLICY IF EXISTS "profiles_select_scoped" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_scoped" ON profiles;
+DROP POLICY IF EXISTS "profiles_insert_scoped" ON profiles;
+DROP POLICY IF EXISTS "profiles_delete_scoped" ON profiles;
+
+CREATE POLICY "profiles_read" ON profiles FOR SELECT USING (id = auth.uid() OR public.is_super_admin() OR client_id = public.current_user_client_id());
+CREATE POLICY "profiles_write" ON profiles FOR UPDATE USING (id = auth.uid() OR public.is_super_admin()) WITH CHECK (id = auth.uid() OR public.is_super_admin());
+CREATE POLICY "profiles_create" ON profiles FOR INSERT WITH CHECK (id = auth.uid() OR public.is_super_admin());
+CREATE POLICY "profiles_remove" ON profiles FOR DELETE USING (public.is_super_admin());
