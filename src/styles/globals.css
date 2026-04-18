@@ -55,7 +55,50 @@
   }
 
   :root[data-theme-preset="modern"] {
-    /* Modern preset overrides — empty for now, safe sandbox for upcoming redesign */
+    --radius: 0.75rem;
+
+    --background: 220 14% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 222 47% 11%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 22 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 22 100% 50%;
+
+    --success: 142 71% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 37 100% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 222 47% 11%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 22 100% 50%;
+    --sidebar-muted: 220 9% 46%;
   }
 }
 
@@ -81,5 +124,58 @@
   }
   .shadow-polaris {
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+}
+
+@layer components {
+  [data-theme-preset="modern"] .shadow-polaris {
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  }
+
+  [data-theme-preset="modern"] [data-slot="card"],
+  [data-theme-preset="modern"] .bg-card {
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+    border-color: hsl(220 13% 93%);
+  }
+
+  [data-theme-preset="modern"] input:not([type="checkbox"]):not([type="radio"]),
+  [data-theme-preset="modern"] textarea,
+  [data-theme-preset="modern"] select {
+    border-radius: 0.625rem;
+  }
+
+  [data-theme-preset="modern"] button {
+    border-radius: 0.625rem;
+  }
+
+  [data-theme-preset="modern"] .rounded-md {
+    border-radius: 0.625rem;
+  }
+
+  [data-theme-preset="modern"] .rounded-lg {
+    border-radius: 0.875rem;
+  }
+
+  [data-theme-preset="modern"] [data-slot="badge"] {
+    border-radius: 9999px;
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+    font-weight: 500;
+  }
+
+  [data-theme-preset="modern"] table {
+    border-spacing: 0;
+  }
+
+  [data-theme-preset="modern"] thead tr {
+    background-color: hsl(220 14% 98%);
+  }
+
+  [data-theme-preset="modern"] th {
+    font-weight: 500;
+    color: hsl(220 9% 46%);
+    text-transform: none;
+    letter-spacing: 0;
   }
 }
