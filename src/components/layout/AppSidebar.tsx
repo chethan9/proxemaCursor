@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getStores, type StoreWithClient } from "@/services/storeService";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,7 @@ import {
   LogOut,
   Shield,
   UserCog,
-  Compass,
+  ChevronRight,
 } from "lucide-react";
 
 type NavItem = { href: string; icon: typeof LayoutDashboard; label: string; permission?: Permission; superAdminOnly?: boolean };
@@ -45,8 +46,6 @@ const navGroups: NavGroup[] = [
     label: "Management",
     items: [
       { href: "/clients", icon: Users, label: "Clients", permission: PERMISSIONS.CLIENTS_VIEW },
-      { href: "/sites", icon: Store, label: "Sites", permission: PERMISSIONS.SITES_VIEW },
-      { href: "/explore", icon: Compass, label: "Explore", permission: PERMISSIONS.SITES_VIEW },
     ],
   },
   {
@@ -79,16 +78,31 @@ export function AppSidebar() {
   const { brandName, logoUrl } = useBranding();
   const { profile, role, can, isSuperAdmin, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [sites, setSites] = useState<StoreWithClient[]>([]);
+  const [sitesExpanded, setSitesExpanded] = useState(true);
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("sidebar-collapsed") : null;
     if (stored === "1") setCollapsed(true);
+    const sitesStored = typeof window !== "undefined" ? localStorage.getItem("sidebar-sites-expanded") : null;
+    if (sitesStored === "0") setSitesExpanded(false);
   }, []);
+
+  useEffect(() => {
+    if (!can(PERMISSIONS.SITES_VIEW)) return;
+    getStores().then(setSites).catch(() => setSites([]));
+  }, [can]);
 
   const toggle = () => {
     const next = !collapsed;
     setCollapsed(next);
     if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
+  };
+
+  const toggleSites = () => {
+    const next = !sitesExpanded;
+    setSitesExpanded(next);
+    if (typeof window !== "undefined") localStorage.setItem("sidebar-sites-expanded", next ? "1" : "0");
   };
 
   const isItemActive = (href: string) =>
@@ -187,6 +201,75 @@ export function AppSidebar() {
                     </li>
                   );
                 })}
+
+                {group.label === "Management" && can(PERMISSIONS.SITES_VIEW) && (
+                  <>
+                    <li>
+                      {collapsed ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link
+                              href="/sites"
+                              className={cn(
+                                "group relative flex items-center rounded-md text-[13px] font-medium transition-colors h-9 w-9 justify-center mx-auto",
+                                router.pathname === "/sites"
+                                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
+                              )}
+                            >
+                              <Store className="h-4 w-4" />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">Sites</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <div className="flex items-center gap-0.5">
+                          <Link
+                            href="/sites"
+                            className={cn(
+                              "flex-1 flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                              router.pathname === "/sites"
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                            )}
+                          >
+                            <Store className="h-4 w-4 shrink-0" />
+                            <span className="truncate">Sites</span>
+                          </Link>
+                          {sites.length > 0 && (
+                            <button
+                              onClick={toggleSites}
+                              aria-label={sitesExpanded ? "Collapse sites" : "Expand sites"}
+                              className="p-1 rounded text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+                            >
+                              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", sitesExpanded && "rotate-90")} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                    {!collapsed && sitesExpanded && sites.map((site) => {
+                      const href = `/explore/${site.id}`;
+                      const isActive = router.asPath.startsWith(`/explore/${site.id}`);
+                      return (
+                        <li key={site.id}>
+                          <Link
+                            href={href}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md pl-7 pr-2.5 py-1 text-[12px] transition-colors",
+                              isActive
+                                ? "text-sidebar-accent-foreground bg-sidebar-accent/40"
+                                : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                            <span className="truncate">{site.name}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </>
+                )}
               </ul>
             </div>
           ))}
