@@ -36,6 +36,39 @@ import {
 
 let cachedSites: StoreWithClient[] | null = null;
 
+function getSiteFavicon(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+  } catch {
+    return null;
+  }
+}
+
+function SiteIcon({ site, size = "sm" }: { site: StoreWithClient; size?: "sm" | "md" }) {
+  const [failed, setFailed] = useState(false);
+  const favicon = getSiteFavicon(site.url);
+  const initial = (site.name || site.url || "?").trim().charAt(0).toUpperCase();
+  const cls = size === "md" ? "h-6 w-6 text-[11px]" : "h-5 w-5 text-[10px]";
+  if (favicon && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={favicon}
+        alt=""
+        onError={() => setFailed(true)}
+        className={cn(cls, "rounded-sm object-contain bg-white/5 flex-shrink-0")}
+      />
+    );
+  }
+  return (
+    <div className={cn(cls, "rounded-sm bg-sidebar-accent text-sidebar-accent-foreground font-semibold flex items-center justify-center flex-shrink-0")}>
+      {initial}
+    </div>
+  );
+}
+
 type NavItem = { href: string; icon: typeof LayoutDashboard; label: string; permission?: Permission; superAdminOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
 
@@ -222,7 +255,7 @@ export function AppSidebar() {
                               <Store className="h-4 w-4" />
                             </Link>
                           </TooltipTrigger>
-                          <TooltipContent side="right">Sites</TooltipContent>
+                          <TooltipContent side="right" sideOffset={8} className="z-[100]">Sites</TooltipContent>
                         </Tooltip>
                       ) : (
                         <Link
@@ -239,21 +272,52 @@ export function AppSidebar() {
                         </Link>
                       )}
                     </li>
-                    {!collapsed && sites.map((site) => {
+                    {sites.map((site) => {
                       const href = `/explore/${site.id}`;
                       const isActive = router.asPath.startsWith(`/explore/${site.id}`);
+                      if (collapsed) {
+                        return (
+                          <li key={site.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link
+                                  href={href}
+                                  className={cn(
+                                    "relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
+                                    isActive
+                                      ? "bg-sidebar-accent"
+                                      : "hover:bg-sidebar-accent/60"
+                                  )}
+                                >
+                                  <SiteIcon site={site} size="md" />
+                                  <span
+                                    className={cn(
+                                      "absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
+                                      site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40"
+                                    )}
+                                  />
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" sideOffset={8} className="z-[100]">
+                                {site.name}
+                              </TooltipContent>
+                            </Tooltip>
+                          </li>
+                        );
+                      }
                       return (
                         <li key={site.id}>
                           <Link
                             href={href}
                             className={cn(
-                              "flex items-center gap-1.5 rounded-md pl-3 pr-2.5 py-1 text-[12px] transition-colors",
+                              "flex items-center gap-2 rounded-md pl-3 pr-2.5 py-1 text-[12px] transition-colors",
                               isActive
                                 ? "text-sidebar-accent-foreground bg-sidebar-accent/40"
                                 : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
                             )}
                           >
-                            <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/40" />
+                            <CornerDownRight className="h-3 w-3 shrink-0 text-sidebar-foreground/40" />
+                            <SiteIcon site={site} size="sm" />
                             <span className="truncate">{site.name}</span>
                             <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
                           </Link>
