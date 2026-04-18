@@ -36,6 +36,20 @@ import {
 
 let cachedSites: StoreWithClient[] | null = null;
 
+function loadCachedSites(): StoreWithClient[] {
+  if (cachedSites) return cachedSites;
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("sidebar-sites-cache");
+    if (raw) {
+      const parsed = JSON.parse(raw) as StoreWithClient[];
+      cachedSites = parsed;
+      return parsed;
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
 function getSiteFavicon(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
@@ -58,12 +72,12 @@ function SiteIcon({ site, size = "sm" }: { site: StoreWithClient; size?: "sm" | 
         src={favicon}
         alt=""
         onError={() => setFailed(true)}
-        className={cn(cls, "rounded-sm object-contain bg-white/5 flex-shrink-0")}
+        className={cn(cls, "rounded-sm object-contain bg-white p-0.5 flex-shrink-0")}
       />
     );
   }
   return (
-    <div className={cn(cls, "rounded-sm bg-sidebar-accent text-sidebar-accent-foreground font-semibold flex items-center justify-center flex-shrink-0")}>
+    <div className={cn(cls, "rounded-sm bg-white text-slate-900 font-semibold flex items-center justify-center flex-shrink-0")}>
       {initial}
     </div>
   );
@@ -120,12 +134,15 @@ export function AppSidebar() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
   });
-  const [sites, setSites] = useState<StoreWithClient[]>(() => cachedSites || []);
+  const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
     getStores().then((list) => {
       cachedSites = list;
+      if (typeof window !== "undefined") {
+        try { localStorage.setItem("sidebar-sites-cache", JSON.stringify(list)); } catch { /* ignore */ }
+      }
       setSites(list);
     }).catch(() => { /* keep cached */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
