@@ -74,7 +74,7 @@ export function CreateKeyDialog({ clients, onCreate }: CreateKeyDialogProps) {
           Create API Key
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create API Key</DialogTitle>
           <DialogDescription>Generate a bearer token for downstream app access</DialogDescription>
