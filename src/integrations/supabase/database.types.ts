@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1073,6 +1073,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_view_preferences: {
+        Row: {
+          id: string
+          preferences: Json
+          updated_at: string
+          user_id: string
+          view_key: string
+        }
+        Insert: {
+          id?: string
+          preferences?: Json
+          updated_at?: string
+          user_id: string
+          view_key: string
+        }
+        Update: {
+          id?: string
+          preferences?: Json
+          updated_at?: string
+          user_id?: string
+          view_key?: string
+        }
+        Relationships: []
       }
       webhook_events: {
         Row: {
