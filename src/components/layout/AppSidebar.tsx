@@ -49,6 +49,10 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "Stores",
+    items: [],
+  },
+  {
     label: "Operations",
     items: [
       { href: "/sync-runs", icon: RefreshCw, label: "Sync Runs", permission: PERMISSIONS.SYNC_VIEW },
@@ -117,7 +121,10 @@ export function AppSidebar() {
         return true;
       }),
     }))
-    .filter((g) => g.items.length > 0);
+    .filter((g) => {
+      if (g.label === "Stores") return can(PERMISSIONS.SITES_VIEW);
+      return g.items.length > 0;
+    });
 
   const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
 
@@ -202,7 +209,7 @@ export function AppSidebar() {
                   );
                 })}
 
-                {group.label === "Management" && can(PERMISSIONS.SITES_VIEW) && (
+                {group.label === "Stores" && can(PERMISSIONS.SITES_VIEW) && (
                   <>
                     <li>
                       {collapsed ? (
