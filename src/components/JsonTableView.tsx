@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TableProperties, Braces } from "lucide-react";
+import { TableProperties, Braces, Copy, Check } from "lucide-react";
 
 interface JsonTableViewProps {
   data: unknown;
@@ -144,10 +144,17 @@ function NestedArrayTable({ data, depth }: { data: Record<string, unknown>[]; de
 
 export function JsonTableView({ data, maxDepth = 2 }: JsonTableViewProps) {
   const [viewMode, setViewMode] = useState<"json" | "table">("json");
+  const [copied, setCopied] = useState(false);
 
   if (data === null || data === undefined) {
     return <span className="text-muted-foreground">No data</span>;
   }
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="space-y-2">
@@ -170,6 +177,17 @@ export function JsonTableView({ data, maxDepth = 2 }: JsonTableViewProps) {
           <TableProperties className="h-3 w-3" />
           Table
         </Button>
+        {viewMode === "json" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="h-7 text-xs gap-1.5 ml-auto"
+          >
+            {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        )}
       </div>
 
       {viewMode === "json" ? (
