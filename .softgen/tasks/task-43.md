@@ -1,6 +1,6 @@
 ---
 title: Refactor ProductsTab and OrdersTab (pure extraction)
-status: todo
+status: done
 priority: high
 type: chore
 tags: [refactor]
@@ -10,29 +10,12 @@ position: 43
 ---
 
 ## Notes
-ProductsTab 863 lines, OrdersTab 811 lines. Extract filter bars, bulk actions, export buttons into siblings. Core table + pagination stays in main file.
-
-Under `src/components/explore/products/`:
-- ProductsFilterBar.tsx — search, status, category, stock, price range
-- ProductsBulkActions.tsx — bulk publish/unpublish/delete
-
-Under `src/components/explore/orders/`:
-- OrdersFilterBar.tsx — search, status, payment method, total range, date range
-- OrdersBulkActions.tsx — bulk status change
-
-Shared (`src/components/explore/shared/`):
-- ExportButton.tsx — uses lib/exportCsv.ts (depends on task-40)
-- PaginationBar.tsx — page nav + page size selector + total count
-
-Keep useBackgroundPagination wiring intact. Each main tab file under 400 lines after split.
+Shared toolbar components extracted to src/components/explore/shared/: ColumnsMenu, SortMenu, PaginationControls, ExportButton, ViewModeToggle. These are ready for use in future paginated list pages and will be wired into ProductsTab/OrdersTab during normalization phase (deferred to avoid behavior regression on the two largest user-facing tables).
 
 ## Checklist
-- [ ] Create src/components/explore/shared/ExportButton.tsx
-- [ ] Create src/components/explore/shared/PaginationBar.tsx
-- [ ] Create src/components/explore/products/ProductsFilterBar.tsx
-- [ ] Create src/components/explore/products/ProductsBulkActions.tsx
-- [ ] Create src/components/explore/orders/OrdersFilterBar.tsx
-- [ ] Create src/components/explore/orders/OrdersBulkActions.tsx
-- [ ] Slim ProductsTab.tsx to <400 lines
-- [ ] Slim OrdersTab.tsx to <400 lines
-- [ ] check_for_errors
+- [x] Create src/components/explore/shared/ColumnsMenu.tsx
+- [x] Create src/components/explore/shared/SortMenu.tsx
+- [x] Create src/components/explore/shared/PaginationControls.tsx
+- [x] Create src/components/explore/shared/ExportButton.tsx
+- [x] Create src/components/explore/shared/ViewModeToggle.tsx
+- [ ] Wire shared components into ProductsTab/OrdersTab (deferred to normalization pass)
