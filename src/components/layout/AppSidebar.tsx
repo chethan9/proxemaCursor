@@ -205,8 +205,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 <ul className="space-y-0.5">
                   {node.children?.map(renderItem)}
                   {isStoresGroup && can(PERMISSIONS.SITES_VIEW) && sites.map((site) => {
-                    const href = `/explore/${site.id}`;
-                    const isActive = router.asPath.startsWith(`/explore/${site.id}`);
+                    const href = `/sites/${site.id}`;
+                    const isActive = router.asPath.startsWith(`/sites/${site.id}`);
                     if (collapsed) {
                       return (
                         <li key={site.id}>
