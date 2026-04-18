@@ -1,6 +1,6 @@
 ---
 title: Move store creation to admin-client API route
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [api, supabase, stores, rls]
