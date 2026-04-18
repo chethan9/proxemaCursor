@@ -610,6 +610,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           </div>
                         );
                       }
+                      const dotColor: Record<string, string> = {
+                        publish: "bg-success",
+                        draft: "bg-muted-foreground/50",
+                        pending: "bg-warning",
+                        private: "bg-muted-foreground/50",
+                      };
+                      const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
+                      const label = p.status === "publish" ? "Active" : (p.status || "—");
                       return (
                         <div key={p.id} onClick={() => setExpandedRowId(p.id)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
