@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SitePageShell, useSiteFromRoute, SiteSectionHeader, SiteLoadingSkeleton } from "./_shared";
+import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "./_shared";
 import { TaxonomyTab } from "@/components/explore/TaxonomyTab";
 
 function TagsInner() {
@@ -9,13 +9,15 @@ function TagsInner() {
   if (!store) return <div className="p-6">Store not found</div>;
   return (
     <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
-      <SiteSectionHeader
-        store={store}
-        searchPlaceholder="Search tags..."
+      <TaxonomyTab
+        storeId={id}
+        mode="tags"
         search={search}
         onSearchChange={setSearch}
+        embedHeader
+        storeName={store.name}
+        storeUrl={store.url}
       />
-      <TaxonomyTab storeId={id} mode="tags" search={search} />
     </div>
   );
 }

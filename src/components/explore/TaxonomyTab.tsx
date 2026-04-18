@@ -79,14 +79,39 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   return (
     <div className="space-y-3">
+      {embedHeader && (
+        <div className="flex items-center gap-4 flex-wrap">
+          <Link href="/sites">
+            <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4" /></Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold truncate leading-tight">{storeName || "—"}</h1>
+            <p className="text-xs text-muted-foreground truncate">{storeUrl || ""}</p>
+          </div>
+          <div className="flex-1 flex justify-center">
+            <div className="relative w-full max-w-[480px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input placeholder={`Search ${mode}...`} value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={rows.length === 0} title="Export CSV">
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">Export</span>
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
         <Card>
           <CardContent className="p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex-1" />
-              <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={rows.length === 0} title="Export CSV">
-                <Download className="h-3.5 w-3.5" />
-              </Button>
+              {!embedHeader && (
+                <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={rows.length === 0} title="Export CSV">
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
                 <Icon className="h-3.5 w-3.5" />
                 <span className="font-medium">{count.toLocaleString()}</span>
