@@ -70,6 +70,7 @@ import {
   Calendar,
   Loader2,
   Archive,
+  Skeleton,
 } from "lucide-react";
 import { getStore, updateStore, updateStoreStatus, deleteStore, type Store } from "@/services/storeService";
 import {
@@ -97,6 +98,7 @@ import { JsonTableView } from "@/components/JsonTableView";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
 interface SyncProgress {
@@ -763,8 +765,22 @@ export default function SiteWorkspacePage() {
   if (loading) {
     return (
       <AppLayout title="Site">
-        <div className="p-6 flex items-center justify-center h-[calc(100vh-4rem)]">
-          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="p-6 space-y-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-9 rounded" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-7 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-full max-w-2xl" />
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20" />
+            ))}
+          </div>
+          <Skeleton className="h-80 w-full" />
         </div>
       </AppLayout>
     );
@@ -1016,7 +1032,10 @@ export default function SiteWorkspacePage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleClearSyncHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          <AlertDialogAction
+                            onClick={handleClearSyncHistory}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
                             Clear All
                           </AlertDialogAction>
                         </AlertDialogFooter>
