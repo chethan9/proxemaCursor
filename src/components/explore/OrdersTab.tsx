@@ -314,15 +314,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     <div className="space-y-3">
       {embedHeader && (
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex-1" />
-          <div className="w-full max-w-[480px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
-            </div>
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {paymentOptions.length > 0 && (
               <Popover>
                 <PopoverTrigger asChild>
@@ -335,7 +327,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     <span className="max-w-[120px] truncate">{paymentFilter === "all" ? "Payment" : paymentFilter}</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-64 p-0">
+                <PopoverContent align="start" className="w-64 p-0">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                     <span className="text-xs font-semibold">Filter by payment</span>
                     {paymentFilter !== "all" && (
@@ -351,14 +343,16 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </PopoverContent>
               </Popover>
             )}
-
-            <div className="flex-1 min-w-0 max-w-[480px]">
+          </div>
+          <div className="flex-1 flex justify-center min-w-0">
+            <div className="w-full max-w-[480px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
               </div>
             </div>
-
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
