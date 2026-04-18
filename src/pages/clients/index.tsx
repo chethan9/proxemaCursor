@@ -21,12 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Building2, Trash2 } from "lucide-react";
-import { getClients, createClient, deleteClient, type Client } from "@/services/clientService";
+import { Plus, Search, Building2, Trash2, Pencil, ExternalLink } from "lucide-react";
+import { useRouter } from "next/router";
+import { getClients, createClient, updateClient, deleteClient, type Client } from "@/services/clientService";
 import { getStoresByClient } from "@/services/storeService";
 import { browserCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<(Client & { siteCount: number })[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,29 +36,31 @@ export default function ClientsPage() {
   const [newClientName, setNewClientName] = useState("");
   const [creating, setCreating] = useState(false);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editName, setEditName] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const loadClients = async (skipCache = false) => {
-    // Check cache first
     if (!skipCache) {
-      const cachedClients = browserCache.get<(Client & { siteCount: number })[]>(CACHE_KEYS.CLIENTS + ":with_counts");
-      if (cachedClients) {
-        setClients(cachedClients);
+      const cached = browserCache.get<(Client & { siteCount: number })[]>(CACHE_KEYS.CLIENTS + ":with_counts");
+      if (cached) {
+        setClients(cached);
         setLoading(false);
         return;
       }
     }
-
     setLoading(true);
     try {
       const data = await getClients();
-      const clientsWithCounts = await Promise.all(
-        data.map(async (client) => {
-          const stores = await getStoresByClient(client.id);
-          return { ...client, siteCount: stores.length };
+      const withCounts = await Promise.all(
+        data.map(async (c) => {
+          const stores = await getStoresByClient(c.id);
+          return { ...c, siteCount: stores.length };
         })
       );
-      setClients(clientsWithCounts);
-      // Cache the results
-      browserCache.set(CACHE_KEYS.CLIENTS + ":with_counts", clientsWithCounts, CACHE_TTL.MEDIUM);
+      setClients(withCounts);
+      browserCache.set(CACHE_KEYS.CLIENTS + ":with_counts", withCounts, CACHE_TTL.MEDIUM);
     } catch (error) {
       console.error("Error loading clients:", error);
     } finally {
@@ -75,7 +79,6 @@ export default function ClientsPage() {
       await createClient({ name: newClientName.trim() });
       setNewClientName("");
       setDialogOpen(false);
-      // Clear cache and reload
       browserCache.delete(CACHE_KEYS.CLIENTS);
       browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
       await loadClients(true);
@@ -86,11 +89,33 @@ export default function ClientsPage() {
     }
   };
 
+  const openEdit = (client: Client) => {
+    setEditingClient(client);
+    setEditName(client.name);
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingClient || !editName.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateClient(editingClient.id, { name: editName.trim() });
+      setEditOpen(false);
+      setEditingClient(null);
+      browserCache.delete(CACHE_KEYS.CLIENTS);
+      browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
+      await loadClients(true);
+    } catch (error) {
+      console.error("Error updating client:", error);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const handleDeleteClient = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this client?")) return;
+    if (!confirm("Are you sure you want to delete this client? Linked sites will be unassigned.")) return;
     try {
       await deleteClient(id);
-      // Clear cache and reload
       browserCache.delete(CACHE_KEYS.CLIENTS);
       browserCache.delete(CACHE_KEYS.CLIENTS + ":with_counts");
       await loadClients(true);
@@ -99,17 +124,12 @@ export default function ClientsPage() {
     }
   };
 
-  const filteredClients = clients.filter((client) =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredClients = clients.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 
   return (
     <AppLayout title="Clients">
@@ -131,9 +151,7 @@ export default function ClientsPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add New Client</DialogTitle>
-                <DialogDescription>
-                  Create a new client to organize their WooCommerce sites.
-                </DialogDescription>
+                <DialogDescription>Create a new client to organize their WooCommerce sites.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -148,9 +166,7 @@ export default function ClientsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleCreateClient} disabled={creating || !newClientName.trim()}>
                   {creating ? "Creating..." : "Create Client"}
                 </Button>
@@ -183,15 +199,13 @@ export default function ClientsPage() {
                   <TableHead>Client Name</TableHead>
                   <TableHead className="text-center">Sites</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
+                  <TableHead className="w-[160px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Loading clients...
-                    </TableCell>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Loading clients...</TableCell>
                   </TableRow>
                 ) : filteredClients.length === 0 ? (
                   <TableRow>
@@ -201,7 +215,7 @@ export default function ClientsPage() {
                   </TableRow>
                 ) : (
                   filteredClients.map((client) => (
-                    <TableRow key={client.id}>
+                    <TableRow key={client.id} className="cursor-pointer" onClick={() => router.push(`/clients/${client.id}`)}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -215,14 +229,31 @@ export default function ClientsPage() {
                           {client.siteCount}
                         </span>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(client.created_at)}
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(client.created_at)}</TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Open"
+                          onClick={() => router.push(`/clients/${client.id}`)}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Edit name"
+                          onClick={() => openEdit(client)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          title="Delete"
                           onClick={() => handleDeleteClient(client.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -235,6 +266,32 @@ export default function ClientsPage() {
             </Table>
           </CardContent>
         </Card>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Client</DialogTitle>
+              <DialogDescription>Update the client name.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Client Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={savingEdit || !editName.trim()}>
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { generateApiToken } from "@/lib/api-auth";
-import { ArrowLeft, Copy, Check, Plus, Trash2, Key, Store, RefreshCw, Shield } from "lucide-react";
+import { ArrowLeft, Copy, Check, Plus, Trash2, Key, Store, RefreshCw, Shield, Pencil, Link2, Unlink } from "lucide-react";
 
 interface Client {
   id: string;
@@ -36,6 +37,7 @@ interface ClientStore {
   url: string;
   status: string;
   last_sync_at: string | null;
+  client_id: string | null;
 }
 
 export default function ClientDetailPage() {
@@ -45,6 +47,7 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [stores, setStores] = useState<ClientStore[]>([]);
+  const [unassignedStores, setUnassignedStores] = useState<ClientStore[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showCreateToken, setShowCreateToken] = useState(false);
@@ -53,30 +56,92 @@ export default function ClientDetailPage() {
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
+  const [linking, setLinking] = useState(false);
+
   useEffect(() => {
     if (id && typeof id === "string") loadClientData(id);
   }, [id]);
 
   async function loadClientData(clientId: string) {
     setLoading(true);
-    const [clientRes, tokensRes, storesRes] = await Promise.all([
+    const [clientRes, tokensRes, storesRes, unassignedRes] = await Promise.all([
       supabase.from("clients").select("id, name, created_at, updated_at").eq("id", clientId).single(),
       supabase.from("api_tokens").select("id, name, prefix, created_at, last_used_at, expires_at, revoked_at").eq("client_id", clientId).order("created_at", { ascending: false }),
-      supabase.from("stores").select("id, name, url, status, last_sync_at").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase.from("stores").select("id, name, url, status, last_sync_at, client_id").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase.from("stores").select("id, name, url, status, last_sync_at, client_id").is("client_id", null).order("created_at", { ascending: false }),
     ]);
-    if (clientRes.data) setClient(clientRes.data);
+    if (clientRes.data) {
+      setClient(clientRes.data);
+      setEditName(clientRes.data.name);
+    }
     setTokens(tokensRes.data || []);
-    setStores(storesRes.data || []);
+    setStores((storesRes.data || []) as ClientStore[]);
+    setUnassignedStores((unassignedRes.data || []) as ClientStore[]);
     setLoading(false);
+  }
+
+  async function handleSaveName() {
+    if (!id || !editName.trim() || !client) return;
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({ name: editName.trim(), updated_at: new Date().toISOString() })
+        .eq("id", client.id);
+      if (error) throw error;
+      setEditOpen(false);
+      await loadClientData(client.id);
+    } catch (err) {
+      console.error("Update client error:", err);
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function handleLinkSite() {
+    if (!id || !selectedSiteId) return;
+    setLinking(true);
+    try {
+      const { error } = await supabase
+        .from("stores")
+        .update({ client_id: id as string, updated_at: new Date().toISOString() })
+        .eq("id", selectedSiteId);
+      if (error) throw error;
+      setLinkOpen(false);
+      setSelectedSiteId("");
+      await loadClientData(id as string);
+    } catch (err) {
+      console.error("Link site error:", err);
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  async function handleUnlinkSite(siteId: string) {
+    if (!confirm("Unlink this site from the client? The site will remain, but will no longer belong to this client.")) return;
+    try {
+      const { error } = await supabase
+        .from("stores")
+        .update({ client_id: null, updated_at: new Date().toISOString() })
+        .eq("id", siteId);
+      if (error) throw error;
+      if (id) await loadClientData(id as string);
+    } catch (err) {
+      console.error("Unlink site error:", err);
+    }
   }
 
   async function handleCreateToken() {
     if (!id || !newTokenName.trim()) return;
     setCreating(true);
-
     try {
       const { plain, hash, prefix } = generateApiToken();
-
       const { error } = await supabase.from("api_tokens").insert({
         client_id: id as string,
         name: newTokenName.trim(),
@@ -84,9 +149,7 @@ export default function ClientDetailPage() {
         token_hash: hash,
         prefix: prefix,
       });
-
       if (error) throw error;
-
       setCreatedToken(plain);
       setNewTokenName("");
       await loadClientData(id as string);
@@ -145,28 +208,85 @@ export default function ClientDetailPage() {
   return (
     <AppLayout title="Client">
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{client.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              Created {formatDate(client.created_at)} · {stores.length} site{stores.length !== 1 ? "s" : ""} · {activeTokens.length} active token{activeTokens.length !== 1 ? "s" : ""}
-            </p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{client.name}</h1>
+              <p className="text-sm text-muted-foreground">
+                Created {formatDate(client.created_at)} · {stores.length} site{stores.length !== 1 ? "s" : ""} · {activeTokens.length} active token{activeTokens.length !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-4 w-4 mr-2" /> Edit
+          </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Store className="h-5 w-5" /> Sites
-            </CardTitle>
-            <CardDescription>WooCommerce sites managed under this client</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Store className="h-5 w-5" /> Sites
+                </CardTitle>
+                <CardDescription>WooCommerce sites linked to this client</CardDescription>
+              </div>
+              <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={unassignedStores.length === 0}>
+                    <Link2 className="h-4 w-4 mr-2" /> Link Site
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Link Site to {client.name}</DialogTitle>
+                    <DialogDescription>
+                      Select an existing site not yet assigned to any client.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    {unassignedStores.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No unassigned sites available. Create a site from the Sites page first.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Unassigned Site</Label>
+                        <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a site..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unassignedStores.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name} — {s.url}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setLinkOpen(false)}>Cancel</Button>
+                    <Button onClick={handleLinkSite} disabled={!selectedSiteId || linking}>
+                      {linking ? "Linking..." : "Link Site"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             {stores.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No sites connected yet</p>
+              <div className="text-center py-8">
+                <Store className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">No sites linked yet</p>
+                <Button variant="outline" size="sm" onClick={() => router.push("/sites")}>
+                  Go to Sites
+                </Button>
+              </div>
             ) : (
               <Table>
                 <TableHeader>
@@ -174,7 +294,7 @@ export default function ClientDetailPage() {
                     <TableHead>Site</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Sync</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -192,8 +312,11 @@ export default function ClientDetailPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">{formatDate(store.last_sync_at)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <Button variant="ghost" size="sm" onClick={() => router.push(`/sites/${store.id}`)}>View</Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Unlink" onClick={() => handleUnlinkSite(store.id)}>
+                          <Unlink className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -341,6 +464,32 @@ GET /api/v1/categories     — Categories`}
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Client</DialogTitle>
+              <DialogDescription>Update the client name.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-client-name">Client Name</Label>
+                <Input
+                  id="edit-client-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveName} disabled={savingName || !editName.trim()}>
+                {savingName ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
