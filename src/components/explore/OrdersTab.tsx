@@ -314,7 +314,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     <div className="space-y-3">
       {embedHeader && (
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex-1 min-w-0 max-w-[480px]">
+          <div className="flex-1" />
+          <div className="w-full max-w-[480px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
@@ -322,6 +323,42 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            {paymentOptions.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={paymentFilter !== "all" ? "secondary" : "outline"}
+                    size="sm"
+                    className="h-9 text-xs gap-1.5 px-2.5"
+                  >
+                    <Filter className="h-3.5 w-3.5" />
+                    <span className="max-w-[120px] truncate">{paymentFilter === "all" ? "Payment" : paymentFilter}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 p-0">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                    <span className="text-xs font-semibold">Filter by payment</span>
+                    {paymentFilter !== "all" && (
+                      <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setPaymentFilter("all")}>Clear</Button>
+                    )}
+                  </div>
+                  <div className="max-h-[280px] overflow-y-auto p-1">
+                    <button onClick={() => setPaymentFilter("all")} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${paymentFilter === "all" ? "bg-accent" : ""}`}>All payment methods</button>
+                    {paymentOptions.map((p) => (
+                      <button key={p} onClick={() => setPaymentFilter(p)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${paymentFilter === p ? "bg-accent" : ""}`}>{p}</button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <div className="flex-1 min-w-0 max-w-[480px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
+              </div>
+            </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
