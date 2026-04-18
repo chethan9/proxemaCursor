@@ -96,6 +96,7 @@ import { EntityHistory } from "@/components/EntityHistory";
 import { JsonTableView } from "@/components/JsonTableView";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 interface SyncProgress {
   current: number;
@@ -610,6 +611,57 @@ export default function SiteWorkspacePage() {
     }
   };
 
+  const handleSyncAspect = async (aspect: string) => {
+    if (!store || syncing) return;
+    setSyncing(true);
+    setSyncProgress({ current: 0, total: 1, aspect: `Syncing ${aspect}...` });
+
+    try {
+      const response = await fetch(`/api/stores/${store.id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aspects: [aspect] }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Sync failed");
+      }
+
+      const result = await response.json();
+      setSyncProgress({
+        current: 1,
+        total: 1,
+        aspect: `Done — ${result.totals?.processed?.toLocaleString() || 0} ${aspect} synced`,
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Sync error:", error);
+      setSyncProgress({
+        current: 0,
+        total: 1,
+        aspect: error instanceof Error ? error.message : "Sync failed",
+      });
+    } finally {
+      setTimeout(() => {
+        setSyncing(false);
+        setSyncProgress(null);
+      }, 3000);
+    }
+  };
+
+  const handleClearSyncHistory = async () => {
+    if (!store) return;
+    const { error } = await supabase
+      .from("sync_runs")
+      .delete()
+      .eq("store_id", store.id);
+    if (!error) {
+      setSyncRuns([]);
+      await loadData();
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
@@ -807,21 +859,34 @@ export default function SiteWorkspacePage() {
                   </div>
                   
                   {/* Right: Data Stats */}
-                  <div className="grid grid-cols-5 gap-4 lg:gap-6">
-                    {SYNC_ASPECTS.map((aspect) => {
-                      const AspectIcon = aspect.icon;
-                      const count = dataCounts[aspect.id] || 0;
-                      return (
-                        <div key={aspect.id} className="text-center">
-                          <div className={`inline-flex items-center justify-center h-10 w-10 rounded-lg bg-muted mb-1`}>
-                            <AspectIcon className={`h-5 w-5 ${aspect.color}`} />
-                          </div>
-                          <p className="text-lg font-semibold">{count.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">{aspect.label}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <TooltipProvider>
+                    <div className="grid grid-cols-5 gap-4 lg:gap-6">
+                      {SYNC_ASPECTS.map((aspect) => {
+                        const AspectIcon = aspect.icon;
+                        const count = dataCounts[aspect.id] || 0;
+                        return (
+                          <Tooltip key={aspect.id}>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleSyncAspect(aspect.id)}
+                                disabled={syncing}
+                                className="text-center group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <div className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-muted mb-1 group-hover:ring-2 group-hover:ring-primary/50 transition-all">
+                                  <AspectIcon className={`h-5 w-5 ${aspect.color}`} />
+                                </div>
+                                <p className="text-lg font-semibold">{count.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">{aspect.label}</p>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Click to sync {aspect.label.toLowerCase()} only</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
                 </div>
               </CardContent>
             </Card>
@@ -891,8 +956,36 @@ export default function SiteWorkspacePage() {
             {/* Sync History */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Sync History</CardTitle>
-                <CardDescription>Recent sync operations for this site</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Sync History</CardTitle>
+                    <CardDescription>Recent sync operations for this site</CardDescription>
+                  </div>
+                  {syncRuns.length > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Clear History
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Clear sync history?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove all sync run records for this site. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleClearSyncHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Clear All
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>

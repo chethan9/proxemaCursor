@@ -43,7 +43,19 @@ import {
   Filter,
   Download,
   Loader2,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SyncRunRow {
   id: string;
@@ -259,6 +271,23 @@ export default function SyncRunsPage() {
 
   const failedRuns = runs.filter((r) => r.status === "failed");
 
+  const handleClearAll = async () => {
+    const { error } = await supabase.from("sync_runs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (!error) {
+      setRuns([]);
+      setStats({ total: 0, completed: 0, failed: 0, running: 0, totalRecords: 0 });
+      setTotalCount(0);
+    }
+  };
+
+  const handleClearFailed = async () => {
+    const { error } = await supabase.from("sync_runs").delete().eq("status", "failed");
+    if (!error) {
+      resetAndLoad();
+      loadStats();
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -274,6 +303,52 @@ export default function SyncRunsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
+            {stats.failed > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear Failed
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear failed sync runs?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all {stats.failed} failed sync run records across all sites.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearFailed} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Clear Failed Runs
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear all sync runs?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all {stats.total} sync run records across all sites. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete All Runs
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button variant="outline" size="sm" onClick={() => { resetAndLoad(); loadStats(); }}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
