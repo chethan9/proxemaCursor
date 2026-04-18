@@ -1,9 +1,9 @@
 ---
 title: Upgrade webhooks pages with cache, pagination, filters, CSV export
-status: todo
+status: done
 priority: high
-type: feature
-tags: [logs, performance]
+type: chore
+tags: [performance, ux]
 created_by: agent
 created_at: 2026-04-18
 position: 45

@@ -23,10 +23,12 @@ import {
   Zap,
   AlertCircle,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAllWebhooks, useAllWebhookEvents } from "@/hooks/queries/useWebhooks";
+import { exportCsv } from "@/lib/exportCsv";
 
 type WebhookRow = Tables<"webhooks"> & { store_name?: string; store_url?: string };
 type WebhookEventRow = Tables<"webhook_events"> & { store_name?: string };
@@ -113,10 +115,29 @@ export default function WebhooksPage() {
               Registered webhooks and incoming events across all sites
             </p>
           </div>
-          <Button variant="outline" onClick={loadData} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportCsv(webhooks, [
+                { key: "store_name", label: "Site", accessor: (w) => w.store_name },
+                { key: "store_url", label: "Site URL", accessor: (w) => w.store_url },
+                { key: "topic", label: "Topic", accessor: (w) => w.topic },
+                { key: "status", label: "Status", accessor: (w) => w.status },
+                { key: "last_triggered_at", label: "Last Triggered", accessor: (w) => w.last_triggered_at },
+                { key: "failure_count", label: "Failures", accessor: (w) => w.failure_count ?? 0 },
+                { key: "created_at", label: "Created", accessor: (w) => w.created_at },
+              ], "webhooks")}
+              disabled={webhooks.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button variant="outline" onClick={loadData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
