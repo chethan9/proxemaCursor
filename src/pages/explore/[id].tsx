@@ -234,58 +234,6 @@ export default function ExploreStorePage() {
     [hasMore, productsLoading, page, loadProducts]
   );
 
-  const exportCsv = () => {
-    const cols: ColumnKey[] = (Object.keys(visibleCols) as ColumnKey[]).filter((k) => visibleCols[k] && k !== "image");
-    const header = cols.map((c) => COLUMNS.find((col) => col.key === c)?.label || c).join(",");
-    const rows = products.map((p) => {
-      return cols
-        .map((c) => {
-          let v: string | number = "";
-          switch (c) {
-            case "id": v = p.id; break;
-            case "name": v = p.name || ""; break;
-            case "status": v = p.status || ""; break;
-            case "sku": v = p.sku || ""; break;
-            case "price": v = (p.price as string) || ""; break;
-            case "regular_price": v = (p.regular_price as string) || ""; break;
-            case "sale_price": v = (p.sale_price as string) || ""; break;
-            case "stock": v = p.stock_quantity ?? ""; break;
-            case "stock_status": v = p.stock_status || ""; break;
-            case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
-            case "category": v = getCategoryNames(p.categories); break;
-            case "type": v = p.type || ""; break;
-            case "slug": v = p.slug || ""; break;
-            case "wooId": v = p.woo_id ?? ""; break;
-            case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
-            case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
-            case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
-            case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
-            case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
-            case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
-            case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
-            case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
-            case "attributes": v = JSON.stringify(p.attributes || []); break;
-            case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
-            case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
-            case "sales": v = p.synced_at || ""; break;
-            case "created": v = p.created_at || ""; break;
-            case "updated": v = p.updated_at || ""; break;
-          }
-          const s = String(v).replace(/"/g, '""');
-          return `"${s}"`;
-        })
-        .join(",");
-    });
-    const csv = [header, ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${store?.name || "products"}-export-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const visibleColList = useMemo(
     () => columnOrder
       .map((k) => COLUMNS.find((c) => c.key === k))
@@ -348,7 +296,7 @@ export default function ExploreStorePage() {
               <Card>
                 <CardContent className="p-3 space-y-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative w-[280px] max-w-full">
+                    <div className="relative w-[220px] max-w-full">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Search name or SKU..."
@@ -416,9 +364,8 @@ export default function ExploreStorePage() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 gap-2">
+                          <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}>
                             <ArrowUpDown className="h-3.5 w-3.5" />
-                            {sort.label}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
@@ -438,9 +385,9 @@ export default function ExploreStorePage() {
 
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 gap-2">
+                          <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
                             <Columns3 className="h-3.5 w-3.5" />
-                            Columns ({Object.values(visibleCols).filter(Boolean).length})
+                            <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6}>
@@ -560,9 +507,8 @@ export default function ExploreStorePage() {
                         </PopoverContent>
                       </Popover>
 
-                      <Button variant="outline" size="sm" className="h-9 gap-2" onClick={exportCsv} disabled={products.length === 0}>
+                      <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
                         <Download className="h-3.5 w-3.5" />
-                        Export
                       </Button>
 
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
@@ -689,7 +635,7 @@ export default function ExploreStorePage() {
                                           {p.sale_price && p.sale_price !== p.regular_price ? (
                                             <>
                                               <span className="text-destructive">{p.sale_price}</span>
-                                              <span className="ml-1 line-through text-muted-foreground text-[10px] font-normal">{p.regular_price}</span>
+                                              <span className="ml-1 line-through text-muted-foreground text-xs">{p.regular_price}</span>
                                             </>
                                           ) : (
                                             <span>{p.price || "—"}</span>
