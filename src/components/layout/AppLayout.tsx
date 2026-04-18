@@ -13,31 +13,43 @@ interface AppLayoutProps {
   requireSuperAdmin?: boolean;
 }
 
+// Persistent shell - rendered once by _app.tsx, never unmounts on navigation
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const { brandName } = useBranding();
+  return (
+    <SidebarProvider>
+      <Head>
+        <title>{brandName}</title>
+      </Head>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground focus:shadow-polaris-md"
+      >
+        Skip to main content
+      </a>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        <AppSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Breadcrumbs />
+          <main id="main-content" className="flex-1 overflow-auto">
+            <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+// Per-page wrapper: only handles title + permission gate, no layout remount
 export function AppLayout({ children, title, requirePermission, requireSuperAdmin }: AppLayoutProps) {
   const { brandName } = useBranding();
   const fullTitle = title ? `${title} · ${brandName}` : brandName;
   return (
     <AuthGuard requirePermission={requirePermission} requireSuperAdmin={requireSuperAdmin}>
-      <SidebarProvider>
-        <Head>
-          <title>{fullTitle}</title>
-        </Head>
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground focus:shadow-polaris-md"
-        >
-          Skip to main content
-        </a>
-        <div className="flex h-screen w-full overflow-hidden bg-background">
-          <AppSidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Breadcrumbs />
-            <main id="main-content" className="flex-1 overflow-auto">
-              <div className="mx-auto w-full max-w-[1600px]">{children}</div>
-            </main>
-          </div>
-        </div>
-      </SidebarProvider>
+      <Head>
+        <title>{fullTitle}</title>
+      </Head>
+      {children}
     </AuthGuard>
   );
 }
