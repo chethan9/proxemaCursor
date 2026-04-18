@@ -29,6 +29,7 @@ import {
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -430,6 +431,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   setStockStatusFilter("all"); setPriceMin(""); setPriceMax("");
                 }}>Clear</Button>
               )}
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-9 w-[180px] text-xs">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {categoryOptions.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex-1" />
               <div className="flex items-center gap-2 ml-auto">
                 {!embedHeader && (
