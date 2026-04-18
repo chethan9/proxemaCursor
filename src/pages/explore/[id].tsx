@@ -82,7 +82,7 @@ const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: 
   { field: "synced_at", direction: "desc", label: "Recently synced" },
 ];
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500];
 
 export default function ExploreStorePage() {
   const router = useRouter();
@@ -96,72 +96,16 @@ export default function ExploreStorePage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [pageSize, setPageSize] = useState<number>(() => {
+    if (typeof window === "undefined") return 50;
+    const v = parseInt(localStorage.getItem("explore-page-size") || "50", 10);
+    return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
+  });
   const [productsLoading, setProductsLoading] = useState(false);
-  const [initialProductsLoad, setInitialProductsLoad] = useState(true);
-
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [outOfStockOnly, setOutOfStockOnly] = useState(false);
-  const [sort, setSort] = useState(SORT_OPTIONS[0]);
-  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
-    image: true,
-    id: false,
-    name: true,
-    status: true,
-    sku: true,
-    price: true,
-    regular_price: false,
-    sale_price: false,
-    stock: true,
-    stock_status: false,
-    manage_stock: false,
-    category: true,
-    type: false,
-    slug: false,
-    wooId: false,
-    parent_id: false,
-    permalink: false,
-    tax_status: false,
-    tax_class: false,
-    shipping_required: false,
-    images_count: false,
-    short_desc: false,
-    description: false,
-    attributes: false,
-    sales: false,
-    date_created: false,
-    date_modified: false,
-    created: false,
-    updated: false,
-  });
-  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("explore-col-order");
-        if (saved) {
-          const parsed = JSON.parse(saved) as ColumnKey[];
-          const allKeys = COLUMNS.map((c) => c.key);
-          const valid = parsed.filter((k) => allKeys.includes(k));
-          const missing = allKeys.filter((k) => !valid.includes(k));
-          return [...valid, ...missing];
-        }
-      } catch { /* ignore */ }
-    }
-    return COLUMNS.map((c) => c.key);
-  });
-  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
-    if (typeof window === "undefined") return "table";
-    return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
-  });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("explore-view-mode", viewMode);
-    }
-  }, [viewMode]);
+    if (typeof window !== "undefined") localStorage.setItem("explore-page-size", String(pageSize));
+  }, [pageSize]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -178,22 +122,19 @@ export default function ExploreStorePage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset when filters change
+  // Reset page when filters change
   useEffect(() => {
     setPage(0);
-    setProducts([]);
-    setHasMore(true);
-    setInitialProductsLoad(true);
-  }, [debouncedSearch, statusFilter, sort, storeId, outOfStockOnly]);
+  }, [debouncedSearch, statusFilter, sort, storeId, outOfStockOnly, pageSize]);
 
-  const loadProducts = useCallback(async (pageNum: number, append: boolean) => {
+  const loadProducts = useCallback(async () => {
     if (!storeId) return;
     setProductsLoading(true);
     try {
       const { data, count } = await fetchProducts({
         storeId,
-        page: pageNum,
-        pageSize: PAGE_SIZE,
+        page,
+        pageSize,
         search: debouncedSearch,
         sortField: sort.field,
         sortDirection: sort.direction,
@@ -201,38 +142,17 @@ export default function ExploreStorePage() {
         outOfStockOnly,
       });
       setProductCount(count);
-      setHasMore(data.length === PAGE_SIZE && (pageNum + 1) * PAGE_SIZE < count);
-      setProducts((prev) => (append ? [...prev, ...data] : data));
+      setProducts(data);
     } catch (e) {
       console.error("Load products failed:", e);
     } finally {
       setProductsLoading(false);
-      setInitialProductsLoad(false);
     }
-  }, [storeId, debouncedSearch, sort, statusFilter, outOfStockOnly]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, outOfStockOnly]);
 
   useEffect(() => {
-    if (storeId && initialProductsLoad) {
-      loadProducts(0, false);
-    }
-  }, [storeId, initialProductsLoad, loadProducts]);
-
-  // Infinite scroll sentinel
-  const sentinelCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!node || !hasMore || productsLoading) return;
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore && !productsLoading) {
-          const next = page + 1;
-          setPage(next);
-          loadProducts(next, true);
-        }
-      }, { rootMargin: "300px" });
-      observer.observe(node);
-      return () => observer.disconnect();
-    },
-    [hasMore, productsLoading, page, loadProducts]
-  );
+    if (storeId) loadProducts();
+  }, [storeId, loadProducts]);
 
   const visibleColList = useMemo(
     () => columnOrder
@@ -580,7 +500,7 @@ export default function ExploreStorePage() {
                           ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2"
                           : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3";
 
-                        if (initialProductsLoad) {
+                        if (productsLoading) {
                           return (
                             <div className={gridCls}>
                               {Array.from({ length: isCompact ? 24 : 10 }).map((_, i) => (
@@ -693,15 +613,15 @@ export default function ExploreStorePage() {
                                       </div>
                                       <div className="text-[10px] text-right shrink-0">
                                         {p.stock_quantity != null ? (
-                                          <span className={p.stock_quantity === 0 ? "text-destructive font-medium" : p.stock_quantity < 5 ? "text-warning font-medium" : "text-muted-foreground"}>
+                                          <span className={p.stock_quantity === 0 ? "text-destructive font-medium" : p.stock_quantity < 5 ? "text-warning font-medium" : ""}>
                                             {p.stock_quantity} qty
                                           </span>
                                         ) : p.stock_status === "instock" ? (
                                           <span className="text-success">In stock</span>
                                         ) : p.stock_status === "outofstock" ? (
-                                          <span className="text-destructive">Out</span>
+                                          <span className="text-destructive">Out of stock</span>
                                         ) : (
-                                          <span className="text-muted-foreground">—</span>
+                                          "—"
                                         )}
                                       </div>
                                     </div>
@@ -729,7 +649,7 @@ export default function ExploreStorePage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {initialProductsLoad ? (
+                        {productsLoading ? (
                           Array.from({ length: 10 }).map((_, i) => (
                             <TableRow key={`sk-${i}`}>
                               {visibleColList.map((c) => (
@@ -957,19 +877,48 @@ export default function ExploreStorePage() {
                     </Table>
                   </div>
                   )}
-                  {/* Load more sentinel */}
-                  {!initialProductsLoad && products.length > 0 && (
-                    <div ref={sentinelCallback} className="py-6 flex items-center justify-center">
-                      {productsLoading ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading more...
+
+                  {/* Pagination controls */}
+                  {!productsLoading && productCount > 0 && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border text-xs">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span>Per page:</span>
+                        <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
+                          {PAGE_SIZE_OPTIONS.map((n) => (
+                            <Button
+                              key={n}
+                              variant={pageSize === n ? "secondary" : "ghost"}
+                              size="sm"
+                              className="h-6 px-2 text-[11px]"
+                              onClick={() => setPageSize(n)}
+                            >
+                              {n}
+                            </Button>
+                          ))}
                         </div>
-                      ) : hasMore ? (
-                        <span className="text-xs text-muted-foreground">Scroll for more</span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">All {productCount.toLocaleString()} products loaded</span>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground">
+                          {page * pageSize + 1}–{Math.min((page + 1) * pageSize, productCount)} of {productCount.toLocaleString()}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(0)} disabled={page === 0}>
+                            First
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+                            Prev
+                          </Button>
+                          <span className="px-2 font-medium">
+                            Page {page + 1} / {Math.max(1, Math.ceil(productCount / pageSize))}
+                          </span>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}>
+                            Next
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(Math.max(0, Math.ceil(productCount / pageSize) - 1))} disabled={(page + 1) * pageSize >= productCount}>
+                            Last
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
