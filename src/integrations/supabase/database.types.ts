@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1194,6 +1194,7 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
