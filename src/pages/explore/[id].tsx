@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter, ChevronDown, GripVertical } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -778,12 +778,42 @@ export default function ExploreStorePage() {
                         <TableRow className="bg-muted/30">
                           {visibleColList.map((c) => {
                             const baseCls = c.key === "image" ? "w-14" : "";
+                            const dragProps = {
+                              draggable: true,
+                              onDragStart: (e: React.DragEvent) => {
+                                setDragKey(c.key);
+                                e.dataTransfer.effectAllowed = "move";
+                              },
+                              onDragOver: (e: React.DragEvent) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = "move";
+                              },
+                              onDrop: (e: React.DragEvent) => {
+                                e.preventDefault();
+                                if (!dragKey || dragKey === c.key) return;
+                                setColumnOrder((prev) => {
+                                  const next = prev.filter((k) => k !== dragKey);
+                                  const targetIdx = next.indexOf(c.key);
+                                  next.splice(targetIdx, 0, dragKey);
+                                  return next;
+                                });
+                                setDragKey(null);
+                              },
+                              onDragEnd: () => setDragKey(null),
+                            };
+                            const headerCls = `${baseCls} cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`;
+                            const labelWithGrip = (label: string) => (
+                              <span className="inline-flex items-center gap-1">
+                                <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                                {label}
+                              </span>
+                            );
                             if (c.key === "price") {
                               const active = !!(priceMin || priceMax);
                               return (
-                                <TableHead key={c.key} className={baseCls}>
+                                <TableHead key={c.key} className={headerCls} {...dragProps}>
                                   <div className="flex items-center gap-1">
-                                    <span>{c.label}</span>
+                                    {labelWithGrip(c.label)}
                                     <Popover>
                                       <PopoverTrigger asChild>
                                         <Button variant="ghost" size="sm" className={`h-5 w-5 p-0 ${active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}>
@@ -826,9 +856,9 @@ export default function ExploreStorePage() {
                             if (c.key === "stock" || c.key === "stock_status") {
                               const active = stockStatusFilter !== "all";
                               return (
-                                <TableHead key={c.key} className={baseCls}>
+                                <TableHead key={c.key} className={headerCls} {...dragProps}>
                                   <div className="flex items-center gap-1">
-                                    <span>{c.label}</span>
+                                    {labelWithGrip(c.label)}
                                     <Popover>
                                       <PopoverTrigger asChild>
                                         <Button variant="ghost" size="sm" className={`h-5 w-5 p-0 relative ${active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}>
@@ -870,9 +900,9 @@ export default function ExploreStorePage() {
                             if (c.key === "category") {
                               const active = categoryFilter !== "all";
                               return (
-                                <TableHead key={c.key} className={baseCls}>
+                                <TableHead key={c.key} className={headerCls} {...dragProps}>
                                   <div className="flex items-center gap-1">
-                                    <span>{c.label}</span>
+                                    {labelWithGrip(c.label)}
                                     {categoryOptions.length > 0 && (
                                       <Popover>
                                         <PopoverTrigger asChild>
@@ -915,8 +945,8 @@ export default function ExploreStorePage() {
                               );
                             }
                             return (
-                              <TableHead key={c.key} className={baseCls}>
-                                {c.label}
+                              <TableHead key={c.key} className={headerCls} {...dragProps}>
+                                {labelWithGrip(c.label)}
                               </TableHead>
                             );
                           })}

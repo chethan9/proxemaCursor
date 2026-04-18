@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
 import {
   fetchOrders,
   getCustomerName,
@@ -135,6 +135,27 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
     created_via: false,
   });
 
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("orders-col-order");
+        if (saved) {
+          const parsed = JSON.parse(saved) as ColumnKey[];
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = parsed.filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          return [...valid, ...missing];
+        }
+      } catch { /* ignore */ }
+    }
+    return COLUMNS.map((c) => c.key);
+  });
+  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("orders-col-order", JSON.stringify(columnOrder));
+  }, [columnOrder]);
+
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("orders-page-size", String(pageSize));
   }, [pageSize]);
@@ -196,8 +217,10 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
   }, [storeId]);
 
   const visibleColList = useMemo(
-    () => COLUMNS.filter((c) => visibleCols[c.key]),
-    [visibleCols]
+    () => columnOrder
+      .map((k) => COLUMNS.find((c) => c.key === k))
+      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
+    [visibleCols, columnOrder]
   );
 
   const exportCsv = useCallback(() => {
@@ -471,11 +494,36 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
               <TableHeader>
                 <TableRow className="bg-muted/30">
                   {visibleColList.map((c) => {
+                    const dragProps = {
+                      draggable: true,
+                      onDragStart: (e: React.DragEvent) => {
+                        setDragKey(c.key);
+                        e.dataTransfer.effectAllowed = "move";
+                      },
+                      onDragOver: (e: React.DragEvent) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                      },
+                      onDrop: (e: React.DragEvent) => {
+                        e.preventDefault();
+                        if (!dragKey || dragKey === c.key) return;
+                        setColumnOrder((prev) => {
+                          const next = prev.filter((k) => k !== dragKey);
+                          const targetIdx = next.indexOf(c.key);
+                          next.splice(targetIdx, 0, dragKey);
+                          return next;
+                        });
+                        setDragKey(null);
+                      },
+                      onDragEnd: () => setDragKey(null),
+                      className: `cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`,
+                    };
                     if (c.key === "total") {
                       const active = !!(totalMin || totalMax);
                       return (
-                        <TableHead key={c.key}>
+                        <TableHead key={c.key} {...dragProps}>
                           <div className="flex items-center gap-1">
+                            <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                             <span>{c.label}</span>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -503,7 +551,14 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
                         </TableHead>
                       );
                     }
-                    return <TableHead key={c.key}>{c.label}</TableHead>;
+                    return (
+                      <TableHead key={c.key} {...dragProps}>
+                        <span className="inline-flex items-center gap-1">
+                          <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                          {c.label}
+                        </span>
+                      </TableHead>
+                    );
                   })}
                 </TableRow>
               </TableHeader>
