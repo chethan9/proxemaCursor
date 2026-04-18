@@ -346,6 +346,10 @@ export default function SiteWorkspacePage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Cron diagnostics
+  const [triggeringCron, setTriggeringCron] = useState(false);
+  const [cronResult, setCronResult] = useState<string | null>(null);
+
   const loadData = async () => {
     if (!id || typeof id !== "string") return;
     
@@ -609,6 +613,28 @@ export default function SiteWorkspacePage() {
       console.error("Error deleting store:", error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleTriggerCron = async () => {
+    setTriggeringCron(true);
+    setCronResult(null);
+    try {
+      const res = await fetch("/api/cron/sync-scheduler");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Trigger failed");
+      const mine = data.results?.find((r: { store_id: string; status: string; records_processed?: number }) => r.store_id === store?.id);
+      if (mine) {
+        setCronResult(`Scheduler ran. This site: ${mine.status} (${mine.records_processed?.toLocaleString() || 0} records)`);
+      } else {
+        setCronResult(`Scheduler ran but this site was not due yet (${data.stores_synced} store(s) processed). Next sync: ${store?.next_sync_at ? formatDate(store.next_sync_at) : "not scheduled"}.`);
+      }
+      await loadData();
+      await loadCronLogs();
+    } catch (err) {
+      setCronResult(err instanceof Error ? err.message : "Failed to trigger scheduler");
+    } finally {
+      setTriggeringCron(false);
     }
   };
 
@@ -1662,23 +1688,68 @@ export default function SiteWorkspacePage() {
                   </p>
                 </div>
 
-                {store.next_sync_at && parseInt(syncInterval) > 0 && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-sm">
-                      <span className="font-medium">Next scheduled sync:</span>{" "}
-                      <span className="text-muted-foreground">{formatDate(store.next_sync_at)}</span>
-                    </p>
+                {store.next_sync_at && parseInt(syncInterval) > 0 && (() => {
+                  const nextSync = new Date(store.next_sync_at).getTime();
+                  const now = Date.now();
+                  const isOverdue = nextSync < now;
+                  const minsOverdue = Math.floor((now - nextSync) / 60000);
+                  const lastCronForSite = cronLogs[0];
+                  return (
+                    <div className={`rounded-lg p-3 space-y-2 ${isOverdue ? "bg-warning/10 border border-warning/30" : "bg-muted/50"}`}>
+                      <div className="flex items-start gap-2">
+                        {isOverdue ? (
+                          <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 text-sm space-y-1">
+                          <p>
+                            <span className="font-medium">Next scheduled sync:</span>{" "}
+                            <span className={isOverdue ? "text-warning font-medium" : "text-muted-foreground"}>
+                              {formatDate(store.next_sync_at)}
+                              {isOverdue && ` (overdue by ${minsOverdue}m)`}
+                            </span>
+                          </p>
+                          {lastCronForSite && (
+                            <p className="text-xs text-muted-foreground">
+                              Last scheduler run for this site: <span className="font-medium">{formatRelativeTime(lastCronForSite.started_at)}</span> ({lastCronForSite.status})
+                            </p>
+                          )}
+                          {isOverdue && (
+                            <p className="text-xs text-warning-foreground/80">
+                              The scheduler runs via Vercel Cron in production. In preview/development, trigger it manually below.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex items-center gap-2">
+                  <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                    {savingSettings ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Settings className="h-4 w-4 mr-2" />
+                    )}
+                    Save Settings
+                  </Button>
+                  <Button variant="outline" onClick={handleTriggerCron} disabled={triggeringCron}>
+                    {triggeringCron ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Zap className="h-4 w-4 mr-2" />
+                    )}
+                    Run Scheduler Now
+                  </Button>
+                </div>
+
+                {cronResult && (
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                    {cronResult}
                   </div>
                 )}
-
-                <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                  {savingSettings ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Settings className="h-4 w-4 mr-2" />
-                  )}
-                  Save Settings
-                </Button>
               </CardContent>
             </Card>
 
