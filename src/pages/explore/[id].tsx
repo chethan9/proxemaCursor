@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3 } from "lucide-react";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -362,16 +362,6 @@ export default function ExploreStorePage() {
                   <CardContent className="p-3 space-y-2">
                     {/* Row 1: search + filters + actions */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <div className="relative w-[220px] max-w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search name or SKU..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="pl-9 h-9"
-                        />
-                      </div>
-
                       <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
                         {["all", "publish", "draft", "pending", "private"].map((s) => (
                           <Button
@@ -398,20 +388,50 @@ export default function ExploreStorePage() {
                       </Button>
 
                       {categoryOptions.length > 0 && (
-                        <select
-                          value={categoryFilter}
-                          onChange={(e) => setCategoryFilter(e.target.value)}
-                          className="h-9 rounded-md border border-border bg-background px-2 text-xs max-w-[180px]"
-                          title="Filter by category"
-                        >
-                          <option value="all">All categories</option>
-                          {categoryOptions.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={categoryFilter !== "all" ? "secondary" : "outline"}
+                              size="sm"
+                              className="h-9 text-xs gap-1.5 px-2.5"
+                            >
+                              <Filter className="h-3.5 w-3.5" />
+                              <span className="max-w-[120px] truncate">
+                                {categoryFilter === "all" ? "Categories" : categoryFilter}
+                              </span>
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-64 p-0">
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                              <span className="text-xs font-semibold">Filter by category</span>
+                              {categoryFilter !== "all" && (
+                                <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setCategoryFilter("all")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                            <div className="max-h-[280px] overflow-y-auto p-1">
+                              <button
+                                onClick={() => setCategoryFilter("all")}
+                                className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${categoryFilter === "all" ? "bg-accent" : ""}`}
+                              >
+                                All categories
+                              </button>
+                              {categoryOptions.map((cat) => (
+                                <button
+                                  key={cat}
+                                  onClick={() => setCategoryFilter(cat)}
+                                  className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${categoryFilter === cat ? "bg-accent" : ""}`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       )}
 
-                      {(categoryFilter !== "all" || excludeOutOfStock || statusFilter !== "all" || search) && (
+                      {(excludeOutOfStock || statusFilter !== "all" || search || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -421,13 +441,28 @@ export default function ExploreStorePage() {
                             setStatusFilter("all");
                             setExcludeOutOfStock(false);
                             setCategoryFilter("all");
+                            setStockStatusFilter("all");
+                            setPriceMin("");
+                            setPriceMax("");
                           }}
                         >
                           Clear
                         </Button>
                       )}
 
-                      <div className="ml-auto flex items-center gap-2">
+                      <div className="flex-1 flex justify-center min-w-[200px]">
+                        <div className="relative w-full max-w-[360px]">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search name or SKU..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9 h-9"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
                           <Button
                             variant={viewMode === "table" ? "secondary" : "ghost"}
@@ -490,7 +525,7 @@ export default function ExploreStorePage() {
                             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                               <div>
                                 <div className="text-sm font-medium">Customize columns</div>
-                                <div className="text-[11px] text-muted-foreground">Drag to reorder • Click to show/hide</div>
+                                <div className="text-[11px] text-muted-foreground">Click to show/hide</div>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Button
@@ -631,14 +666,16 @@ export default function ExploreStorePage() {
                           return (
                             <div className={gridCls}>
                               {Array.from({ length: isCompact ? 24 : 10 }).map((_, i) => (
-                                <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden">
-                                  <Skeleton className="aspect-square w-full rounded-none" />
-                                  {!isCompact && (
-                                    <div className="p-2.5 space-y-1.5">
-                                      <Skeleton className="h-3.5 w-full" />
-                                      <Skeleton className="h-3 w-2/3" />
-                                    </div>
-                                  )}
+                                <div key={`skg-${i}`} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
+                                  <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                                    <Skeleton className="aspect-square w-full rounded-none" />
+                                    {!isCompact && (
+                                      <div className="p-2.5 space-y-1.5">
+                                        <Skeleton className="h-3.5 w-full" />
+                                        <Skeleton className="h-3 w-2/3" />
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -765,14 +802,103 @@ export default function ExploreStorePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30">
-                          {visibleColList.map((c) => (
-                            <TableHead
-                              key={c.key}
-                              className={c.key === "image" ? "w-14" : ""}
-                            >
-                              {c.label}
-                            </TableHead>
-                          ))}
+                          {visibleColList.map((c) => {
+                            const baseCls = c.key === "image" ? "w-14" : "";
+                            if (c.key === "price") {
+                              const active = !!(priceMin || priceMax);
+                              return (
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1">
+                                    <span>{c.label}</span>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="sm" className={`h-5 w-5 p-0 ${active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}>
+                                          <Filter className="h-3 w-3" />
+                                          {active && <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="start" className="w-60 p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs font-semibold">Filter by price</span>
+                                          {active && (
+                                            <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5 font-normal" onClick={() => { setPriceMin(""); setPriceMax(""); }}>
+                                              Clear
+                                            </Button>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Input
+                                            type="number"
+                                            value={priceMin}
+                                            onChange={(e) => setPriceMin(e.target.value)}
+                                            placeholder="Min"
+                                            className="h-8 text-xs"
+                                          />
+                                          <span className="text-muted-foreground text-xs">to</span>
+                                          <Input
+                                            type="number"
+                                            value={priceMax}
+                                            onChange={(e) => setPriceMax(e.target.value)}
+                                            placeholder="Max"
+                                            className="h-8 text-xs"
+                                          />
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "stock" || c.key === "stock_status") {
+                              const active = stockStatusFilter !== "all";
+                              return (
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1">
+                                    <span>{c.label}</span>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="sm" className={`h-5 w-5 p-0 relative ${active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}>
+                                          <Filter className="h-3 w-3" />
+                                          {active && <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="start" className="w-52 p-2">
+                                        <div className="flex items-center justify-between mb-1 px-1">
+                                          <span className="text-xs font-semibold">Filter by stock</span>
+                                          {active && (
+                                            <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5 font-normal" onClick={() => setStockStatusFilter("all")}>
+                                              Clear
+                                            </Button>
+                                          )}
+                                        </div>
+                                        <div className="flex flex-col gap-0.5">
+                                          {[
+                                            { v: "all", l: "All" },
+                                            { v: "instock", l: "In stock" },
+                                            { v: "outofstock", l: "Out of stock" },
+                                            { v: "onbackorder", l: "On backorder" },
+                                          ].map((o) => (
+                                            <button
+                                              key={o.v}
+                                              onClick={() => setStockStatusFilter(o.v)}
+                                              className={`text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${stockStatusFilter === o.v ? "bg-accent font-medium" : ""}`}
+                                            >
+                                              {o.l}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            return (
+                              <TableHead key={c.key} className={baseCls}>
+                                {c.label}
+                              </TableHead>
+                            );
+                          })}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
