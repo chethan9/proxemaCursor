@@ -35,6 +35,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OrdersTab } from "@/components/explore/OrdersTab";
 import { TaxonomyTab } from "@/components/explore/TaxonomyTab";
+import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
@@ -120,6 +121,7 @@ export default function ExploreStorePage() {
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
   const [activeTab, setActiveTab] = useState("products");
+  const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
@@ -719,6 +721,7 @@ export default function ExploreStorePage() {
                                 return (
                                   <div
                                     key={p.id}
+                                    onClick={() => setEditingProduct(p)}
                                     className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer"
                                     title={`${p.name || "—"}${p.sku ? ` · ${p.sku}` : ""}${p.price ? ` · ${p.price}` : ""}`}
                                   >
@@ -750,7 +753,7 @@ export default function ExploreStorePage() {
                               }
 
                               return (
-                                <div key={p.id} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col">
+                                <div key={p.id} onClick={() => setEditingProduct(p)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
                                   <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                                     {thumb ? (
                                       // eslint-disable-next-line @next/next/no-img-element
@@ -936,7 +939,7 @@ export default function ExploreStorePage() {
                           products.map((p) => {
                             const thumb = getProductThumbnail(p.images);
                             return (
-                              <TableRow key={p.id} className="hover:bg-muted/30">
+                              <TableRow key={p.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setEditingProduct(p)}>
                                 {visibleColList.map((c) => {
                                   if (c.key === "image") {
                                     return (
@@ -1159,6 +1162,14 @@ export default function ExploreStorePage() {
             </TabsContent>
           </Tabs>
         </div>
+        <ProductQuickEdit
+          product={editingProduct}
+          open={!!editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSaved={(p) => {
+            setProducts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
+          }}
+        />
       </AppLayout>
     </AuthGuard>
   );
