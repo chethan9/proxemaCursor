@@ -380,4 +380,12 @@
     background-color: hsl(22 100% 50%);
     border-color: hsl(22 100% 50%);
   }
+
+  [data-theme-preset="modern"] [data-slot="select-item"][data-highlighted],
+  [data-theme-preset="modern"] [data-slot="select-item"][data-state="checked"],
+  [data-theme-preset="modern"] [data-slot="dropdown-menu-item"][data-highlighted],
+  [data-theme-preset="modern"] [data-slot="command-item"][data-selected="true"] {
+    background-color: hsl(220 14% 94%);
+    color: hsl(222 47% 11%);
+  }
 }
