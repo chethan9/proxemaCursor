@@ -157,7 +157,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     setPage(0);
   }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
-  const { data: productsResult, isFetching: loading } = useProducts({
+  const { data: productsResult, isLoading: loading } = useProducts({
     storeId,
     page,
     pageSize,
