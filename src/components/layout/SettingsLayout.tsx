@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
-import { User, Lock, Palette, CreditCard, UserCog, Shield } from "lucide-react";
+import { User, Palette, CreditCard, UserCog, Shield, Key, RefreshCw, Webhook, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -21,24 +21,35 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
       label: "Account",
       items: [
         { href: "/settings/profile", icon: User, label: "My Profile", show: true },
-        { href: "/settings/security", icon: Lock, label: "Security", show: true },
       ],
     },
     {
-      label: "Workspace",
+      label: "Appearance",
       items: [
         { href: "/settings/theme", icon: Palette, label: "Theme", show: true },
-        { href: "/settings/payment-methods", icon: CreditCard, label: "Payment Methods", show: isSuperAdmin },
       ],
     },
     {
-      label: "Team",
+      label: "Developer",
       items: [
+        { href: "/api-management", icon: Key, label: "API", show: can(PERMISSIONS.API_VIEW) },
+        { href: "/sync-runs", icon: RefreshCw, label: "Sync Runs", show: can(PERMISSIONS.SYNC_VIEW) },
+        { href: "/webhooks", icon: Webhook, label: "Webhooks", show: can(PERMISSIONS.WEBHOOKS_VIEW) },
+        { href: "/webhooks/activity", icon: Activity, label: "Activity", show: can(PERMISSIONS.WEBHOOKS_VIEW) },
+      ],
+    },
+    {
+      label: "Admin",
+      items: [
+        { href: "/settings/payment-methods", icon: CreditCard, label: "Payment Methods", show: isSuperAdmin },
         { href: "/settings/users", icon: UserCog, label: "Users", show: can(PERMISSIONS.USERS_VIEW) },
         { href: "/settings/roles", icon: Shield, label: "Roles & Permissions", show: can(PERMISSIONS.ROLES_VIEW) },
       ],
     },
   ];
+
+  const isActive = (href: string) =>
+    router.pathname === href || router.pathname.startsWith(href + "/");
 
   return (
     <AppLayout title={title}>
@@ -54,7 +65,7 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
                   <div className="px-2 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</div>
                   <div className="space-y-0.5">
                     {visible.map((item) => {
-                      const active = router.pathname === item.href;
+                      const active = isActive(item.href);
                       return (
                         <Link
                           key={item.href}

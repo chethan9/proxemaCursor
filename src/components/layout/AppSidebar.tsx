@@ -168,6 +168,7 @@ export function AppSidebar() {
     }))
     .filter((g) => {
       if (g.label === "Stores") return can(PERMISSIONS.SITES_VIEW);
+      if ((g.label === "Operations" || g.label === "Developer") && !isSuperAdmin) return false;
       return g.items.length > 0;
     });
 
