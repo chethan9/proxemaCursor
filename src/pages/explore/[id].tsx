@@ -1,0 +1,531 @@
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import Image from "next/image";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { AuthGuard } from "@/components/AuthGuard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon } from "lucide-react";
+import { getStore } from "@/services/storeService";
+import type { Database } from "@/integrations/supabase/types";
+import {
+  fetchProducts,
+  getProductThumbnail,
+  getCategoryNames,
+  type ProductRow,
+  type ProductSortField,
+  type SortDirection,
+} from "@/services/productService";
+
+type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
+
+type ColumnKey = "image" | "name" | "status" | "sku" | "price" | "stock" | "category" | "sales" | "created";
+
+const COLUMNS: { key: ColumnKey; label: string; sortable?: ProductSortField }[] = [
+  { key: "image", label: "" },
+  { key: "name", label: "Product", sortable: "name" },
+  { key: "status", label: "Status" },
+  { key: "sku", label: "SKU" },
+  { key: "price", label: "Price", sortable: "price" },
+  { key: "stock", label: "Stock", sortable: "stock_quantity" },
+  { key: "category", label: "Category" },
+  { key: "sales", label: "Sales", sortable: "total_sales" },
+  { key: "created", label: "Created", sortable: "date_created" },
+];
+
+const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: string }[] = [
+  { field: "date_created", direction: "desc", label: "Newest first" },
+  { field: "date_created", direction: "asc", label: "Oldest first" },
+  { field: "name", direction: "asc", label: "Name A-Z" },
+  { field: "name", direction: "desc", label: "Name Z-A" },
+  { field: "price", direction: "desc", label: "Price high to low" },
+  { field: "price", direction: "asc", label: "Price low to high" },
+  { field: "stock_quantity", direction: "desc", label: "Stock high to low" },
+  { field: "total_sales", direction: "desc", label: "Best selling" },
+];
+
+const PAGE_SIZE = 50;
+
+export default function ExploreStorePage() {
+  const router = useRouter();
+  const { id } = router.query;
+  const storeId = typeof id === "string" ? id : "";
+
+  const [store, setStore] = useState<StoreRow | null>(null);
+  const [storeLoading, setStoreLoading] = useState(true);
+
+  // Products state
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [productCount, setProductCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [initialProductsLoad, setInitialProductsLoad] = useState(true);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sort, setSort] = useState(SORT_OPTIONS[0]);
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
+    image: true,
+    name: true,
+    status: true,
+    sku: true,
+    price: true,
+    stock: true,
+    category: true,
+    sales: false,
+    created: false,
+  });
+
+  useEffect(() => {
+    if (!storeId) return;
+    setStoreLoading(true);
+    getStore(storeId)
+      .then((s) => setStore(s))
+      .catch((e) => console.error("Load store failed:", e))
+      .finally(() => setStoreLoading(false));
+  }, [storeId]);
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Reset when filters change
+  useEffect(() => {
+    setPage(0);
+    setProducts([]);
+    setHasMore(true);
+    setInitialProductsLoad(true);
+  }, [debouncedSearch, statusFilter, sort, storeId]);
+
+  const loadProducts = useCallback(async (pageNum: number, append: boolean) => {
+    if (!storeId) return;
+    setProductsLoading(true);
+    try {
+      const { data, count } = await fetchProducts({
+        storeId,
+        page: pageNum,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch,
+        sortField: sort.field,
+        sortDirection: sort.direction,
+        statusFilter,
+      });
+      setProductCount(count);
+      setHasMore(data.length === PAGE_SIZE && (pageNum + 1) * PAGE_SIZE < count);
+      setProducts((prev) => (append ? [...prev, ...data] : data));
+    } catch (e) {
+      console.error("Load products failed:", e);
+    } finally {
+      setProductsLoading(false);
+      setInitialProductsLoad(false);
+    }
+  }, [storeId, debouncedSearch, sort, statusFilter]);
+
+  useEffect(() => {
+    if (storeId && initialProductsLoad) {
+      loadProducts(0, false);
+    }
+  }, [storeId, initialProductsLoad, loadProducts]);
+
+  // Infinite scroll sentinel
+  const sentinelCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node || !hasMore || productsLoading) return;
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore && !productsLoading) {
+          const next = page + 1;
+          setPage(next);
+          loadProducts(next, true);
+        }
+      }, { rootMargin: "300px" });
+      observer.observe(node);
+      return () => observer.disconnect();
+    },
+    [hasMore, productsLoading, page, loadProducts]
+  );
+
+  const exportCsv = () => {
+    const cols: ColumnKey[] = (Object.keys(visibleCols) as ColumnKey[]).filter((k) => visibleCols[k] && k !== "image");
+    const header = cols.map((c) => COLUMNS.find((col) => col.key === c)?.label || c).join(",");
+    const rows = products.map((p) => {
+      return cols
+        .map((c) => {
+          let v: string | number = "";
+          switch (c) {
+            case "name": v = p.name || ""; break;
+            case "status": v = p.status || ""; break;
+            case "sku": v = p.sku || ""; break;
+            case "price": v = p.price || ""; break;
+            case "stock": v = p.stock_quantity ?? ""; break;
+            case "category": v = getCategoryNames(p.categories); break;
+            case "sales": v = p.total_sales ?? 0; break;
+            case "created": v = p.date_created || ""; break;
+          }
+          const s = String(v).replace(/"/g, '""');
+          return `"${s}"`;
+        })
+        .join(",");
+    });
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${store?.name || "products"}-export-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const visibleColList = useMemo(
+    () => COLUMNS.filter((c) => visibleCols[c.key]),
+    [visibleCols]
+  );
+
+  if (storeLoading) {
+    return (
+      <AuthGuard>
+        <AppLayout title="Explore">
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-10 w-full max-w-xl" />
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </AppLayout>
+      </AuthGuard>
+    );
+  }
+
+  if (!store) {
+    return (
+      <AuthGuard>
+        <AppLayout title="Explore">
+          <div className="p-6">Store not found</div>
+        </AppLayout>
+      </AuthGuard>
+    );
+  }
+
+  return (
+    <AuthGuard>
+      <AppLayout title={store.name}>
+        <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <Link href="/explore">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-semibold truncate">{store.name}</h1>
+              <p className="text-xs text-muted-foreground truncate">{store.url}</p>
+            </div>
+          </div>
+
+          <Tabs defaultValue="products" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="tags">Tags</TabsTrigger>
+              <TabsTrigger value="categories">Categories</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="products" className="space-y-4">
+              {/* Toolbar */}
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[240px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search products by name or SKU..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 h-9"
+                      />
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-2">
+                          <ArrowUpDown className="h-3.5 w-3.5" />
+                          Sort: {sort.label}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {SORT_OPTIONS.map((opt, i) => (
+                          <DropdownMenuItem
+                            key={i}
+                            onClick={() => setSort(opt)}
+                            className={sort === opt ? "bg-accent" : ""}
+                          >
+                            {opt.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-2">
+                          <Columns3 className="h-3.5 w-3.5" />
+                          Columns
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {COLUMNS.filter((c) => c.key !== "image").map((c) => (
+                          <DropdownMenuCheckboxItem
+                            key={c.key}
+                            checked={visibleCols[c.key]}
+                            onCheckedChange={(v) =>
+                              setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                            }
+                          >
+                            {c.label}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button variant="outline" size="sm" className="h-9 gap-2" onClick={exportCsv} disabled={products.length === 0}>
+                      <Download className="h-3.5 w-3.5" />
+                      Export
+                    </Button>
+
+                    <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                      <Package className="h-3.5 w-3.5" />
+                      <span>{productCount.toLocaleString()} products</span>
+                    </div>
+                  </div>
+
+                  {/* Status filter pills */}
+                  <div className="flex items-center gap-1.5 mt-3">
+                    {["all", "publish", "draft", "pending", "private"].map((s) => (
+                      <Button
+                        key={s}
+                        variant={statusFilter === s ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-7 text-xs capitalize"
+                        onClick={() => setStatusFilter(s)}
+                      >
+                        {s === "all" ? "All" : s}
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Products table */}
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/30">
+                          {visibleColList.map((c) => (
+                            <TableHead
+                              key={c.key}
+                              className={c.key === "image" ? "w-14" : ""}
+                            >
+                              {c.label}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {initialProductsLoad ? (
+                          Array.from({ length: 10 }).map((_, i) => (
+                            <TableRow key={`sk-${i}`}>
+                              {visibleColList.map((c) => (
+                                <TableCell key={c.key}>
+                                  {c.key === "image" ? (
+                                    <Skeleton className="h-10 w-10 rounded" />
+                                  ) : (
+                                    <Skeleton className="h-4 w-24" />
+                                  )}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        ) : products.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={visibleColList.length} className="text-center py-16">
+                              <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                              <p className="text-sm text-muted-foreground">No products found</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          products.map((p) => {
+                            const thumb = getProductThumbnail(p.images);
+                            return (
+                              <TableRow key={p.id} className="hover:bg-muted/30">
+                                {visibleColList.map((c) => {
+                                  if (c.key === "image") {
+                                    return (
+                                      <TableCell key={c.key}>
+                                        {thumb ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img
+                                            src={thumb}
+                                            alt=""
+                                            className="h-10 w-10 rounded object-cover border border-border"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border border-border">
+                                            <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+                                          </div>
+                                        )}
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "name") {
+                                    return (
+                                      <TableCell key={c.key} className="max-w-[320px]">
+                                        <div className="font-medium truncate">{p.name || "—"}</div>
+                                        {p.type && p.type !== "simple" && (
+                                          <div className="text-[10px] text-muted-foreground uppercase mt-0.5">{p.type}</div>
+                                        )}
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "status") {
+                                    const statusColor: Record<string, string> = {
+                                      publish: "bg-success/10 text-success border-success/20",
+                                      draft: "bg-muted text-muted-foreground border-border",
+                                      pending: "bg-warning/10 text-warning border-warning/20",
+                                      private: "bg-secondary text-secondary-foreground border-border",
+                                    };
+                                    const cls = statusColor[p.status || ""] || "bg-muted text-muted-foreground border-border";
+                                    return (
+                                      <TableCell key={c.key}>
+                                        <Badge variant="outline" className={`capitalize text-[10px] ${cls}`}>
+                                          {p.status === "publish" ? "Active" : p.status || "—"}
+                                        </Badge>
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "sku") {
+                                    return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{p.sku || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "price") {
+                                    return (
+                                      <TableCell key={c.key} className="font-mono text-sm">
+                                        {p.sale_price && p.sale_price !== p.regular_price ? (
+                                          <div>
+                                            <span>{p.sale_price}</span>
+                                            <span className="ml-1.5 line-through text-muted-foreground text-xs">{p.regular_price}</span>
+                                          </div>
+                                        ) : (
+                                          p.price || "—"
+                                        )}
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "stock") {
+                                    const qty = p.stock_quantity;
+                                    const status = p.stock_status;
+                                    return (
+                                      <TableCell key={c.key} className="text-sm">
+                                        {qty != null ? (
+                                          <span className={qty === 0 ? "text-destructive" : qty < 5 ? "text-warning" : ""}>
+                                            {qty} in stock
+                                          </span>
+                                        ) : status === "instock" ? (
+                                          <span className="text-success">In stock</span>
+                                        ) : status === "outofstock" ? (
+                                          <span className="text-destructive">Out of stock</span>
+                                        ) : (
+                                          "—"
+                                        )}
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "category") {
+                                    const cats = getCategoryNames(p.categories);
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{cats || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "sales") {
+                                    return <TableCell key={c.key} className="text-sm">{p.total_sales ?? 0}</TableCell>;
+                                  }
+                                  if (c.key === "created") {
+                                    return (
+                                      <TableCell key={c.key} className="text-xs text-muted-foreground">
+                                        {p.date_created ? new Date(p.date_created).toLocaleDateString() : "—"}
+                                      </TableCell>
+                                    );
+                                  }
+                                  return <TableCell key={c.key}>—</TableCell>;
+                                })}
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Load more sentinel */}
+                  {!initialProductsLoad && products.length > 0 && (
+                    <div ref={sentinelCallback} className="py-6 flex items-center justify-center">
+                      {productsLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading more...
+                        </div>
+                      ) : hasMore ? (
+                        <span className="text-xs text-muted-foreground">Scroll for more</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">All {productCount.toLocaleString()} products loaded</span>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="orders">
+              <Card>
+                <CardContent className="py-16 text-center text-muted-foreground text-sm">Coming soon</CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="tags">
+              <Card>
+                <CardContent className="py-16 text-center text-muted-foreground text-sm">Coming soon</CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="categories">
+              <Card>
+                <CardContent className="py-16 text-center text-muted-foreground text-sm">Coming soon</CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </AppLayout>
+    </AuthGuard>
+  );
+}

@@ -30,6 +30,7 @@ import {
   LogOut,
   Shield,
   UserCog,
+  Compass,
 } from "lucide-react";
 
 type NavItem = { href: string; icon: typeof LayoutDashboard; label: string; permission?: Permission; superAdminOnly?: boolean };
@@ -45,6 +46,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/clients", icon: Users, label: "Clients", permission: PERMISSIONS.CLIENTS_VIEW },
       { href: "/sites", icon: Store, label: "Sites", permission: PERMISSIONS.SITES_VIEW },
+      { href: "/explore", icon: Compass, label: "Explore", permission: PERMISSIONS.SITES_VIEW },
     ],
   },
   {
