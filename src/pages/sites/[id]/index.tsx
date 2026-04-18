@@ -70,7 +70,6 @@ import {
   Calendar,
   Loader2,
   Archive,
-  Skeleton,
 } from "lucide-react";
 import { getStore, updateStore, updateStoreStatus, deleteStore, type Store } from "@/services/storeService";
 import {
