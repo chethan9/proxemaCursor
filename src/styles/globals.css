@@ -354,4 +354,24 @@
   [data-theme-preset="modern"] [data-slot="skeleton"]::before {
     background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.6), transparent);
   }
+
+  [data-theme-preset="modern"] [data-slot="radio-group-item"][data-state="checked"] {
+    border-color: hsl(22 100% 50%);
+    color: hsl(22 100% 50%);
+  }
+
+  [data-theme-preset="modern"] [data-slot="radio-group-item"][data-state="checked"] > span > svg,
+  [data-theme-preset="modern"] [data-slot="radio-group-indicator"] svg {
+    fill: hsl(22 100% 50%);
+    color: hsl(22 100% 50%);
+  }
+
+  [data-theme-preset="modern"] [data-slot="switch"][data-state="checked"] {
+    background-color: hsl(22 100% 50%);
+  }
+
+  [data-theme-preset="modern"] [data-slot="checkbox"][data-state="checked"] {
+    background-color: hsl(22 100% 50%);
+    border-color: hsl(22 100% 50%);
+  }
 }
