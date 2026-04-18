@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Palette, UserCog, Shield, ChevronRight } from "lucide-react";
+import { Palette, UserCog, Shield, ChevronRight, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -9,6 +9,13 @@ export default function SettingsIndex() {
   const { can } = useAuth();
 
   const sections = [
+    {
+      href: "/settings/profile",
+      icon: User,
+      title: "Profile",
+      description: "Update your name, email, and password",
+      show: true,
+    },
     {
       href: "/settings/theme",
       icon: Palette,
