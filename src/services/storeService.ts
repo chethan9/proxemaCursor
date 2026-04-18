@@ -58,25 +58,32 @@ export async function getStore(id: string): Promise<Store | null> {
 }
 
 export async function createStore(store: StoreInsert): Promise<Store> {
-  console.log("[createStore] getting session...");
-  const sessionPromise = supabase.auth.getSession();
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("getSession timeout after 5s")), 5000)
-  );
-  const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<typeof sessionPromise>;
-  console.log("[createStore] session:", session ? "present" : "null");
-  if (!session) throw new Error("Not authenticated");
+  // Read token directly from localStorage — bypasses the browser Supabase client
+  // which can hang on getSession() after certain errors.
+  let token: string | null = null;
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+    const key = `sb-${projectRef}-auth-token`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      token = parsed?.access_token ?? null;
+    }
+  } catch (e) {
+    console.error("[createStore] failed to read session from storage:", e);
+  }
 
-  console.log("[createStore] POSTing to /api/stores/create...");
+  if (!token) throw new Error("Not authenticated");
+
   const res = await fetch("/api/stores/create", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(store),
   });
-  console.log("[createStore] response status:", res.status);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
