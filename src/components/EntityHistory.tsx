@@ -102,29 +102,42 @@ export function EntityHistory({
 
   const loadChanges = useCallback(async (pageNum: number, append = false) => {
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query = (supabase as any)
-      .from("entity_changes")
-      .select("*")
-      .eq("store_id", storeId)
-      .order("created_at", { ascending: false })
-      .range(pageNum * limit, (pageNum + 1) * limit - 1);
-
-    if (entityType) query = query.eq("entity_type", entityType);
-    if (entityId) query = query.eq("entity_id", entityId);
-    if (wooId) query = query.eq("woo_id", wooId);
-
-    const { data, error } = await query;
-    if (error) {
-      console.error("Error loading entity changes:", error);
+    const timeoutId = setTimeout(() => {
+      console.warn("[EntityHistory] query timeout — showing empty state");
       setLoading(false);
-      return;
-    }
+    }, 5000);
 
-    const rows = (data || []) as EntityChange[];
-    setChanges(prev => append ? [...prev, ...rows] : rows);
-    setHasMore(rows.length === limit);
-    setLoading(false);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query = (supabase as any)
+        .from("entity_changes")
+        .select("*")
+        .eq("store_id", storeId)
+        .order("created_at", { ascending: false })
+        .range(pageNum * limit, (pageNum + 1) * limit - 1);
+
+      if (entityType) query = query.eq("entity_type", entityType);
+      if (entityId) query = query.eq("entity_id", entityId);
+      if (wooId) query = query.eq("woo_id", wooId);
+
+      const { data, error } = await query;
+      clearTimeout(timeoutId);
+
+      if (error) {
+        console.error("Error loading entity changes:", error);
+        setLoading(false);
+        return;
+      }
+
+      const rows = (data || []) as EntityChange[];
+      setChanges(prev => append ? [...prev, ...rows] : rows);
+      setHasMore(rows.length === limit);
+      setLoading(false);
+    } catch (e) {
+      clearTimeout(timeoutId);
+      console.error("Error loading entity changes:", e);
+      setLoading(false);
+    }
   }, [storeId, entityType, entityId, wooId, limit]);
 
   useEffect(() => {
