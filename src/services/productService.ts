@@ -38,6 +38,9 @@ export interface FetchProductsOptions {
   statusFilter?: string;
   excludeOutOfStock?: boolean;
   categoryFilter?: string;
+  stockStatusFilter?: string;
+  priceMin?: number;
+  priceMax?: number;
 }
 
 export async function fetchProducts({
@@ -50,6 +53,9 @@ export async function fetchProducts({
   statusFilter,
   excludeOutOfStock,
   categoryFilter,
+  stockStatusFilter,
+  priceMin,
+  priceMax,
 }: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number }> {
   let query = supabase
     .from("products")
@@ -65,12 +71,23 @@ export async function fetchProducts({
     query = query.eq("status", statusFilter);
   }
 
+  if (stockStatusFilter && stockStatusFilter !== "all") {
+    query = query.eq("stock_status", stockStatusFilter);
+  }
+
   if (excludeOutOfStock) {
     query = query.neq("stock_status", "outofstock");
   }
 
   if (categoryFilter) {
     query = query.ilike("categories::text", `%"name":"${categoryFilter}"%`);
+  }
+
+  if (priceMin !== undefined && !isNaN(priceMin)) {
+    query = query.gte("price", String(priceMin));
+  }
+  if (priceMax !== undefined && !isNaN(priceMax)) {
+    query = query.lte("price", String(priceMax));
   }
 
   if (sortField === "woo_date_created") {
