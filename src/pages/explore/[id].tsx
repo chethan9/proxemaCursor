@@ -134,6 +134,28 @@ export default function ExploreStorePage() {
     created: false,
     updated: false,
   });
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("explore-col-order");
+        if (saved) {
+          const parsed = JSON.parse(saved) as ColumnKey[];
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = parsed.filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          return [...valid, ...missing];
+        }
+      } catch { /* ignore */ }
+    }
+    return COLUMNS.map((c) => c.key);
+  });
+  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
+    }
+  }, [columnOrder]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -258,8 +280,10 @@ export default function ExploreStorePage() {
   };
 
   const visibleColList = useMemo(
-    () => COLUMNS.filter((c) => visibleCols[c.key]),
-    [visibleCols]
+    () => columnOrder
+      .map((k) => COLUMNS.find((c) => c.key === k))
+      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
+    [visibleCols, columnOrder]
   );
 
   if (storeLoading) {
@@ -371,11 +395,11 @@ export default function ExploreStorePage() {
                             Columns ({Object.values(visibleCols).filter(Boolean).length})
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-[720px] p-0" sideOffset={6}>
+                        <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6}>
                           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                             <div>
-                              <div className="text-sm font-medium">Visible columns</div>
-                              <div className="text-[11px] text-muted-foreground">Toggle columns to show in the table</div>
+                              <div className="text-sm font-medium">Customize columns</div>
+                              <div className="text-[11px] text-muted-foreground">Drag to reorder • Click to show/hide</div>
                             </div>
                             <div className="flex items-center gap-1">
                               <Button
@@ -398,23 +422,74 @@ export default function ExploreStorePage() {
                                   const none: Record<string, boolean> = {};
                                   COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
                                   setVisibleCols(none as Record<ColumnKey, boolean>);
+                                  setColumnOrder(COLUMNS.map((c) => c.key));
                                 }}
                               >
                                 Reset
                               </Button>
                             </div>
                           </div>
-                          <div className="max-h-[460px] overflow-y-auto p-4">
-                            <div className="grid grid-cols-4 gap-x-5 gap-y-4">
-                              {Array.from(new Set(COLUMNS.map((c) => c.group))).map((group) => {
-                                const groupCols = COLUMNS.filter((c) => c.group === group);
-                                return (
+
+                          <div className="px-4 py-3 border-b border-border bg-muted/30">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                              Active order ({visibleColList.length}) — drag to rearrange
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {visibleColList.length === 0 ? (
+                                <span className="text-xs text-muted-foreground italic">No columns selected</span>
+                              ) : (
+                                visibleColList.map((c) => (
+                                  <div
+                                    key={c.key}
+                                    draggable
+                                    onDragStart={() => setDragKey(c.key)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={() => {
+                                      if (!dragKey || dragKey === c.key) return;
+                                      setColumnOrder((prev) => {
+                                        const next = prev.filter((k) => k !== dragKey);
+                                        const idx = next.indexOf(c.key);
+                                        next.splice(idx, 0, dragKey);
+                                        return next;
+                                      });
+                                      setDragKey(null);
+                                    }}
+                                    onDragEnd={() => setDragKey(null)}
+                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-background text-xs cursor-move hover:border-primary/50 hover:bg-accent transition ${dragKey === c.key ? "opacity-40" : ""}`}
+                                  >
+                                    <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="3" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="3" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="13" r="1.2"/></svg>
+                                    <span>{c.label || c.key}</span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="max-h-[380px] overflow-y-auto p-4">
+                            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                              {(() => {
+                                const groupMap: Record<string, string> = {
+                                  "Basic": "Basic",
+                                  "Pricing": "Pricing & Inventory",
+                                  "Inventory": "Pricing & Inventory",
+                                  "Tax & Shipping": "Tax, Taxonomy & Content",
+                                  "Taxonomy": "Tax, Taxonomy & Content",
+                                  "Content": "Tax, Taxonomy & Content",
+                                  "Dates": "Dates",
+                                };
+                                const grouped: Record<string, typeof COLUMNS> = {};
+                                COLUMNS.forEach((c) => {
+                                  const g = groupMap[c.group] || c.group;
+                                  if (!grouped[g]) grouped[g] = [];
+                                  grouped[g].push(c);
+                                });
+                                return Object.entries(grouped).map(([group, cols]) => (
                                   <div key={group}>
                                     <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
                                       {group}
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                      {groupCols.map((c) => (
+                                      {cols.map((c) => (
                                         <label
                                           key={c.key}
                                           className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]"
@@ -430,8 +505,8 @@ export default function ExploreStorePage() {
                                       ))}
                                     </div>
                                   </div>
-                                );
-                              })}
+                                ));
+                              })()}
                             </div>
                           </div>
                         </PopoverContent>
@@ -651,7 +726,7 @@ export default function ExploreStorePage() {
                                   }
                                   if (c.key === "manage_stock") {
                                     const ms = p.raw_data?.manage_stock;
-                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{ms === true ? "Yes" : ms === false ? "No" : (ms as string) || "—"}</TableCell>;
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{ms === true ? "Yes" : ms === false ? "No" : "—"}</TableCell>;
                                   }
                                   if (c.key === "parent_id") {
                                     const pid = p.raw_data?.parent_id as number | undefined;
