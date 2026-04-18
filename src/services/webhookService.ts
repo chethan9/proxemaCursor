@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert, Database } from "@/integrations/supabase/types";
+import { getWebhookDeliveryUrl } from "@/lib/app-url";
 
 export type Webhook = Tables<"webhooks">;
 export type WebhookEventRow = Tables<"webhook_events">;
@@ -154,11 +155,7 @@ export function generateWebhookSecret(): string {
 
 // Build the delivery URL for a store's webhooks
 export function buildWebhookDeliveryUrl(storeId: string): string {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
-  return `${baseUrl}/api/webhooks/incoming/${storeId}`;
+  return getWebhookDeliveryUrl(storeId);
 }
 
 // Register all webhooks for a store (creates records, actual WooCommerce registration done via API)

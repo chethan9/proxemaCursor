@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
-import { WEBHOOK_TOPICS, generateWebhookSecret, buildWebhookDeliveryUrl } from "@/services/webhookService";
+import { WEBHOOK_TOPICS, generateWebhookSecret } from "@/services/webhookService";
+import { getWebhookDeliveryUrl } from "@/lib/app-url";
 
 export default async function handler(
   req: NextApiRequest,
@@ -32,7 +33,7 @@ export default async function handler(
       return res.status(400).json({ error: "Store not connected - missing API credentials" });
     }
 
-    const deliveryUrl = buildWebhookDeliveryUrl(storeId);
+    const deliveryUrl = getWebhookDeliveryUrl(storeId, req);
     const results: Array<{ topic: string; success: boolean; error?: string; woo_id?: number }> = [];
 
     // Register each webhook with WooCommerce
