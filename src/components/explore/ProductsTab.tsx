@@ -28,6 +28,7 @@ import {
 } from "@/services/productService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
+import { Switch } from "@/components/ui/switch";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -419,10 +420,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   </Button>
                 ))}
               </div>
-              <Button variant={excludeOutOfStock ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5" onClick={() => setExcludeOutOfStock((v) => !v)}>
-                <span className={`h-1.5 w-1.5 rounded-full ${excludeOutOfStock ? "bg-success" : "bg-muted-foreground/40"}`} />
-                EOS
-              </Button>
+              <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
+                <Switch checked={excludeOutOfStock} onCheckedChange={(v) => setExcludeOutOfStock(!!v)} />
+                <span>Exclude out of stock</span>
+              </label>
               {(excludeOutOfStock || statusFilter !== "all" || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
                 <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => {
                   setStatusFilter("all"); setExcludeOutOfStock(false); setCategoryFilter("all");
