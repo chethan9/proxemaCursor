@@ -194,48 +194,57 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               );
             }
             const isStoresGroup = node.id === "group-stores";
-            return (
-              <div key={node.id} className={cn("mb-3", collapsed ? "px-1.5" : "px-2")}>
-                {!collapsed && node.id === "group-stores" && (
-                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                    {node.label}
-                  </p>
-                )}
-                <ul className="space-y-0.5">
-                  {node.children?.map(renderItem)}
-                  {isStoresGroup && can(PERMISSIONS.SITES_VIEW) && sites.map((site) => {
-                    const href = `/explore/${site.id}`;
-                    const isActive = router.asPath.startsWith(`/explore/${site.id}`);
-                    if (collapsed) {
+            if (isStoresGroup) {
+              return (
+                <div key={node.id} className={cn("mb-1", collapsed ? "px-1.5" : "px-2")}>
+                  <ul className="space-y-0.5">
+                    {node.children?.map(renderItem)}
+                    {can(PERMISSIONS.SITES_VIEW) && sites.map((site) => {
+                      const href = `/explore/${site.id}`;
+                      const isActive = router.asPath.startsWith(`/explore/${site.id}`);
+                      if (collapsed) {
+                        return (
+                          <li key={site.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href={href} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
+                                  isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
+                                  <SiteIcon site={site} size="md" />
+                                  <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
+                                    site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" sideOffset={8} className="z-[100]">{site.name}</TooltipContent>
+                            </Tooltip>
+                          </li>
+                        );
+                      }
                       return (
                         <li key={site.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link href={href} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
-                                isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
-                                <SiteIcon site={site} size="md" />
-                                <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
-                                  site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" sideOffset={8} className="z-[100]">{site.name}</TooltipContent>
-                          </Tooltip>
+                          <Link href={href} aria-current={isActive ? "page" : undefined} className={cn(
+                            "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                            isActive
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                          )}>
+                            {isActive && (
+                              <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
+                            )}
+                            <SiteIcon site={site} size="sm" />
+                            <span className="truncate">{site.name}</span>
+                            <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                          </Link>
                         </li>
                       );
-                    }
-                    return (
-                      <li key={site.id}>
-                        <Link href={href} className={cn("flex items-center gap-2 rounded-md pl-3 pr-2.5 py-1 text-[12px] transition-colors",
-                          isActive ? "text-sidebar-accent-foreground bg-sidebar-accent/40"
-                                   : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40")}>
-                          <CornerDownRight className="h-3 w-3 shrink-0 text-sidebar-foreground/40" />
-                          <SiteIcon site={site} size="sm" />
-                          <span className="truncate">{site.name}</span>
-                          <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
-                        </Link>
-                      </li>
-                    );
-                  })}
+                    })}
+                  </ul>
+                </div>
+              );
+            }
+            return (
+              <div key={node.id} className={cn("mb-3", collapsed ? "px-1.5" : "px-2")}>
+                <ul className="space-y-0.5">
+                  {node.children?.map(renderItem)}
                 </ul>
               </div>
             );
