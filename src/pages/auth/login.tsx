@@ -6,6 +6,7 @@ import { useBranding } from "@/contexts/BrandingProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Zap, Loader2 } from "lucide-react";
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const { brandName, logoUrl } = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +24,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    localStorage.setItem("sb-remember-me", remember ? "true" : "false");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
@@ -64,6 +67,10 @@ export default function LoginPage() {
                 <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
               </div>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">Remember me on this device</Label>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
