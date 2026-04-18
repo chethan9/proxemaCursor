@@ -289,7 +289,7 @@ export default function SyncRunsPage() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout title="Sync Runs">
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>

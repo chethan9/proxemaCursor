@@ -162,7 +162,7 @@ export default function Dashboard() {
   const timelineData = Object.values(syncsByDay).slice(0, 7).reverse();
 
   return (
-    <AppLayout>
+    <AppLayout title="Dashboard">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>

@@ -118,7 +118,7 @@ export default function ClientDetailPage() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout title="Client">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -128,7 +128,7 @@ export default function ClientDetailPage() {
 
   if (!client) {
     return (
-      <AppLayout>
+      <AppLayout title="Client">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Client not found</p>
           <Button variant="outline" className="mt-4" onClick={() => router.push("/clients")}>
@@ -143,7 +143,7 @@ export default function ClientDetailPage() {
   const revokedTokens = tokens.filter(t => t.revoked_at);
 
   return (
-    <AppLayout>
+    <AppLayout title="Client">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>

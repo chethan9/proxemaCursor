@@ -110,7 +110,7 @@ export default function ApiManagementPage() {
   const revokedKeys = keys.filter((k) => !k.is_active).length;
 
   return (
-    <AppLayout>
+    <AppLayout title="API Management">
       <div className="space-y-6 pb-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-6">
           <div className="min-w-0 flex-1">

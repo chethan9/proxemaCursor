@@ -139,7 +139,7 @@ export default function WebhooksPage() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout title="Webhooks">
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>

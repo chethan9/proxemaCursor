@@ -112,7 +112,7 @@ export default function ClientsPage() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout title="Clients">
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>

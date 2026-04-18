@@ -729,7 +729,7 @@ export default function SiteWorkspacePage() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout title="Site">
         <div className="p-6 flex items-center justify-center h-[calc(100vh-4rem)]">
           <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -739,7 +739,7 @@ export default function SiteWorkspacePage() {
 
   if (!store) {
     return (
-      <AppLayout>
+      <AppLayout title="Site">
         <div className="p-6">
           <p className="text-muted-foreground">Site not found.</p>
           <Link href="/sites">
@@ -754,7 +754,7 @@ export default function SiteWorkspacePage() {
   }
 
   return (
-    <AppLayout>
+    <AppLayout title="Site">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
