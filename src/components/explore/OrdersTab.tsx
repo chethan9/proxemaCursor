@@ -376,7 +376,43 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6} />
+              <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                  <div className="text-sm font-medium">Customize columns</div>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
+                    const none: Record<string, boolean> = {};
+                    COLUMNS.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
+                    setVisibleCols(none as Record<ColumnKey, boolean>);
+                  }}>Reset</Button>
+                </div>
+                <div className="max-h-[380px] overflow-y-auto p-4">
+                  <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                    {(() => {
+                      const grouped: Record<string, typeof COLUMNS> = {};
+                      COLUMNS.forEach((c) => {
+                        if (!grouped[c.group]) grouped[c.group] = [];
+                        grouped[c.group].push(c);
+                      });
+                      return Object.entries(grouped).map(([group, cols]) => (
+                        <div key={group}>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                          <div className="flex flex-col gap-0.5">
+                            {cols.map((c) => (
+                              <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                <Checkbox
+                                  checked={visibleCols[c.key]}
+                                  onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
+                                />
+                                <span className="truncate">{c.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </PopoverContent>
             </Popover>
             <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={orders.length === 0} title="Export CSV">
               <Download className="h-3.5 w-3.5" />
@@ -396,7 +432,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 ))}
               </div>
 
-              {paymentOptions.length > 0 && (
+              {!embedHeader && paymentOptions.length > 0 && (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
