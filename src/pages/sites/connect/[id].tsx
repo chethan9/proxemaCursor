@@ -2,75 +2,127 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
+import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
-type Phase = "verifying" | "connected" | "timeout";
+type StepStatus = "pending" | "active" | "done" | "error";
+
+interface Step {
+  id: string;
+  label: string;
+  status: StepStatus;
+}
+
+const INITIAL_STEPS: Step[] = [
+  { id: "auth", label: "Authorizing with WooCommerce", status: "active" },
+  { id: "creds", label: "Receiving API credentials", status: "pending" },
+  { id: "webhooks", label: "Registering webhooks", status: "pending" },
+  { id: "sync", label: "Starting initial data sync", status: "pending" },
+  { id: "redirect", label: "Redirecting to site dashboard", status: "pending" },
+];
 
 export default function ConnectSuccessPage() {
   const router = useRouter();
   const { id, success } = router.query;
-  const [phase, setPhase] = useState<Phase>("verifying");
-  const [message, setMessage] = useState("Waiting for WooCommerce to send credentials...");
+  const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
+  const [failed, setFailed] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  const setStep = (id: string, status: StepStatus) => {
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+  };
+
+  const advanceFrom = (id: string) => {
+    setSteps((prev) => {
+      const idx = prev.findIndex((s) => s.id === id);
+      return prev.map((s, i) => {
+        if (i < idx) return { ...s, status: "done" as StepStatus };
+        if (i === idx) return { ...s, status: "active" as StepStatus };
+        return s;
+      });
+    });
+  };
 
   useEffect(() => {
     if (!id || typeof id !== "string" || success !== "1") return;
 
     let cancelled = false;
     let attempts = 0;
-    const maxAttempts = 20; // 20 * 1.5s = 30s
+    const maxAttempts = 20;
 
-    const poll = async () => {
+    const runFlow = async () => {
+      advanceFrom("auth");
+
+      while (attempts < maxAttempts && !cancelled) {
+        attempts += 1;
+        const { data } = await supabase
+          .from("stores")
+          .select("id, consumer_key, consumer_secret")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (data?.consumer_key && data?.consumer_secret) {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+
       if (cancelled) return;
-      attempts += 1;
-
-      const { data, error } = await supabase
-        .from("stores")
-        .select("id, status, consumer_key, consumer_secret")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[Connect] Poll error:", error);
-      }
-
-      if (data?.consumer_key && data?.consumer_secret) {
-        if (cancelled) return;
-        setPhase("connected");
-        setMessage("Credentials received. Registering webhooks and starting initial sync...");
-
-        // Safety-net: explicitly trigger webhook registration + sync in case the WC server-to-server
-        // callback failed silently (ad blocker, firewall, etc.) during the OAuth handshake.
-        Promise.allSettled([
-          fetch(`/api/stores/${id}/register-webhooks`, { method: "POST" }),
-          fetch(`/api/stores/${id}/sync`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          }),
-        ]).then(() => {
-          if (cancelled) return;
-          setTimeout(() => router.push(`/sites/${id}`), 1200);
-        });
-        return;
-      }
 
       if (attempts >= maxAttempts) {
-        if (cancelled) return;
-        setPhase("timeout");
-        setMessage("We did not receive credentials from WooCommerce within 30 seconds.");
+        setStep("auth", "error");
+        setFailed(true);
+        setErrorMessage("We did not receive credentials from WooCommerce within 30 seconds. This is often caused by an ad blocker or firewall blocking the callback.");
         return;
       }
 
-      setTimeout(poll, 1500);
+      setStep("auth", "done");
+      advanceFrom("creds");
+      await new Promise((r) => setTimeout(r, 400));
+      setStep("creds", "done");
+      advanceFrom("webhooks");
+
+      try {
+        const whRes = await fetch(`/api/stores/${id}/register-webhooks`, { method: "POST" });
+        setStep("webhooks", whRes.ok ? "done" : "error");
+      } catch {
+        setStep("webhooks", "error");
+      }
+
+      if (cancelled) return;
+      advanceFrom("sync");
+
+      try {
+        const syncRes = await fetch(`/api/stores/${id}/sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        setStep("sync", syncRes.ok ? "done" : "error");
+      } catch {
+        setStep("sync", "error");
+      }
+
+      if (cancelled) return;
+      advanceFrom("redirect");
+
+      browserCache.delete(CACHE_KEYS.STORES);
+      browserCache.delete(CACHE_KEYS.store(id));
+
+      await new Promise((r) => setTimeout(r, 800));
+      setStep("redirect", "done");
+      if (!cancelled) router.push(`/sites/${id}`);
     };
 
-    poll();
+    runFlow();
     return () => {
       cancelled = true;
     };
   }, [id, success, router]);
+
+  const completedCount = steps.filter((s) => s.status === "done").length;
 
   if (!id) {
     return (
@@ -84,41 +136,67 @@ export default function ConnectSuccessPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            {phase === "connected" && (
-              <>
-                <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
-                <h1 className="text-2xl font-semibold mb-2">Store Connected</h1>
-                <p className="text-muted-foreground mb-4">{message}</p>
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto" />
-              </>
-            )}
-            {phase === "verifying" && (
-              <>
-                <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto mb-4" />
-                <h1 className="text-2xl font-semibold mb-2">Connecting Store...</h1>
-                <p className="text-muted-foreground">{message}</p>
-              </>
-            )}
-            {phase === "timeout" && (
-              <>
-                <AlertTriangle className="h-16 w-16 text-warning mx-auto mb-4" />
-                <h1 className="text-2xl font-semibold mb-2">Connection Pending</h1>
-                <p className="text-muted-foreground mb-4">
-                  {message} This is often caused by an ad blocker or firewall blocking the WooCommerce callback.
-                  Try disabling ad blockers, or reconnect using Manual Keys.
-                </p>
+          <CardContent className="pt-6 pb-6">
+            <div className="text-center mb-6">
+              <h1 className="text-xl font-semibold mb-1">
+                {failed ? "Connection Pending" : "Connecting Store"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {failed
+                  ? "Something didn't complete as expected"
+                  : `Step ${Math.min(completedCount + 1, steps.length)} of ${steps.length}`}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {steps.map((step) => (
+                <div
+                  key={step.id}
+                  className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5"
+                >
+                  <div className="shrink-0">
+                    {step.status === "done" && (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    )}
+                    {step.status === "active" && (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    )}
+                    {step.status === "pending" && (
+                      <Circle className="h-5 w-5 text-muted-foreground/40" />
+                    )}
+                    {step.status === "error" && (
+                      <AlertTriangle className="h-5 w-5 text-warning" />
+                    )}
+                  </div>
+                  <span
+                    className={
+                      step.status === "pending"
+                        ? "text-sm text-muted-foreground"
+                        : step.status === "error"
+                        ? "text-sm text-warning font-medium"
+                        : "text-sm text-foreground font-medium"
+                    }
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {failed && (
+              <div className="mt-5 space-y-3">
+                <p className="text-xs text-muted-foreground text-center">{errorMessage}</p>
                 <div className="flex gap-2 justify-center">
                   <Link href={`/sites/${id}`}>
-                    <Button variant="outline">Go to Site</Button>
+                    <Button variant="outline" size="sm">Go to Site</Button>
                   </Link>
                   <Link href="/sites">
-                    <Button>Back to Sites</Button>
+                    <Button size="sm">Back to Sites</Button>
                   </Link>
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
