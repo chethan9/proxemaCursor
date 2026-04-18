@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, RotateCcw, Palette } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, Save, RotateCcw, Palette, Upload, Loader2 } from "lucide-react";
 
 const PRESETS = [
   { name: "Polaris Green", primary: "#008060", sidebar: "#1a1a1a" },
@@ -30,6 +31,8 @@ export default function ThemeSettings() {
     accentColor: "#008060",
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -76,6 +79,38 @@ export default function ThemeSettings() {
     setForm({ ...form, primaryColor: p.primary, sidebarColor: p.sidebar, accentColor: p.primary });
   };
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please choose an image file (PNG, SVG, JPG).", variant: "destructive" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Maximum size is 2MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("branding").upload(path, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("branding").getPublicUrl(path);
+      setForm((prev) => ({ ...prev, logoUrl: publicUrl }));
+      toast({ title: "Logo uploaded", description: "Click Save Changes to apply." });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <AppLayout title="Theme & Branding">
       <div className="p-6 space-y-6 max-w-4xl">
@@ -109,14 +144,33 @@ export default function ThemeSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="logo-url">Logo URL</Label>
-              <Input
-                id="logo-url"
-                value={form.logoUrl}
-                onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-                placeholder="https://example.com/logo.png"
-              />
-              <p className="text-xs text-muted-foreground">Paste a public image URL (PNG/SVG). Leave empty for the default lightning icon.</p>
+              <Label htmlFor="logo-url">Logo</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="logo-url"
+                  value={form.logoUrl}
+                  onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+                  placeholder="https://example.com/logo.png"
+                  className="flex-1"
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                  {uploading ? "Uploading..." : "Upload"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Upload an image (PNG/SVG/JPG, max 2MB) or paste a public URL. Leave empty for the default icon.</p>
               {form.logoUrl && (
                 <div className="mt-2 flex items-center gap-3 p-3 rounded-lg bg-muted">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
