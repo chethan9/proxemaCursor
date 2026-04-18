@@ -30,7 +30,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { Plus, Search, Store, ExternalLink, Eye, EyeOff, Heart } from "lucide-react";
+import { Plus, Search, Store, ExternalLink, Eye, EyeOff, Heart, AlertTriangle } from "lucide-react";
 import { getStores, getStore, createStore, type StoreWithClient } from "@/services/storeService";
 import { getClients, type Client } from "@/services/clientService";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
@@ -236,6 +236,13 @@ export default function SitesPage() {
                   Add a store and authorize WooSync to access it.
                 </DialogDescription>
               </DialogHeader>
+              <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                <p className="text-xs text-foreground">
+                  <span className="font-medium">Disable ad blockers</span> (uBlock, AdGuard, Brave Shields) for this page. They can block the
+                  WooCommerce callback and webhook registration, leaving your site stuck in &ldquo;pending&rdquo;.
+                </p>
+              </div>
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
