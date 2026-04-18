@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Search, FolderTree, Tag as TagIcon, Download } from "lucide-react";
+import { Search, FolderTree, Tag as TagIcon, Download, ChevronDown, ChevronRight } from "lucide-react";
 import { fetchCategories, fetchTags, type CategoryRow, type TagRow } from "@/services/taxonomyService";
+import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 
 type Mode = "categories" | "tags";
 
@@ -17,13 +18,15 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [allCategories, setAllCategories] = useState<CategoryRow[]>([]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => { setPage(0); }, [debounced, storeId, mode]);
+  useEffect(() => { setPage(0); setExpandedId(null); }, [debounced, storeId, mode]);
 
   const load = useCallback(async () => {
     if (!storeId) return;
@@ -41,6 +44,11 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
   }, [storeId, mode, debounced, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (mode !== "categories" || !storeId) return;
+    fetchCategories(storeId, "", 0, 500).then(({ data }) => setAllCategories(data)).catch(() => {});
+  }, [mode, storeId]);
 
   const exportCsv = () => {
     if (rows.length === 0) return;
@@ -63,6 +71,7 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
   };
 
   const Icon = mode === "categories" ? FolderTree : TagIcon;
+  const colSpan = mode === "categories" ? 6 : 5;
 
   return (
     <div className="space-y-3">
@@ -111,6 +120,7 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
+                <TableHead className="w-8"></TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead className="text-right">Products</TableHead>
@@ -122,6 +132,7 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={`sk-${i}`}>
+                    <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -131,7 +142,7 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
                 ))
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={mode === "categories" ? 5 : 4} className="text-center py-16">
+                  <TableCell colSpan={colSpan} className="text-center py-16">
                     <Icon className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
                     <p className="text-sm text-muted-foreground">No {mode} found</p>
                   </TableCell>
@@ -139,16 +150,58 @@ export function TaxonomyTab({ storeId, mode }: { storeId: string; mode: Mode }) 
               ) : (
                 rows.map((r) => {
                   const desc = mode === "categories" ? ((r as CategoryRow).description || "").replace(/<[^>]+>/g, "") : "";
+                  const isExpanded = expandedId === r.id;
                   return (
-                    <TableRow key={r.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{r.name || "—"}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{r.slug || "—"}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{r.count ?? 0}</TableCell>
-                      {mode === "categories" && (
-                        <TableCell className="text-xs text-muted-foreground max-w-[360px] truncate">{desc || "—"}</TableCell>
+                    <>
+                      <TableRow
+                        key={r.id}
+                        className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""}`}
+                        onClick={() => setExpandedId((cur) => (cur === r.id ? null : r.id))}
+                      >
+                        <TableCell>
+                          {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </TableCell>
+                        <TableCell className="font-medium">{r.name || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{r.slug || "—"}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">{r.count ?? 0}</TableCell>
+                        {mode === "categories" && (
+                          <TableCell className="text-xs text-muted-foreground max-w-[360px] truncate">{desc || "—"}</TableCell>
+                        )}
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{r.woo_id}</TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow key={`${r.id}-exp`} className="hover:bg-transparent">
+                          <TableCell colSpan={colSpan} className="p-0">
+                            {mode === "categories" ? (
+                              <TaxonomyRowExpanded
+                                mode="categories"
+                                storeId={storeId}
+                                row={r as CategoryRow}
+                                parents={allCategories}
+                                onSaved={(updated) => setRows((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+                                onDeleted={(id) => {
+                                  setRows((prev) => prev.filter((x) => x.id !== id));
+                                  setCount((c) => Math.max(0, c - 1));
+                                  setExpandedId(null);
+                                }}
+                              />
+                            ) : (
+                              <TaxonomyRowExpanded
+                                mode="tags"
+                                storeId={storeId}
+                                row={r as TagRow}
+                                onSaved={(updated) => setRows((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+                                onDeleted={(id) => {
+                                  setRows((prev) => prev.filter((x) => x.id !== id));
+                                  setCount((c) => Math.max(0, c - 1));
+                                  setExpandedId(null);
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                        </TableRow>
                       )}
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">{r.woo_id}</TableCell>
-                    </TableRow>
+                    </>
                   );
                 })
               )}
