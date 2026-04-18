@@ -25,7 +25,7 @@ export interface ProductRow {
   updated_at: string | null;
 }
 
-export type ProductSortField = "name" | "created_at" | "updated_at" | "synced_at" | "price" | "stock_quantity";
+export type ProductSortField = "name" | "created_at" | "updated_at" | "synced_at" | "price" | "stock_quantity" | "woo_date_created";
 export type SortDirection = "asc" | "desc";
 
 export interface FetchProductsOptions {
@@ -36,6 +36,7 @@ export interface FetchProductsOptions {
   sortField?: ProductSortField;
   sortDirection?: SortDirection;
   statusFilter?: string;
+  outOfStockOnly?: boolean;
 }
 
 export async function fetchProducts({
@@ -43,9 +44,10 @@ export async function fetchProducts({
   page,
   pageSize = 50,
   search,
-  sortField = "created_at",
+  sortField = "woo_date_created",
   sortDirection = "desc",
   statusFilter,
+  outOfStockOnly,
 }: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number }> {
   let query = supabase
     .from("products")
@@ -61,7 +63,15 @@ export async function fetchProducts({
     query = query.eq("status", statusFilter);
   }
 
-  query = query.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
+  if (outOfStockOnly) {
+    query = query.or("stock_status.eq.outofstock,stock_quantity.eq.0");
+  }
+
+  if (sortField === "woo_date_created") {
+    query = query.order("raw_data->>date_created", { ascending: sortDirection === "asc", nullsFirst: false });
+  } else {
+    query = query.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
+  }
   query = query.range(page * pageSize, (page + 1) * pageSize - 1);
 
   const { data, error, count } = await query;

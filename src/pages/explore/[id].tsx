@@ -71,13 +71,14 @@ const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: Produc
 ];
 
 const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: string }[] = [
-  { field: "created_at", direction: "desc", label: "Newest first" },
-  { field: "created_at", direction: "asc", label: "Oldest first" },
+  { field: "woo_date_created", direction: "desc", label: "Newest first" },
+  { field: "woo_date_created", direction: "asc", label: "Oldest first" },
   { field: "name", direction: "asc", label: "Name A-Z" },
   { field: "name", direction: "desc", label: "Name Z-A" },
   { field: "price", direction: "desc", label: "Price high to low" },
   { field: "price", direction: "asc", label: "Price low to high" },
   { field: "stock_quantity", direction: "desc", label: "Stock high to low" },
+  { field: "stock_quantity", direction: "asc", label: "Stock low to high" },
   { field: "synced_at", direction: "desc", label: "Recently synced" },
 ];
 
@@ -102,6 +103,7 @@ export default function ExploreStorePage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [outOfStockOnly, setOutOfStockOnly] = useState(false);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     image: true,
@@ -182,7 +184,7 @@ export default function ExploreStorePage() {
     setProducts([]);
     setHasMore(true);
     setInitialProductsLoad(true);
-  }, [debouncedSearch, statusFilter, sort, storeId]);
+  }, [debouncedSearch, statusFilter, sort, storeId, outOfStockOnly]);
 
   const loadProducts = useCallback(async (pageNum: number, append: boolean) => {
     if (!storeId) return;
@@ -196,6 +198,7 @@ export default function ExploreStorePage() {
         sortField: sort.field,
         sortDirection: sort.direction,
         statusFilter,
+        outOfStockOnly,
       });
       setProductCount(count);
       setHasMore(data.length === PAGE_SIZE && (pageNum + 1) * PAGE_SIZE < count);
@@ -206,7 +209,7 @@ export default function ExploreStorePage() {
       setProductsLoading(false);
       setInitialProductsLoad(false);
     }
-  }, [storeId, debouncedSearch, sort, statusFilter]);
+  }, [storeId, debouncedSearch, sort, statusFilter, outOfStockOnly]);
 
   useEffect(() => {
     if (storeId && initialProductsLoad) {
@@ -368,6 +371,17 @@ export default function ExploreStorePage() {
                         </Button>
                       ))}
                     </div>
+
+                    <Button
+                      variant={outOfStockOnly ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-9 text-xs gap-1.5"
+                      onClick={() => setOutOfStockOnly((v) => !v)}
+                      title="Show only out-of-stock products"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${outOfStockOnly ? "bg-destructive" : "bg-muted-foreground/40"}`} />
+                      Out of stock
+                    </Button>
 
                     <div className="ml-auto flex items-center gap-2">
                       <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
