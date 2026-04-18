@@ -99,7 +99,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { browserCache, CACHE_KEYS } from "@/lib/cache";
-import { SitePageShell } from "./_shared";
 
 interface SyncProgress {
   current: number;
@@ -288,10 +287,7 @@ function DeletedRecordsArchive({ storeId }: { storeId: string }) {
 const siteCache = new Map<string, { data: Store; timestamp: number }>();
 const CACHE_TTL = 30000;
 
-export default function SiteWorkspacePage({ siteLayout = false }: { siteLayout?: boolean } = {}) {
-  const Wrapper = siteLayout
-    ? ({ children }: { children: React.ReactNode }) => <SitePageShell>{children}</SitePageShell>
-    : ({ children }: { children: React.ReactNode }) => <AppLayout title="Site">{children}</AppLayout>;
+export default function SiteWorkspacePage() {
   const router = useRouter();
   const { id } = router.query;
   const [store, setStore] = useState<Store | null>(null);
@@ -807,7 +803,7 @@ export default function SiteWorkspacePage({ siteLayout = false }: { siteLayout?:
 
   if (!store) {
     return (
-      <Wrapper>
+      <AppLayout title="Site">
         <div className="p-6">
           <p className="text-muted-foreground">Site not found.</p>
           <Link href="/sites">
@@ -817,12 +813,12 @@ export default function SiteWorkspacePage({ siteLayout = false }: { siteLayout?:
             </Button>
           </Link>
         </div>
-      </Wrapper>
+      </AppLayout>
     );
   }
 
   return (
-    <Wrapper>
+    <AppLayout title="Site">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -1950,6 +1946,6 @@ export default function SiteWorkspacePage({ siteLayout = false }: { siteLayout?:
           </div>
         </DialogContent>
       </Dialog>
-    </Wrapper>
+    </AppLayout>
   );
 }
