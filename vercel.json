@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/sync-scheduler",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/auto-fail-stuck",
+      "schedule": "*/5 * * * *"
     }
   ],
   "redirects": [
