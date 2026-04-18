@@ -86,8 +86,8 @@ export default function ExplorePage() {
                         <Badge variant="outline" className="text-[10px]">
                           {s.status || "pending"}
                         </Badge>
-                        {s.client?.name && (
-                          <span className="text-xs text-muted-foreground truncate">{s.client.name}</span>
+                        {s.clients?.name && (
+                          <span className="text-xs text-muted-foreground truncate">{s.clients.name}</span>
                         )}
                       </div>
                     </CardContent>
