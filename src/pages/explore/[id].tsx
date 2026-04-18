@@ -109,7 +109,6 @@ export default function ExploreStorePage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [skuFilter, setSkuFilter] = useState("");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
@@ -199,7 +198,7 @@ export default function ExploreStorePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter, skuFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
   const loadProducts = useCallback(async () => {
     if (!storeId) return;
@@ -215,7 +214,6 @@ export default function ExploreStorePage() {
         statusFilter,
         excludeOutOfStock,
         categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-        skuFilter: skuFilter.trim() || undefined,
         stockStatusFilter,
         priceMin: priceMin ? parseFloat(priceMin) : undefined,
         priceMax: priceMax ? parseFloat(priceMax) : undefined,
@@ -227,7 +225,7 @@ export default function ExploreStorePage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter, skuFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
   useEffect(() => {
     if (storeId) loadProducts();
@@ -406,7 +404,7 @@ export default function ExploreStorePage() {
                         EOS
                       </Button>
 
-                      {(excludeOutOfStock || statusFilter !== "all" || search || categoryFilter !== "all" || skuFilter || stockStatusFilter !== "all" || priceMin || priceMax) && (
+                      {(excludeOutOfStock || statusFilter !== "all" || search || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -416,7 +414,6 @@ export default function ExploreStorePage() {
                             setStatusFilter("all");
                             setExcludeOutOfStock(false);
                             setCategoryFilter("all");
-                            setSkuFilter("");
                             setStockStatusFilter("all");
                             setPriceMin("");
                             setPriceMax("");
@@ -764,29 +761,94 @@ export default function ExploreStorePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30">
-                          {visibleColList.map((c) => (
-                            <TableHead
-                              key={c.key}
-                              className={c.key === "image" ? "w-14" : ""}
-                            >
-                              {c.label}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-background border-b">
                           {visibleColList.map((c) => {
-                            if (c.key === "sku") {
+                            const baseCls = c.key === "image" ? "w-14" : "";
+                            if (c.key === "status") {
                               return (
-                                <TableHead key={`f-${c.key}`} className="py-1.5">
-                                  <Input
-                                    value={skuFilter}
-                                    onChange={(e) => setSkuFilter(e.target.value)}
-                                    placeholder="Filter SKU..."
-                                    className="h-7 text-xs"
-                                  />
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{c.label}</span>
+                                    <select
+                                      value={statusFilter}
+                                      onChange={(e) => setStatusFilter(e.target.value)}
+                                      className="h-6 rounded border border-input bg-background px-1 text-[11px] font-normal"
+                                    >
+                                      <option value="all">All</option>
+                                      <option value="publish">Publish</option>
+                                      <option value="draft">Draft</option>
+                                      <option value="pending">Pending</option>
+                                      <option value="private">Private</option>
+                                    </select>
+                                  </div>
                                 </TableHead>
                               );
                             }
+                            if (c.key === "price") {
+                              return (
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1">
+                                    <span>{c.label}</span>
+                                    <Input
+                                      type="number"
+                                      value={priceMin}
+                                      onChange={(e) => setPriceMin(e.target.value)}
+                                      placeholder="min"
+                                      className="h-6 text-[11px] w-16 px-1.5 font-normal"
+                                    />
+                                    <Input
+                                      type="number"
+                                      value={priceMax}
+                                      onChange={(e) => setPriceMax(e.target.value)}
+                                      placeholder="max"
+                                      className="h-6 text-[11px] w-16 px-1.5 font-normal"
+                                    />
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "stock" || c.key === "stock_status") {
+                              return (
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{c.label}</span>
+                                    <select
+                                      value={stockStatusFilter}
+                                      onChange={(e) => setStockStatusFilter(e.target.value)}
+                                      className="h-6 rounded border border-input bg-background px-1 text-[11px] font-normal"
+                                    >
+                                      <option value="all">All</option>
+                                      <option value="instock">In stock</option>
+                                      <option value="outofstock">Out of stock</option>
+                                      <option value="onbackorder">Backorder</option>
+                                    </select>
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "category") {
+                              return (
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{c.label}</span>
+                                    <select
+                                      value={categoryFilter}
+                                      onChange={(e) => setCategoryFilter(e.target.value)}
+                                      className="h-6 rounded border border-input bg-background px-1 text-[11px] font-normal max-w-[120px]"
+                                    >
+                                      <option value="all">All categories</option>
+                                      {categoryOptions.map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            return <TableHead key={`f-${c.key}`} className="py-1.5" />;
+                          })}
+                        </TableRow>
+                        <TableRow className="bg-background border-b">
+                          {visibleColList.map((c) => {
                             if (c.key === "status") {
                               return (
                                 <TableHead key={`f-${c.key}`} className="py-1.5">
