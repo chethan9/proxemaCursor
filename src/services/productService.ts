@@ -19,6 +19,7 @@ export interface ProductRow {
   categories: unknown;
   images: unknown;
   attributes: unknown;
+  raw_data: Record<string, unknown> | null;
   synced_at: string | null;
   created_at: string | null;
   updated_at: string | null;

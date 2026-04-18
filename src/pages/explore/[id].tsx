@@ -36,28 +36,38 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
-type ColumnKey = "image" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "category" | "type" | "slug" | "wooId" | "short_desc" | "description" | "attributes" | "sales" | "created" | "updated";
+type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
 const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: ProductSortField }[] = [
   { key: "image", label: "Image", group: "Basic" },
-  { key: "name", label: "Product name", group: "Basic", sortable: "name" },
-  { key: "status", label: "Status", group: "Basic" },
-  { key: "sku", label: "SKU", group: "Basic" },
+  { key: "id", label: "ID", group: "Basic" },
   { key: "wooId", label: "Woo ID", group: "Basic" },
+  { key: "name", label: "Product name", group: "Basic", sortable: "name" },
   { key: "slug", label: "Slug", group: "Basic" },
+  { key: "sku", label: "SKU", group: "Basic" },
   { key: "type", label: "Type", group: "Basic" },
+  { key: "status", label: "Status", group: "Basic" },
+  { key: "permalink", label: "Permalink", group: "Basic" },
+  { key: "parent_id", label: "Parent ID", group: "Basic" },
   { key: "price", label: "Price", group: "Pricing", sortable: "price" },
   { key: "regular_price", label: "Regular price", group: "Pricing" },
   { key: "sale_price", label: "Sale price", group: "Pricing" },
   { key: "stock", label: "Stock qty", group: "Inventory", sortable: "stock_quantity" },
   { key: "stock_status", label: "Stock status", group: "Inventory" },
+  { key: "manage_stock", label: "Manage stock", group: "Inventory" },
+  { key: "tax_status", label: "Tax status", group: "Tax & Shipping" },
+  { key: "tax_class", label: "Tax class", group: "Tax & Shipping" },
+  { key: "shipping_required", label: "Shipping required", group: "Tax & Shipping" },
   { key: "category", label: "Categories", group: "Taxonomy" },
   { key: "attributes", label: "Attributes", group: "Taxonomy" },
+  { key: "images_count", label: "Images count", group: "Taxonomy" },
   { key: "short_desc", label: "Short description", group: "Content" },
   { key: "description", label: "Description", group: "Content" },
+  { key: "date_created", label: "Date created (Woo)", group: "Dates" },
+  { key: "date_modified", label: "Date modified (Woo)", group: "Dates" },
   { key: "sales", label: "Last synced", group: "Dates", sortable: "synced_at" },
-  { key: "created", label: "Created at", group: "Dates", sortable: "created_at" },
-  { key: "updated", label: "Updated at", group: "Dates", sortable: "updated_at" },
+  { key: "created", label: "Created at (DB)", group: "Dates", sortable: "created_at" },
+  { key: "updated", label: "Updated at (DB)", group: "Dates", sortable: "updated_at" },
 ];
 
 const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: string }[] = [
@@ -95,6 +105,7 @@ export default function ExploreStorePage() {
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     image: true,
+    id: false,
     name: true,
     status: true,
     sku: true,
@@ -103,14 +114,23 @@ export default function ExploreStorePage() {
     sale_price: false,
     stock: true,
     stock_status: false,
+    manage_stock: false,
     category: true,
     type: false,
     slug: false,
     wooId: false,
+    parent_id: false,
+    permalink: false,
+    tax_status: false,
+    tax_class: false,
+    shipping_required: false,
+    images_count: false,
     short_desc: false,
     description: false,
     attributes: false,
     sales: false,
+    date_created: false,
+    date_modified: false,
     created: false,
     updated: false,
   });
@@ -193,6 +213,7 @@ export default function ExploreStorePage() {
         .map((c) => {
           let v: string | number = "";
           switch (c) {
+            case "id": v = p.id; break;
             case "name": v = p.name || ""; break;
             case "status": v = p.status || ""; break;
             case "sku": v = p.sku || ""; break;
@@ -201,13 +222,22 @@ export default function ExploreStorePage() {
             case "sale_price": v = (p.sale_price as string) || ""; break;
             case "stock": v = p.stock_quantity ?? ""; break;
             case "stock_status": v = p.stock_status || ""; break;
+            case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
             case "category": v = getCategoryNames(p.categories); break;
             case "type": v = p.type || ""; break;
             case "slug": v = p.slug || ""; break;
             case "wooId": v = p.woo_id ?? ""; break;
+            case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
+            case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
+            case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
+            case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
+            case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
+            case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
             case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
             case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
             case "attributes": v = JSON.stringify(p.attributes || []); break;
+            case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
+            case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
             case "sales": v = p.synced_at || ""; break;
             case "created": v = p.created_at || ""; break;
             case "updated": v = p.updated_at || ""; break;
@@ -615,6 +645,47 @@ export default function ExploreStorePage() {
                                       .filter(Boolean)
                                       .join(" • ");
                                     return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[260px] truncate">{summary || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "id") {
+                                    return <TableCell key={c.key} className="font-mono text-[11px] text-muted-foreground">{p.id.slice(0, 8)}…</TableCell>;
+                                  }
+                                  if (c.key === "manage_stock") {
+                                    const ms = p.raw_data?.manage_stock;
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{ms === true ? "Yes" : ms === false ? "No" : (ms as string) || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "parent_id") {
+                                    const pid = p.raw_data?.parent_id as number | undefined;
+                                    return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{pid || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "permalink") {
+                                    const link = p.raw_data?.permalink as string | undefined;
+                                    return (
+                                      <TableCell key={c.key} className="text-xs max-w-[220px] truncate">
+                                        {link ? <a href={link} target="_blank" rel="noreferrer" className="text-primary hover:underline">{link}</a> : "—"}
+                                      </TableCell>
+                                    );
+                                  }
+                                  if (c.key === "tax_status") {
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{(p.raw_data?.tax_status as string) || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "tax_class") {
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{(p.raw_data?.tax_class as string) || "—"}</TableCell>;
+                                  }
+                                  if (c.key === "shipping_required") {
+                                    const sr = p.raw_data?.shipping_required;
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{sr === true ? "Yes" : sr === false ? "No" : "—"}</TableCell>;
+                                  }
+                                  if (c.key === "images_count") {
+                                    const n = Array.isArray(p.images) ? p.images.length : 0;
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{n}</TableCell>;
+                                  }
+                                  if (c.key === "date_created") {
+                                    const d = p.raw_data?.date_created as string | undefined;
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{d ? new Date(d).toLocaleString() : "—"}</TableCell>;
+                                  }
+                                  if (c.key === "date_modified") {
+                                    const d = p.raw_data?.date_modified as string | undefined;
+                                    return <TableCell key={c.key} className="text-xs text-muted-foreground">{d ? new Date(d).toLocaleString() : "—"}</TableCell>;
                                   }
                                   return <TableCell key={c.key}>—</TableCell>;
                                 })}
