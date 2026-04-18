@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SitePageShell, useSiteFromRoute, SiteSectionHeader, SiteLoadingSkeleton } from "./_shared";
+import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "./_shared";
 import { ProductsTab } from "@/components/explore/ProductsTab";
 
 function ProductsInner() {
@@ -9,13 +9,14 @@ function ProductsInner() {
   if (!store) return <div className="p-6">Store not found</div>;
   return (
     <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
-      <SiteSectionHeader
-        store={store}
-        searchPlaceholder="Search products by name or SKU..."
+      <ProductsTab
+        storeId={id}
+        storeUrl={store.url}
+        storeName={store.name}
         search={search}
         onSearchChange={setSearch}
+        embedHeader
       />
-      <ProductsTab storeId={id} storeUrl={store.url} search={search} />
     </div>
   );
 }

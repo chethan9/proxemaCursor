@@ -16,7 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, Filter, ChevronDown, GripVertical } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search } from "lucide-react";
 import {
   fetchProducts,
   getProductThumbnail,
@@ -80,9 +81,12 @@ interface ProductsTabProps {
   storeId: string;
   storeUrl?: string;
   search: string;
+  storeName?: string;
+  onSearchChange?: (v: string) => void;
+  embedHeader?: boolean;
 }
 
-export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
+export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -299,6 +303,60 @@ export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
 
   return (
     <div className="space-y-2">
+      {embedHeader && (
+        <div className="flex items-center gap-4 flex-wrap">
+          <Link href="/sites">
+            <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4" /></Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold truncate leading-tight">{storeName || "—"}</h1>
+            <p className="text-xs text-muted-foreground truncate">{storeUrl || ""}</p>
+          </div>
+          <div className="flex-1 flex justify-center">
+            <div className="relative w-full max-w-[480px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input placeholder="Search products by name or SKU..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
+              <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
+              <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
+              <Button variant={viewMode === "compact" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  <span className="text-xs">Sort</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {SORT_OPTIONS.map((opt, i) => (
+                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                  <Columns3 className="h-3.5 w-3.5" />
+                  <span className="text-xs">Columns</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6} />
+            </Popover>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">Export</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Sticky toolbar */}
       <div className="sticky top-0 z-20 -mx-6 px-6 pt-2 pb-1 bg-background/85 backdrop-blur border-b border-border [[data-theme-preset=modern]_&]:border-b-0 [[data-theme-preset=modern]_&]:pb-0">
         <Card>
@@ -323,90 +381,44 @@ export function ProductsTab({ storeId, storeUrl, search }: ProductsTabProps) {
               )}
               <div className="flex-1" />
               <div className="flex items-center gap-2 ml-auto">
-                <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
-                  <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
-                  <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
-                  <Button variant={viewMode === "compact" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
-                      <ArrowUpDown className="h-3.5 w-3.5" />
-                      <span className="text-xs">Sort</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {SORT_OPTIONS.map((opt, i) => (
-                      <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
-                      <Columns3 className="h-3.5 w-3.5" />
-                      <span className="text-xs">Columns</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6}>
-                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                      <div>
-                        <div className="text-sm font-medium">Customize columns</div>
-                        <div className="text-[11px] text-muted-foreground">Click to show/hide</div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
-                          const all: Record<string, boolean> = {};
-                          COLUMNS.forEach((c) => { all[c.key] = true; });
-                          setVisibleCols(all as Record<ColumnKey, boolean>);
-                        }}>Select all</Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
-                          const none: Record<string, boolean> = {};
-                          COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
-                          setVisibleCols(none as Record<ColumnKey, boolean>);
-                          setColumnOrder(COLUMNS.map((c) => c.key));
-                        }}>Reset</Button>
-                      </div>
+                {!embedHeader && (
+                  <>
+                    <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
+                      <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
+                      <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
+                      <Button variant={viewMode === "compact" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
                     </div>
-                    <div className="max-h-[380px] overflow-y-auto p-4">
-                      <div className="grid grid-cols-3 gap-x-6 gap-y-4">
-                        {(() => {
-                          const groupMap: Record<string, string> = {
-                            "Basic": "Basic", "Pricing": "Pricing & Inventory", "Inventory": "Pricing & Inventory",
-                            "Tax & Shipping": "Tax, Taxonomy & Content", "Taxonomy": "Tax, Taxonomy & Content",
-                            "Content": "Tax, Taxonomy & Content", "Dates": "Dates",
-                          };
-                          const grouped: Record<string, typeof COLUMNS> = {};
-                          COLUMNS.forEach((c) => {
-                            const g = groupMap[c.group] || c.group;
-                            if (!grouped[g]) grouped[g] = [];
-                            grouped[g].push(c);
-                          });
-                          return Object.entries(grouped).map(([group, cols]) => (
-                            <div key={group}>
-                              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
-                              <div className="flex flex-col gap-0.5">
-                                {cols.map((c) => (
-                                  <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
-                                    <Checkbox checked={visibleCols[c.key]} onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))} />
-                                    <span className="truncate">{c.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="text-xs">Export</span>
-                </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                          <ArrowUpDown className="h-3.5 w-3.5" />
+                          <span className="text-xs">Sort</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {SORT_OPTIONS.map((opt, i) => (
+                          <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                          <Columns3 className="h-3.5 w-3.5" />
+                          <span className="text-xs">Columns</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-[680px] p-0" sideOffset={6} />
+                    </Popover>
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+                      <Download className="h-3.5 w-3.5" />
+                      <span className="text-xs">Export</span>
+                    </Button>
+                  </>
+                )}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
                   <Package className="h-3.5 w-3.5" />
                   <span className="font-medium">{productCount.toLocaleString()}</span>
