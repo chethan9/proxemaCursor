@@ -355,7 +355,26 @@ export default function ExploreStorePage() {
               <h1 className="text-xl font-semibold truncate leading-tight">{store.name}</h1>
               <p className="text-xs text-muted-foreground truncate">{store.url}</p>
             </div>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="ml-auto">
+            <div className="flex-1 flex justify-center min-w-[240px] px-4">
+              <div className="relative w-full max-w-[560px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={
+                    activeTab === "products"
+                      ? "Search products by name or SKU..."
+                      : activeTab === "orders"
+                      ? "Search orders by #, customer, or email..."
+                      : activeTab === "tags"
+                      ? "Search tags..."
+                      : "Search categories..."
+                  }
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
+            </div>
+            <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
               <TabsList>
                 <TabsTrigger value="products">Products</TabsTrigger>
                 <TabsTrigger value="orders">Orders</TabsTrigger>
@@ -371,7 +390,7 @@ export default function ExploreStorePage() {
               <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
                 <Card>
                   <CardContent className="p-3 space-y-2">
-                    {/* Row 1: search + filters + actions */}
+                    {/* Row 1: filters + actions */}
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
                         {["all", "publish", "draft", "pending", "private"].map((s) => (
@@ -398,57 +417,12 @@ export default function ExploreStorePage() {
                         EOS
                       </Button>
 
-                      {categoryOptions.length > 0 && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={categoryFilter !== "all" ? "secondary" : "outline"}
-                              size="sm"
-                              className="h-9 text-xs gap-1.5 px-2.5"
-                            >
-                              <Filter className="h-3.5 w-3.5" />
-                              <span className="max-w-[120px] truncate">
-                                {categoryFilter === "all" ? "Categories" : categoryFilter}
-                              </span>
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent align="start" className="w-64 p-0">
-                            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                              <span className="text-xs font-semibold">Filter by category</span>
-                              {categoryFilter !== "all" && (
-                                <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setCategoryFilter("all")}>
-                                  Clear
-                                </Button>
-                              )}
-                            </div>
-                            <div className="max-h-[280px] overflow-y-auto p-1">
-                              <button
-                                onClick={() => setCategoryFilter("all")}
-                                className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${categoryFilter === "all" ? "bg-accent" : ""}`}
-                              >
-                                All categories
-                              </button>
-                              {categoryOptions.map((cat) => (
-                                <button
-                                  key={cat}
-                                  onClick={() => setCategoryFilter(cat)}
-                                  className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${categoryFilter === cat ? "bg-accent" : ""}`}
-                                >
-                                  {cat}
-                                </button>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-
-                      {(excludeOutOfStock || statusFilter !== "all" || search || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
+                      {(excludeOutOfStock || statusFilter !== "all" || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-9 text-xs"
                           onClick={() => {
-                            setSearch("");
                             setStatusFilter("all");
                             setExcludeOutOfStock(false);
                             setCategoryFilter("all");
@@ -461,17 +435,7 @@ export default function ExploreStorePage() {
                         </Button>
                       )}
 
-                      <div className="flex-1 flex justify-center min-w-[200px]">
-                        <div className="relative w-full max-w-[360px]">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search name or SKU..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 h-9"
-                          />
-                        </div>
-                      </div>
+                      <div className="flex-1" />
 
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
@@ -622,42 +586,40 @@ export default function ExploreStorePage() {
                           <Package className="h-3.5 w-3.5" />
                           <span className="font-medium">{productCount.toLocaleString()}</span>
                         </div>
+
+                        {productCount > 0 && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
+                            <span>Rows:</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">
+                                  {pageSize}
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {PAGE_SIZE_OPTIONS.map((n) => (
+                                  <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>
+                                    {n}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <span className="whitespace-nowrap">
+                              {page * pageSize + 1}–{Math.min((page + 1) * pageSize, productCount)} of {productCount.toLocaleString()}
+                            </span>
+                            <div className="flex items-center gap-0.5">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+                                <ArrowLeft className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}>
+                                <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    {/* Row 2: pagination (only shown when there are results) */}
-                    {productCount > 0 && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border text-xs">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <span>Per page:</span>
-                          <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
-                            {PAGE_SIZE_OPTIONS.map((n) => (
-                              <Button
-                                key={n}
-                                variant={pageSize === n ? "secondary" : "ghost"}
-                                size="sm"
-                                className="h-6 px-2 text-[11px]"
-                                onClick={() => setPageSize(n)}
-                              >
-                                {n}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-muted-foreground">
-                            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, productCount)} of {productCount.toLocaleString()}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(0)} disabled={page === 0}>First</Button>
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Prev</Button>
-                            <span className="px-2 font-medium">Page {page + 1} / {Math.max(1, Math.ceil(productCount / pageSize))}</span>
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}>Next</Button>
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(Math.max(0, Math.ceil(productCount / pageSize) - 1))} disabled={(page + 1) * pageSize >= productCount}>Last</Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -901,6 +863,53 @@ export default function ExploreStorePage() {
                                         </div>
                                       </PopoverContent>
                                     </Popover>
+                                  </div>
+                                </TableHead>
+                              );
+                            }
+                            if (c.key === "category") {
+                              const active = categoryFilter !== "all";
+                              return (
+                                <TableHead key={c.key} className={baseCls}>
+                                  <div className="flex items-center gap-1">
+                                    <span>{c.label}</span>
+                                    {categoryOptions.length > 0 && (
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <Button variant="ghost" size="sm" className={`h-5 w-5 p-0 relative ${active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}>
+                                            <Filter className="h-3 w-3" />
+                                            {active && <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />}
+                                          </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent align="start" className="w-64 p-0">
+                                          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                                            <span className="text-xs font-semibold">Filter by category</span>
+                                            {active && (
+                                              <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setCategoryFilter("all")}>
+                                                Clear
+                                              </Button>
+                                            )}
+                                          </div>
+                                          <div className="max-h-[280px] overflow-y-auto p-1">
+                                            <button
+                                              onClick={() => setCategoryFilter("all")}
+                                              className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${categoryFilter === "all" ? "bg-accent" : ""}`}
+                                            >
+                                              All categories
+                                            </button>
+                                            {categoryOptions.map((cat) => (
+                                              <button
+                                                key={cat}
+                                                onClick={() => setCategoryFilter(cat)}
+                                                className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${categoryFilter === cat ? "bg-accent" : ""}`}
+                                              >
+                                                {cat}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    )}
                                   </div>
                                 </TableHead>
                               );
@@ -1169,13 +1178,13 @@ export default function ExploreStorePage() {
             </TabsContent>
 
             <TabsContent value="orders">
-              <OrdersTab storeId={storeId} storeUrl={store?.url} />
+              <OrdersTab storeId={storeId} storeUrl={store?.url} search={search} />
             </TabsContent>
             <TabsContent value="tags">
-              <TaxonomyTab storeId={storeId} mode="tags" />
+              <TaxonomyTab storeId={storeId} mode="tags" search={search} />
             </TabsContent>
             <TabsContent value="categories">
-              <TaxonomyTab storeId={storeId} mode="categories" />
+              <TaxonomyTab storeId={storeId} mode="categories" search={search} />
             </TabsContent>
           </Tabs>
         </div>

@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   fetchOrders,
   getCustomerName,
@@ -71,7 +71,7 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
-export function OrdersTab({ storeId, storeUrl }: { storeId: string; storeUrl?: string | null }) {
+export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: string; storeUrl?: string | null; search?: string }) {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [orderCount, setOrderCount] = useState(0);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -83,7 +83,7 @@ export function OrdersTab({ storeId, storeUrl }: { storeId: string; storeUrl?: s
   });
   const [loading, setLoading] = useState(false);
 
-  const [search, setSearch] = useState("");
+  const search = searchProp ?? "";
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
@@ -293,7 +293,6 @@ export function OrdersTab({ storeId, storeUrl }: { storeId: string; storeUrl?: s
                   size="sm"
                   className="h-9 text-xs"
                   onClick={() => {
-                    setSearch("");
                     setStatusFilter("all");
                     setPaymentFilter("all");
                     setTotalMin("");
@@ -304,17 +303,7 @@ export function OrdersTab({ storeId, storeUrl }: { storeId: string; storeUrl?: s
                 </Button>
               )}
 
-              <div className="flex-1 flex justify-center min-w-[200px]">
-                <div className="relative w-full max-w-[360px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search order #, customer, email..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-9"
-                  />
-                </div>
-              </div>
+              <div className="flex-1" />
 
               <div className="flex items-center gap-2">
                 <DropdownMenu>
@@ -406,41 +395,39 @@ export function OrdersTab({ storeId, storeUrl }: { storeId: string; storeUrl?: s
                   <ShoppingCart className="h-3.5 w-3.5" />
                   <span className="font-medium">{orderCount.toLocaleString()}</span>
                 </div>
+
+                {orderCount > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
+                    <span>Rows:</span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">
+                          {pageSize}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {PAGE_SIZE_OPTIONS.map((n) => (
+                          <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>
+                            {n}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="whitespace-nowrap">
+                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {orderCount.toLocaleString()}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount}>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-
-            {orderCount > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border text-xs">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <span>Per page:</span>
-                  <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
-                    {PAGE_SIZE_OPTIONS.map((n) => (
-                      <Button
-                        key={n}
-                        variant={pageSize === n ? "secondary" : "ghost"}
-                        size="sm"
-                        className="h-6 px-2 text-[11px]"
-                        onClick={() => setPageSize(n)}
-                      >
-                        {n}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground">
-                    {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {orderCount.toLocaleString()}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(0)} disabled={page === 0}>First</Button>
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Prev</Button>
-                    <span className="px-2 font-medium">Page {page + 1} / {Math.max(1, Math.ceil(orderCount / pageSize))}</span>
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount}>Next</Button>
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPage(Math.max(0, Math.ceil(orderCount / pageSize) - 1))} disabled={(page + 1) * pageSize >= orderCount}>Last</Button>
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
