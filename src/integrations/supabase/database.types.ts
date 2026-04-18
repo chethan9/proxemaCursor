@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -1188,7 +1188,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      bootstrap_super_admin: { Args: never; Returns: undefined }
+      can_bootstrap_super_admin: { Args: never; Returns: boolean }
+      current_user_client_id: { Args: never; Returns: string }
+      current_user_role: { Args: never; Returns: string }
+      has_permission: { Args: { perm: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
