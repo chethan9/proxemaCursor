@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, ChevronsLeft, ChevronsRight, LogOut, CornerDownRight, Store } from "lucide-react";
+import { Zap, ChevronsLeft, ChevronsRight, LogOut, CornerDownRight, Store, Lock, Unlock } from "lucide-react";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -80,7 +80,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
   });
-  const collapsed = forceCollapsed || collapsedPref;
+  const [locked, setLocked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("sidebar-locked") === "1";
+  });
+  const collapsed = locked ? collapsedPref : (forceCollapsed || collapsedPref);
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     const roleKey = roleKeyFor(undefined, false);
@@ -115,6 +119,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const next = !collapsedPref;
     setCollapsedPref(next);
     if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
+  };
+
+  const toggleLock = () => {
+    const next = !locked;
+    setLocked(next);
+    if (typeof window !== "undefined") localStorage.setItem("sidebar-locked", next ? "1" : "0");
   };
 
   const isItemActive = (href: string) => router.pathname === href;
@@ -177,10 +187,22 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             {!collapsed && <span className="font-semibold text-sm truncate">{brandName}</span>}
           </Link>
           {!collapsed && (
-            <button onClick={toggle} aria-label="Collapse sidebar"
-              className="p-1 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60">
-              <ChevronsLeft className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button onClick={toggleLock} aria-label={locked ? "Unlock sidebar" : "Lock sidebar expanded"}
+                    className={cn("p-1 rounded-md hover:bg-sidebar-accent/60",
+                      locked ? "text-sidebar-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground")}>
+                    {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{locked ? "Unlock sidebar" : "Keep sidebar expanded"}</TooltipContent>
+              </Tooltip>
+              <button onClick={toggle} aria-label="Collapse sidebar"
+                className="p-1 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60">
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
 
