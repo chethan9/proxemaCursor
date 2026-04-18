@@ -179,7 +179,7 @@ export default function ClientsPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-4">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   placeholder="Search clients..."
                   value={searchQuery}

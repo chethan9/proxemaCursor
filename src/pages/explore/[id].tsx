@@ -389,7 +389,7 @@ export default function ExploreStorePage() {
             </div>
             <div className="flex-1 flex justify-center min-w-[240px] px-4">
               <div className="relative w-full max-w-[560px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   placeholder={
                     activeTab === "products"
@@ -914,7 +914,7 @@ export default function ExploreStorePage() {
                                         <div className="flex items-center justify-between mb-1 px-1">
                                           <span className="text-xs font-semibold">Filter by stock</span>
                                           {active && (
-                                            <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5 font-normal" onClick={() => setStockStatusFilter("all")}>
+                                            <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setStockStatusFilter("all")}>
                                               Clear
                                             </Button>
                                           )}
