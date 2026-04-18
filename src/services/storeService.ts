@@ -58,9 +58,16 @@ export async function getStore(id: string): Promise<Store | null> {
 }
 
 export async function createStore(store: StoreInsert): Promise<Store> {
-  const { data: { session } } = await supabase.auth.getSession();
+  console.log("[createStore] getting session...");
+  const sessionPromise = supabase.auth.getSession();
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("getSession timeout after 5s")), 5000)
+  );
+  const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<typeof sessionPromise>;
+  console.log("[createStore] session:", session ? "present" : "null");
   if (!session) throw new Error("Not authenticated");
 
+  console.log("[createStore] POSTing to /api/stores/create...");
   const res = await fetch("/api/stores/create", {
     method: "POST",
     headers: {
@@ -69,6 +76,7 @@ export async function createStore(store: StoreInsert): Promise<Store> {
     },
     body: JSON.stringify(store),
   });
+  console.log("[createStore] response status:", res.status);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
