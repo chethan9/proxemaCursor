@@ -41,8 +41,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const isSuperAdmin = profile.role === "super_admin";
-  if (!isSuperAdmin && client_id && client_id !== profile.client_id) {
-    return res.status(403).json({ error: "Cannot create store for another client" });
+
+  let finalClientId: string | null = client_id || null;
+  if (!isSuperAdmin) {
+    if (!profile.client_id) {
+      return res.status(403).json({ error: "Your account is not assigned to a client. Ask an admin to assign one." });
+    }
+    if (client_id && client_id !== profile.client_id) {
+      return res.status(403).json({ error: "Cannot create store for another client" });
+    }
+    finalClientId = profile.client_id;
   }
 
   const { data, error } = await supabaseAdmin
@@ -52,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       url,
       consumer_key: consumer_key || null,
       consumer_secret: consumer_secret || null,
-      client_id: client_id || null,
+      client_id: finalClientId,
       status: status || "pending",
     })
     .select()
