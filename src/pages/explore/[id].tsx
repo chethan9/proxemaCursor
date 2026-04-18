@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter } from "lucide-react";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter, ChevronDown } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -36,6 +36,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { OrdersTab } from "@/components/explore/OrdersTab";
 import { TaxonomyTab } from "@/components/explore/TaxonomyTab";
 import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
+import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
@@ -121,7 +122,7 @@ export default function ExploreStorePage() {
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
   const [activeTab, setActiveTab] = useState("products");
-  const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
@@ -721,7 +722,7 @@ export default function ExploreStorePage() {
                                 return (
                                   <div
                                     key={p.id}
-                                    onClick={() => setEditingProduct(p)}
+                                    onClick={() => setExpandedRowId(p.id)}
                                     className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer"
                                     title={`${p.name || "—"}${p.sku ? ` · ${p.sku}` : ""}${p.price ? ` · ${p.price}` : ""}`}
                                   >
@@ -753,7 +754,7 @@ export default function ExploreStorePage() {
                               }
 
                               return (
-                                <div key={p.id} onClick={() => setEditingProduct(p)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
+                                <div key={p.id} onClick={() => setExpandedRowId(p.id)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
                                   <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                                     {thumb ? (
                                       // eslint-disable-next-line @next/next/no-img-element
@@ -939,7 +940,7 @@ export default function ExploreStorePage() {
                           products.map((p) => {
                             const thumb = getProductThumbnail(p.images);
                             return (
-                              <TableRow key={p.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setEditingProduct(p)}>
+                              <TableRow key={p.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                                 {visibleColList.map((c) => {
                                   if (c.key === "image") {
                                     return (
