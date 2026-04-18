@@ -154,12 +154,10 @@
     padding: 1rem 1.75rem 1.5rem;
   }
 
-  [data-theme-preset="modern"] input:not([type="checkbox"]):not([type="radio"]):not([class*="pl-"]),
-  [data-theme-preset="modern"] textarea:not([class*="pl-"]),
-  [data-theme-preset="modern"] select:not([class*="pl-"]) {
+  [data-theme-preset="modern"] input:not([type="checkbox"]):not([type="radio"]),
+  [data-theme-preset="modern"] textarea,
+  [data-theme-preset="modern"] select {
     border-radius: 0.75rem;
-    padding-left: 0.875rem;
-    padding-right: 0.875rem;
     height: 2.625rem;
   }
 
