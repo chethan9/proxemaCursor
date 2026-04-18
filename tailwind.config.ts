@@ -76,6 +76,12 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        "polaris-xs": "0 1px 0 rgba(0, 0, 0, 0.05)",
+        "polaris-sm": "0 1px 0 rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+        "polaris-md": "0 2px 6px -1px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+        "polaris-lg": "0 10px 20px -4px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

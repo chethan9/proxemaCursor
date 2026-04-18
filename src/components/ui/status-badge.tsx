@@ -2,16 +2,16 @@ import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 
 const statusBadgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+  "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
   {
     variants: {
       variant: {
-        default: "bg-secondary text-secondary-foreground",
-        success: "bg-emerald-100 text-emerald-700",
-        warning: "bg-amber-100 text-amber-700",
-        error: "bg-rose-100 text-rose-700",
-        info: "bg-blue-100 text-blue-700",
-        pending: "bg-slate-100 text-slate-600",
+        default: "border-transparent bg-secondary text-secondary-foreground",
+        success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        warning: "border-amber-200 bg-amber-50 text-amber-800",
+        error: "border-rose-200 bg-rose-50 text-rose-700",
+        info: "border-sky-200 bg-sky-50 text-sky-700",
+        pending: "border-slate-200 bg-slate-50 text-slate-600",
       },
     },
     defaultVariants: {
@@ -37,11 +37,12 @@ export function StatusBadge({
     <span className={cn(statusBadgeVariants({ variant }), className)} {...props}>
       {pulse && (
         <span
+          aria-hidden="true"
           className={cn("h-1.5 w-1.5 rounded-full animate-pulse-slow", {
             "bg-emerald-500": variant === "success",
             "bg-amber-500": variant === "warning",
             "bg-rose-500": variant === "error",
-            "bg-blue-500": variant === "info",
+            "bg-sky-500": variant === "info",
             "bg-slate-400": variant === "pending" || variant === "default",
           })}
         />
