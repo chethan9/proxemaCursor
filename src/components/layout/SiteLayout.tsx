@@ -11,7 +11,7 @@ export function SiteLayout({ children }: Props) {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      <AppSidebar forceCollapsed />
+      <AppSidebar />
       {siteId ? (
         <SiteSidebar siteId={siteId} />
       ) : (
