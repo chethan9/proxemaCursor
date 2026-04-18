@@ -6,12 +6,12 @@ const statusBadgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-secondary text-secondary-foreground",
-        success: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        warning: "border-amber-200 bg-amber-50 text-amber-800",
-        error: "border-rose-200 bg-rose-50 text-rose-700",
-        info: "border-sky-200 bg-sky-50 text-sky-700",
-        pending: "border-slate-200 bg-slate-50 text-slate-600",
+        default: "border-border bg-muted text-muted-foreground",
+        success: "border-success/20 bg-success/10 text-success",
+        warning: "border-warning/20 bg-warning/10 text-warning",
+        error: "border-destructive/20 bg-destructive/10 text-destructive",
+        info: "border-primary/20 bg-primary/10 text-primary",
+        pending: "border-border bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {
@@ -39,11 +39,11 @@ export function StatusBadge({
         <span
           aria-hidden="true"
           className={cn("h-1.5 w-1.5 rounded-full animate-pulse-slow", {
-            "bg-emerald-500": variant === "success",
-            "bg-amber-500": variant === "warning",
-            "bg-rose-500": variant === "error",
-            "bg-sky-500": variant === "info",
-            "bg-slate-400": variant === "pending" || variant === "default",
+            "bg-success": variant === "success",
+            "bg-warning": variant === "warning",
+            "bg-destructive": variant === "error",
+            "bg-primary": variant === "info",
+            "bg-muted-foreground": variant === "pending" || variant === "default",
           })}
         />
       )}
