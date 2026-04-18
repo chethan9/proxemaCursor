@@ -177,15 +177,34 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         )}
       >
         <div className={cn("flex h-12 items-center border-b border-sidebar-border", collapsed ? "justify-center px-0" : "px-3 justify-between")}>
-          <Link href="/" className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary min-w-0">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={brandName} className="h-6 w-6 rounded object-contain flex-shrink-0" />
-            ) : (
-              <Zap className="h-5 w-5 text-sidebar-primary flex-shrink-0" aria-hidden="true" />
-            )}
-            {!collapsed && <span className="font-semibold text-sm truncate">{brandName}</span>}
-          </Link>
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCollapsedPref(false);
+                if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", "0");
+              }}
+              aria-label="Expand sidebar"
+              className="flex items-center justify-center rounded-md p-1 hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary"
+            >
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={brandName} className="h-6 w-6 rounded object-contain flex-shrink-0" />
+              ) : (
+                <Zap className="h-5 w-5 text-sidebar-primary flex-shrink-0" aria-hidden="true" />
+              )}
+            </button>
+          ) : (
+            <Link href="/" className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary min-w-0">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={brandName} className="h-6 w-6 rounded object-contain flex-shrink-0" />
+              ) : (
+                <Zap className="h-5 w-5 text-sidebar-primary flex-shrink-0" aria-hidden="true" />
+              )}
+              <span className="font-semibold text-sm truncate">{brandName}</span>
+            </Link>
+          )}
           {!collapsed && (
             <div className="flex items-center gap-0.5">
               <Tooltip>
@@ -284,7 +303,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 {!collapsed && (
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-xs font-medium truncate">{profile?.full_name || profile?.email}</p>
-                    <p className="text-[10px] text-sidebar-foreground/50 truncate">{role?.name || profile?.role}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{role?.name || profile?.role}</p>
                   </div>
                 )}
               </button>
