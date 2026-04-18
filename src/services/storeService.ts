@@ -58,18 +58,25 @@ export async function getStore(id: string): Promise<Store | null> {
 }
 
 export async function createStore(store: StoreInsert): Promise<Store> {
-  const { data, error } = await supabase
-    .from("stores")
-    .insert(store)
-    .select()
-    .single();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
 
-  if (error) {
-    console.error("Error creating store:", error);
-    throw error;
+  const res = await fetch("/api/stores/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(store),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error || "Failed to create store");
   }
 
-  return data;
+  const { store: created } = await res.json();
+  return created;
 }
 
 export async function updateStore(
