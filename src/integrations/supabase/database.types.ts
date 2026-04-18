@@ -636,6 +636,27 @@ export type Database = {
           },
         ]
       }
+      menu_configs: {
+        Row: {
+          config: Json
+          role: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          role: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          role?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           billing: Json | null
