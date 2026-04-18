@@ -39,6 +39,18 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
 
   const handleSave = async () => {
     setSaving(true);
+
+    const optimistic: ProductRow = {
+      ...product,
+      regular_price: regularPrice ? parseFloat(regularPrice) : null,
+      sale_price: salePrice ? parseFloat(salePrice) : null,
+      price: salePrice ? parseFloat(salePrice) : regularPrice ? parseFloat(regularPrice) : null,
+      stock_status: stockStatus,
+      stock_quantity: stockQuantity ? parseInt(stockQuantity, 10) : null,
+      status: isActive ? "publish" : "draft",
+    };
+    onSaved(optimistic);
+
     try {
       const updates: Record<string, unknown> = {
         regular_price: regularPrice ? parseFloat(regularPrice) : null,
@@ -52,7 +64,13 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
       onSaved(updated);
       toast({ title: "Product updated", description: product.name || "" });
     } catch (e) {
-      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      onSaved(product);
+      setRegularPrice(product.regular_price?.toString() || "");
+      setSalePrice(product.sale_price?.toString() || "");
+      setStockQuantity(product.stock_quantity?.toString() || "");
+      setStockStatus(product.stock_status || "instock");
+      setIsActive(product.status === "publish");
+      toast({ title: "Update failed — reverted", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setSaving(false);
     }

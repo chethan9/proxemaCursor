@@ -58,12 +58,17 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === order.status) return;
     setSaving(newStatus);
+
+    const previousStatus = order.status;
+    onSaved({ ...order, status: newStatus });
+
     try {
       const updated = await updateOrderStatus(order.id, newStatus);
       onSaved(updated);
       toast({ title: "Status updated", description: `Order #${order.order_number || order.woo_id} → ${newStatus}` });
     } catch (e) {
-      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      onSaved({ ...order, status: previousStatus });
+      toast({ title: "Update failed — reverted", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setSaving(null);
     }
