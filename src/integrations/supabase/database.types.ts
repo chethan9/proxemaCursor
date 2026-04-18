@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -802,26 +802,73 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          client_id: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
+          is_active: boolean | null
+          role: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          client_id?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean | null
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          client_id?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          permissions: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          permissions?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          permissions?: Json
           updated_at?: string | null
         }
         Relationships: []
