@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Json = Database["public"]["Tables"]["user_view_preferences"]["Row"]["preferences"];
 
 export type ViewPreferences = Record<string, unknown>;
 
@@ -12,7 +15,7 @@ export async function fetchPreferences(viewKey: string): Promise<ViewPreferences
     .eq("view_key", viewKey)
     .maybeSingle();
   if (error || !data) return null;
-  return (data.preferences as ViewPreferences) || null;
+  return (data.preferences as unknown as ViewPreferences) || null;
 }
 
 export async function savePreferences(viewKey: string, preferences: ViewPreferences): Promise<void> {
@@ -21,7 +24,7 @@ export async function savePreferences(viewKey: string, preferences: ViewPreferen
   await supabase
     .from("user_view_preferences")
     .upsert(
-      { user_id: user.id, view_key: viewKey, preferences, updated_at: new Date().toISOString() },
+      { user_id: user.id, view_key: viewKey, preferences: preferences as unknown as Json, updated_at: new Date().toISOString() },
       { onConflict: "user_id,view_key" }
     );
 }
