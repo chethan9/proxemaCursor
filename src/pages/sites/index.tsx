@@ -122,6 +122,7 @@ export default function SitesPage() {
     setUrlError(null);
     
     setCreating(true);
+    console.log("[AddSite] Starting create with:", { name: newStore.name, url: cleanedUrl, authMode });
     try {
       const store = await createStore({
         name: newStore.name.trim(),
@@ -131,6 +132,7 @@ export default function SitesPage() {
         client_id: newStore.client_id || null,
         status: authMode === "manual" && newStore.consumer_key && newStore.consumer_secret ? "connected" : "pending",
       });
+      console.log("[AddSite] Store created:", store);
 
       // Invalidate cache
       browserCache.delete(CACHE_KEYS.STORES);
@@ -140,6 +142,7 @@ export default function SitesPage() {
           storeUrl: cleanedUrl,
           storeId: store.id,
         });
+        console.log("[AddSite] Redirecting to:", authUrl);
         window.location.href = authUrl;
       } else {
         setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
@@ -152,7 +155,8 @@ export default function SitesPage() {
         }
       }
     } catch (error) {
-      console.error("Error creating store:", error);
+      console.error("[AddSite] Error creating store:", error);
+      alert(`Error creating store: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
     } finally {
       setCreating(false);
     }
