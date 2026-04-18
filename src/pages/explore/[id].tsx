@@ -241,6 +241,55 @@ export default function ExploreStorePage() {
     [visibleCols, columnOrder]
   );
 
+  const exportCsv = useCallback(() => {
+    if (products.length === 0) return;
+    const cols = visibleColList.filter((c) => c.key !== "image");
+    const header = cols.map((c) => c.label).join(",");
+    const rows = products.map((p) => cols.map((c) => {
+      let v: string | number = "";
+      switch (c.key) {
+        case "id": v = p.id; break;
+        case "name": v = p.name || ""; break;
+        case "status": v = p.status || ""; break;
+        case "sku": v = p.sku || ""; break;
+        case "price": v = (p.price as string) || ""; break;
+        case "regular_price": v = (p.regular_price as string) || ""; break;
+        case "sale_price": v = (p.sale_price as string) || ""; break;
+        case "stock": v = p.stock_quantity ?? ""; break;
+        case "stock_status": v = p.stock_status || ""; break;
+        case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
+        case "category": v = getCategoryNames(p.categories); break;
+        case "type": v = p.type || ""; break;
+        case "slug": v = p.slug || ""; break;
+        case "wooId": v = p.woo_id ?? ""; break;
+        case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
+        case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
+        case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
+        case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
+        case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
+        case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
+        case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
+        case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
+        case "attributes": v = JSON.stringify(p.attributes || []); break;
+        case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
+        case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
+        case "sales": v = p.synced_at || ""; break;
+        case "created": v = p.created_at || ""; break;
+        case "updated": v = p.updated_at || ""; break;
+      }
+      const s = String(v).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    }).join(",")).join("\n");
+    const csv = `${header}\n${rows}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `products-${storeId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [products, visibleColList, storeId]);
+
   if (storeLoading) {
     return (
       <AuthGuard>
