@@ -1024,7 +1024,7 @@ export default function ExploreStorePage() {
                             const isExpanded = expandedRowId === p.id;
                             return (
                               <>
-                              <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                              <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/20 border-b-0" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                                 {visibleColList.map((c) => {
                                   if (c.key === "image") {
                                     return (
@@ -1221,7 +1221,7 @@ export default function ExploreStorePage() {
                                 })}
                               </TableRow>
                               {isExpanded && (
-                                <TableRow key={`${p.id}-exp`} className="hover:bg-transparent">
+                                <TableRow key={`${p.id}-exp`} className="hover:bg-transparent bg-muted/20 border-t-0">
                                   <TableCell colSpan={visibleColList.length} className="p-0">
                                     <ProductRowExpanded
                                       product={p}
