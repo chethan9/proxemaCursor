@@ -22,6 +22,7 @@ import {
 import { Zap, ChevronsLeft, ChevronsRight, LogOut, CornerDownRight, Store } from "lucide-react";
 
 let cachedSites: StoreWithClient[] | null = null;
+const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
 
 function loadCachedSites(): StoreWithClient[] {
   if (cachedSites) return cachedSites;
@@ -80,7 +81,10 @@ export function AppSidebar() {
     return localStorage.getItem("sidebar-collapsed") === "1";
   });
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
-  const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>([]);
+  const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
+    const roleKey = roleKeyFor(undefined, false);
+    return cachedMenuByRole.get(roleKey) || [];
+  });
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
@@ -94,11 +98,14 @@ export function AppSidebar() {
 
   useEffect(() => {
     const roleKey = roleKeyFor(profile?.role, isSuperAdmin);
+    const cached = cachedMenuByRole.get(roleKey);
+    if (cached) setMenuTree(cached);
     getMenuConfig(roleKey).then((cfg) => {
       const { tree } = mergeMenu(cfg);
       const resolved = resolveForSidebar(tree, can, isSuperAdmin);
+      cachedMenuByRole.set(roleKey, resolved);
       setMenuTree(resolved);
-    }).catch(() => setMenuTree([]));
+    }).catch(() => { if (!cached) setMenuTree([]); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.role, isSuperAdmin]);
 
