@@ -188,7 +188,7 @@ export default function ConnectSuccessPage() {
                   <Link href={`/sites/${id}`}>
                     <Button variant="outline" size="sm">Go to Site</Button>
                   </Link>
-                  <Link href="/sites">
+                  <Link href="/projects">
                     <Button size="sm">Back to Sites</Button>
                   </Link>
                 </div>

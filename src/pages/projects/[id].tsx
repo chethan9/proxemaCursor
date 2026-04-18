@@ -616,7 +616,7 @@ export default function SiteWorkspacePage() {
       siteCache.delete(store.id);
       browserCache.delete(CACHE_KEYS.STORES);
       browserCache.delete(CACHE_KEYS.DASHBOARD_STATS);
-      router.push("/sites");
+      router.push("/projects");
     } catch (error) {
       console.error("Error deleting store:", error);
     } finally {
@@ -790,7 +790,7 @@ export default function SiteWorkspacePage() {
       <AppLayout title="Site">
         <div className="p-6">
           <p className="text-muted-foreground">Site not found.</p>
-          <Link href="/sites">
+          <Link href="/projects">
             <Button variant="outline" className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Sites
@@ -806,7 +806,7 @@ export default function SiteWorkspacePage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link href="/sites">
+          <Link href="/projects">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>

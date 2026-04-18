@@ -283,7 +283,7 @@ export default function ClientDetailPage() {
               <div className="text-center py-8">
                 <Store className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground mb-3">No sites linked yet</p>
-                <Button variant="outline" size="sm" onClick={() => router.push("/sites")}>
+                <Button variant="outline" size="sm" onClick={() => router.push("/projects")}>
                   Go to Sites
                 </Button>
               </div>

@@ -70,7 +70,7 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
     <div className="space-y-3">
       {embedHeader && (
         <div className="flex items-center gap-4 flex-wrap">
-          <Link href="/sites">
+          <Link href="/projects">
             <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
           <div className="min-w-0">

@@ -393,7 +393,7 @@ export default function Dashboard() {
                 <CardDescription>Latest WooCommerce stores</CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/sites">
+                <Link href="/projects">
                   View all <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
@@ -410,7 +410,7 @@ export default function Dashboard() {
                   <Store className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No sites yet</p>
                   <Button variant="link" asChild className="mt-2">
-                    <Link href="/sites">Add your first site</Link>
+                    <Link href="/projects">Add your first site</Link>
                   </Button>
                 </div>
               ) : (
