@@ -12,6 +12,7 @@ const LABEL_MAP: Record<string, string> = {
   activity: "Activity",
   "api-management": "API Management",
   settings: "Settings",
+  "site-settings": "Configuration",
   profile: "Profile",
   theme: "Theme",
   users: "Users",

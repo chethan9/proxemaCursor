@@ -148,7 +148,7 @@ function SettingsInner() {
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2"><SettingsIcon className="h-5 w-5" />Settings</h1>
+        <h1 className="text-2xl font-semibold flex items-center gap-2"><SettingsIcon className="h-5 w-5" />Configuration</h1>
         <p className="text-sm text-muted-foreground">{store.name} · {store.url}</p>
       </div>
 
@@ -211,7 +211,7 @@ function SettingsInner() {
           <div className="flex items-center gap-2">
             <Button onClick={handleSaveSettings} disabled={savingSettings}>
               {savingSettings ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <SettingsIcon className="h-4 w-4 mr-2" />}
-              Save Settings
+              Save Configuration
             </Button>
             <Button variant="outline" onClick={handleTriggerCron} disabled={triggeringCron}>
               {triggeringCron ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}

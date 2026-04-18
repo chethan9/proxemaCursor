@@ -62,7 +62,7 @@ export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-products", defaultLabel: "Products", defaultIcon: "Package", path: "/products", defaultGroup: "Main", defaultOrder: 2 },
   { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 3 },
   { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 4 },
-  { id: "site-settings", defaultLabel: "Settings", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 0 },
+  { id: "site-settings", defaultLabel: "Configuration", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 0 },
 ];
 
 export const SITE_MENU_DEFAULT_GROUPS = ["Main", "Manage"];
