@@ -291,4 +291,53 @@
     color: hsl(220 9% 55%);
     font-weight: 500;
   }
+
+  [data-theme-preset="modern"] input:focus-visible,
+  [data-theme-preset="modern"] textarea:focus-visible,
+  [data-theme-preset="modern"] select:focus-visible,
+  [data-theme-preset="modern"] [data-slot="input"]:focus-visible,
+  [data-theme-preset="modern"] [data-slot="textarea"]:focus-visible {
+    outline: none;
+    border-color: hsl(22 100% 50%);
+    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.18), 0 1px 2px rgba(16, 24, 40, 0.04);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  [data-theme-preset="modern"] button[data-slot="button"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.25), 0 1px 2px rgba(16, 24, 40, 0.06);
+  }
+
+  [data-theme-preset="modern"] [data-slot="checkbox"]:focus-visible,
+  [data-theme-preset="modern"] [data-slot="switch"]:focus-visible,
+  [data-theme-preset="modern"] [data-slot="radio-group-item"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.22);
+  }
+
+  [data-theme-preset="modern"] input,
+  [data-theme-preset="modern"] textarea,
+  [data-theme-preset="modern"] select {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  [data-theme-preset="modern"] [data-sidebar="menu-button"] {
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  }
+
+  [data-theme-preset="modern"] [data-sidebar="menu-button"]:hover {
+    background-color: hsl(220 14% 97%);
+  }
+
+  [data-theme-preset="modern"] [data-sidebar="menu-button"]:active {
+    transform: scale(0.98);
+  }
+
+  [data-theme-preset="modern"] [data-slot="badge"] {
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  [data-theme-preset="modern"] [role="tab"] {
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
 }
