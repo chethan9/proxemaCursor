@@ -97,6 +97,7 @@ import { JsonTableView } from "@/components/JsonTableView";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { browserCache, CACHE_KEYS } from "@/lib/cache";
 
 interface SyncProgress {
   current: number;
