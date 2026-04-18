@@ -53,6 +53,10 @@
     --sidebar-ring: 166 100% 35%;
     --sidebar-muted: 215 10% 65%;
   }
+
+  :root[data-theme-preset="modern"] {
+    /* Modern preset overrides — empty for now, safe sandbox for upcoming redesign */
+  }
 }
 
 @layer base {

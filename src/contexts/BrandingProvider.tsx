@@ -53,28 +53,37 @@ function hexToHsl(hex: string): string {
 function applyTheme(settings: BrandingSettings) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+
+  if (settings.themePreset === "classic") {
+    // FROZEN Classic baseline — do not modify. Any redesign must go through "modern" preset.
+    root.style.setProperty("--primary", "166 100% 25%");
+    root.style.setProperty("--primary-foreground", "0 0% 100%");
+    root.style.setProperty("--ring", "166 100% 25%");
+    root.style.setProperty("--sidebar", "210 14% 18%");
+    root.style.setProperty("--sidebar-foreground", "0 0% 98%");
+    root.style.setProperty("--sidebar-primary", "166 100% 35%");
+    root.style.setProperty("--sidebar-accent", "210 11% 24%");
+    root.style.setProperty("--background", "220 14% 96%");
+    root.style.setProperty("--card", "0 0% 100%");
+    root.style.setProperty("--muted", "220 14% 96%");
+    root.style.setProperty("--border", "220 13% 87%");
+    root.style.setProperty("--radius", "0.5rem");
+    root.dataset.themePreset = "classic";
+    return;
+  }
+
+  // Modern preset — applies live brand color overrides + tags root for scoped CSS
   root.style.setProperty("--primary", hexToHsl(settings.primaryColor));
   root.style.setProperty("--sidebar-primary", hexToHsl(settings.primaryColor));
   root.style.setProperty("--ring", hexToHsl(settings.primaryColor));
   root.style.setProperty("--sidebar", hexToHsl(settings.sidebarColor));
   root.style.setProperty("--sidebar-accent", hexToHsl(settings.sidebarColor));
-
-  // Apply preset-specific CSS variables
-  if (settings.themePreset === "modern") {
-    root.style.setProperty("--background", "220 13% 97%");
-    root.style.setProperty("--card", "0 0% 100%");
-    root.style.setProperty("--muted", "220 14% 95%");
-    root.style.setProperty("--border", "220 13% 91%");
-    root.style.setProperty("--radius", "0.75rem");
-    root.dataset.themePreset = "modern";
-  } else {
-    root.style.setProperty("--background", "0 0% 100%");
-    root.style.setProperty("--card", "0 0% 100%");
-    root.style.setProperty("--muted", "210 40% 96%");
-    root.style.setProperty("--border", "214 32% 91%");
-    root.style.setProperty("--radius", "0.375rem");
-    root.dataset.themePreset = "classic";
-  }
+  root.style.setProperty("--background", "220 13% 97%");
+  root.style.setProperty("--card", "0 0% 100%");
+  root.style.setProperty("--muted", "220 14% 95%");
+  root.style.setProperty("--border", "220 13% 91%");
+  root.style.setProperty("--radius", "0.75rem");
+  root.dataset.themePreset = "modern";
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
