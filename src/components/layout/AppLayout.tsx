@@ -1,5 +1,6 @@
 import Head from "next/head";
 import { AppSidebar } from "./AppSidebar";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -30,6 +31,7 @@ export function AppLayout({ children, title, requirePermission, requireSuperAdmi
         <div className="flex h-screen w-full overflow-hidden bg-background">
           <AppSidebar />
           <div className="flex flex-1 flex-col overflow-hidden">
+            <Breadcrumbs />
             <main id="main-content" className="flex-1 overflow-auto">
               <div className="mx-auto w-full max-w-[1600px]">{children}</div>
             </main>
