@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "./_shared";
+import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { OrdersTab } from "@/components/explore/OrdersTab";
 
 function OrdersInner() {

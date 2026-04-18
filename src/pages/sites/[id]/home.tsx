@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
-import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "./_shared";
+import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 
 function HomeInner() {
   const { store, loading } = useSiteFromRoute();
