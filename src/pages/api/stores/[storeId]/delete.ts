@@ -51,29 +51,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const webhookResults: { id: string; woo_webhook_id: number | null; ok: boolean; error?: string }[] = [];
   if (webhooks && store.consumer_key && store.consumer_secret && store.url) {
     const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
-    for (const wh of webhooks) {
-      if (!wh.woo_webhook_id) {
-        webhookResults.push({ id: wh.id, woo_webhook_id: null, ok: true });
-        continue;
-      }
-      try {
-        const resp = await fetch(
-          `${store.url.replace(/\/$/, "")}/wp-json/wc/v3/webhooks/${wh.woo_webhook_id}?force=true`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Basic ${auth}` },
-          }
-        );
-        webhookResults.push({ id: wh.id, woo_webhook_id: wh.woo_webhook_id, ok: resp.ok });
-      } catch (e) {
-        webhookResults.push({
-          id: wh.id,
-          woo_webhook_id: wh.woo_webhook_id,
-          ok: false,
-          error: e instanceof Error ? e.message : "Unknown error",
-        });
-      }
-    }
+    const baseUrl = store.url.replace(/\/$/, "");
+    const results = await Promise.all(
+      webhooks.map(async (wh) => {
+        if (!wh.woo_webhook_id) {
+          return { id: wh.id, woo_webhook_id: null, ok: true };
+        }
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(
+            `${baseUrl}/wp-json/wc/v3/webhooks/${wh.woo_webhook_id}?force=true`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Basic ${auth}` },
+              signal: controller.signal,
+            }
+          );
+          clearTimeout(timeout);
+          return { id: wh.id, woo_webhook_id: wh.woo_webhook_id, ok: resp.ok };
+        } catch (e) {
+          return {
+            id: wh.id,
+            woo_webhook_id: wh.woo_webhook_id,
+            ok: false,
+            error: e instanceof Error ? e.message : "Unknown error",
+          };
+        }
+      })
+    );
+    webhookResults.push(...results);
   }
 
   // Delete store (cascade removes local webhooks, sync_runs, etc via FK)
