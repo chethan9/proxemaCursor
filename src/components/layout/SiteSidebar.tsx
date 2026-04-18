@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthProvider";
 import { getStores, type StoreWithClient } from "@/services/storeService";
 import { getSiteMenuConfig } from "@/services/menuConfigService";
-import { mergeSiteMenu, resolveForSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
+import { mergeSiteMenu, resolveForSiteSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,7 @@ export function SiteSidebar({ siteId }: Props) {
     }
     getSiteMenuConfig(roleKey, siteId).then((cfg) => {
       const { tree } = mergeSiteMenu(cfg);
-      const resolved = resolveForSidebar(tree, can, isSuperAdmin);
+      const resolved = resolveForSiteSidebar(tree, siteId, can);
       cachedSiteMenuByKey.set(menuCacheKey, resolved);
       setMenuTree(resolved);
       setMenuLoading(false);
