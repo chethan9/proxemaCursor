@@ -1,6 +1,6 @@
 ---
 title: Wire per-site workspace pages (Home, Orders, Products, Categories, Tags, Configuration)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [routing, site-workspace, sidebar]
