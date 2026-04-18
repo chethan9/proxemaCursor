@@ -650,10 +650,49 @@ export default function SitesPage() {
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <Label>API Credentials</Label>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setEditShowSecrets(!editShowSecrets)} className="h-8 px-2">
-                    {editShowSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2.5 gap-1.5"
+                      onClick={() => {
+                        if (!editStore) return;
+                        const validation = validateStoreUrl(editForm.url);
+                        if (!validation.valid) {
+                          setEditUrlError(validation.error || "Invalid URL");
+                          return;
+                        }
+                        const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(editForm.url);
+                        (async () => {
+                          try {
+                            if (editForm.name.trim() !== editStore.name || cleanedUrl !== editStore.url || (editForm.client_id || null) !== editStore.client_id) {
+                              await updateStore(editStore.id, {
+                                name: editForm.name.trim(),
+                                url: cleanedUrl,
+                                client_id: editForm.client_id || null,
+                              });
+                              browserCache.delete(CACHE_KEYS.STORES);
+                              browserCache.delete(CACHE_KEYS.store(editStore.id));
+                            }
+                          } catch (e) {
+                            console.error("[ReAuth] Pre-save failed:", e);
+                          }
+                          const authUrl = buildWooCommerceAuthUrl({ storeUrl: cleanedUrl, storeId: editStore.id });
+                          window.location.href = authUrl;
+                        })();
+                      }}
+                      title="Re-authorize via OAuth"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="text-xs">Re-authorize (OAuth)</span>
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setEditShowSecrets(!editShowSecrets)} className="h-8 px-2">
+                      {editShowSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
+                <p className="text-[11px] text-muted-foreground -mt-1">Edit keys manually below, or click Re-authorize to regenerate via WooCommerce OAuth.</p>
                 <div className="space-y-2">
                   <Label htmlFor="edit-ck" className="text-xs text-muted-foreground">Consumer Key</Label>
                   <div className="flex items-center gap-2">
