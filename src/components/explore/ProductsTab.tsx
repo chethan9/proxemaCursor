@@ -486,7 +486,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   <Package className="h-3.5 w-3.5" />
                   <span className="font-medium">{productCount.toLocaleString()}</span>
                 </div>
-                {productCount > 0 && (
+                {(productCount > 0 || loading) && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
                     <span>Rows:</span>
                     <DropdownMenu>
@@ -500,11 +500,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, productCount)} of {productCount.toLocaleString()}
+                      {loading && productCount === 0 ? "Loading…" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, productCount)} of ${productCount.toLocaleString()}`}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || loading}><ArrowLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount || loading}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
                     </div>
                   </div>
                 )}
