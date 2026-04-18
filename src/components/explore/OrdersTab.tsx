@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
+import Link from "next/link";
+import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft } from "lucide-react";
 import {
   fetchOrders,
   getCustomerName,
@@ -87,7 +88,7 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
-export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: string; storeUrl?: string | null; search?: string }) {
+export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [orderCount, setOrderCount] = useState(0);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -311,29 +312,62 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
 
   return (
     <div className="space-y-3">
+      {embedHeader && (
+        <div className="flex items-center gap-4 flex-wrap">
+          <Link href="/sites">
+            <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4" /></Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold truncate leading-tight">{storeName || "—"}</h1>
+            <p className="text-xs text-muted-foreground truncate">{storeUrl || ""}</p>
+          </div>
+          <div className="flex-1 flex justify-center">
+            <div className="relative w-full max-w-[480px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  <span className="text-xs">Sort</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {SORT_OPTIONS.map((opt, i) => (
+                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
+                  <Columns3 className="h-3.5 w-3.5" />
+                  <span className="text-xs">Columns</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6} />
+            </Popover>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={orders.length === 0} title="Export CSV">
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">Export</span>
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
         <Card>
           <CardContent className="p-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
-                <Button
-                  variant={statusFilter === "all" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 text-xs px-2.5"
-                  onClick={() => setStatusFilter("all")}
-                >
-                  All
-                </Button>
+                <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>All</Button>
                 {ORDER_STATUSES.map((s) => (
-                  <Button
-                    key={s}
-                    variant={statusFilter === s ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 text-xs capitalize px-2.5"
-                    onClick={() => setStatusFilter(s)}
-                  >
-                    {s}
-                  </Button>
+                  <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>{s}</Button>
                 ))}
               </div>
 
