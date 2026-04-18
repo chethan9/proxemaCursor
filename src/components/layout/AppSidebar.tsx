@@ -31,9 +31,10 @@ import {
   LogOut,
   Shield,
   UserCog,
-  ChevronRight,
   CornerDownRight,
 } from "lucide-react";
+
+let cachedSites: StoreWithClient[] | null = null;
 
 type NavItem = { href: string; icon: typeof LayoutDashboard; label: string; permission?: Permission; superAdminOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
@@ -86,15 +87,14 @@ export function AppSidebar() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
   });
-  const [sites, setSites] = useState<StoreWithClient[]>([]);
-  const [sitesExpanded, setSitesExpanded] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    return localStorage.getItem("sidebar-sites-expanded") !== "0";
-  });
+  const [sites, setSites] = useState<StoreWithClient[]>(() => cachedSites || []);
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
-    getStores().then(setSites).catch(() => setSites([]));
+    getStores().then((list) => {
+      cachedSites = list;
+      setSites(list);
+    }).catch(() => { /* keep cached */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,12 +102,6 @@ export function AppSidebar() {
     const next = !collapsed;
     setCollapsed(next);
     if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
-  };
-
-  const toggleSites = () => {
-    const next = !sitesExpanded;
-    setSitesExpanded(next);
-    if (typeof window !== "undefined") localStorage.setItem("sidebar-sites-expanded", next ? "1" : "0");
   };
 
   const isItemActive = (href: string) =>
@@ -231,32 +225,21 @@ export function AppSidebar() {
                           <TooltipContent side="right">Sites</TooltipContent>
                         </Tooltip>
                       ) : (
-                        <div className="flex items-center gap-0.5">
-                          <Link
-                            href="/sites"
-                            className={cn(
-                              "flex-1 flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
-                              router.pathname === "/sites"
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                            )}
-                          >
-                            <Store className="h-4 w-4 shrink-0" />
-                            <span className="truncate">Sites</span>
-                          </Link>
-                          {sites.length > 0 && (
-                            <button
-                              onClick={toggleSites}
-                              aria-label={sitesExpanded ? "Collapse sites" : "Expand sites"}
-                              className="p-1 rounded text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
-                            >
-                              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", sitesExpanded && "rotate-90")} />
-                            </button>
+                        <Link
+                          href="/sites"
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                            router.pathname === "/sites"
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                           )}
-                        </div>
+                        >
+                          <Store className="h-4 w-4 shrink-0" />
+                          <span className="truncate">Sites</span>
+                        </Link>
                       )}
                     </li>
-                    {!collapsed && sitesExpanded && sites.map((site) => {
+                    {!collapsed && sites.map((site) => {
                       const href = `/explore/${site.id}`;
                       const isActive = router.asPath.startsWith(`/explore/${site.id}`);
                       return (
