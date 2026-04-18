@@ -10,6 +10,8 @@ import { FolderTree, Tag as TagIcon, Download, ChevronDown, ChevronRight as Chev
 import { type CategoryRow, type TagRow } from "@/services/taxonomyService";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { useTaxonomyRows, useAllCategories } from "@/hooks/queries/useTaxonomy";
+import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
+import { fetchCategories, fetchTags } from "@/services/taxonomyService";
 
 type Mode = "categories" | "tags";
 
@@ -65,6 +67,19 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   const Icon = mode === "categories" ? FolderTree : TagIcon;
   const colSpan = mode === "categories" ? 6 : 5;
+
+  useBackgroundPagination({
+    enabled: !!storeId && count > 0,
+    totalCount: count,
+    pageSize,
+    currentPage: page,
+    queryKeyFn: (p) => ["taxonomy", mode, storeId, debounced, p, pageSize] as const,
+    queryFn: (p) => (mode === "categories"
+      ? fetchCategories(storeId, debounced, p, pageSize)
+      : fetchTags(storeId, debounced, p, pageSize)),
+    maxRecords: 5000,
+    resetKey: `${mode}|${debounced}|${pageSize}`,
+  });
 
   return (
     <div className="space-y-3">

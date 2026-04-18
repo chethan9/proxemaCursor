@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { generateApiToken } from "@/lib/api-auth";
+import { generateApiToken } from "@/lib/api-token";
 import { ArrowLeft, Copy, Check, Plus, Trash2, Key, Store, RefreshCw, Shield, Pencil, Link2, Unlink } from "lucide-react";
 
 interface Client {

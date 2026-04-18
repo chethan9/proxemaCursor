@@ -30,6 +30,9 @@ import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts, useProductCategoryOptions } from "@/hooks/queries/useProducts";
+import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
+import { queryKeys } from "@/lib/query-client";
+import { fetchProducts } from "@/services/productService";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -168,11 +171,35 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     excludeOutOfStock,
     categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
     stockStatusFilter,
-    priceMin: priceMin ? parseFloat(priceMin) : undefined,
-    priceMax: priceMax ? parseFloat(priceMax) : undefined,
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
   });
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
+
+  const prefetchOpts = useMemo(() => ({
+    storeId,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+    statusFilter,
+    excludeOutOfStock,
+    categoryFilter,
+    stockStatusFilter,
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
+  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+
+  useBackgroundPagination({
+    enabled: !!storeId && productCount > 0,
+    totalCount: productCount,
+    pageSize,
+    currentPage: page,
+    queryKeyFn: (p) => queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
+    queryFn: (p) => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
+    maxRecords: 5000,
+    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
+  });
 
   const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
     // Inline mutations should invalidate query; placeholder no-op.

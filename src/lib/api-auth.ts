@@ -2,18 +2,13 @@ import type { NextApiRequest } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import crypto from "crypto";
 
+export { generateApiToken } from "./api-token";
+
 export interface ApiAuthResult {
   valid: boolean;
   clientId?: string;
   tokenId?: string;
   error?: string;
-}
-
-export function generateApiToken(): { plain: string; hash: string; prefix: string } {
-  const plain = `wsk_${crypto.randomBytes(32).toString("hex")}`;
-  const hash = crypto.createHash("sha256").update(plain).digest("hex");
-  const prefix = plain.substring(0, 12);
-  return { plain, hash, prefix };
 }
 
 export async function authenticateRequest(req: NextApiRequest): Promise<ApiAuthResult> {

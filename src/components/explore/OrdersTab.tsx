@@ -35,6 +35,9 @@ import { fetchPreferences, savePreferences } from "@/services/viewPreferencesSer
 import { useOrders, useOrderPaymentOptions } from "@/hooks/queries/useOrders";
 import { usePaymentMethods } from "@/hooks/queries/usePaymentMethods";
 import { OrderRowExpanded } from "./OrderRowExpanded";
+import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
+import { queryKeys } from "@/lib/query-client";
+import { fetchOrders } from "@/services/orderService";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -257,6 +260,28 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort]);
+
+  const prefetchOpts = useMemo(() => ({
+    storeId,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+    statusFilter,
+    paymentMethodFilter: paymentFilter,
+    totalMin: totalMin ? Number(totalMin) : undefined,
+    totalMax: totalMax ? Number(totalMax) : undefined,
+  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, paymentFilter, totalMin, totalMax]);
+
+  useBackgroundPagination({
+    enabled: !!storeId && orderCount > 0,
+    totalCount: orderCount,
+    pageSize,
+    currentPage: page,
+    queryKeyFn: (p) => queryKeys.orders(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
+    queryFn: (p) => fetchOrders({ ...prefetchOpts, page: p, pageSize }),
+    maxRecords: 5000,
+    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
+  });
 
   return (
     <div className="space-y-3">

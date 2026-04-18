@@ -12,6 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Search, Check } from "lucide-react";
 import type { RoleKey } from "@/services/menuConfigService";
+import { useQueryClient } from "@tanstack/react-query";
+import { fetchProducts } from "@/services/productService";
+import { fetchOrders } from "@/services/orderService";
+import { fetchCategories, fetchTags } from "@/services/taxonomyService";
+import { queryKeys } from "@/lib/query-client";
 
 type Props = { siteId: string };
 
@@ -76,6 +81,7 @@ export function SiteSidebar({ siteId }: Props) {
   const menuCacheKey = `${roleKey}:${siteId}`;
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => cachedSiteMenuByKey.get(menuCacheKey) || []);
   const [menuLoading, setMenuLoading] = useState(!cachedSiteMenuByKey.has(menuCacheKey));
+  const queryClient = useQueryClient();
 
   const currentSite = useMemo(() => sites.find((s) => s.id === siteId), [sites, siteId]);
 
@@ -133,6 +139,36 @@ export function SiteSidebar({ siteId }: Props) {
     return current === href || current.startsWith(href + "/");
   };
 
+  const prefetchForHref = (href: string) => {
+    // Match /sites/:id/(products|orders|categories|tags)
+    const m = href.match(/^\/sites\/([^/]+)\/(products|orders|categories|tags)$/);
+    if (!m) return;
+    const [, sid, section] = m;
+    if (section === "products") {
+      const opts = { storeId: sid, page: 0, pageSize: 50 };
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.products(sid, opts as unknown as Record<string, unknown>),
+        queryFn: () => fetchProducts(opts),
+      });
+    } else if (section === "orders") {
+      const opts = { storeId: sid, page: 0, pageSize: 50 };
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.orders(sid, opts as unknown as Record<string, unknown>),
+        queryFn: () => fetchOrders(opts),
+      });
+    } else if (section === "categories") {
+      queryClient.prefetchQuery({
+        queryKey: ["taxonomy", "categories", sid, "", 0, 50] as const,
+        queryFn: () => fetchCategories(sid, "", 0, 50),
+      });
+    } else if (section === "tags") {
+      queryClient.prefetchQuery({
+        queryKey: ["taxonomy", "tags", sid, "", 0, 50] as const,
+        queryFn: () => fetchTags(sid, "", 0, 50),
+      });
+    }
+  };
+
   const renderItem = (node: ResolvedMenuNode) => {
     if (node.type !== "item" || !node.href) return null;
     const active = isItemActive(node.href);
@@ -149,6 +185,8 @@ export function SiteSidebar({ siteId }: Props) {
               ? "bg-foreground/[0.08] text-foreground font-semibold"
               : "font-medium text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           )}
+          onMouseEnter={() => node.href && prefetchForHref(node.href)}
+          onFocus={() => node.href && prefetchForHref(node.href)}
         >
           {active && (
             <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />
