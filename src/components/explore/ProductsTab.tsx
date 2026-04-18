@@ -545,6 +545,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   <TableRow className="bg-muted/30">
                     {visibleColList.map((c) => {
                       const baseCls = c.key === "image" ? "w-14" : "";
+                      const numericKeys: ColumnKey[] = ["price", "regular_price", "sale_price", "stock", "wooId", "parent_id", "images_count"];
+                      const isNumeric = numericKeys.includes(c.key);
+                      const alignCls = isNumeric ? "text-right" : "text-left";
                       const dragProps = {
                         draggable: true,
                         onDragStart: (e: React.DragEvent) => { setDragKey(c.key); e.dataTransfer.effectAllowed = "move"; },
@@ -563,10 +566,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         onDragEnd: () => setDragKey(null),
                       };
                       return (
-                        <TableHead key={c.key} className={`${baseCls} cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
-                          <span className="inline-flex items-center gap-1">
-                            <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                        <TableHead key={c.key} className={`${baseCls} ${alignCls} cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
+                          <span className={`inline-flex items-center gap-1 ${isNumeric ? "justify-end w-full" : ""}`}>
                             {c.label}
+                            <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                           </span>
                         </TableHead>
                       );
@@ -642,7 +645,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "sku") return <TableCell key={c.key} className="font-mono text-sm text-muted-foreground">{p.sku || "—"}</TableCell>;
                               if (c.key === "price") {
                                 return (
-                                  <TableCell key={c.key} className="font-mono text-sm">
+                                  <TableCell key={c.key} className="font-mono text-sm text-right">
                                     {p.sale_price && p.sale_price !== p.regular_price ? (
                                       <div>
                                         <span>{p.sale_price}</span>
@@ -656,7 +659,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 const qty = p.stock_quantity;
                                 const status = p.stock_status;
                                 return (
-                                  <TableCell key={c.key} className="text-sm">
+                                  <TableCell key={c.key} className="text-sm text-right">
                                     {qty != null ? (
                                       <span className={qty === 0 ? "text-destructive" : qty < 5 ? "text-warning" : ""}>{qty} in stock</span>
                                     ) : status === "instock" ? (
@@ -674,8 +677,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "sales") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.synced_at ? new Date(p.synced_at).toLocaleString() : "—"}</TableCell>;
                               if (c.key === "created") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}</TableCell>;
                               if (c.key === "updated") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.updated_at ? new Date(p.updated_at).toLocaleString() : "—"}</TableCell>;
-                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-sm">{p.regular_price || "—"}</TableCell>;
-                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-sm">{p.sale_price || "—"}</TableCell>;
+                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.regular_price || "—"}</TableCell>;
+                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.sale_price || "—"}</TableCell>;
                               if (c.key === "stock_status") {
                                 const s = p.stock_status;
                                 return (
@@ -686,23 +689,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               }
                               if (c.key === "type") return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{p.type || "—"}</TableCell>;
                               if (c.key === "slug") return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground max-w-[200px] truncate">{p.slug || "—"}</TableCell>;
-                              if (c.key === "wooId") return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{p.woo_id ?? "—"}</TableCell>;
-                              if (c.key === "id") return <TableCell key={c.key} className="font-mono text-[11px] text-muted-foreground">{p.id.slice(0, 8)}…</TableCell>;
-                              if (c.key === "short_desc") {
-                                const txt = (p.short_description || "").replace(/<[^>]+>/g, "");
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate">{txt || "—"}</TableCell>;
-                              }
-                              if (c.key === "description") {
-                                const txt = (p.description || "").replace(/<[^>]+>/g, "");
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[320px] truncate">{txt || "—"}</TableCell>;
-                              }
-                              if (c.key === "manage_stock") {
-                                const ms = p.raw_data?.manage_stock;
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground">{ms === true ? "Yes" : ms === false ? "No" : "—"}</TableCell>;
-                              }
+                              if (c.key === "wooId") return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{p.woo_id ?? "—"}</TableCell>;
                               if (c.key === "parent_id") {
                                 const pid = p.raw_data?.parent_id as number | undefined;
-                                return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{pid || "—"}</TableCell>;
+                                return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{pid || "—"}</TableCell>;
                               }
                               if (c.key === "permalink") {
                                 const link = p.raw_data?.permalink as string | undefined;
@@ -714,7 +704,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 const sr = p.raw_data?.shipping_required;
                                 return <TableCell key={c.key} className="text-xs text-muted-foreground">{sr === true ? "Yes" : sr === false ? "No" : "—"}</TableCell>;
                               }
-                              if (c.key === "images_count") return <TableCell key={c.key} className="text-xs text-muted-foreground">{Array.isArray(p.images) ? p.images.length : 0}</TableCell>;
+                              if (c.key === "images_count") return <TableCell key={c.key} className="text-xs text-muted-foreground text-right">{Array.isArray(p.images) ? p.images.length : 0}</TableCell>;
+                              if (c.key === "short_desc") {
+                                const txt = (p.short_description || "").replace(/<[^>]+>/g, "");
+                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate">{txt || "—"}</TableCell>;
+                              }
+                              if (c.key === "description") {
+                                const txt = (p.description || "").replace(/<[^>]+>/g, "");
+                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[320px] truncate">{txt || "—"}</TableCell>;
+                              }
                               if (c.key === "attributes") {
                                 const attrs = Array.isArray(p.attributes) ? p.attributes : [];
                                 const summary = attrs.map((a: unknown) => {

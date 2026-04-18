@@ -541,17 +541,22 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               <div key={group}>
                                 <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
                                 <div className="flex flex-col gap-0.5">
-                                  {cols.map((c) => (
-                                    <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
-                                      <Checkbox
-                                        checked={visibleCols[c.key]}
-                                        onCheckedChange={(v) =>
-                                          setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
-                                        }
-                                      />
-                                      <span className="truncate">{c.label}</span>
-                                    </label>
-                                  ))}
+                                  {cols.map((c) => {
+                                    const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
+                                    const alignCls = isNumeric ? "text-right" : "text-left";
+                                    return (
+                                      <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                        <Checkbox
+                                          checked={visibleCols[c.key]}
+                                          onCheckedChange={(v) =>
+                                            setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                          }
+                                        />
+                                        <span className="truncate">{c.label}</span>
+                                        <GripVertical className={`h-3 w-3 text-muted-foreground/30 ${isNumeric ? "ml-0.5" : ""}`} />
+                                      </label>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ));
@@ -626,11 +631,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       onDragEnd: () => setDragKey(null),
                       className: `cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`,
                     };
+                    const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
+                    const alignCls = isNumeric ? "text-right" : "text-left";
                     if (c.key === "total") {
                       const active = !!(totalMin || totalMax);
                       return (
-                        <TableHead key={c.key} {...dragProps}>
-                          <div className="flex items-center gap-1">
+                        <TableHead key={c.key} {...dragProps} className={`${dragProps.className} ${alignCls}`}>
+                          <div className="flex items-center justify-end gap-1">
                             <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                             <span>{c.label}</span>
                             <Popover>
@@ -655,15 +662,16 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                                 </div>
                               </PopoverContent>
                             </Popover>
+                            <GripVertical className="h-3 w-3 text-muted-foreground/30 ml-0.5" />
                           </div>
                         </TableHead>
                       );
                     }
                     return (
                       <TableHead key={c.key} {...dragProps}>
-                        <span className="inline-flex items-center gap-1">
-                          <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                        <span className={`inline-flex items-center gap-1 ${isNumeric ? "justify-end w-full" : ""}`}>
                           {c.label}
+                          <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                         </span>
                       </TableHead>
                     );
@@ -702,7 +710,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               return <TableCell key={c.key} className="font-mono font-medium">#{o.order_number || o.woo_id}</TableCell>;
                             }
                             if (c.key === "woo_id") {
-                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.woo_id}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.woo_id}</TableCell>;
                             }
                             if (c.key === "status") {
                               const cls = STATUS_COLORS[o.status || ""] || "bg-muted text-muted-foreground border-border";
@@ -731,28 +739,28 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               return <TableCell key={c.key} className="font-mono text-xs">{phone || "—"}</TableCell>;
                             }
                             if (c.key === "customer_id") {
-                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.customer_id ?? "—"}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.customer_id ?? "—"}</TableCell>;
                             }
                             if (c.key === "items") {
-                              return <TableCell key={c.key} className="text-sm">{getItemCount(o.line_items)}</TableCell>;
+                              return <TableCell key={c.key} className="text-sm text-right">{getItemCount(o.line_items)}</TableCell>;
                             }
                             if (c.key === "line_items_summary") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate" title={getLineItemsSummary(o.line_items)}>{getLineItemsSummary(o.line_items) || "—"}</TableCell>;
                             }
                             if (c.key === "total") {
-                              return <TableCell key={c.key} className="font-mono text-sm font-semibold">{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-sm font-semibold text-right">{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
                             }
                             if (c.key === "subtotal") {
-                              return <TableCell key={c.key} className="font-mono text-sm">{o.subtotal || "—"}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-sm text-right">{o.subtotal || "—"}</TableCell>;
                             }
                             if (c.key === "tax") {
-                              return <TableCell key={c.key} className="font-mono text-sm">{o.total_tax || "—"}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-sm text-right">{o.total_tax || "—"}</TableCell>;
                             }
                             if (c.key === "shipping") {
-                              return <TableCell key={c.key} className="font-mono text-sm">{o.shipping_total || "—"}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-sm text-right">{o.shipping_total || "—"}</TableCell>;
                             }
                             if (c.key === "discount") {
-                              return <TableCell key={c.key} className="font-mono text-sm">{o.discount_total || "—"}</TableCell>;
+                              return <TableCell key={c.key} className="font-mono text-sm text-right">{o.discount_total || "—"}</TableCell>;
                             }
                             if (c.key === "currency") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.currency || "—"}</TableCell>;
