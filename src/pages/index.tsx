@@ -165,11 +165,17 @@ export default function Dashboard() {
     <AppLayout title="Dashboard">
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of your WooCommerce sync operations
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Overview of your WooCommerce sync operations
+            </p>
+          </div>
+          <div className="text-right text-xs text-muted-foreground font-mono space-y-0.5">
+            <div>v1.0.0</div>
+            <div>Build 2026.04.18</div>
+          </div>
         </div>
 
         {/* Stats Grid */}
