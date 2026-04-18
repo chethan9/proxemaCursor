@@ -143,14 +143,17 @@ export function SiteSidebar({ siteId }: Props) {
           href={node.href}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+            "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
             active
-              ? "bg-muted text-foreground"
-              : "text-foreground/75 hover:bg-muted/60 hover:text-foreground"
+              ? "bg-foreground/[0.08] text-foreground font-semibold"
+              : "font-medium text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           )}
         >
-          <Icon className="h-4 w-4 shrink-0 text-foreground/70" style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden />
+          {active && (
+            <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />
+          )}
+          <Icon className={cn("h-4 w-4 shrink-0", active ? "text-foreground" : "text-foreground/60")} style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden />
           <span className="truncate">{node.label}</span>
         </Link>
       </li>

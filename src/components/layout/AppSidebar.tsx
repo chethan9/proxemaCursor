@@ -140,6 +140,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         {active && !collapsed && (
           <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
         )}
+        {active && collapsed && (
+          <span aria-hidden="true" className="absolute inset-0 rounded-md ring-2 ring-sidebar-primary/70 pointer-events-none" />
+        )}
         <Icon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden="true" />
         {!collapsed && <span className="truncate">{node.label}</span>}
       </Link>

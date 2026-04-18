@@ -93,7 +93,7 @@ export const ICON_NAMES = Object.keys(ICON_MAP);
 
 export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "dashboard", defaultLabel: "Dashboard", defaultIcon: "LayoutDashboard", href: "/", defaultGroup: "Overview", defaultOrder: 0 },
-  { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW },
+  { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW, superAdminOnly: true },
   { id: "sites", defaultLabel: "Sites", defaultIcon: "Store", href: "/sites", defaultGroup: "Stores", defaultOrder: 0, permission: PERMISSIONS.SITES_VIEW },
   { id: "sync-runs", defaultLabel: "Sync Runs", defaultIcon: "RefreshCw", href: "/sync-runs", defaultGroup: "Operations", defaultOrder: 0, permission: PERMISSIONS.SYNC_VIEW },
   { id: "webhooks", defaultLabel: "Webhooks", defaultIcon: "Webhook", href: "/webhooks", defaultGroup: "Operations", defaultOrder: 1, permission: PERMISSIONS.WEBHOOKS_VIEW },
