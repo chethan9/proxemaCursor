@@ -313,20 +313,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   return (
     <div className="space-y-3">
       {embedHeader && (
-        <div className="flex items-center gap-4 flex-wrap">
-          <Link href="/sites">
-            <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4" /></Button>
-          </Link>
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold truncate leading-tight">{storeName || "—"}</h1>
-            <p className="text-xs text-muted-foreground truncate">{storeUrl || ""}</p>
-          </div>
-          <div className="flex-1 flex justify-center">
-            <div className="relative w-full max-w-[480px]">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex-1 min-w-0 max-w-[480px]">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
             </div>
           </div>
+          <div className="flex-1" />
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -419,7 +413,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 text-xs"
+                  className="h-9 text-xs ml-auto"
                   onClick={() => {
                     setStatusFilter("all");
                     setPaymentFilter("all");
@@ -427,7 +421,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     setTotalMax("");
                   }}
                 >
-                  Clear
+                  Clear filters
                 </Button>
               )}
 
