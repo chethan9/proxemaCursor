@@ -137,15 +137,6 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
     }).catch(() => { prefsLoaded.current = true; });
   }, []);
 
-  useEffect(() => {
-    if (!prefsLoaded.current) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      savePreferences("orders", { columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort }).catch(() => {});
-    }, 800);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort]);
-
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     id: false,
     order_number: true,
@@ -308,6 +299,15 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
   }, [orders, visibleColList, storeId]);
 
   const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax;
+
+  useEffect(() => {
+    if (!prefsLoaded.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      savePreferences("orders", { columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort }).catch(() => {});
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort]);
 
   return (
     <div className="space-y-3">
