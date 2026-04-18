@@ -620,7 +620,7 @@ export default function SiteWorkspacePage() {
       const response = await fetch(`/api/stores/${store.id}/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aspects: [aspect] }),
+        body: JSON.stringify({ aspect }),
       });
 
       if (!response.ok) {
@@ -629,10 +629,11 @@ export default function SiteWorkspacePage() {
       }
 
       const result = await response.json();
+      const aspectResult = result.results?.[aspect];
       setSyncProgress({
         current: 1,
         total: 1,
-        aspect: `Done — ${result.totals?.processed?.toLocaleString() || 0} ${aspect} synced`,
+        aspect: `Done — ${aspectResult?.processed?.toLocaleString() || 0} ${aspect} synced`,
       });
       await loadData();
     } catch (error) {
