@@ -260,161 +260,163 @@ export default function ExploreStorePage() {
     <AuthGuard>
       <AppLayout title={store.name}>
         <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
-          {/* Header */}
-          <div className="flex items-center gap-3">
+          {/* Header with tabs inline */}
+          <div className="flex items-center gap-4 flex-wrap">
             <Link href="/explore">
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-semibold truncate">{store.name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold truncate leading-tight">{store.name}</h1>
               <p className="text-xs text-muted-foreground truncate">{store.url}</p>
             </div>
+            <Tabs defaultValue="products" className="ml-auto">
+              <TabsList>
+                <TabsTrigger value="products">Products</TabsTrigger>
+                <TabsTrigger value="orders">Orders</TabsTrigger>
+                <TabsTrigger value="tags">Tags</TabsTrigger>
+                <TabsTrigger value="categories">Categories</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           <Tabs defaultValue="products" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-              <TabsTrigger value="tags">Tags</TabsTrigger>
-              <TabsTrigger value="categories">Categories</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="products" className="space-y-4">
-              {/* Toolbar */}
+            <TabsContent value="products" className="space-y-3 mt-0">
+              {/* Unified toolbar: search + status filter + actions */}
               <Card>
-                <CardContent className="p-3">
+                <CardContent className="p-3 space-y-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative flex-1 min-w-[240px]">
+                    <div className="relative w-[280px] max-w-full">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search products by name or SKU..."
+                        placeholder="Search name or SKU..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-9 h-9"
                       />
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 gap-2">
-                          <ArrowUpDown className="h-3.5 w-3.5" />
-                          Sort: {sort.label}
+                    <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
+                      {["all", "publish", "draft", "pending", "private"].map((s) => (
+                        <Button
+                          key={s}
+                          variant={statusFilter === s ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-7 text-xs capitalize px-2.5"
+                          onClick={() => setStatusFilter(s)}
+                        >
+                          {s === "all" ? "All" : s}
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {SORT_OPTIONS.map((opt, i) => (
-                          <DropdownMenuItem
-                            key={i}
-                            onClick={() => setSort(opt)}
-                            className={sort === opt ? "bg-accent" : ""}
-                          >
-                            {opt.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 gap-2">
-                          <Columns3 className="h-3.5 w-3.5" />
-                          Columns ({Object.values(visibleCols).filter(Boolean).length})
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-[720px] p-0" sideOffset={6}>
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                          <div>
-                            <div className="text-sm font-medium">Visible columns</div>
-                            <div className="text-[11px] text-muted-foreground">Toggle columns to show in the table</div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                const all: Record<string, boolean> = {};
-                                COLUMNS.forEach((c) => { all[c.key] = true; });
-                                setVisibleCols(all as Record<ColumnKey, boolean>);
-                              }}
-                            >
-                              Select all
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                const none: Record<string, boolean> = {};
-                                COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
-                                setVisibleCols(none as Record<ColumnKey, boolean>);
-                              }}
-                            >
-                              Reset
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="max-h-[460px] overflow-y-auto p-4">
-                          <div className="grid grid-cols-4 gap-x-5 gap-y-4">
-                            {Array.from(new Set(COLUMNS.map((c) => c.group))).map((group) => {
-                              const groupCols = COLUMNS.filter((c) => c.group === group);
-                              return (
-                                <div key={group}>
-                                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
-                                    {group}
-                                  </div>
-                                  <div className="flex flex-col gap-0.5">
-                                    {groupCols.map((c) => (
-                                      <label
-                                        key={c.key}
-                                        className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]"
-                                      >
-                                        <Checkbox
-                                          checked={visibleCols[c.key]}
-                                          onCheckedChange={(v) =>
-                                            setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
-                                          }
-                                        />
-                                        <span className="truncate">{c.label}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-
-                    <Button variant="outline" size="sm" className="h-9 gap-2" onClick={exportCsv} disabled={products.length === 0}>
-                      <Download className="h-3.5 w-3.5" />
-                      Export
-                    </Button>
-
-                    <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-                      <Package className="h-3.5 w-3.5" />
-                      <span>{productCount.toLocaleString()} products</span>
+                      ))}
                     </div>
-                  </div>
 
-                  {/* Status filter pills */}
-                  <div className="flex items-center gap-1.5 mt-3">
-                    {["all", "publish", "draft", "pending", "private"].map((s) => (
-                      <Button
-                        key={s}
-                        variant={statusFilter === s ? "secondary" : "ghost"}
-                        size="sm"
-                        className="h-7 text-xs capitalize"
-                        onClick={() => setStatusFilter(s)}
-                      >
-                        {s === "all" ? "All" : s}
+                    <div className="ml-auto flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-9 gap-2">
+                            <ArrowUpDown className="h-3.5 w-3.5" />
+                            {sort.label}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {SORT_OPTIONS.map((opt, i) => (
+                            <DropdownMenuItem
+                              key={i}
+                              onClick={() => setSort(opt)}
+                              className={sort === opt ? "bg-accent" : ""}
+                            >
+                              {opt.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-9 gap-2">
+                            <Columns3 className="h-3.5 w-3.5" />
+                            Columns ({Object.values(visibleCols).filter(Boolean).length})
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[720px] p-0" sideOffset={6}>
+                          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                            <div>
+                              <div className="text-sm font-medium">Visible columns</div>
+                              <div className="text-[11px] text-muted-foreground">Toggle columns to show in the table</div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  const all: Record<string, boolean> = {};
+                                  COLUMNS.forEach((c) => { all[c.key] = true; });
+                                  setVisibleCols(all as Record<ColumnKey, boolean>);
+                                }}
+                              >
+                                Select all
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  const none: Record<string, boolean> = {};
+                                  COLUMNS.forEach((c) => { none[c.key] = c.key === "name"; });
+                                  setVisibleCols(none as Record<ColumnKey, boolean>);
+                                }}
+                              >
+                                Reset
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="max-h-[460px] overflow-y-auto p-4">
+                            <div className="grid grid-cols-4 gap-x-5 gap-y-4">
+                              {Array.from(new Set(COLUMNS.map((c) => c.group))).map((group) => {
+                                const groupCols = COLUMNS.filter((c) => c.group === group);
+                                return (
+                                  <div key={group}>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
+                                      {group}
+                                    </div>
+                                    <div className="flex flex-col gap-0.5">
+                                      {groupCols.map((c) => (
+                                        <label
+                                          key={c.key}
+                                          className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]"
+                                        >
+                                          <Checkbox
+                                            checked={visibleCols[c.key]}
+                                            onCheckedChange={(v) =>
+                                              setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                            }
+                                          />
+                                          <span className="truncate">{c.label}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+
+                      <Button variant="outline" size="sm" className="h-9 gap-2" onClick={exportCsv} disabled={products.length === 0}>
+                        <Download className="h-3.5 w-3.5" />
+                        Export
                       </Button>
-                    ))}
+
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
+                        <Package className="h-3.5 w-3.5" />
+                        <span className="font-medium">{productCount.toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
