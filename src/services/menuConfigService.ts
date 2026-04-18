@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export type MenuNodeType = "item" | "group";
 
@@ -21,13 +22,18 @@ export async function getMenuConfig(role: string): Promise<MenuNode[]> {
     .eq("role", role)
     .maybeSingle();
   if (error) { console.error("getMenuConfig", error); return []; }
-  return (data?.config as unknown as MenuNode[] | null) || [];
+  const cfg = data?.config as unknown;
+  return Array.isArray(cfg) ? (cfg as MenuNode[]) : [];
 }
 
 export async function saveMenuConfig(role: string, config: MenuNode[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  const payload = { role, config: config as unknown as never, updated_at: new Date().toISOString(), updated_by: user?.id ?? null };
-  const { error } = await supabase.from("menu_configs").upsert(payload, { onConflict: "role" });
+  const { error } = await supabase.from("menu_configs").upsert({
+    role,
+    config: config as unknown as Json,
+    updated_at: new Date().toISOString(),
+    updated_by: user?.id ?? null,
+  }, { onConflict: "role" });
   if (error) throw error;
 }
 
