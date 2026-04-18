@@ -1034,12 +1034,13 @@ export default function SiteWorkspacePage() {
                       <TableHead>Records</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Started</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {syncRuns.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           No sync runs yet. Click &quot;Sync All Data&quot; to start.
                         </TableCell>
                       </TableRow>
@@ -1084,6 +1085,11 @@ export default function SiteWorkspacePage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatDate(run.started_at)}
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedSyncRun(run)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
