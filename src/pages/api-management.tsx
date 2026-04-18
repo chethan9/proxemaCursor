@@ -13,188 +13,90 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Key, Plus, Trash2, Shield, Activity, BookOpen, Copy, EyeOff, Terminal, Globe, Lock, Zap } from "lucide-react";
+import { Key, Plus, Trash2, Shield, Activity, BookOpen, Copy, EyeOff, Terminal, Globe, Lock, Zap, Clock, AlertTriangle } from "lucide-react";
 import { getApiKeys, createApiKey, revokeApiKey, deleteApiKey, getApiCallLogs, getApiKeyStats, type ApiKey, type ApiCallLog } from "@/services/apiKeyService";
 import { getClients, type ClientWithStats } from "@/services/clientService";
 import { useToast } from "@/hooks/use-toast";
 
-const AVAILABLE_SCOPES = [
+const SCOPES = [
   { id: "read", label: "Read", desc: "Read products, orders, customers" },
-  { id: "write", label: "Write", desc: "Create/update records" },
+  { id: "write", label: "Write", desc: "Create and update records" },
   { id: "delete", label: "Delete", desc: "Delete records" },
   { id: "webhooks", label: "Webhooks", desc: "Manage webhooks" },
   { id: "sync", label: "Sync", desc: "Trigger sync operations" },
 ];
 
-interface EndpointParam {
-  name: string;
-  type: string;
-  required: boolean;
-  desc: string;
-  example?: string;
-}
+interface EPParam { name: string; type: string; required: boolean; desc: string; example?: string; }
+interface EPDef { method: string; path: string; summary: string; desc: string; scope: string; params: EPParam[]; response: string; }
 
-interface EndpointDef {
-  method: "GET" | "POST" | "PATCH" | "DELETE";
-  path: string;
-  summary: string;
-  description: string;
-  scope: string;
-  params: EndpointParam[];
-  responseExample: string;
-}
-
-const API_ENDPOINTS: EndpointDef[] = [
-  {
-    method: "GET",
-    path: "/api/v1/stores",
-    summary: "List stores",
-    description: "Returns all WooCommerce stores belonging to the authenticated client. Use this to discover store IDs for subsequent API calls.",
-    scope: "read",
-    params: [],
-    responseExample: JSON.stringify({
-      data: [
-        { id: "uuid-1", name: "My Store", url: "https://store.example.com", status: "connected", last_sync_at: "2026-04-17T12:00:00Z" },
-      ],
-      total: 1,
-    }, null, 2),
-  },
-  {
-    method: "GET",
-    path: "/api/v1/products",
-    summary: "List products",
-    description: "Returns paginated products for a specific store. Supports search by name and filtering by status. Includes full product data with pricing, stock, and categories.",
-    scope: "read",
-    params: [
-      { name: "store_id", type: "uuid", required: true, desc: "Store UUID from /stores endpoint", example: "6aa04e65-..." },
-      { name: "page", type: "integer", required: false, desc: "Page number (default: 1)", example: "1" },
-      { name: "per_page", type: "integer", required: false, desc: "Items per page (default: 20, max: 100)", example: "20" },
-      { name: "search", type: "string", required: false, desc: "Search by product name", example: "T-Shirt" },
-      { name: "status", type: "string", required: false, desc: "Filter by status: publish, draft, pending", example: "publish" },
-    ],
-    responseExample: JSON.stringify({
-      data: [
-        { id: "uuid", woo_id: 123, name: "Premium T-Shirt", sku: "TSH-001", price: "29.99", regular_price: "39.99", status: "publish", stock_quantity: 45, categories: ["Apparel"] },
-      ],
-      total: 156,
-      page: 1,
-      per_page: 20,
-    }, null, 2),
-  },
-  {
-    method: "GET",
-    path: "/api/v1/orders",
-    summary: "List orders",
-    description: "Returns paginated orders for a specific store. Supports filtering by status (pending, processing, completed, cancelled, refunded) and search by order number.",
-    scope: "read",
+const ENDPOINTS: EPDef[] = [
+  { method: "GET", path: "/api/v1/stores", summary: "List stores", desc: "Returns all WooCommerce stores belonging to the authenticated client.", scope: "read", params: [],
+    response: JSON.stringify({ data: [{ id: "uuid-1", name: "My Store", url: "https://store.example.com", status: "connected", last_sync_at: "2026-04-17T12:00:00Z" }], total: 1 }, null, 2) },
+  { method: "GET", path: "/api/v1/products", summary: "List products", desc: "Paginated products for a store. Supports search and status filtering.", scope: "read",
     params: [
       { name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." },
       { name: "page", type: "integer", required: false, desc: "Page number (default: 1)", example: "1" },
-      { name: "per_page", type: "integer", required: false, desc: "Items per page (default: 20, max: 100)", example: "20" },
-      { name: "status", type: "string", required: false, desc: "Filter by order status", example: "processing" },
-      { name: "search", type: "string", required: false, desc: "Search by order number or customer email", example: "1042" },
+      { name: "per_page", type: "integer", required: false, desc: "Items per page, max 100", example: "20" },
+      { name: "search", type: "string", required: false, desc: "Search product name", example: "T-Shirt" },
+      { name: "status", type: "string", required: false, desc: "publish, draft, pending", example: "publish" },
     ],
-    responseExample: JSON.stringify({
-      data: [
-        { id: "uuid", woo_id: 1042, status: "processing", total: "89.97", currency: "USD", billing: { first_name: "John", last_name: "Doe", email: "john@example.com" }, line_items_count: 3, date_created: "2026-04-17T10:30:00Z" },
-      ],
-      total: 2110,
-      page: 1,
-      per_page: 20,
-    }, null, 2),
-  },
-  {
-    method: "GET",
-    path: "/api/v1/customers",
-    summary: "List customers",
-    description: "Returns paginated customers for a specific store. Supports search by name or email. Includes order count and total spent.",
-    scope: "read",
+    response: JSON.stringify({ data: [{ id: "uuid", woo_id: 123, name: "Premium T-Shirt", sku: "TSH-001", price: "29.99", status: "publish", stock_quantity: 45 }], total: 156, page: 1, per_page: 20 }, null, 2) },
+  { method: "GET", path: "/api/v1/orders", summary: "List orders", desc: "Paginated orders with status filtering and search.", scope: "read",
     params: [
       { name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." },
-      { name: "page", type: "integer", required: false, desc: "Page number (default: 1)", example: "1" },
-      { name: "per_page", type: "integer", required: false, desc: "Items per page (default: 20, max: 100)", example: "20" },
-      { name: "search", type: "string", required: false, desc: "Search by name or email", example: "john@example.com" },
+      { name: "page", type: "integer", required: false, desc: "Page number", example: "1" },
+      { name: "per_page", type: "integer", required: false, desc: "Items per page, max 100", example: "20" },
+      { name: "status", type: "string", required: false, desc: "Order status filter", example: "processing" },
+      { name: "search", type: "string", required: false, desc: "Order number or email", example: "1042" },
     ],
-    responseExample: JSON.stringify({
-      data: [
-        { id: "uuid", woo_id: 5, email: "john@example.com", first_name: "John", last_name: "Doe", orders_count: 12, total_spent: "1249.50", date_created: "2025-01-15T08:00:00Z" },
-      ],
-      total: 2981,
-      page: 1,
-      per_page: 20,
-    }, null, 2),
-  },
-  {
-    method: "GET",
-    path: "/api/v1/categories",
-    summary: "List categories",
-    description: "Returns all product categories for a specific store. Flat list with parent reference for building category trees.",
-    scope: "read",
+    response: JSON.stringify({ data: [{ id: "uuid", woo_id: 1042, status: "processing", total: "89.97", currency: "USD", line_items_count: 3, date_created: "2026-04-17T10:30:00Z" }], total: 2110, page: 1, per_page: 20 }, null, 2) },
+  { method: "GET", path: "/api/v1/customers", summary: "List customers", desc: "Paginated customers with search by name or email.", scope: "read",
     params: [
       { name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." },
+      { name: "page", type: "integer", required: false, desc: "Page number", example: "1" },
+      { name: "per_page", type: "integer", required: false, desc: "Items per page, max 100", example: "20" },
+      { name: "search", type: "string", required: false, desc: "Name or email", example: "john@example.com" },
     ],
-    responseExample: JSON.stringify({
-      data: [
-        { id: "uuid", woo_id: 15, name: "Apparel", slug: "apparel", parent_id: null, count: 24 },
-        { id: "uuid", woo_id: 16, name: "T-Shirts", slug: "t-shirts", parent_id: 15, count: 8 },
-      ],
-      total: 12,
-    }, null, 2),
-  },
+    response: JSON.stringify({ data: [{ id: "uuid", woo_id: 5, email: "john@example.com", first_name: "John", last_name: "Doe", orders_count: 12, total_spent: "1249.50" }], total: 2981, page: 1, per_page: 20 }, null, 2) },
+  { method: "GET", path: "/api/v1/categories", summary: "List categories", desc: "All product categories for a store with parent references.", scope: "read",
+    params: [{ name: "store_id", type: "uuid", required: true, desc: "Store UUID", example: "6aa04e65-..." }],
+    response: JSON.stringify({ data: [{ id: "uuid", woo_id: 15, name: "Apparel", slug: "apparel", parent_id: null, count: 24 }], total: 12 }, null, 2) },
 ];
 
-const METHOD_COLORS: Record<string, string> = {
-  GET: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
-  POST: "bg-blue-500/10 text-blue-700 border-blue-500/30",
-  PATCH: "bg-amber-500/10 text-amber-700 border-amber-500/30",
-  DELETE: "bg-rose-500/10 text-rose-700 border-rose-500/30",
+const METHOD_STYLE: Record<string, string> = {
+  GET: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  POST: "bg-blue-100 text-blue-800 border-blue-300",
+  PATCH: "bg-amber-100 text-amber-800 border-amber-300",
+  DELETE: "bg-rose-100 text-rose-800 border-rose-300",
 };
 
-function formatDate(d: string | null) {
-  if (!d) return "Never";
-  return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+function fmtDate(d: string | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
+function CopyBtn({ text, label }: { text: string; label?: string }) {
   const { toast } = useToast();
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="h-7 px-2 text-xs gap-1.5 font-mono"
-      onClick={() => {
-        navigator.clipboard.writeText(text);
-        toast({ title: "Copied to clipboard" });
-      }}
-    >
-      <Copy className="h-3 w-3" />
-      {label || "Copy"}
+    <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+      onClick={() => { navigator.clipboard.writeText(text); toast({ title: "Copied" }); }}>
+      <Copy className="h-3 w-3" />{label || "Copy"}
     </Button>
   );
 }
 
-function CodeBlock({ children, actions }: { children: string; actions?: React.ReactNode }) {
+function CodeBlock({ children }: { children: string }) {
   return (
-    <div className="relative group">
-      {actions && (
-        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          {actions}
-        </div>
-      )}
-      <pre className="bg-slate-950 text-slate-200 p-4 rounded-lg font-mono text-[13px] leading-relaxed overflow-x-auto whitespace-pre-wrap border border-slate-800">
-        {children}
-      </pre>
-    </div>
+    <pre className="rounded-lg border bg-slate-950 p-4 font-mono text-[13px] leading-relaxed text-slate-200 overflow-x-auto">
+      {children}
+    </pre>
   );
 }
 
-function buildCurl(baseUrl: string, ep: EndpointDef): string {
-  let url = baseUrl + ep.path;
-  const qsParams = ep.params.filter(p => p.example);
-  if (qsParams.length > 0) {
-    const qs = qsParams.map(p => p.name + "=" + (p.example || "{value}")).join("&");
-    url += "?" + qs;
-  }
+function buildCurl(base: string, ep: EPDef) {
+  let url = base + ep.path;
+  const qs = ep.params.filter(p => p.example).map(p => p.name + "=" + p.example).join("&");
+  if (qs) url += "?" + qs;
   return "curl -X " + ep.method + " \\\n  -H \"Authorization: Bearer wsk_YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  \"" + url + "\"";
 }
 
@@ -206,80 +108,53 @@ export default function ApiManagementPage() {
   const [logsTotal, setLogsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newKeyRevealed, setNewKeyRevealed] = useState<string | null>(null);
-  const [selectedKeyStats, setSelectedKeyStats] = useState<Record<string, { totalCalls: number; last24h: number; avgResponseTime: number; errorRate: number }>>({});
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [keyStats, setKeyStats] = useState<Record<string, { totalCalls: number; last24h: number; avgResponseTime: number; errorRate: number }>>({});
   const [baseUrl, setBaseUrl] = useState("");
 
-  const [formName, setFormName] = useState("");
-  const [formClient, setFormClient] = useState("");
-  const [formScopes, setFormScopes] = useState<string[]>(["read"]);
-  const [formRateLimit, setFormRateLimit] = useState("1000");
-  const [formOrigins, setFormOrigins] = useState("");
-  const [formExpiry, setFormExpiry] = useState("");
+  const [fName, setFName] = useState("");
+  const [fClient, setFClient] = useState("");
+  const [fScopes, setFScopes] = useState<string[]>(["read"]);
+  const [fRate, setFRate] = useState("1000");
+  const [fOrigins, setFOrigins] = useState("");
+  const [fExpiry, setFExpiry] = useState("");
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setBaseUrl(window.location.origin);
-    }
-  }, []);
+  useEffect(() => { if (typeof window !== "undefined") setBaseUrl(window.location.origin); }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [k, c, l] = await Promise.all([
-      getApiKeys(),
-      getClients(),
-      getApiCallLogs({ limit: 100 }),
-    ]);
+    const [k, c, l] = await Promise.all([getApiKeys(), getClients(), getApiCallLogs({ limit: 100 })]);
     setKeys(k);
     setClients(c);
     setLogs(l.logs);
     setLogsTotal(l.total);
     setLoading(false);
-
     for (const key of k) {
-      getApiKeyStats(key.id).then(stats => {
-        setSelectedKeyStats(prev => ({ ...prev, [key.id]: stats }));
-      });
+      getApiKeyStats(key.id).then(s => setKeyStats(prev => ({ ...prev, [key.id]: s })));
     }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleCreate = async () => {
-    if (!formName || !formClient) return;
+    if (!fName || !fClient) return;
     const result = await createApiKey({
-      clientId: formClient,
-      name: formName,
-      scopes: formScopes,
-      rateLimit: parseInt(formRateLimit) || 1000,
-      allowedOrigins: formOrigins ? formOrigins.split(",").map(s => s.trim()).filter(Boolean) : undefined,
-      expiresAt: formExpiry || null,
+      clientId: fClient, name: fName, scopes: fScopes,
+      rateLimit: parseInt(fRate) || 1000,
+      allowedOrigins: fOrigins ? fOrigins.split(",").map(s => s.trim()).filter(Boolean) : undefined,
+      expiresAt: fExpiry || null,
     });
     if (result) {
-      setNewKeyRevealed(result.plainTextKey);
+      setRevealedKey(result.plainTextKey);
       toast({ title: "API Key Created", description: "Copy the key now — it won't be shown again." });
       setShowCreate(false);
-      setFormName("");
-      setFormClient("");
-      setFormScopes(["read"]);
-      setFormRateLimit("1000");
-      setFormOrigins("");
-      setFormExpiry("");
+      setFName(""); setFClient(""); setFScopes(["read"]); setFRate("1000"); setFOrigins(""); setFExpiry("");
       loadData();
     }
   };
 
-  const handleRevoke = async (id: string) => {
-    await revokeApiKey(id);
-    toast({ title: "Key Revoked" });
-    loadData();
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteApiKey(id);
-    toast({ title: "Key Deleted" });
-    loadData();
-  };
+  const activeKeys = keys.filter(k => k.is_active).length;
+  const revokedKeys = keys.filter(k => !k.is_active).length;
 
   return (
     <AppLayout>
@@ -287,223 +162,225 @@ export default function ApiManagementPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">API Management</h1>
-            <p className="text-muted-foreground">Manage API keys, monitor usage, and explore the REST API</p>
+            <p className="text-sm text-muted-foreground mt-1">Manage API keys, monitor usage, and explore the REST API</p>
           </div>
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />Create API Key</Button>
+              <Button size="sm" className="gap-2"><Plus className="h-4 w-4" />Create API Key</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Create API Key</DialogTitle>
-                <DialogDescription>Generate a new bearer token for downstream app access</DialogDescription>
+                <DialogDescription>Generate a bearer token for downstream app access</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Key Name</Label>
-                  <Input placeholder="e.g. Flutter App Production" value={formName} onChange={e => setFormName(e.target.value)} />
+              <div className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Key Name</Label>
+                  <Input placeholder="e.g. Flutter App Production" value={fName} onChange={e => setFName(e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label>Client</Label>
-                  <Select value={formClient} onValueChange={setFormClient}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Client</Label>
+                  <Select value={fClient} onValueChange={setFClient}>
                     <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                     <SelectContent>
-                      {clients.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
+                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Scopes</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {AVAILABLE_SCOPES.map(scope => (
-                      <label key={scope.id} className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
-                        <Checkbox
-                          checked={formScopes.includes(scope.id)}
-                          onCheckedChange={(checked) => {
-                            setFormScopes(prev => checked ? [...prev, scope.id] : prev.filter(s => s !== scope.id));
-                          }}
-                        />
-                        <div>
-                          <div className="text-sm font-medium">{scope.label}</div>
-                          <div className="text-xs text-muted-foreground">{scope.desc}</div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Scopes</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {SCOPES.map(s => (
+                      <label key={s.id} className="flex items-start gap-2.5 rounded-md border p-2.5 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <Checkbox className="mt-0.5" checked={fScopes.includes(s.id)}
+                          onCheckedChange={v => setFScopes(prev => v ? [...prev, s.id] : prev.filter(x => x !== s.id))} />
+                        <div className="leading-tight">
+                          <div className="text-sm font-medium">{s.label}</div>
+                          <div className="text-[11px] text-muted-foreground">{s.desc}</div>
                         </div>
                       </label>
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Rate Limit (req/hour)</Label>
-                    <Input type="number" value={formRateLimit} onChange={e => setFormRateLimit(e.target.value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Rate Limit (req/hr)</Label>
+                    <Input type="number" value={fRate} onChange={e => setFRate(e.target.value)} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Expires</Label>
-                    <Input type="date" value={formExpiry} onChange={e => setFormExpiry(e.target.value)} />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Expires</Label>
+                    <Input type="date" value={fExpiry} onChange={e => setFExpiry(e.target.value)} />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Allowed Origins (comma-separated)</Label>
-                  <Input placeholder="e.g. app.example.com, *.example.com" value={formOrigins} onChange={e => setFormOrigins(e.target.value)} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Allowed Origins</Label>
+                  <Input placeholder="app.example.com, *.example.com" value={fOrigins} onChange={e => setFOrigins(e.target.value)} />
+                  <p className="text-[11px] text-muted-foreground">Comma-separated. Leave empty to allow all origins.</p>
                 </div>
-                <Button onClick={handleCreate} className="w-full" disabled={!formName || !formClient}>Create Key</Button>
+                <Button onClick={handleCreate} className="w-full" disabled={!fName || !fClient}>Create Key</Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        {newKeyRevealed && (
-          <Card className="border-amber-400 bg-amber-50">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-                <div className="flex-1 space-y-3">
-                  <p className="font-semibold text-amber-900">Your new API key — copy it now, it won't be shown again</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-white p-3 rounded-lg border border-amber-200 font-mono text-sm break-all select-all">{newKeyRevealed}</code>
-                    <CopyButton text={newKeyRevealed} label="Copy Key" />
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-amber-700" onClick={() => setNewKeyRevealed(null)}>Dismiss</Button>
+        {revealedKey && (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="flex items-start gap-3 pt-5 pb-4">
+              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-2">
+                <p className="text-sm font-semibold text-amber-900">Copy your API key now — it will not be shown again</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 min-w-0 truncate rounded-md border border-amber-200 bg-white px-3 py-2 font-mono text-sm select-all">{revealedKey}</code>
+                  <CopyBtn text={revealedKey} label="Copy" />
                 </div>
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-amber-700" onClick={() => setRevealedKey(null)}>Dismiss</Button>
               </div>
             </CardContent>
           </Card>
         )}
 
         <Tabs defaultValue="keys">
-          <TabsList className="bg-muted/60">
-            <TabsTrigger value="keys" className="gap-2"><Key className="h-4 w-4" />API Keys</TabsTrigger>
-            <TabsTrigger value="logs" className="gap-2"><Activity className="h-4 w-4" />Call Logs</TabsTrigger>
-            <TabsTrigger value="docs" className="gap-2"><BookOpen className="h-4 w-4" />API Reference</TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="keys" className="gap-1.5"><Key className="h-3.5 w-3.5" />API Keys</TabsTrigger>
+            <TabsTrigger value="logs" className="gap-1.5"><Activity className="h-3.5 w-3.5" />Call Logs</TabsTrigger>
+            <TabsTrigger value="docs" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" />API Reference</TabsTrigger>
           </TabsList>
 
-          {/* === KEYS TAB === */}
-          <TabsContent value="keys" className="space-y-4 mt-4">
-            <div className="grid grid-cols-4 gap-4">
-              <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{keys.length}</div><div className="text-sm text-muted-foreground">Total Keys</div></CardContent></Card>
-              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-600">{keys.filter(k => k.is_active).length}</div><div className="text-sm text-muted-foreground">Active</div></CardContent></Card>
-              <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{logsTotal.toLocaleString()}</div><div className="text-sm text-muted-foreground">Total API Calls</div></CardContent></Card>
-              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-rose-600">{keys.filter(k => !k.is_active).length}</div><div className="text-sm text-muted-foreground">Revoked</div></CardContent></Card>
+          <TabsContent value="keys" className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: "Total Keys", value: keys.length, icon: Key },
+                { label: "Active", value: activeKeys, icon: Shield, color: "text-emerald-600" },
+                { label: "Total API Calls", value: logsTotal.toLocaleString(), icon: Activity, color: "text-primary" },
+                { label: "Revoked", value: revokedKeys, icon: EyeOff, color: "text-rose-500" },
+              ].map(s => (
+                <Card key={s.label}>
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                      <s.icon className={"h-4 w-4 " + (s.color || "text-muted-foreground")} />
+                    </div>
+                    <div>
+                      <div className={"text-xl font-bold leading-none " + (s.color || "")}>{s.value}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
             <Card>
-              <CardHeader><CardTitle className="text-lg">API Keys</CardTitle></CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {loading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                  <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
                 ) : keys.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Key className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                    <p className="font-medium">No API keys yet</p>
-                    <p className="text-sm mt-1">Create one to start using the WooSync REST API</p>
+                  <div className="py-16 text-center">
+                    <Key className="mx-auto h-10 w-10 text-muted-foreground/30" />
+                    <p className="mt-3 text-sm font-medium">No API keys yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Create one to start using the WooSync REST API</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Key</TableHead>
-                        <TableHead>Scopes</TableHead>
-                        <TableHead>Rate Limit</TableHead>
-                        <TableHead>Usage (24h)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Last Used</TableHead>
-                        <TableHead className="w-[80px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {keys.map(key => {
-                        const stats = selectedKeyStats[key.id];
-                        return (
-                          <TableRow key={key.id}>
-                            <TableCell className="font-medium">{key.name}</TableCell>
-                            <TableCell className="text-muted-foreground">{key.clients?.name || "—"}</TableCell>
-                            <TableCell>
-                              <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{key.key_prefix}...</code>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1 flex-wrap">
-                                {key.scopes?.map(s => (
-                                  <Badge key={s} variant="secondary" className="text-[11px] font-mono">{s}</Badge>
-                                ))}
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{key.rate_limit?.toLocaleString()}/hr</TableCell>
-                            <TableCell className="font-mono text-sm">{stats ? stats.last24h.toLocaleString() : "—"}</TableCell>
-                            <TableCell>
-                              <StatusBadge variant={key.is_active ? "success" : "error"}>
-                                {key.is_active ? "Active" : "Revoked"}
-                              </StatusBadge>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{formatDate(key.last_used_at)}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {key.is_active && (
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRevoke(key.id)} title="Revoke">
-                                    <EyeOff className="h-4 w-4" />
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="pl-4">Name</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Key Prefix</TableHead>
+                          <TableHead>Scopes</TableHead>
+                          <TableHead className="text-right">Rate Limit</TableHead>
+                          <TableHead className="text-right">24h Calls</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Last Used</TableHead>
+                          <TableHead className="w-20 pr-4"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {keys.map(k => {
+                          const st = keyStats[k.id];
+                          return (
+                            <TableRow key={k.id}>
+                              <TableCell className="pl-4 font-medium">{k.name}</TableCell>
+                              <TableCell className="text-muted-foreground text-sm">{k.clients?.name || "—"}</TableCell>
+                              <TableCell><code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{k.key_prefix}...</code></TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {k.scopes?.map(s => <Badge key={s} variant="secondary" className="text-[10px] font-mono px-1.5">{s}</Badge>)}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">{k.rate_limit?.toLocaleString()}/hr</TableCell>
+                              <TableCell className="text-right font-mono text-sm">{st ? st.last24h.toLocaleString() : "—"}</TableCell>
+                              <TableCell>
+                                <StatusBadge variant={k.is_active ? "success" : "error"}>{k.is_active ? "Active" : "Revoked"}</StatusBadge>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{fmtDate(k.last_used_at)}</TableCell>
+                              <TableCell className="pr-4">
+                                <div className="flex justify-end gap-0.5">
+                                  {k.is_active && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { revokeApiKey(k.id).then(() => { toast({ title: "Key Revoked" }); loadData(); }); }} title="Revoke">
+                                      <EyeOff className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => { deleteApiKey(k.id).then(() => { toast({ title: "Key Deleted" }); loadData(); }); }} title="Delete">
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
-                                )}
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(key.id)} title="Delete">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* === LOGS TAB === */}
           <TabsContent value="logs" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">API Call Logs</CardTitle>
-                <CardDescription>Recent API calls across all keys ({logsTotal.toLocaleString()} total)</CardDescription>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Recent API Calls</CardTitle>
+                    <CardDescription>{logsTotal.toLocaleString()} total calls across all keys</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {logs.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Activity className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                    <p className="font-medium">No API calls logged yet</p>
-                    <p className="text-sm mt-1">Calls made with your API keys will appear here</p>
+                  <div className="py-16 text-center">
+                    <Activity className="mx-auto h-10 w-10 text-muted-foreground/30" />
+                    <p className="mt-3 text-sm font-medium">No API calls logged yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Calls made with your API keys will appear here</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[500px]">
+                  <ScrollArea className="h-[480px]">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Time</TableHead>
+                          <TableHead className="pl-4">Time</TableHead>
                           <TableHead>Method</TableHead>
                           <TableHead>Path</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Duration</TableHead>
-                          <TableHead>IP</TableHead>
+                          <TableHead className="text-right">Duration</TableHead>
+                          <TableHead className="pr-4">IP</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {logs.map(log => (
-                          <TableRow key={log.id}>
-                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.created_at)}</TableCell>
+                        {logs.map(l => (
+                          <TableRow key={l.id}>
+                            <TableCell className="pl-4 text-xs text-muted-foreground whitespace-nowrap">{fmtDate(l.created_at)}</TableCell>
                             <TableCell>
-                              <span className={"px-2 py-0.5 rounded text-[11px] font-bold border " + (METHOD_COLORS[log.method] || "bg-muted text-foreground")}>
-                                {log.method}
+                              <span className={"inline-block rounded border px-2 py-0.5 text-[11px] font-bold " + (METHOD_STYLE[l.method || "GET"] || "bg-muted")}>
+                                {l.method}
                               </span>
                             </TableCell>
-                            <TableCell className="font-mono text-xs max-w-[300px] truncate">{log.path}</TableCell>
+                            <TableCell className="max-w-[280px] truncate font-mono text-xs">{l.path}</TableCell>
                             <TableCell>
-                              <StatusBadge variant={(log.status_code || 0) < 400 ? "success" : "error"}>
-                                {log.status_code}
-                              </StatusBadge>
+                              <StatusBadge variant={(l.status_code || 0) < 400 ? "success" : "error"}>{l.status_code}</StatusBadge>
                             </TableCell>
-                            <TableCell className="text-xs font-mono">{log.response_time_ms}ms</TableCell>
-                            <TableCell className="text-xs text-muted-foreground font-mono">{log.ip_address}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{l.response_time_ms}ms</TableCell>
+                            <TableCell className="pr-4 font-mono text-xs text-muted-foreground">{l.ip_address}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -514,113 +391,99 @@ export default function ApiManagementPage() {
             </Card>
           </TabsContent>
 
-          {/* === DOCS TAB === */}
-          <TabsContent value="docs" className="mt-4 space-y-6">
+          <TabsContent value="docs" className="mt-4 space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-primary" />
-                  Getting Started
-                </CardTitle>
-                <CardDescription>Quick start guide for integrating with the WooSync REST API v1</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base"><Zap className="h-4 w-4 text-primary" />Getting Started</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-3 gap-4">
+              <CardContent className="space-y-5">
+                <div className="grid gap-3 sm:grid-cols-3">
                   {[
-                    { step: "1", title: "Create an API Key", desc: "Go to the API Keys tab and create a key scoped to your client." },
-                    { step: "2", title: "Add Authorization Header", desc: "Include your API key as a Bearer token in every request." },
-                    { step: "3", title: "Start Querying Data", desc: "Fetch stores, products, orders, customers from your synced data." },
+                    { n: "1", t: "Create an API Key", d: "Go to the API Keys tab and generate a key scoped to your client." },
+                    { n: "2", t: "Add Auth Header", d: "Include your key as a Bearer token in every request." },
+                    { n: "3", t: "Query Data", d: "Fetch stores, products, orders, and customers." },
                   ].map(s => (
-                    <div key={s.step} className="border rounded-lg p-4 space-y-2 bg-muted/30">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">{s.step}</div>
-                        <span className="font-semibold text-sm">{s.title}</span>
+                    <div key={s.n} className="rounded-lg border bg-muted/30 p-4 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{s.n}</div>
+                        <span className="text-sm font-semibold">{s.t}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground pl-9">{s.desc}</p>
+                      <p className="pl-8 text-xs text-muted-foreground leading-relaxed">{s.d}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" />Base URL</h4>
-                    <CopyButton text={(baseUrl || "https://your-domain.com") + "/api/v1"} />
+                    <h4 className="flex items-center gap-1.5 text-sm font-semibold"><Globe className="h-3.5 w-3.5 text-muted-foreground" />Base URL</h4>
+                    <CopyBtn text={(baseUrl || "https://your-domain.com") + "/api/v1"} />
                   </div>
                   <CodeBlock>{(baseUrl || "https://your-domain.com") + "/api/v1"}</CodeBlock>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold flex items-center gap-2"><Lock className="h-4 w-4 text-muted-foreground" />Authentication</h4>
-                    <CopyButton text="Authorization: Bearer wsk_YOUR_API_KEY" />
+                    <h4 className="flex items-center gap-1.5 text-sm font-semibold"><Lock className="h-3.5 w-3.5 text-muted-foreground" />Authentication</h4>
+                    <CopyBtn text="Authorization: Bearer wsk_YOUR_API_KEY" />
                   </div>
-                  <CodeBlock>{`# Include in every request header:\nAuthorization: Bearer wsk_YOUR_API_KEY`}</CodeBlock>
+                  <CodeBlock>{"# Include in every request header:\nAuthorization: Bearer wsk_YOUR_API_KEY"}</CodeBlock>
                 </div>
 
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" />Rate Limiting</h4>
-                  <p className="text-sm text-muted-foreground">Rate limits are configured per API key (default: 1,000 req/hour). Check response headers:</p>
-                  <CodeBlock>{`X-RateLimit-Limit: 1000\nX-RateLimit-Remaining: 987\nX-RateLimit-Reset: 1713400000`}</CodeBlock>
+                <div className="space-y-2">
+                  <h4 className="flex items-center gap-1.5 text-sm font-semibold"><Clock className="h-3.5 w-3.5 text-muted-foreground" />Rate Limiting</h4>
+                  <p className="text-xs text-muted-foreground">Configured per API key (default: 1,000 req/hour). Check response headers:</p>
+                  <CodeBlock>{"X-RateLimit-Limit: 1000\nX-RateLimit-Remaining: 987\nX-RateLimit-Reset: 1713400000"}</CodeBlock>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Terminal className="h-5 w-5 text-primary" />
-                  Endpoints
-                </CardTitle>
-                <CardDescription>Complete reference for all WooSync v1 REST API endpoints</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base"><Terminal className="h-4 w-4 text-primary" />Endpoints</CardTitle>
+                <CardDescription>Complete REST API v1 reference</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <Accordion type="multiple" className="w-full">
-                  {API_ENDPOINTS.map((ep, i) => {
-                    const curlCmd = buildCurl(baseUrl || "https://your-domain.com", ep);
+                  {ENDPOINTS.map((ep, i) => {
+                    const curl = buildCurl(baseUrl || "https://your-domain.com", ep);
                     return (
-                      <AccordionItem key={i} value={"ep-" + i} className="border rounded-lg mb-3 px-1 last:mb-0">
-                        <AccordionTrigger className="hover:no-underline py-3 px-3">
-                          <div className="flex items-center gap-3 text-left w-full">
-                            <span className={"px-2.5 py-1 rounded text-xs font-bold border shrink-0 " + METHOD_COLORS[ep.method]}>
-                              {ep.method}
-                            </span>
-                            <code className="font-mono text-sm font-medium">{ep.path}</code>
-                            <span className="text-sm text-muted-foreground hidden md:inline ml-1">— {ep.summary}</span>
-                            <Badge variant="outline" className="text-[11px] ml-auto mr-2 font-mono shrink-0">{ep.scope}</Badge>
+                      <AccordionItem key={i} value={"ep-" + i} className="border-b last:border-b-0">
+                        <AccordionTrigger className="px-5 py-3 hover:no-underline hover:bg-muted/30">
+                          <div className="flex items-center gap-3 text-left">
+                            <span className={"shrink-0 rounded border px-2 py-0.5 text-[11px] font-bold " + METHOD_STYLE[ep.method]}>{ep.method}</span>
+                            <code className="font-mono text-sm">{ep.path}</code>
+                            <span className="hidden text-xs text-muted-foreground sm:inline">— {ep.summary}</span>
+                            <Badge variant="outline" className="ml-auto mr-2 shrink-0 font-mono text-[10px]">{ep.scope}</Badge>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent className="px-3 pb-4">
-                          <div className="space-y-5 pt-1">
-                            <p className="text-sm text-muted-foreground leading-relaxed">{ep.description}</p>
+                        <AccordionContent className="px-5 pb-5">
+                          <div className="space-y-4 pt-1">
+                            <p className="text-sm text-muted-foreground">{ep.desc}</p>
 
                             {ep.params.length > 0 && (
-                              <div className="space-y-2">
-                                <h5 className="text-sm font-semibold">Parameters</h5>
-                                <div className="border rounded-lg overflow-hidden">
+                              <div className="space-y-1.5">
+                                <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Parameters</h5>
+                                <div className="overflow-hidden rounded-lg border">
                                   <Table>
                                     <TableHeader>
-                                      <TableRow className="bg-muted/30">
-                                        <TableHead className="w-[140px] text-xs">Name</TableHead>
-                                        <TableHead className="w-[80px] text-xs">Type</TableHead>
-                                        <TableHead className="w-[80px] text-xs">Required</TableHead>
+                                      <TableRow className="bg-muted/40">
+                                        <TableHead className="text-xs w-[130px]">Name</TableHead>
+                                        <TableHead className="text-xs w-[70px]">Type</TableHead>
+                                        <TableHead className="text-xs w-[70px]">Required</TableHead>
                                         <TableHead className="text-xs">Description</TableHead>
-                                        <TableHead className="w-[120px] text-xs">Example</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {ep.params.map(p => (
                                         <TableRow key={p.name}>
                                           <TableCell><code className="text-xs font-semibold text-primary">{p.name}</code></TableCell>
-                                          <TableCell><Badge variant="outline" className="text-[11px] font-mono">{p.type}</Badge></TableCell>
+                                          <TableCell><code className="text-[11px] text-muted-foreground">{p.type}</code></TableCell>
                                           <TableCell>
-                                            {p.required ? (
-                                              <Badge className="text-[11px] bg-rose-500/10 text-rose-700 border-rose-500/30 hover:bg-rose-500/10">required</Badge>
-                                            ) : (
-                                              <span className="text-xs text-muted-foreground">optional</span>
-                                            )}
+                                            {p.required
+                                              ? <Badge className="bg-rose-100 text-rose-700 border-rose-300 text-[10px] hover:bg-rose-100">required</Badge>
+                                              : <span className="text-[11px] text-muted-foreground">optional</span>}
                                           </TableCell>
-                                          <TableCell className="text-sm text-muted-foreground">{p.desc}</TableCell>
-                                          <TableCell><code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{p.example}</code></TableCell>
+                                          <TableCell className="text-xs text-muted-foreground">{p.desc}</TableCell>
                                         </TableRow>
                                       ))}
                                     </TableBody>
@@ -629,25 +492,20 @@ export default function ApiManagementPage() {
                               </div>
                             )}
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               <div className="flex items-center justify-between">
-                                <h5 className="text-sm font-semibold flex items-center gap-2">
-                                  <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
-                                  cURL Example
-                                </h5>
-                                <CopyButton text={curlCmd} label="Copy cURL" />
+                                <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">cURL Example</h5>
+                                <CopyBtn text={curl} label="Copy cURL" />
                               </div>
-                              <CodeBlock actions={<CopyButton text={curlCmd} />}>{curlCmd}</CodeBlock>
+                              <CodeBlock>{curl}</CodeBlock>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               <div className="flex items-center justify-between">
-                                <h5 className="text-sm font-semibold">Response Example</h5>
-                                <CopyButton text={ep.responseExample} />
+                                <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Response</h5>
+                                <CopyBtn text={ep.response} />
                               </div>
-                              <pre className="bg-muted/50 border p-4 rounded-lg font-mono text-[13px] leading-relaxed overflow-x-auto whitespace-pre-wrap text-foreground">
-                                {ep.responseExample}
-                              </pre>
+                              <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-4 font-mono text-[13px] leading-relaxed">{ep.response}</pre>
                             </div>
                           </div>
                         </AccordionContent>
@@ -659,42 +517,37 @@ export default function ApiManagementPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">Error Codes</CardTitle>
-                <CardDescription>Standard HTTP error responses returned by the API</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="w-[80px] text-xs">Status</TableHead>
-                        <TableHead className="w-[180px] text-xs">Code</TableHead>
-                        <TableHead className="text-xs">Description</TableHead>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="w-[70px] pl-5 text-xs">Status</TableHead>
+                      <TableHead className="w-[160px] text-xs">Code</TableHead>
+                      <TableHead className="text-xs">Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { s: "400", c: "BAD_REQUEST", d: "Missing or invalid query parameters" },
+                      { s: "401", c: "UNAUTHORIZED", d: "Missing or invalid API key" },
+                      { s: "403", c: "FORBIDDEN", d: "Insufficient scope or origin not allowed" },
+                      { s: "404", c: "NOT_FOUND", d: "Resource or endpoint not found" },
+                      { s: "429", c: "RATE_LIMITED", d: "Rate limit exceeded — retry after X-RateLimit-Reset" },
+                      { s: "500", c: "INTERNAL_ERROR", d: "Server error — contact support if persistent" },
+                    ].map(e => (
+                      <TableRow key={e.s}>
+                        <TableCell className="pl-5">
+                          <StatusBadge variant={parseInt(e.s) < 400 ? "success" : parseInt(e.s) < 500 ? "warning" : "error"}>{e.s}</StatusBadge>
+                        </TableCell>
+                        <TableCell><code className="font-mono text-xs font-bold">{e.c}</code></TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{e.d}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[
-                        { status: "400", code: "BAD_REQUEST", desc: "Missing or invalid query parameters" },
-                        { status: "401", code: "UNAUTHORIZED", desc: "Missing or invalid API key" },
-                        { status: "403", code: "FORBIDDEN", desc: "API key does not have required scope, or origin not allowed" },
-                        { status: "404", code: "NOT_FOUND", desc: "Resource or endpoint not found" },
-                        { status: "429", code: "RATE_LIMITED", desc: "Rate limit exceeded — retry after X-RateLimit-Reset" },
-                        { status: "500", code: "INTERNAL_ERROR", desc: "Server error — contact support if persistent" },
-                      ].map(e => (
-                        <TableRow key={e.status}>
-                          <TableCell>
-                            <StatusBadge variant={parseInt(e.status) < 400 ? "success" : parseInt(e.status) < 500 ? "warning" : "error"}>
-                              {e.status}
-                            </StatusBadge>
-                          </TableCell>
-                          <TableCell><code className="text-xs font-bold font-mono">{e.code}</code></TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{e.desc}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
