@@ -20,29 +20,43 @@ import {
   fetchOrders,
   getCustomerName,
   getCustomerEmail,
+  getCustomerPhone,
+  getBillingFirstName,
+  getBillingLastName,
   getItemCount,
+  getLineItemsSummary,
+  getOrderSource,
   type OrderRow,
   type OrderSortField,
   type SortDirection,
 } from "@/services/orderService";
 import { OrderRowExpanded } from "./OrderRowExpanded";
 
-type ColumnKey = "order_number" | "status" | "customer" | "email" | "items" | "total" | "payment" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount";
+type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
 const COLUMNS: { key: ColumnKey; label: string; group: string }[] = [
-  { key: "order_number", label: "Order #", group: "Basic" },
-  { key: "woo_id", label: "Woo ID", group: "Basic" },
+  { key: "id", label: "Internal ID", group: "Identifiers" },
+  { key: "woo_id", label: "Woo ID", group: "Identifiers" },
+  { key: "order_number", label: "Order #", group: "Identifiers" },
   { key: "status", label: "Status", group: "Basic" },
-  { key: "customer", label: "Customer", group: "Customer" },
-  { key: "email", label: "Email", group: "Customer" },
-  { key: "items", label: "Items", group: "Basic" },
+  { key: "currency", label: "Currency", group: "Amounts" },
   { key: "total", label: "Total", group: "Amounts" },
   { key: "subtotal", label: "Subtotal", group: "Amounts" },
   { key: "tax", label: "Tax", group: "Amounts" },
   { key: "shipping", label: "Shipping", group: "Amounts" },
   { key: "discount", label: "Discount", group: "Amounts" },
-  { key: "currency", label: "Currency", group: "Amounts" },
-  { key: "payment", label: "Payment method", group: "Payment" },
+  { key: "customer_id", label: "Customer ID", group: "Customer" },
+  { key: "customer", label: "Customer (full name)", group: "Customer" },
+  { key: "first_name", label: "First name", group: "Customer" },
+  { key: "last_name", label: "Last name", group: "Customer" },
+  { key: "email", label: "Email", group: "Customer" },
+  { key: "phone", label: "Phone", group: "Customer" },
+  { key: "items", label: "Item count", group: "Line items" },
+  { key: "line_items_summary", label: "Items (name × qty)", group: "Line items" },
+  { key: "payment", label: "Payment title", group: "Payment" },
+  { key: "payment_method", label: "Payment method", group: "Payment" },
+  { key: "source", label: "Source (UTM)", group: "Attribution" },
+  { key: "created_via", label: "Created via", group: "Attribution" },
   { key: "date_created", label: "Date created", group: "Dates" },
   { key: "date_modified", label: "Date modified", group: "Dates" },
   { key: "synced_at", label: "Last synced", group: "Dates" },
@@ -94,12 +108,18 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
   const [paymentOptions, setPaymentOptions] = useState<string[]>([]);
 
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
+    id: false,
     order_number: true,
     woo_id: false,
     status: true,
     customer: true,
+    first_name: false,
+    last_name: false,
     email: false,
+    phone: true,
+    customer_id: false,
     items: true,
+    line_items_summary: false,
     total: true,
     subtotal: false,
     tax: false,
@@ -107,9 +127,12 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
     discount: false,
     currency: false,
     payment: true,
+    payment_method: false,
     date_created: true,
     date_modified: false,
     synced_at: false,
+    source: false,
+    created_via: false,
   });
 
   useEffect(() => {
@@ -183,19 +206,28 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
     const rows = orders.map((o) => visibleColList.map((c) => {
       let v: string | number = "";
       switch (c.key) {
+        case "id": v = o.id; break;
         case "order_number": v = o.order_number || ""; break;
         case "woo_id": v = o.woo_id; break;
         case "status": v = o.status || ""; break;
         case "customer": v = getCustomerName(o.billing); break;
+        case "first_name": v = getBillingFirstName(o.billing); break;
+        case "last_name": v = getBillingLastName(o.billing); break;
         case "email": v = getCustomerEmail(o.billing); break;
+        case "phone": v = getCustomerPhone(o.billing); break;
+        case "customer_id": v = o.customer_id ?? ""; break;
         case "items": v = getItemCount(o.line_items); break;
+        case "line_items_summary": v = getLineItemsSummary(o.line_items); break;
         case "total": v = String(o.total ?? ""); break;
         case "subtotal": v = String(o.subtotal ?? ""); break;
         case "tax": v = String(o.total_tax ?? ""); break;
         case "shipping": v = String(o.shipping_total ?? ""); break;
         case "discount": v = String(o.discount_total ?? ""); break;
         case "currency": v = o.currency || ""; break;
-        case "payment": v = o.payment_method_title || o.payment_method || ""; break;
+        case "payment": v = o.payment_method_title || ""; break;
+        case "payment_method": v = o.payment_method || ""; break;
+        case "source": v = getOrderSource(o); break;
+        case "created_via": v = (o.raw_data as { created_via?: string } | null)?.created_via || ""; break;
         case "date_created": v = o.date_created || ""; break;
         case "date_modified": v = o.date_modified || ""; break;
         case "synced_at": v = o.synced_at || ""; break;
@@ -500,6 +532,9 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
                       <>
                         <TableRow key={o.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
                           {visibleColList.map((c) => {
+                            if (c.key === "id") {
+                              return <TableCell key={c.key} className="font-mono text-[10px] text-muted-foreground">{o.id.slice(0, 8)}</TableCell>;
+                            }
                             if (c.key === "order_number") {
                               return <TableCell key={c.key} className="font-mono font-medium">#{o.order_number || o.woo_id}</TableCell>;
                             }
@@ -519,11 +554,27 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
                             if (c.key === "customer") {
                               return <TableCell key={c.key} className="max-w-[200px] truncate">{getCustomerName(o.billing)}</TableCell>;
                             }
+                            if (c.key === "first_name") {
+                              return <TableCell key={c.key} className="max-w-[140px] truncate">{getBillingFirstName(o.billing) || "—"}</TableCell>;
+                            }
+                            if (c.key === "last_name") {
+                              return <TableCell key={c.key} className="max-w-[140px] truncate">{getBillingLastName(o.billing) || "—"}</TableCell>;
+                            }
                             if (c.key === "email") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{getCustomerEmail(o.billing) || "—"}</TableCell>;
                             }
+                            if (c.key === "phone") {
+                              const phone = getCustomerPhone(o.billing);
+                              return <TableCell key={c.key} className="font-mono text-xs">{phone || "—"}</TableCell>;
+                            }
+                            if (c.key === "customer_id") {
+                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.customer_id ?? "—"}</TableCell>;
+                            }
                             if (c.key === "items") {
                               return <TableCell key={c.key} className="text-sm">{getItemCount(o.line_items)}</TableCell>;
+                            }
+                            if (c.key === "line_items_summary") {
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate" title={getLineItemsSummary(o.line_items)}>{getLineItemsSummary(o.line_items) || "—"}</TableCell>;
                             }
                             if (c.key === "total") {
                               return <TableCell key={c.key} className="font-mono text-sm font-semibold">{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
@@ -544,7 +595,18 @@ export function OrdersTab({ storeId, storeUrl, search: searchProp }: { storeId: 
                               return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.currency || "—"}</TableCell>;
                             }
                             if (c.key === "payment") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[160px] truncate">{o.payment_method_title || o.payment_method || "—"}</TableCell>;
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[160px] truncate">{o.payment_method_title || "—"}</TableCell>;
+                            }
+                            if (c.key === "payment_method") {
+                              return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{o.payment_method || "—"}</TableCell>;
+                            }
+                            if (c.key === "source") {
+                              const src = getOrderSource(o);
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{src || "—"}</TableCell>;
+                            }
+                            if (c.key === "created_via") {
+                              const cv = (o.raw_data as { created_via?: string } | null)?.created_via || "";
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{cv || "—"}</TableCell>;
                             }
                             if (c.key === "date_created") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_created ? new Date(o.date_created).toLocaleString() : "—"}</TableCell>;
