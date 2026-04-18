@@ -619,9 +619,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             ) : (
                               <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
                             )}
-                            <Badge variant="outline" className={`absolute top-1.5 left-1.5 capitalize text-[10px] ${cls} backdrop-blur-sm`}>
-                              {p.status === "publish" ? "Active" : p.status || "—"}
-                            </Badge>
+                            <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                              <span className={`h-1.5 w-1.5 rounded-full ${dotColor[p.status || ""] || "bg-muted-foreground/50"}`} />
+                              <span className="capitalize">{label}</span>
+                            </div>
                           </div>
                           <div className="p-2.5 space-y-1 flex-1 flex flex-col">
                             <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
