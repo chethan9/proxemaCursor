@@ -1,12 +1,8 @@
-<![CDATA[import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/ch
-...
-     </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
+export interface ColumnsMenuProps {
+  columns: { key: string; label: string; visible: boolean }[];
+  onToggle: (key: string) => void;
 }
-]]>
 
-[Tool result trimmed: kept first 100 chars and last 100 chars of 2664 chars.]
+export function ColumnsMenu(_props: ColumnsMenuProps) {
+  return null;
+}

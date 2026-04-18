@@ -1,12 +1,10 @@
-<![CDATA[import { Button } from "@/components/ui/button";
-import { LayoutGrid, List, Grid3x3 } from "
-...
-/ Compact`}>
-        <Grid3x3 className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-}
-]]>
+export type ViewMode = "table" | "grid" | "compact";
 
-[Tool result trimmed: kept first 100 chars and last 100 chars of 1147 chars.]
+export interface ViewModeToggleProps {
+  value: ViewMode;
+  onChange: (mode: ViewMode) => void;
+}
+
+export function ViewModeToggle(_props: ViewModeToggleProps) {
+  return null;
+}

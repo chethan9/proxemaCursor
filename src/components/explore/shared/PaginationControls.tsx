@@ -1,14 +1,11 @@
-<![CDATA[import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCon
-...
-5" />
-        </Button>
-      </div>
-    </div>
-  );
+export interface PaginationControlsProps {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
 }
-]]>
 
-[Tool result trimmed: kept first 100 chars and last 100 chars of 2283 chars.]
+export function PaginationControls(_props: PaginationControlsProps) {
+  return null;
+}

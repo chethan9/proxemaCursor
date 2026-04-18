@@ -1,14 +1,10 @@
-<![CDATA[import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCon
-...
-tem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+export interface SortMenuProps {
+  field: string;
+  direction: "asc" | "desc";
+  onChange: (field: string, direction: "asc" | "desc") => void;
+  options: { value: string; label: string }[];
 }
-]]>
 
-[Tool result trimmed: kept first 100 chars and last 100 chars of 1377 chars.]
+export function SortMenu(_props: SortMenuProps) {
+  return null;
+}
