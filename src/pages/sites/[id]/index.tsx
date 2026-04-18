@@ -384,17 +384,18 @@ export default function SiteWorkspacePage() {
       const hasRunning = runsData.some(r => r.status === "running");
       if (hasRunning && !syncing) {
         setSyncing(true);
-        const completed = runsData.filter(r => r.status === "completed" || r.status === "failed").length;
-        const running = runsData.find(r => r.status === "running");
-        const totalProcessed = runsData.reduce((s, r) => s + (r.records_processed || 0), 0);
+        const recentRuns = runsData.slice(0, 6);
+        const completed = recentRuns.filter(r => r.status === "completed" || r.status === "failed").length;
+        const running = recentRuns.find(r => r.status === "running");
+        const totalProcessed = recentRuns.reduce((s, r) => s + (r.records_processed || 0), 0);
         setSyncProgress({
-          current: completed,
+          current: Math.min(completed, 6),
           total: 6,
           aspect: running ? `Syncing ${running.aspect}... (${totalProcessed.toLocaleString()} records)` : "Syncing...",
         });
       } else if (!hasRunning && syncing) {
-        // Sync finished while we were polling
-        const totalProcessed = runsData.reduce((s, r) => s + (r.records_processed || 0), 0);
+        const recentRuns = runsData.slice(0, 6);
+        const totalProcessed = recentRuns.reduce((s, r) => s + (r.records_processed || 0), 0);
         setSyncProgress({
           current: 6,
           total: 6,
