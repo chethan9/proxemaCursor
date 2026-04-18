@@ -416,7 +416,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
                 {["all", "publish", "draft", "pending", "private"].map((s) => (
-                  <Button key={s} variant={statusFilter === s ? "secondary" : "ghost"} size="sm" className="h-7 text-xs capitalize px-2.5" onClick={() => setStatusFilter(s)}>
+                  <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>
                     {s === "all" ? "All" : s}
                   </Button>
                 ))}
