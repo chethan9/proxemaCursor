@@ -21,14 +21,13 @@ export async function getMenuConfig(role: string): Promise<MenuNode[]> {
     .eq("role", role)
     .maybeSingle();
   if (error) { console.error("getMenuConfig", error); return []; }
-  return (data?.config as MenuNode[] | null) || [];
+  return (data?.config as unknown as MenuNode[] | null) || [];
 }
 
 export async function saveMenuConfig(role: string, config: MenuNode[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase
-    .from("menu_configs")
-    .upsert({ role, config: config as unknown as object, updated_at: new Date().toISOString(), updated_by: user?.id ?? null }, { onConflict: "role" });
+  const payload = { role, config: config as unknown as never, updated_at: new Date().toISOString(), updated_by: user?.id ?? null };
+  const { error } = await supabase.from("menu_configs").upsert(payload, { onConflict: "role" });
   if (error) throw error;
 }
 
