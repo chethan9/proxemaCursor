@@ -1,16 +1,16 @@
 import Head from "next/head";
 import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { useBranding } from "@/contexts/BrandingProvider";
 
 interface AppLayoutProps {
   children: React.ReactNode;
   title?: string;
-  subtitle?: string;
-  actions?: React.ReactNode;
 }
 
-export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps) {
-  const fullTitle = title ? `${title} · WooSync` : "WooSync";
+export function AppLayout({ children, title }: AppLayoutProps) {
+  const { brandName } = useBranding();
+  const fullTitle = title ? `${title} · ${brandName}` : brandName;
   return (
     <SidebarProvider>
       <Head>
@@ -26,24 +26,7 @@ export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps
         <AppSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <main id="main-content" className="flex-1 overflow-auto">
-            <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
-              {(title || actions) && (
-                <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    {title && (
-                      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
-                        {title}
-                      </h1>
-                    )}
-                    {subtitle && (
-                      <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-                    )}
-                  </div>
-                  {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-                </header>
-              )}
-              {children}
-            </div>
+            <div className="mx-auto w-full max-w-[1600px]">{children}</div>
           </main>
         </div>
       </div>

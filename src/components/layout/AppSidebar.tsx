@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
+import { useBranding } from "@/contexts/BrandingProvider";
 import {
   LayoutDashboard,
   Users,
@@ -10,6 +11,8 @@ import {
   Zap,
   Activity,
   Key,
+  Settings as SettingsIcon,
+  Palette,
 } from "lucide-react";
 
 const navSections = [
@@ -36,13 +39,21 @@ const navSections = [
     label: "Developer",
     items: [{ href: "/api-management", icon: Key, label: "API Management" }],
   },
+  {
+    label: "Settings",
+    items: [
+      { href: "/settings", icon: SettingsIcon, label: "General" },
+      { href: "/settings/theme", icon: Palette, label: "Theme & Branding" },
+    ],
+  },
 ];
 
 export function AppSidebar() {
   const router = useRouter();
+  const { brandName, logoUrl } = useBranding();
 
   const isItemActive = (href: string) =>
-    href === "/" ? router.pathname === "/" : router.pathname.startsWith(href);
+    href === "/" ? router.pathname === "/" : router.pathname === href || router.pathname.startsWith(href + "/");
 
   return (
     <aside
@@ -54,8 +65,13 @@ export function AppSidebar() {
           href="/"
           className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
         >
-          <Zap className="h-6 w-6 text-sidebar-primary" aria-hidden="true" />
-          <span className="font-semibold text-lg">WooSync</span>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={brandName} className="h-7 w-7 rounded object-contain" />
+          ) : (
+            <Zap className="h-6 w-6 text-sidebar-primary" aria-hidden="true" />
+          )}
+          <span className="font-semibold text-lg truncate">{brandName}</span>
         </Link>
       </div>
 
@@ -99,7 +115,7 @@ export function AppSidebar() {
       </nav>
 
       <div className="border-t border-sidebar-border p-4">
-        <p className="text-xs text-sidebar-muted">WooSync v1.0.0</p>
+        <p className="text-xs text-sidebar-muted">{brandName} v1.0.0</p>
       </div>
     </aside>
   );
