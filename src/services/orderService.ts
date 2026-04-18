@@ -37,7 +37,18 @@ export async function fetchOrders({
 
   if (search && search.trim()) {
     const s = search.trim();
-    query = query.or(`order_number.ilike.%${s}%,billing->>email.ilike.%${s}%,billing->>first_name.ilike.%${s}%,billing->>last_name.ilike.%${s}%`);
+    query = query.or(
+      `order_number.ilike.%${s}%,` +
+      `billing->>email.ilike.%${s}%,` +
+      `billing->>first_name.ilike.%${s}%,` +
+      `billing->>last_name.ilike.%${s}%,` +
+      `billing->>phone.ilike.%${s}%,` +
+      `billing->>address_1.ilike.%${s}%,` +
+      `billing->>address_2.ilike.%${s}%,` +
+      `billing->>city.ilike.%${s}%,` +
+      `billing->>state.ilike.%${s}%,` +
+      `billing->>postcode.ilike.%${s}%`
+    );
   }
 
   if (statusFilter && statusFilter !== "all") {
@@ -73,6 +84,51 @@ export function getCustomerName(billing: unknown): string {
 export function getCustomerEmail(billing: unknown): string {
   if (!billing || typeof billing !== "object") return "";
   return (billing as { email?: string }).email || "";
+}
+
+export function getCustomerPhone(billing: unknown): string {
+  if (!billing || typeof billing !== "object") return "";
+  return (billing as { phone?: string }).phone || "";
+}
+
+export function getBillingFirstName(billing: unknown): string {
+  if (!billing || typeof billing !== "object") return "";
+  return (billing as { first_name?: string }).first_name || "";
+}
+
+export function getBillingLastName(billing: unknown): string {
+  if (!billing || typeof billing !== "object") return "";
+  return (billing as { last_name?: string }).last_name || "";
+}
+
+export function getBillingAddress(billing: unknown): string {
+  if (!billing || typeof billing !== "object") return "";
+  const b = billing as { address_1?: string; address_2?: string; city?: string; state?: string; postcode?: string; country?: string };
+  return [b.address_1, b.address_2, b.city, b.state, b.postcode, b.country].filter(Boolean).join(", ");
+}
+
+export function getLineItemsSummary(lineItems: unknown): string {
+  if (!Array.isArray(lineItems)) return "";
+  return lineItems
+    .map((item: unknown) => {
+      const i = item as { name?: string; quantity?: number };
+      return `${i.name || "—"} × ${i.quantity ?? 0}`;
+    })
+    .join(", ");
+}
+
+export function getOrderSource(order: { meta_data?: unknown; raw_data?: unknown }): string {
+  const meta = (order.meta_data ?? (order.raw_data as { meta_data?: unknown })?.meta_data) as unknown;
+  if (!Array.isArray(meta)) return "";
+  const keys = ["_wc_order_attribution_utm_source", "utm_source", "_utm_source", "_wc_order_attribution_source_type"];
+  for (const k of keys) {
+    const hit = meta.find((m: unknown) => (m as { key?: string })?.key === k);
+    if (hit) {
+      const val = (hit as { value?: unknown }).value;
+      if (typeof val === "string" && val) return val;
+    }
+  }
+  return "";
 }
 
 export function getItemCount(lineItems: unknown): number {
