@@ -378,7 +378,6 @@ export default function ApiManagementPage() {
             <TabsTrigger value="docs" className="gap-2"><BookOpen className="h-4 w-4" />API Reference</TabsTrigger>
           </TabsList>
 
-          {/* === KEYS TAB === */}
           <TabsContent value="keys" className="space-y-4 mt-4">
             <div className="grid grid-cols-4 gap-4">
               <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{keys.length}</div><div className="text-sm text-muted-foreground">Total Keys</div></CardContent></Card>
@@ -460,7 +459,6 @@ export default function ApiManagementPage() {
             </Card>
           </TabsContent>
 
-          {/* === LOGS TAB === */}
           <TabsContent value="logs" className="mt-4">
             <Card>
               <CardHeader>
@@ -492,7 +490,7 @@ export default function ApiManagementPage() {
                           <TableRow key={log.id}>
                             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.created_at)}</TableCell>
                             <TableCell>
-                              <span className={"px-2 py-0.5 rounded text-[11px] font-bold border " + (METHOD_COLORS[log.method] || "bg-muted text-foreground")}>
+                              <span className={"px-2 py-0.5 rounded text-[11px] font-bold border " + (METHOD_COLORS[log.method || ""] || "bg-muted text-foreground")}>
                                 {log.method}
                               </span>
                             </TableCell>
@@ -514,7 +512,6 @@ export default function ApiManagementPage() {
             </Card>
           </TabsContent>
 
-          {/* === DOCS TAB === */}
           <TabsContent value="docs" className="mt-4 space-y-6">
             <Card>
               <CardHeader>
