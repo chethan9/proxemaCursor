@@ -129,39 +129,67 @@
 
 @layer components {
   [data-theme-preset="modern"] .shadow-polaris {
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.04);
   }
 
   [data-theme-preset="modern"] [data-slot="card"],
   [data-theme-preset="modern"] .bg-card {
-    border-radius: 1rem;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
-    border-color: hsl(220 13% 93%);
+    border-radius: 1.25rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.05);
+    border-color: hsl(220 13% 94%);
+  }
+
+  [data-theme-preset="modern"] [data-slot="card-header"] {
+    padding: 1.5rem 1.75rem 1rem;
+  }
+
+  [data-theme-preset="modern"] [data-slot="card-content"] {
+    padding: 1rem 1.75rem 1.5rem;
+  }
+
+  [data-theme-preset="modern"] [data-slot="card-footer"] {
+    padding: 1rem 1.75rem 1.5rem;
   }
 
   [data-theme-preset="modern"] input:not([type="checkbox"]):not([type="radio"]),
   [data-theme-preset="modern"] textarea,
   [data-theme-preset="modern"] select {
-    border-radius: 0.625rem;
+    border-radius: 0.75rem;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+    height: 2.625rem;
+  }
+
+  [data-theme-preset="modern"] textarea {
+    height: auto;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
   }
 
   [data-theme-preset="modern"] button {
-    border-radius: 0.625rem;
+    border-radius: 0.75rem;
+  }
+
+  [data-theme-preset="modern"] button[data-slot="button"]:not([data-size="sm"]):not([data-size="icon"]) {
+    height: 2.625rem;
+    padding-left: 1.125rem;
+    padding-right: 1.125rem;
+    font-weight: 500;
   }
 
   [data-theme-preset="modern"] .rounded-md {
-    border-radius: 0.625rem;
+    border-radius: 0.75rem;
   }
 
   [data-theme-preset="modern"] .rounded-lg {
-    border-radius: 0.875rem;
+    border-radius: 1rem;
   }
 
   [data-theme-preset="modern"] [data-slot="badge"] {
     border-radius: 9999px;
-    padding-left: 0.625rem;
-    padding-right: 0.625rem;
+    padding: 0.25rem 0.75rem;
     font-weight: 500;
+    font-size: 0.75rem;
   }
 
   [data-theme-preset="modern"] table {
@@ -177,5 +205,17 @@
     color: hsl(220 9% 46%);
     text-transform: none;
     letter-spacing: 0;
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+  }
+
+  [data-theme-preset="modern"] td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  [data-theme-preset="modern"] [data-slot="dialog-content"] {
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 50px rgba(16, 24, 40, 0.15), 0 4px 16px rgba(16, 24, 40, 0.08);
   }
 }
