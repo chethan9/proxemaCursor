@@ -32,6 +32,7 @@ import {
   Shield,
   UserCog,
   ChevronRight,
+  CornerDownRight,
 } from "lucide-react";
 
 type NavItem = { href: string; icon: typeof LayoutDashboard; label: string; permission?: Permission; superAdminOnly?: boolean };
@@ -263,14 +264,15 @@ export function AppSidebar() {
                           <Link
                             href={href}
                             className={cn(
-                              "flex items-center gap-2 rounded-md pl-7 pr-2.5 py-1 text-[12px] transition-colors",
+                              "flex items-center gap-1.5 rounded-md pl-3 pr-2.5 py-1 text-[12px] transition-colors",
                               isActive
                                 ? "text-sidebar-accent-foreground bg-sidebar-accent/40"
                                 : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
                             )}
                           >
-                            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                            <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/40" />
                             <span className="truncate">{site.name}</span>
+                            <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
                           </Link>
                         </li>
                       );
