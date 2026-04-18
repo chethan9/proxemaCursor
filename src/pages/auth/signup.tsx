@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/contexts/BrandingProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Zap, Loader2, Mail } from "lucide-react";
 
 export default function SignupPage() {
+  const { brandName, logoUrl } = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -68,12 +70,16 @@ export default function SignupPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary" />
-            </div>
+            {logoUrl ? (
+              <img src={logoUrl} alt={brandName} className="h-12 w-auto object-contain" />
+            ) : (
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Zap className="h-5 w-5 text-primary" />
+              </div>
+            )}
           </div>
           <CardTitle className="text-2xl">Create account</CardTitle>
-          <CardDescription>Sign up to manage your WooCommerce stores</CardDescription>
+          <CardDescription>Sign up to manage your {brandName} workspace</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
