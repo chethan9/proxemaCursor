@@ -111,7 +111,7 @@ export default function ApiManagementPage() {
 
   return (
     <AppLayout title="API Management">
-      <div className="space-y-6 pb-8">
+      <div className="p-6 space-y-6 pb-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
