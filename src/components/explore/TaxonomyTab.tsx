@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FolderTree, Tag as TagIcon, Download, ChevronDown, ChevronRight as ChevronRightIcon, ChevronLeft } from "lucide-react";
+import { FolderTree, Tag as TagIcon, Download, ChevronDown, ChevronRight as ChevronRightIcon, ChevronLeft, ArrowLeft, Search } from "lucide-react";
 import { fetchCategories, fetchTags, type CategoryRow, type TagRow } from "@/services/taxonomyService";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 
@@ -12,7 +14,7 @@ type Mode = "categories" | "tags";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
-export function TaxonomyTab({ storeId, mode, search: searchProp }: { storeId: string; mode: Mode; search?: string }) {
+export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange, embedHeader = false, storeName, storeUrl }: { storeId: string; mode: Mode; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean; storeName?: string; storeUrl?: string | null }) {
   const [rows, setRows] = useState<(CategoryRow | TagRow)[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
