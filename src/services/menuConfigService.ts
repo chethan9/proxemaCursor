@@ -13,7 +13,7 @@ export interface MenuNode {
   children?: MenuNode[];
 }
 
-export type RoleKey = "super_admin" | "admin" | "staff" | "readonly";
+export type RoleKey = string;
 
 export async function getMenuConfig(role: string): Promise<MenuNode[]> {
   const { data, error } = await supabase
