@@ -1,9 +1,9 @@
 ---
 title: Create site Home (analytics) page with coming soon
-status: todo
+status: done
 priority: high
 type: feature
-tags: [pages, analytics]
+tags: [site-pages, analytics]
 created_by: agent
 created_at: 2026-04-18T14:15:00Z
 position: 32
