@@ -1,17 +1,36 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Palette, Settings as SettingsIcon, ChevronRight } from "lucide-react";
+import { Palette, UserCog, Shield, ChevronRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthProvider";
+import { PERMISSIONS } from "@/lib/permissions";
 
 export default function SettingsIndex() {
+  const { can } = useAuth();
+
   const sections = [
     {
       href: "/settings/theme",
       icon: Palette,
       title: "Theme & Branding",
       description: "Customize logo, app name, and color palette",
+      show: true,
     },
-  ];
+    {
+      href: "/settings/users",
+      icon: UserCog,
+      title: "Users",
+      description: "Manage team members, assign roles and clients",
+      show: can(PERMISSIONS.USERS_VIEW),
+    },
+    {
+      href: "/settings/roles",
+      icon: Shield,
+      title: "Roles & Permissions",
+      description: "Define roles and what each can access",
+      show: can(PERMISSIONS.ROLES_VIEW),
+    },
+  ].filter(s => s.show);
 
   return (
     <AppLayout title="Settings">

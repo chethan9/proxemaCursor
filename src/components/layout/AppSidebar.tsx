@@ -3,7 +3,18 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingProvider";
+import { useAuth } from "@/contexts/AuthProvider";
+import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   LayoutDashboard,
   Users,
@@ -16,9 +27,12 @@ import {
   Settings as SettingsIcon,
   ChevronsLeft,
   ChevronsRight,
+  LogOut,
+  Shield,
+  UserCog,
 } from "lucide-react";
 
-type NavItem = { href: string; icon: typeof LayoutDashboard; label: string };
+type NavItem = { href: string; icon: typeof LayoutDashboard; label: string; permission?: Permission; superAdminOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
@@ -29,21 +43,28 @@ const navGroups: NavGroup[] = [
   {
     label: "Management",
     items: [
-      { href: "/clients", icon: Users, label: "Clients" },
-      { href: "/sites", icon: Store, label: "Sites" },
+      { href: "/clients", icon: Users, label: "Clients", permission: PERMISSIONS.CLIENTS_VIEW },
+      { href: "/sites", icon: Store, label: "Sites", permission: PERMISSIONS.SITES_VIEW },
     ],
   },
   {
     label: "Operations",
     items: [
-      { href: "/sync-runs", icon: RefreshCw, label: "Sync Runs" },
-      { href: "/webhooks", icon: Webhook, label: "Webhooks" },
-      { href: "/webhooks/activity", icon: Activity, label: "Activity" },
+      { href: "/sync-runs", icon: RefreshCw, label: "Sync Runs", permission: PERMISSIONS.SYNC_VIEW },
+      { href: "/webhooks", icon: Webhook, label: "Webhooks", permission: PERMISSIONS.WEBHOOKS_VIEW },
+      { href: "/webhooks/activity", icon: Activity, label: "Activity", permission: PERMISSIONS.WEBHOOKS_VIEW },
     ],
   },
   {
     label: "Developer",
-    items: [{ href: "/api-management", icon: Key, label: "API" }],
+    items: [{ href: "/api-management", icon: Key, label: "API", permission: PERMISSIONS.API_VIEW }],
+  },
+  {
+    label: "Administration",
+    items: [
+      { href: "/settings/users", icon: UserCog, label: "Users", permission: PERMISSIONS.USERS_VIEW },
+      { href: "/settings/roles", icon: Shield, label: "Roles", permission: PERMISSIONS.ROLES_VIEW },
+    ],
   },
   {
     label: "System",
@@ -54,6 +75,7 @@ const navGroups: NavGroup[] = [
 export function AppSidebar() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
+  const { profile, role, can, isSuperAdmin, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -69,6 +91,19 @@ export function AppSidebar() {
 
   const isItemActive = (href: string) =>
     href === "/" ? router.pathname === "/" : router.pathname === href || router.pathname.startsWith(href + "/");
+
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.superAdminOnly && !isSuperAdmin) return false;
+        if (item.permission && !can(item.permission)) return false;
+        return true;
+      }),
+    }))
+    .filter((g) => g.items.length > 0);
+
+  const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -104,7 +139,7 @@ export function AppSidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          {navGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.label} className={cn("mb-3", collapsed ? "px-1.5" : "px-2")}>
               {!collapsed && (
                 <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
@@ -155,15 +190,48 @@ export function AppSidebar() {
           ))}
         </nav>
 
-        <div className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "px-3 py-2 flex items-center justify-between")}>
-          {!collapsed && <p className="text-[11px] text-sidebar-foreground/40">{brandName} v1.0.0</p>}
+        <div className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "p-2")}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "w-full flex items-center gap-2 rounded-md p-1.5 hover:bg-sidebar-accent/60 transition-colors",
+                  collapsed && "justify-center"
+                )}
+                aria-label="User menu"
+              >
+                <Avatar className="h-7 w-7 flex-shrink-0">
+                  <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-xs">{initials}</AvatarFallback>
+                </Avatar>
+                {!collapsed && (
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-xs font-medium truncate">{profile?.full_name || profile?.email}</p>
+                    <p className="text-[10px] text-sidebar-foreground/50 truncate">{role?.name || profile?.role}</p>
+                  </div>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div>
+                  <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {collapsed && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={toggle}
                   aria-label="Expand sidebar"
-                  className="w-full flex items-center justify-center h-8 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+                  className="mt-1 w-full flex items-center justify-center h-7 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
                 >
                   <ChevronsRight className="h-4 w-4" />
                 </button>
