@@ -84,12 +84,21 @@ export function getItemCount(lineItems: unknown): number {
 }
 
 export async function updateOrderStatus(id: string, status: string): Promise<OrderRow> {
-  const { data, error } = await supabase
+  const { data: order, error: fetchErr } = await supabase
     .from("orders")
-    .update({ status })
+    .select("store_id")
     .eq("id", id)
-    .select("*")
     .single();
-  if (error) throw error;
-  return data as OrderRow;
+  if (fetchErr || !order) throw fetchErr || new Error("Order not found");
+
+  const res = await fetch(`/api/stores/${order.store_id}/orders/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || `Update failed (${res.status})`);
+  }
+  return (await res.json()) as OrderRow;
 }

@@ -117,12 +117,21 @@ export function getCategoryNames(categories: unknown): string {
 }
 
 export async function updateProduct(id: string, updates: Record<string, unknown>): Promise<ProductRow> {
-  const { data, error } = await supabase
+  const { data: product, error: fetchErr } = await supabase
     .from("products")
-    .update(updates)
+    .select("store_id")
     .eq("id", id)
-    .select("*")
     .single();
-  if (error) throw error;
-  return data as unknown as ProductRow;
+  if (fetchErr || !product) throw fetchErr || new Error("Product not found");
+
+  const res = await fetch(`/api/stores/${product.store_id}/products/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || `Update failed (${res.status})`);
+  }
+  return (await res.json()) as ProductRow;
 }
