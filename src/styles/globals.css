@@ -125,6 +125,9 @@
   .shadow-polaris {
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
   }
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
 }
 
 @layer components {
@@ -339,5 +342,14 @@
 
   [data-theme-preset="modern"] [role="tab"] {
     transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  [data-theme-preset="modern"] [data-slot="skeleton"] {
+    border-radius: 0.625rem;
+    background-color: hsl(220 14% 94%);
+  }
+
+  [data-theme-preset="modern"] [data-slot="skeleton"]::before {
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.6), transparent);
   }
 }
