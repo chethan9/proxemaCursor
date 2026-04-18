@@ -304,13 +304,21 @@
   [data-theme-preset="modern"] [data-slot="textarea"]:focus-visible {
     outline: none;
     border-color: hsl(22 100% 50%);
-    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.18), 0 1px 2px rgba(16, 24, 40, 0.04);
+    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.22), 0 1px 2px rgba(16, 24, 40, 0.04);
+    --tw-ring-shadow: 0 0 0 0 transparent;
+    --tw-ring-offset-shadow: 0 0 0 0 transparent;
+    --tw-ring-color: transparent;
+    --tw-ring-offset-width: 0px;
     transition: box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
   [data-theme-preset="modern"] button[data-slot="button"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.25), 0 1px 2px rgba(16, 24, 40, 0.06);
+    box-shadow: 0 0 0 3px hsl(22 100% 50% / 0.28), 0 1px 2px rgba(16, 24, 40, 0.06);
+    --tw-ring-shadow: 0 0 0 0 transparent;
+    --tw-ring-offset-shadow: 0 0 0 0 transparent;
+    --tw-ring-color: transparent;
+    --tw-ring-offset-width: 0px;
   }
 
   [data-theme-preset="modern"] [data-slot="checkbox"]:focus-visible,
