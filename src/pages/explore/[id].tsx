@@ -1152,7 +1152,8 @@ export default function ExploreStorePage() {
                                 </TableRow>
                               )}
                             </>
-                          ))
+                          );
+                          })
                         )}
                       </TableBody>
                     </Table>
