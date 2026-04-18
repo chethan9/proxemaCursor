@@ -1,12 +1,15 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+export type ThemePreset = "classic" | "modern";
+
 export interface BrandingSettings {
   brandName: string;
   logoUrl: string | null;
   primaryColor: string;
   sidebarColor: string;
   accentColor: string;
+  themePreset: ThemePreset;
 }
 
 interface BrandingContextValue extends BrandingSettings {
@@ -21,6 +24,7 @@ const DEFAULTS: BrandingSettings = {
   primaryColor: "#008060",
   sidebarColor: "#1a1a1a",
   accentColor: "#008060",
+  themePreset: "classic",
 };
 
 const BrandingContext = createContext<BrandingContextValue | null>(null);
@@ -54,6 +58,23 @@ function applyTheme(settings: BrandingSettings) {
   root.style.setProperty("--ring", hexToHsl(settings.primaryColor));
   root.style.setProperty("--sidebar", hexToHsl(settings.sidebarColor));
   root.style.setProperty("--sidebar-accent", hexToHsl(settings.sidebarColor));
+
+  // Apply preset-specific CSS variables
+  if (settings.themePreset === "modern") {
+    root.style.setProperty("--background", "220 13% 97%");
+    root.style.setProperty("--card", "0 0% 100%");
+    root.style.setProperty("--muted", "220 14% 95%");
+    root.style.setProperty("--border", "220 13% 91%");
+    root.style.setProperty("--radius", "0.75rem");
+    root.dataset.themePreset = "modern";
+  } else {
+    root.style.setProperty("--background", "0 0% 100%");
+    root.style.setProperty("--card", "0 0% 100%");
+    root.style.setProperty("--muted", "210 40% 96%");
+    root.style.setProperty("--border", "214 32% 91%");
+    root.style.setProperty("--radius", "0.375rem");
+    root.dataset.themePreset = "classic";
+  }
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
@@ -69,9 +90,12 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
         primaryColor: data.primary_color || DEFAULTS.primaryColor,
         sidebarColor: data.sidebar_color || DEFAULTS.sidebarColor,
         accentColor: data.accent_color || DEFAULTS.accentColor,
+        themePreset: ((data as { theme_preset?: string }).theme_preset as ThemePreset) || DEFAULTS.themePreset,
       };
       setSettings(next);
       applyTheme(next);
+    } else {
+      applyTheme(DEFAULTS);
     }
     setLoading(false);
   }, []);
@@ -89,6 +113,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       primary_color: next.primaryColor,
       sidebar_color: next.sidebarColor,
       accent_color: next.accentColor,
+      theme_preset: next.themePreset,
       updated_at: new Date().toISOString(),
     });
   }, [settings]);

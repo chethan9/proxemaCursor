@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -225,6 +225,7 @@ export type Database = {
           logo_url: string | null
           primary_color: string | null
           sidebar_color: string | null
+          theme_preset: string | null
           updated_at: string | null
         }
         Insert: {
@@ -235,6 +236,7 @@ export type Database = {
           logo_url?: string | null
           primary_color?: string | null
           sidebar_color?: string | null
+          theme_preset?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -245,6 +247,7 @@ export type Database = {
           logo_url?: string | null
           primary_color?: string | null
           sidebar_color?: string | null
+          theme_preset?: string | null
           updated_at?: string | null
         }
         Relationships: []
