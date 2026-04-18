@@ -1,12 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { wooRequest } from "@/lib/woo-client";
+import { wooRequest, getStoreCreds } from "@/lib/woo-client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Json = Database["public"]["Tables"]["tags"]["Row"]["raw_data"];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { storeId, tagId } = req.query;
   if (typeof storeId !== "string" || typeof tagId !== "string") {
     return res.status(400).json({ error: "storeId and tagId required" });
   }
+
+  const creds = await getStoreCreds(storeId);
+  if (!creds) return res.status(400).json({ error: "Store credentials missing" });
 
   const { data: tag, error: fetchErr } = await supabaseAdmin
     .from("tags")
@@ -20,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const updates = req.body as Record<string, unknown>;
     try {
       const wooResponse = await wooRequest<Record<string, unknown>>(
-        storeId,
+        creds,
         "PUT",
         `products/tags/${tag.woo_id}`,
         updates
@@ -31,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         slug: (wooResponse.slug as string) ?? tag.slug,
         description: (wooResponse.description as string) ?? tag.description,
         count: (wooResponse.count as number) ?? tag.count,
-        raw_data: wooResponse,
+        raw_data: wooResponse as unknown as Json,
         synced_at: new Date().toISOString(),
       };
 
@@ -52,9 +58,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         change_type: "update",
         source: "dashboard",
         status: "success",
-        snapshot_before: tag,
-        snapshot_after: updated,
-        changed_fields: updates,
+        snapshot_before: tag as unknown as Json,
+        snapshot_after: updated as unknown as Json,
+        changed_fields: updates as unknown as Json,
       });
 
       return res.status(200).json(updated);
@@ -70,8 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         source: "dashboard",
         status: "failed",
         error_message: message,
-        retry_payload: updates,
-        snapshot_before: tag,
+        retry_payload: updates as unknown as Json,
+        snapshot_before: tag as unknown as Json,
       });
       return res.status(500).json({ error: "Failed to update tag", message });
     }
@@ -79,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "DELETE") {
     try {
-      await wooRequest(storeId, "DELETE", `products/tags/${tag.woo_id}?force=true`);
+      await wooRequest(creds, "DELETE", `products/tags/${tag.woo_id}?force=true`);
       await supabaseAdmin.from("tags").delete().eq("id", tagId);
       await supabaseAdmin.from("entity_changes").insert({
         store_id: storeId,
@@ -90,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         change_type: "delete",
         source: "dashboard",
         status: "success",
-        snapshot_before: tag,
+        snapshot_before: tag as unknown as Json,
       });
       return res.status(200).json({ success: true });
     } catch (err) {
@@ -105,7 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         source: "dashboard",
         status: "failed",
         error_message: message,
-        snapshot_before: tag,
+        snapshot_before: tag as unknown as Json,
       });
       return res.status(500).json({ error: "Failed to delete tag", message });
     }

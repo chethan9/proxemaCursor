@@ -1,12 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { wooRequest } from "@/lib/woo-client";
+import { wooRequest, getStoreCreds } from "@/lib/woo-client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Json = Database["public"]["Tables"]["categories"]["Row"]["raw_data"];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { storeId, categoryId } = req.query;
   if (typeof storeId !== "string" || typeof categoryId !== "string") {
     return res.status(400).json({ error: "storeId and categoryId required" });
   }
+
+  const creds = await getStoreCreds(storeId);
+  if (!creds) return res.status(400).json({ error: "Store credentials missing" });
 
   const { data: category, error: fetchErr } = await supabaseAdmin
     .from("categories")
@@ -20,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const updates = req.body as Record<string, unknown>;
     try {
       const wooResponse = await wooRequest<Record<string, unknown>>(
-        storeId,
+        creds,
         "PUT",
         `products/categories/${category.woo_id}`,
         updates
@@ -32,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         description: (wooResponse.description as string) ?? category.description,
         parent_id: (wooResponse.parent as number) ?? category.parent_id,
         count: (wooResponse.count as number) ?? category.count,
-        raw_data: wooResponse,
+        raw_data: wooResponse as unknown as Json,
         synced_at: new Date().toISOString(),
       };
 
@@ -53,9 +59,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         change_type: "update",
         source: "dashboard",
         status: "success",
-        snapshot_before: category,
-        snapshot_after: updated,
-        changed_fields: updates,
+        snapshot_before: category as unknown as Json,
+        snapshot_after: updated as unknown as Json,
+        changed_fields: updates as unknown as Json,
       });
 
       return res.status(200).json(updated);
@@ -71,8 +77,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         source: "dashboard",
         status: "failed",
         error_message: message,
-        retry_payload: updates,
-        snapshot_before: category,
+        retry_payload: updates as unknown as Json,
+        snapshot_before: category as unknown as Json,
       });
       return res.status(500).json({ error: "Failed to update category", message });
     }
@@ -80,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "DELETE") {
     try {
-      await wooRequest(storeId, "DELETE", `products/categories/${category.woo_id}?force=true`);
+      await wooRequest(creds, "DELETE", `products/categories/${category.woo_id}?force=true`);
       await supabaseAdmin.from("categories").delete().eq("id", categoryId);
       await supabaseAdmin.from("entity_changes").insert({
         store_id: storeId,
@@ -91,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         change_type: "delete",
         source: "dashboard",
         status: "success",
-        snapshot_before: category,
+        snapshot_before: category as unknown as Json,
       });
       return res.status(200).json({ success: true });
     } catch (err) {
@@ -106,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         source: "dashboard",
         status: "failed",
         error_message: message,
-        snapshot_before: category,
+        snapshot_before: category as unknown as Json,
       });
       return res.status(500).json({ error: "Failed to delete category", message });
     }
