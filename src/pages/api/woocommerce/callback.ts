@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 
 // WooCommerce sends credentials via POST to this callback
 export default async function handler(

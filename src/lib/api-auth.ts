@@ -1,5 +1,5 @@
 import type { NextApiRequest } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import crypto from "crypto";
 
 export interface ApiAuthResult {

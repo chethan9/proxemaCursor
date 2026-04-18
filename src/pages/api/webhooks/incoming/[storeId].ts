@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 
 function getEntityType(topic: string): string | null {
   const prefix = topic.split(".")[0];

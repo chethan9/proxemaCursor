@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { WEBHOOK_TOPICS, generateWebhookSecret, buildWebhookDeliveryUrl } from "@/services/webhookService";
 
 export default async function handler(
