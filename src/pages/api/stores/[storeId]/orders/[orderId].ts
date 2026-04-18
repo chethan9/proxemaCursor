@@ -30,6 +30,17 @@ interface WooOrder {
   date_modified: string;
 }
 
+function diffFields(before: Record<string, unknown>, after: Record<string, unknown>) {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changes: { field: string; old: unknown; new: unknown }[] = [];
+  keys.forEach((k) => {
+    if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) {
+      changes.push({ field: k, old: before[k], new: after[k] });
+    }
+  });
+  return changes;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "PUT") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -40,23 +51,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "storeId and orderId required" });
   }
 
+  const { data: localOrder } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .eq("store_id", storeId)
+    .single();
+
+  if (!localOrder?.woo_id) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  const { status } = req.body || {};
+  const wooPayload: Record<string, unknown> = {};
+  if (status !== undefined) wooPayload.status = status;
+
+  const beforeSnapshot = toJson(localOrder);
+  const entityName = `#${localOrder.order_number || localOrder.woo_id}`;
+
   try {
     const store = await getStoreCreds(storeId);
-    if (!store) return res.status(404).json({ error: "Store not connected" });
-
-    const { data: localOrder, error: localErr } = await supabaseAdmin
-      .from("orders")
-      .select("id, woo_id")
-      .eq("id", orderId)
-      .eq("store_id", storeId)
-      .single();
-    if (localErr || !localOrder?.woo_id) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    const { status } = req.body || {};
-    const wooPayload: Record<string, unknown> = {};
-    if (status !== undefined) wooPayload.status = status;
+    if (!store) throw new Error("Store not connected");
 
     const updated = await wooRequest<WooOrder>(
       store,
@@ -66,40 +81,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     const now = new Date().toISOString();
+    const updatePayload = {
+      order_number: updated.number,
+      status: updated.status,
+      currency: updated.currency,
+      total: updated.total ? parseFloat(updated.total) : null,
+      subtotal: updated.subtotal ? parseFloat(updated.subtotal) : null,
+      total_tax: updated.total_tax ? parseFloat(updated.total_tax) : null,
+      discount_total: updated.discount_total ? parseFloat(updated.discount_total) : null,
+      shipping_total: updated.shipping_total ? parseFloat(updated.shipping_total) : null,
+      payment_method: updated.payment_method,
+      payment_method_title: updated.payment_method_title,
+      billing: toJson(updated.billing),
+      shipping: toJson(updated.shipping),
+      line_items: toJson(updated.line_items),
+      shipping_lines: toJson(updated.shipping_lines || []),
+      fee_lines: toJson(updated.fee_lines || []),
+      coupon_lines: toJson(updated.coupon_lines || []),
+      raw_data: toJson(updated),
+      date_modified: updated.date_modified,
+      synced_at: now,
+    };
+
     const { data: saved, error: saveErr } = await supabaseAdmin
       .from("orders")
-      .update({
-        order_number: updated.number,
-        status: updated.status,
-        currency: updated.currency,
-        total: updated.total ? parseFloat(updated.total) : null,
-        subtotal: updated.subtotal ? parseFloat(updated.subtotal) : null,
-        total_tax: updated.total_tax ? parseFloat(updated.total_tax) : null,
-        discount_total: updated.discount_total ? parseFloat(updated.discount_total) : null,
-        shipping_total: updated.shipping_total ? parseFloat(updated.shipping_total) : null,
-        payment_method: updated.payment_method,
-        payment_method_title: updated.payment_method_title,
-        billing: toJson(updated.billing),
-        shipping: toJson(updated.shipping),
-        line_items: toJson(updated.line_items),
-        shipping_lines: toJson(updated.shipping_lines || []),
-        fee_lines: toJson(updated.fee_lines || []),
-        coupon_lines: toJson(updated.coupon_lines || []),
-        raw_data: toJson(updated),
-        date_modified: updated.date_modified,
-        synced_at: now,
-      })
+      .update(updatePayload)
       .eq("id", orderId)
       .select("*")
       .single();
-
     if (saveErr) throw saveErr;
+
+    const afterSnapshot = toJson(saved);
+    const changeType = localOrder.status !== updated.status ? "status_change" : "updated";
+    const changedFields = diffFields(
+      localOrder as Record<string, unknown>,
+      saved as Record<string, unknown>
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabaseAdmin as any).from("entity_changes").insert({
+      store_id: storeId,
+      entity_type: "order",
+      entity_id: orderId,
+      woo_id: localOrder.woo_id,
+      entity_name: entityName,
+      change_type: changeType,
+      changed_fields: changedFields as unknown as Json,
+      snapshot_before: beforeSnapshot,
+      snapshot_after: afterSnapshot,
+      source: "dashboard",
+      status: "success",
+    });
+
     return res.status(200).json(saved);
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[order update] error:", err);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabaseAdmin as any).from("entity_changes").insert({
+      store_id: storeId,
+      entity_type: "order",
+      entity_id: orderId,
+      woo_id: localOrder.woo_id,
+      entity_name: entityName,
+      change_type: "update_failed",
+      changed_fields: null,
+      snapshot_before: beforeSnapshot,
+      snapshot_after: null,
+      source: "dashboard",
+      status: "failed",
+      error_message: message,
+      retry_payload: toJson(wooPayload),
+    });
+
     return res.status(500).json({
       error: "Failed to update order",
-      message: err instanceof Error ? err.message : "Unknown error",
+      message,
     });
   }
 }
