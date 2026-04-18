@@ -244,6 +244,8 @@
   }
 
   [data-theme-preset="modern"] body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 400;
     font-feature-settings: "cv02", "cv03", "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
   }
