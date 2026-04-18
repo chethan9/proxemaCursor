@@ -7,6 +7,8 @@ export interface SyncRunFilters {
   status?: string;
   aspect?: string;
   search?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 interface StoreOption { id: string; name: string; }
@@ -78,6 +80,8 @@ export function useSyncRunsPaged(
       if (filters.status && filters.status !== "all") q = q.eq("status", filters.status);
       if (filters.aspect && filters.aspect !== "all") q = q.eq("aspect", filters.aspect);
       if (filters.search) q = q.ilike("error_message", `%${filters.search}%`);
+      if (filters.dateFrom) q = q.gte("started_at", filters.dateFrom);
+      if (filters.dateTo) q = q.lte("started_at", filters.dateTo);
       q = q.range(page * pageSize, (page + 1) * pageSize - 1);
       const { data, count, error } = await q;
       if (error) throw error;

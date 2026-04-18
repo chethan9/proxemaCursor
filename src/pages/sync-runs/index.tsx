@@ -111,6 +111,8 @@ export default function SyncRunsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterAspect, setFilterAspect] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
   const { data: stores = [] } = useStoreOptions();
   const { data: stats = { total: 0, completed: 0, failed: 0, running: 0, totalRecords: 0 } } = useSyncRunsStats();
@@ -120,7 +122,9 @@ export default function SyncRunsPage() {
     status: filterStatus,
     aspect: filterAspect,
     search: searchQuery,
-  }), [filterStore, filterStatus, filterAspect, searchQuery]);
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  }), [filterStore, filterStatus, filterAspect, searchQuery, dateFrom, dateTo]);
 
   const hasActiveRuns = stats.running > 0;
 
@@ -150,7 +154,7 @@ export default function SyncRunsPage() {
   useEffect(() => {
     setCurrentPage(0);
     setAccumulated([]);
-  }, [filterStore, filterStatus, filterAspect, searchQuery]);
+  }, [filterStore, filterStatus, filterAspect, searchQuery, dateFrom, dateTo]);
 
   const runs = accumulated;
   const totalCount = pageData?.count ?? 0;
@@ -483,7 +487,21 @@ export default function SyncRunsPage() {
                   <SelectItem value="coupons">Coupons</SelectItem>
                 </SelectContent>
               </Select>
-              {(filterStore !== "all" || filterStatus !== "all" || filterAspect !== "all" || searchQuery) && (
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-[150px]"
+                placeholder="From"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-[150px]"
+                placeholder="To"
+              />
+              {(filterStore !== "all" || filterStatus !== "all" || filterAspect !== "all" || searchQuery || dateFrom || dateTo) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -492,6 +510,8 @@ export default function SyncRunsPage() {
                     setFilterStatus("all");
                     setFilterAspect("all");
                     setSearchQuery("");
+                    setDateFrom("");
+                    setDateTo("");
                   }}
                 >
                   Clear filters
