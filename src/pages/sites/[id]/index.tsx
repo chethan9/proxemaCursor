@@ -225,7 +225,7 @@ function DeletedRecordsArchive({ storeId }: { storeId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
+                  <TableHead className="pl-6">Type</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>WooCommerce ID</TableHead>
                   <TableHead>Source</TableHead>
@@ -1047,18 +1047,17 @@ export default function SiteWorkspacePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Aspect</TableHead>
+                      <TableHead className="pl-6">Aspect</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Records</TableHead>
                       <TableHead>Duration</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead></TableHead>
+                      <TableHead className="pr-6">Started</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {syncRuns.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
                           No sync runs yet. Click &quot;Sync All Data&quot; to start.
                         </TableCell>
                       </TableRow>
@@ -1069,8 +1068,8 @@ export default function SiteWorkspacePage() {
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => setSelectedSyncRun(run)}
                         >
-                          <TableCell>
-                            <div className="flex items-center gap-2">
+                          <TableCell className="pl-6 py-3.5">
+                            <div className="flex items-center gap-2.5">
                               {(() => {
                                 const aspect = SYNC_ASPECTS.find(a => a.id === run.aspect);
                                 if (aspect) {
@@ -1082,13 +1081,13 @@ export default function SiteWorkspacePage() {
                               <span className="font-medium capitalize">{run.aspect}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-3.5">
                             <div className="flex items-center gap-2">
                               {getStatusIcon(run.status || "pending")}
                               <span className="capitalize">{run.status}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-3.5">
                             {run.records_processed ? (
                               <span>
                                 {run.records_processed}
@@ -1098,16 +1097,11 @@ export default function SiteWorkspacePage() {
                               </span>
                             ) : "-"}
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm py-3.5">
                             {formatDuration(run.started_at || "", run.completed_at)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="pr-6 py-3.5 text-muted-foreground">
                             {formatDate(run.started_at)}
-                          </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedSyncRun(run)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
