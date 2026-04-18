@@ -33,6 +33,7 @@ import {
   type SortDirection,
 } from "@/services/productService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { OrdersTab } from "@/components/explore/OrdersTab";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
@@ -1146,9 +1147,7 @@ export default function ExploreStorePage() {
             </TabsContent>
 
             <TabsContent value="orders">
-              <Card>
-                <CardContent className="py-16 text-center text-muted-foreground text-sm">Coming soon</CardContent>
-              </Card>
+              <OrdersTab storeId={storeId} />
             </TabsContent>
             <TabsContent value="tags">
               <Card>
