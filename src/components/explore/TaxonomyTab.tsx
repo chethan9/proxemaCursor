@@ -94,7 +94,31 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
               <Input placeholder={`Search ${mode}...`} value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 h-9 px-2.5 rounded-md border border-border">
+              <Icon className="h-3.5 w-3.5" />
+              <span className="font-medium text-foreground">{count.toLocaleString()}</span>
+            </div>
+            {count > 0 && (
+              <div className="flex items-center gap-2 h-9 px-2.5 rounded-md border border-border">
+                <span>Rows:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">{pageSize}</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="whitespace-nowrap">{page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {count.toLocaleString()}</span>
+                <div className="flex items-center gap-0.5">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count}><ChevronRightIcon className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+            )}
             <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={rows.length === 0} title="Export CSV">
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
@@ -102,55 +126,44 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
           </div>
         </div>
       )}
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex-1" />
-              {!embedHeader && (
+      {!embedHeader && (
+        <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex-1" />
                 <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={exportCsv} disabled={rows.length === 0} title="Export CSV">
                   <Download className="h-3.5 w-3.5" />
                 </Button>
-              )}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
-                <Icon className="h-3.5 w-3.5" />
-                <span className="font-medium">{count.toLocaleString()}</span>
-              </div>
-
-              {count > 0 && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
-                  <span>Rows:</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">
-                        {pageSize}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {PAGE_SIZE_OPTIONS.map((n) => (
-                        <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>
-                          {n}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <span className="whitespace-nowrap">
-                    {page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {count.toLocaleString()}
-                  </span>
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count}>
-                      <ChevronRightIcon className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="font-medium">{count.toLocaleString()}</span>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                {count > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
+                    <span>Rows:</span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">{pageSize}</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {PAGE_SIZE_OPTIONS.map((n) => (
+                          <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="whitespace-nowrap">{page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {count.toLocaleString()}</span>
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count}><ChevronRightIcon className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">
