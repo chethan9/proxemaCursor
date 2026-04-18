@@ -103,6 +103,74 @@ export default function ExploreStorePage() {
   });
   const [productsLoading, setProductsLoading] = useState(false);
 
+  // Filter/sort/view state
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [outOfStockOnly, setOutOfStockOnly] = useState(false);
+  const [sort, setSort] = useState(SORT_OPTIONS[0]);
+  const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
+    if (typeof window === "undefined") return "table";
+    return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
+  }, [viewMode]);
+
+  // Column visibility + order
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
+    image: true,
+    id: false,
+    name: true,
+    status: true,
+    sku: true,
+    price: true,
+    regular_price: false,
+    sale_price: false,
+    stock: true,
+    stock_status: false,
+    manage_stock: false,
+    category: true,
+    type: false,
+    slug: false,
+    wooId: false,
+    parent_id: false,
+    permalink: false,
+    tax_status: false,
+    tax_class: false,
+    shipping_required: false,
+    images_count: false,
+    short_desc: false,
+    description: false,
+    attributes: false,
+    sales: false,
+    date_created: false,
+    date_modified: false,
+    created: false,
+    updated: false,
+  });
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("explore-col-order");
+        if (saved) {
+          const parsed = JSON.parse(saved) as ColumnKey[];
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = parsed.filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          return [...valid, ...missing];
+        }
+      } catch { /* ignore */ }
+    }
+    return COLUMNS.map((c) => c.key);
+  });
+  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
+  }, [columnOrder]);
+
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-page-size", String(pageSize));
   }, [pageSize]);
