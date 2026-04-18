@@ -1,6 +1,6 @@
 ---
 title: Dynamic webhook URL via NEXT_PUBLIC_APP_URL env var
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [deployment, webhooks]

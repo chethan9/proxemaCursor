@@ -1,6 +1,6 @@
 ---
 title: Deployment workflow documentation (docs/DEPLOYMENT.md)
-status: todo
+status: done
 priority: high
 type: chore
 tags: [docs, deployment]

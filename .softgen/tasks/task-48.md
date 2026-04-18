@@ -1,6 +1,6 @@
 ---
 title: Supabase dev/prod split + migration runner
-status: todo
+status: done
 priority: high
 type: chore
 tags: [deployment, database]
