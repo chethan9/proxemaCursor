@@ -1,6 +1,6 @@
 ---
 title: Create SiteLayout wrapper with auto-collapsing main sidebar
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [layout, routing]
