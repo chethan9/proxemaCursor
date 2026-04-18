@@ -35,7 +35,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OrdersTab } from "@/components/explore/OrdersTab";
 import { TaxonomyTab } from "@/components/explore/TaxonomyTab";
-import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
 import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -939,8 +938,10 @@ export default function ExploreStorePage() {
                         ) : (
                           products.map((p) => {
                             const thumb = getProductThumbnail(p.images);
+                            const isExpanded = expandedRowId === p.id;
                             return (
-                              <TableRow key={p.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                              <>
+                              <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                                 {visibleColList.map((c) => {
                                   if (c.key === "image") {
                                     return (
@@ -1136,8 +1137,22 @@ export default function ExploreStorePage() {
                                   return <TableCell key={c.key}>—</TableCell>;
                                 })}
                               </TableRow>
-                            );
-                          })
+                              {isExpanded && (
+                                <TableRow key={`${p.id}-exp`} className="hover:bg-transparent">
+                                  <TableCell colSpan={visibleColList.length} className="p-0">
+                                    <ProductRowExpanded
+                                      product={p}
+                                      storeUrl={store?.url}
+                                      onClose={() => setExpandedRowId(null)}
+                                      onSaved={(updated) => {
+                                        setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                                      }}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
+                          ))
                         )}
                       </TableBody>
                     </Table>
@@ -1163,14 +1178,6 @@ export default function ExploreStorePage() {
             </TabsContent>
           </Tabs>
         </div>
-        <ProductQuickEdit
-          product={editingProduct}
-          open={!!editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSaved={(p) => {
-            setProducts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
-          }}
-        />
       </AppLayout>
     </AuthGuard>
   );
