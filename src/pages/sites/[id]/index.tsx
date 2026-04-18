@@ -110,6 +110,7 @@ const SYNC_ASPECTS = [
   { id: "orders", label: "Orders", icon: ShoppingCart, color: "text-green-500" },
   { id: "customers", label: "Customers", icon: Users, color: "text-purple-500" },
   { id: "categories", label: "Categories", icon: Layers, color: "text-orange-500" },
+  { id: "tags", label: "Tags", icon: Tag, color: "text-cyan-500" },
   { id: "coupons", label: "Coupons", icon: Ticket, color: "text-pink-500" },
 ] as const;
 
@@ -308,6 +309,7 @@ export default function SiteWorkspacePage() {
     orders: 0,
     customers: 0,
     categories: 0,
+    tags: 0,
     coupons: 0,
   });
   
@@ -419,11 +421,12 @@ export default function SiteWorkspacePage() {
   };
 
   const getExtendedDataCounts = async (storeId: string) => {
-    const [products, orders, customers, categories, coupons] = await Promise.all([
+    const [products, orders, customers, categories, tags, coupons] = await Promise.all([
       supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId),
       supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", storeId),
       supabase.from("categories").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+      supabase.from("tags").select("id", { count: "exact", head: true }).eq("store_id", storeId),
       supabase.from("coupons").select("id", { count: "exact", head: true }).eq("store_id", storeId),
     ]);
     
@@ -432,6 +435,7 @@ export default function SiteWorkspacePage() {
       orders: orders.count || 0,
       customers: customers.count || 0,
       categories: categories.count || 0,
+      tags: tags.count || 0,
       coupons: coupons.count || 0,
     };
   };
@@ -809,7 +813,10 @@ export default function SiteWorkspacePage() {
 
         <Tabs defaultValue="sync" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="sync">Sync Engine</TabsTrigger>
+            <TabsTrigger value="sync" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Sync Engine
+            </TabsTrigger>
             <TabsTrigger value="data" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Data
@@ -891,7 +898,7 @@ export default function SiteWorkspacePage() {
                   
                   {/* Right: Data Stats */}
                   <TooltipProvider>
-                    <div className="grid grid-cols-5 gap-4 lg:gap-6">
+                    <div className="grid grid-cols-6 gap-4 lg:gap-6">
                       {SYNC_ASPECTS.map((aspect) => {
                         const AspectIcon = aspect.icon;
                         const count = dataCounts[aspect.id] || 0;
@@ -1173,7 +1180,11 @@ export default function SiteWorkspacePage() {
                         </TableRow>
                       ) : (
                         products.map((product) => (
-                          <TableRow key={product.id}>
+                          <TableRow 
+                            key={product.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => openDetail(product, "product")}
+                          >
                             <TableCell className="font-medium max-w-[200px] truncate">{product.name}</TableCell>
                             <TableCell className="font-mono text-sm">{product.sku || "-"}</TableCell>
                             <TableCell>{formatCurrency(Number(product.price))}</TableCell>
@@ -1186,7 +1197,7 @@ export default function SiteWorkspacePage() {
                             <TableCell className="text-muted-foreground">
                               {formatRelativeTime(product.synced_at)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -1221,7 +1232,11 @@ export default function SiteWorkspacePage() {
                         </TableRow>
                       ) : (
                         orders.map((order) => (
-                          <TableRow key={order.id}>
+                          <TableRow 
+                            key={order.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => openDetail(order, "order")}
+                          >
                             <TableCell className="font-mono">#{order.order_number || order.woo_id}</TableCell>
                             <TableCell>
                               <StatusBadge variant={getStatusVariant(order.status || "pending")}>
@@ -1236,7 +1251,7 @@ export default function SiteWorkspacePage() {
                             <TableCell className="text-muted-foreground">
                               {formatDate(order.date_created)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -1271,7 +1286,11 @@ export default function SiteWorkspacePage() {
                         </TableRow>
                       ) : (
                         customers.map((customer) => (
-                          <TableRow key={customer.id}>
+                          <TableRow 
+                            key={customer.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => openDetail(customer, "customer")}
+                          >
                             <TableCell className="font-medium">
                               {customer.first_name} {customer.last_name}
                             </TableCell>
@@ -1281,7 +1300,7 @@ export default function SiteWorkspacePage() {
                             <TableCell className="text-muted-foreground">
                               {formatDate(customer.date_created)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
