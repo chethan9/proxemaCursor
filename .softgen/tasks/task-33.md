@@ -1,9 +1,9 @@
 ---
 title: Split site mega-page into per-section pages (Orders, Products, etc.)
-status: todo
-priority: urgent
-type: chore
-tags: [refactor, pages, routing]
+status: done
+priority: high
+type: feature
+tags: [site-pages, routing, refactor]
 created_by: agent
 created_at: 2026-04-18T14:15:00Z
 position: 33
