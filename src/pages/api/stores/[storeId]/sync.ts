@@ -32,9 +32,23 @@ async function fetchAllFromWooCommerce<T>(
     url.searchParams.set("page", page.toString());
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
 
-    const response = await fetch(url.toString(), {
-      headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), {
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timeout);
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new Error(`WooCommerce API timeout (30s) on ${endpoint} page ${page}`);
+      }
+      throw err;
+    }
+    clearTimeout(timeout);
 
     if (!response.ok) {
       if (response.status === 400 || response.status === 404) break;
