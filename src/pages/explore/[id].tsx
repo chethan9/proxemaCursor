@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter, ChevronDown, GripVertical } from "lucide-react";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List, Grid3x3, Filter, ChevronDown, GripVertical, ShoppingCart, Tag, FolderTree } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -407,11 +407,23 @@ export default function ExploreStorePage() {
               </div>
             </div>
             <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
-              <TabsList>
-                <TabsTrigger value="products">Products</TabsTrigger>
-                <TabsTrigger value="orders">Orders</TabsTrigger>
-                <TabsTrigger value="tags">Tags</TabsTrigger>
-                <TabsTrigger value="categories">Categories</TabsTrigger>
+              <TabsList className="h-10 bg-muted/60 border border-border p-1 gap-0.5">
+                <TabsTrigger value="products" className="h-8 px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary">
+                  <Package className="h-3.5 w-3.5" />
+                  <span className="text-sm font-medium">Products</span>
+                </TabsTrigger>
+                <TabsTrigger value="orders" className="h-8 px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary">
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                  <span className="text-sm font-medium">Orders</span>
+                </TabsTrigger>
+                <TabsTrigger value="tags" className="h-8 px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary">
+                  <Tag className="h-3.5 w-3.5" />
+                  <span className="text-sm font-medium">Tags</span>
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="h-8 px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary">
+                  <FolderTree className="h-3.5 w-3.5" />
+                  <span className="text-sm font-medium">Categories</span>
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
