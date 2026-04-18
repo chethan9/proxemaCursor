@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, UserCog, Shield, Key, RefreshCw, Webhook, Activity, ListTree } from "lucide-react";
+import { User, Palette, CreditCard, UserCog, Shield, ListTree } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -27,15 +27,6 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
       label: "Appearance",
       items: [
         { href: "/settings/theme", icon: Palette, label: "Theme", show: true },
-      ],
-    },
-    {
-      label: "Developer",
-      items: [
-        { href: "/api-management", icon: Key, label: "API", show: can(PERMISSIONS.API_VIEW) },
-        { href: "/sync-runs", icon: RefreshCw, label: "Sync Runs", show: can(PERMISSIONS.SYNC_VIEW) },
-        { href: "/webhooks", icon: Webhook, label: "Webhooks", show: can(PERMISSIONS.WEBHOOKS_VIEW) },
-        { href: "/webhooks/activity", icon: Activity, label: "Activity", show: can(PERMISSIONS.WEBHOOKS_VIEW) },
       ],
     },
     {
