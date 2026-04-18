@@ -107,10 +107,8 @@ export default function ExploreStorePage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [outOfStockOnly, setOutOfStockOnly] = useState(false);
+  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [priceMin, setPriceMin] = useState<string>("");
-  const [priceMax, setPriceMax] = useState<string>("");
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";
@@ -196,7 +194,7 @@ export default function ExploreStorePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, outOfStockOnly, pageSize, categoryFilter, priceMin, priceMax]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, pageSize, categoryFilter]);
 
   const loadProducts = useCallback(async () => {
     if (!storeId) return;
@@ -210,10 +208,8 @@ export default function ExploreStorePage() {
         sortField: sort.field,
         sortDirection: sort.direction,
         statusFilter,
-        outOfStockOnly,
+        excludeOutOfStock,
         categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-        priceMin: priceMin ? parseFloat(priceMin) : undefined,
-        priceMax: priceMax ? parseFloat(priceMax) : undefined,
       });
       setProductCount(count);
       setProducts(data);
@@ -222,7 +218,7 @@ export default function ExploreStorePage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, outOfStockOnly, categoryFilter, priceMin, priceMax]);
+  }, [storeId, page, pageSize, debouncedSearch, sort, statusFilter, excludeOutOfStock, categoryFilter]);
 
   useEffect(() => {
     if (storeId) loadProducts();
@@ -391,14 +387,14 @@ export default function ExploreStorePage() {
                       </div>
 
                       <Button
-                        variant={outOfStockOnly ? "secondary" : "outline"}
+                        variant={excludeOutOfStock ? "secondary" : "outline"}
                         size="sm"
-                        className="h-9 text-xs gap-1.5"
-                        onClick={() => setOutOfStockOnly((v) => !v)}
-                        title="Show only out-of-stock products"
+                        className="h-9 text-xs gap-1.5 px-2.5"
+                        onClick={() => setExcludeOutOfStock((v) => !v)}
+                        title={excludeOutOfStock ? "Showing in-stock only — click to include out-of-stock" : "Exclude out-of-stock items"}
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${outOfStockOnly ? "bg-destructive" : "bg-muted-foreground/40"}`} />
-                        Out of stock
+                        <span className={`h-1.5 w-1.5 rounded-full ${excludeOutOfStock ? "bg-success" : "bg-muted-foreground/40"}`} />
+                        EOS
                       </Button>
 
                       {categoryOptions.length > 0 && (
@@ -415,26 +411,7 @@ export default function ExploreStorePage() {
                         </select>
                       )}
 
-                      <div className="flex items-center gap-1 h-9 rounded-md border border-border bg-background px-1.5">
-                        <span className="text-[11px] text-muted-foreground">Price</span>
-                        <Input
-                          type="number"
-                          placeholder="min"
-                          value={priceMin}
-                          onChange={(e) => setPriceMin(e.target.value)}
-                          className="h-7 w-16 text-xs border-0 p-0 focus-visible:ring-0 shadow-none"
-                        />
-                        <span className="text-muted-foreground">–</span>
-                        <Input
-                          type="number"
-                          placeholder="max"
-                          value={priceMax}
-                          onChange={(e) => setPriceMax(e.target.value)}
-                          className="h-7 w-16 text-xs border-0 p-0 focus-visible:ring-0 shadow-none"
-                        />
-                      </div>
-
-                      {(categoryFilter !== "all" || priceMin || priceMax || outOfStockOnly || statusFilter !== "all" || search) && (
+                      {(categoryFilter !== "all" || excludeOutOfStock || statusFilter !== "all" || search) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -442,10 +419,8 @@ export default function ExploreStorePage() {
                           onClick={() => {
                             setSearch("");
                             setStatusFilter("all");
-                            setOutOfStockOnly(false);
+                            setExcludeOutOfStock(false);
                             setCategoryFilter("all");
-                            setPriceMin("");
-                            setPriceMax("");
                           }}
                         >
                           Clear
@@ -543,41 +518,6 @@ export default function ExploreStorePage() {
                                 >
                                   Reset
                                 </Button>
-                              </div>
-                            </div>
-
-                            <div className="px-4 py-3 border-b border-border bg-muted/30">
-                              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
-                                Active order ({visibleColList.length}) — drag to rearrange
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {visibleColList.length === 0 ? (
-                                  <span className="text-xs text-muted-foreground italic">No columns selected</span>
-                                ) : (
-                                  visibleColList.map((c) => (
-                                    <div
-                                      key={c.key}
-                                      draggable
-                                      onDragStart={() => setDragKey(c.key)}
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={() => {
-                                        if (!dragKey || dragKey === c.key) return;
-                                        setColumnOrder((prev) => {
-                                          const next = prev.filter((k) => k !== dragKey);
-                                          const idx = next.indexOf(c.key);
-                                          next.splice(idx, 0, dragKey);
-                                          return next;
-                                        });
-                                        setDragKey(null);
-                                      }}
-                                      onDragEnd={() => setDragKey(null)}
-                                      className={`flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-background text-xs cursor-move hover:border-primary/50 hover:bg-accent transition ${dragKey === c.key ? "opacity-40" : ""}`}
-                                    >
-                                      <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="3" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="3" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="13" r="1.2"/></svg>
-                                      <span>{c.label || c.key}</span>
-                                    </div>
-                                  ))
-                                )}
                               </div>
                             </div>
 
