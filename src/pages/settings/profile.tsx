@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Mail, Lock } from "lucide-react";
+import { User, Mail, Lock } from "lucide-react";
 
 export default function ProfileSettings() {
   const { user, profile, refresh, loading } = useAuth();
@@ -103,28 +103,25 @@ export default function ProfileSettings() {
 
   if (loading) {
     return (
-      <AppLayout title="Profile">
-        <div className="p-6 text-sm text-muted-foreground">Loading...</div>
-      </AppLayout>
+      <SettingsLayout title="Profile">
+        <div className="p-8 text-sm text-muted-foreground">Loading...</div>
+      </SettingsLayout>
     );
   }
 
   if (!user) {
     return (
-      <AppLayout title="Profile">
-        <div className="p-6 text-sm text-muted-foreground">Not signed in.</div>
-      </AppLayout>
+      <SettingsLayout title="Profile">
+        <div className="p-8 text-sm text-muted-foreground">Not signed in.</div>
+      </SettingsLayout>
     );
   }
 
   return (
-    <AppLayout title="Profile">
-      <div className="p-6 space-y-6 max-w-2xl">
+    <SettingsLayout title="Profile">
+      <div className="p-8 space-y-6 max-w-2xl">
         <div>
-          <Link href="/settings" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Settings
-          </Link>
-          <h1 className="text-2xl font-semibold">Profile</h1>
+          <h1 className="text-2xl font-semibold">My Profile</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage your personal account information</p>
         </div>
 
@@ -243,6 +240,6 @@ export default function ProfileSettings() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </SettingsLayout>
   );
 }
