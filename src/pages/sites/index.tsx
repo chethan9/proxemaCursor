@@ -61,33 +61,33 @@ export default function SitesPage() {
 
   // Cache-first data loading
   const loadData = useCallback(async (forceRefresh = false) => {
-    // Check cache FIRST - before any loading state
     const cachedStores = browserCache.get<StoreWithClient[]>(CACHE_KEYS.STORES);
     const cachedClients = browserCache.get<Client[]>(CACHE_KEYS.CLIENTS);
-    
+
     if (cachedStores && cachedClients && !forceRefresh) {
-      // Instant render from cache - no loading state
       setStores(cachedStores);
       setClients(cachedClients);
-      
-      // Background refresh (SWR pattern)
       Promise.all([getStores(), getClients()]).then(([freshStores, freshClients]) => {
         browserCache.set(CACHE_KEYS.STORES, freshStores, CACHE_TTL.MEDIUM);
         browserCache.set(CACHE_KEYS.CLIENTS, freshClients, CACHE_TTL.MEDIUM);
         setStores(freshStores);
         setClients(freshClients);
       }).catch(console.error);
-      
       return;
     }
 
-    // No cache - show loading
     setLoading(true);
+    const timeoutId = setTimeout(() => {
+      console.warn("[Sites] load timeout — releasing loading state");
+      setLoading(false);
+    }, 8000);
+
     try {
       const [storesData, clientsData] = await Promise.all([
         getStores(),
         getClients(),
       ]);
+      clearTimeout(timeoutId);
       setStores(storesData);
       setClients(clientsData);
       browserCache.set(CACHE_KEYS.STORES, storesData, CACHE_TTL.MEDIUM);
@@ -95,6 +95,7 @@ export default function SitesPage() {
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, []);
