@@ -173,7 +173,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
@@ -181,9 +181,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.clients}</div>
-              <p className="text-xs text-muted-foreground">
-                Organizations managed
-              </p>
+              <p className="text-xs text-muted-foreground">Organizations managed</p>
             </CardContent>
           </Card>
 
@@ -195,13 +193,9 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {stats.connectedStores}
-                <span className="text-sm font-normal text-muted-foreground">
-                  /{stats.stores}
-                </span>
+                <span className="text-sm font-normal text-muted-foreground">/{stats.stores}</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Connected WooCommerce stores
-              </p>
+              <p className="text-xs text-muted-foreground">Connected WooCommerce stores</p>
             </CardContent>
           </Card>
 
@@ -215,12 +209,8 @@ export default function Dashboard() {
               )}
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {successRate}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.successfulSyncs} of {stats.totalSyncs} syncs
-              </p>
+              <div className="text-2xl font-bold">{successRate}%</div>
+              <p className="text-xs text-muted-foreground">{stats.successfulSyncs} of {stats.totalSyncs} syncs</p>
             </CardContent>
           </Card>
 
@@ -230,19 +220,12 @@ export default function Dashboard() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.totalRecords.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Total records processed
-              </p>
+              <div className="text-2xl font-bold">{stats.totalRecords.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Total records processed</p>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Fleet Health + Attention */}
-        {avgHealth !== null && (
-          <div className="grid gap-4 lg:grid-cols-3">
+          {avgHealth !== null && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Fleet Health</CardTitle>
@@ -250,37 +233,37 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{avgHealth}%</div>
-                <p className="text-xs text-muted-foreground">
-                  {healthyStores.length} healthy, {attentionStores.length} need attention
-                </p>
+                <p className="text-xs text-muted-foreground">{healthyStores.length} healthy, {attentionStores.length} need attention</p>
               </CardContent>
             </Card>
-            {attentionStores.length > 0 && (
-              <Card className="lg:col-span-2 border-amber-200 bg-amber-50/30">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <CardTitle className="text-sm font-medium">Sites Needing Attention</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {attentionStores.slice(0, 4).map(store => (
-                      <Link key={store.id} href={`/sites/${store.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-100/50 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <Store className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">{store.name}</span>
-                        </div>
-                        <span className={`text-sm font-bold ${(store.health_score ?? 0) < 50 ? "text-red-600" : "text-amber-600"}`}>
-                          {store.health_score}%
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          )}
+        </div>
+
+        {/* Attention Row - only when needed */}
+        {attentionStores.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50/30">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-sm font-medium">Sites Needing Attention</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 md:grid-cols-2">
+                {attentionStores.slice(0, 6).map(store => (
+                  <Link key={store.id} href={`/sites/${store.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-100/50 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Store className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">{store.name}</span>
+                    </div>
+                    <span className={`text-sm font-bold flex-shrink-0 ${(store.health_score ?? 0) < 50 ? "text-red-600" : "text-amber-600"}`}>
+                      {store.health_score}%
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Charts Row */}
@@ -352,32 +335,45 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="h-[200px] flex items-center justify-center">
+                <div className="h-[240px] flex items-center justify-center">
                   <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : aspectChartData.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                <div className="h-[240px] flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p>No sync data yet</p>
                   </div>
                 </div>
               ) : (
-                <div className="h-[200px]">
+                <div className="h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={aspectChartData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" />
-                      <YAxis 
-                        type="category" 
-                        dataKey="aspect" 
-                        width={80}
-                        tick={{ fontSize: 12 }}
+                    <BarChart data={aspectChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barCategoryGap="20%">
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="aspect"
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={{ stroke: "hsl(var(--border))" }}
+                        tickLine={false}
                       />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted))" }}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
+                      <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
