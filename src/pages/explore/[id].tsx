@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Columns3, ArrowUpDown, Download, Package, Loader2, ImageIcon, LayoutGrid, List } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -150,12 +150,16 @@ export default function ExploreStorePage() {
     return COLUMNS.map((c) => c.key);
   });
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "grid">(() => {
+    if (typeof window === "undefined") return "table";
+    return (localStorage.getItem("explore-view-mode") as "table" | "grid") || "table";
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
+      localStorage.setItem("explore-view-mode", viewMode);
     }
-  }, [columnOrder]);
+  }, [viewMode]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -366,6 +370,27 @@ export default function ExploreStorePage() {
                     </div>
 
                     <div className="ml-auto flex items-center gap-2">
+                      <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
+                        <Button
+                          variant={viewMode === "table" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setViewMode("table")}
+                          title="Table view"
+                        >
+                          <List className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant={viewMode === "grid" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setViewMode("grid")}
+                          title="Grid view"
+                        >
+                          <LayoutGrid className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" className="h-9 gap-2">
@@ -431,7 +456,7 @@ export default function ExploreStorePage() {
                           </div>
 
                           <div className="px-4 py-3 border-b border-border bg-muted/30">
-                            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">
                               Active order ({visibleColList.length}) — drag to rearrange
                             </div>
                             <div className="flex flex-wrap gap-1.5">
@@ -526,9 +551,88 @@ export default function ExploreStorePage() {
                 </CardContent>
               </Card>
 
-              {/* Products table */}
+              {/* Products table or grid */}
               <Card>
                 <CardContent className="p-0">
+                  {viewMode === "grid" ? (
+                    <div className="p-4">
+                      {initialProductsLoad ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden">
+                              <Skeleton className="h-36 w-full rounded-none" />
+                              <div className="p-2.5 space-y-1.5">
+                                <Skeleton className="h-3.5 w-full" />
+                                <Skeleton className="h-3 w-2/3" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : products.length === 0 ? (
+                        <div className="py-16 text-center">
+                          <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                          <p className="text-sm text-muted-foreground">No products found</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          {products.map((p) => {
+                            const thumb = getProductThumbnail(p.images);
+                            const cats = getCategoryNames(p.categories);
+                            const statusColor: Record<string, string> = {
+                              publish: "bg-success/10 text-success border-success/20",
+                              draft: "bg-muted text-muted-foreground border-border",
+                              pending: "bg-warning/10 text-warning border-warning/20",
+                              private: "bg-secondary text-secondary-foreground border-border",
+                            };
+                            const cls = statusColor[p.status || ""] || "bg-muted text-muted-foreground border-border";
+                            return (
+                              <div key={p.id} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-sm transition bg-card">
+                                <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                                  {thumb ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                  ) : (
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                                  )}
+                                  <Badge variant="outline" className={`absolute top-1.5 left-1.5 capitalize text-[10px] ${cls}`}>
+                                    {p.status === "publish" ? "Active" : p.status || "—"}
+                                  </Badge>
+                                </div>
+                                <div className="p-2.5 space-y-1">
+                                  <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
+                                  <div className="flex items-center justify-between gap-2 text-xs">
+                                    <span className="font-mono text-muted-foreground truncate">{p.sku || "—"}</span>
+                                    <span className="font-mono font-medium">
+                                      {p.sale_price && p.sale_price !== p.regular_price ? (
+                                        <>
+                                          <span>{p.sale_price}</span>
+                                          <span className="ml-1 line-through text-muted-foreground text-xs">{p.regular_price}</span>
+                                        </>
+                                      ) : (
+                                        p.price || "—"
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                                    <span className="truncate">{cats || "No category"}</span>
+                                    {p.stock_quantity != null ? (
+                                      <span className={p.stock_quantity === 0 ? "text-destructive" : p.stock_quantity < 5 ? "text-warning" : ""}>
+                                        {p.stock_quantity} qty
+                                      </span>
+                                    ) : p.stock_status === "instock" ? (
+                                      <span className="text-success">In stock</span>
+                                    ) : p.stock_status === "outofstock" ? (
+                                      <span className="text-destructive">Out</span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -617,7 +721,7 @@ export default function ExploreStorePage() {
                                     );
                                   }
                                   if (c.key === "sku") {
-                                    return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground">{p.sku || "—"}</TableCell>;
+                                    return <TableCell key={c.key} className="font-mono text-sm text-muted-foreground">{p.sku || "—"}</TableCell>;
                                   }
                                   if (c.key === "price") {
                                     return (
@@ -771,7 +875,7 @@ export default function ExploreStorePage() {
                       </TableBody>
                     </Table>
                   </div>
-
+                  )}
                   {/* Load more sentinel */}
                   {!initialProductsLoad && products.length > 0 && (
                     <div ref={sentinelCallback} className="py-6 flex items-center justify-center">
