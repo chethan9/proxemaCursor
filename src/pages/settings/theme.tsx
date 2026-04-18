@@ -10,40 +10,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Save, RotateCcw, Palette, Upload, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const COLOR_PRESETS = [
-  { name: "Polaris Green", primary: "#008060", sidebar: "#1a1a1a" },
-  { name: "Ocean Blue", primary: "#2563eb", sidebar: "#0f172a" },
-  { name: "Royal Purple", primary: "#7c3aed", sidebar: "#1e1b2e" },
-  { name: "Crimson", primary: "#dc2626", sidebar: "#1a0a0a" },
-  { name: "Amber", primary: "#d97706", sidebar: "#1a1205" },
-  { name: "Slate", primary: "#475569", sidebar: "#0f172a" },
-];
-
-const THEME_PRESETS: { id: ThemePreset; name: string; description: string; preview: { bg: string; surface: string; accent: string; radius: string } }[] = [
+const THEME_PRESETS: { id: ThemePreset; name: string; description: string; preview: { bg: string; surface: string; accent: string; sidebar: string; sidebarFg: string; radius: string } }[] = [
   {
     id: "classic",
     name: "Classic Shopify",
     description: "Clean Polaris-style with sharp edges and minimal shadows",
-    preview: { bg: "#FFFFFF", surface: "#F6F6F7", accent: "#008060", radius: "6px" },
+    preview: { bg: "#F6F6F7", surface: "#FFFFFF", accent: "#008060", sidebar: "#1A1D21", sidebarFg: "#FFFFFF", radius: "6px" },
   },
   {
     id: "modern",
     name: "Modern",
-    description: "Soft gray surfaces, rounded corners, elevated cards",
-    preview: { bg: "#F7F7F8", surface: "#FFFFFF", accent: "#FF6A00", radius: "12px" },
+    description: "Soft gray surfaces, elevated cards, orange accent, rounded corners",
+    preview: { bg: "#F7F7F8", surface: "#FFFFFF", accent: "#FF6A00", sidebar: "#FFFFFF", sidebarFg: "#111827", radius: "12px" },
   },
 ];
 
 export default function ThemeSettings() {
-  const { brandName, logoUrl, primaryColor, sidebarColor, accentColor, themePreset, save, loading } = useBranding();
+  const { brandName, logoUrl, themePreset, save, loading } = useBranding();
   const { toast } = useToast();
 
   const [form, setForm] = useState({
     brandName: "",
     logoUrl: "",
-    primaryColor: "#008060",
-    sidebarColor: "#1a1a1a",
-    accentColor: "#008060",
     themePreset: "classic" as ThemePreset,
   });
   const [saving, setSaving] = useState(false);
@@ -52,16 +40,9 @@ export default function ThemeSettings() {
 
   useEffect(() => {
     if (!loading) {
-      setForm({
-        brandName,
-        logoUrl: logoUrl || "",
-        primaryColor,
-        sidebarColor,
-        accentColor,
-        themePreset,
-      });
+      setForm({ brandName, logoUrl: logoUrl || "", themePreset });
     }
-  }, [loading, brandName, logoUrl, primaryColor, sidebarColor, accentColor, themePreset]);
+  }, [loading, brandName, logoUrl, themePreset]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -69,9 +50,6 @@ export default function ThemeSettings() {
       await save({
         brandName: form.brandName.trim() || "WooSync",
         logoUrl: form.logoUrl.trim() || null,
-        primaryColor: form.primaryColor,
-        sidebarColor: form.sidebarColor,
-        accentColor: form.accentColor,
         themePreset: form.themePreset,
       });
       toast({ title: "Theme saved", description: "Your theme has been updated." });
@@ -84,18 +62,7 @@ export default function ThemeSettings() {
   };
 
   const resetDefaults = () => {
-    setForm({
-      brandName: "WooSync",
-      logoUrl: "",
-      primaryColor: "#008060",
-      sidebarColor: "#1a1a1a",
-      accentColor: "#008060",
-      themePreset: "classic",
-    });
-  };
-
-  const applyPreset = (p: typeof COLOR_PRESETS[0]) => {
-    setForm({ ...form, primaryColor: p.primary, sidebarColor: p.sidebar, accentColor: p.primary });
+    setForm({ brandName: "WooSync", logoUrl: "", themePreset: "classic" });
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,13 +100,13 @@ export default function ThemeSettings() {
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <Palette className="h-6 w-6 text-primary" /> Theme
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Choose your style and customize your theme</p>
+          <p className="text-sm text-muted-foreground mt-1">Choose your style preset</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Style Preset</CardTitle>
-            <CardDescription>Pick a base design language. Affects radius, shadows, spacing, and surface tones.</CardDescription>
+            <CardDescription>Each preset controls colors, radius, shadows, spacing, and typography.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
@@ -160,18 +127,15 @@ export default function ThemeSettings() {
                         <Check className="h-3 w-3 text-primary-foreground" />
                       </div>
                     )}
-                    <div
-                      className="h-32 rounded-md mb-3 p-3 flex gap-2"
-                      style={{ background: p.preview.bg, borderRadius: p.preview.radius }}
-                    >
-                      <div className="w-20 rounded space-y-1.5 p-2" style={{ background: p.preview.surface, borderRadius: p.preview.radius }}>
-                        <div className="h-1.5 w-10 rounded-full bg-foreground/20" />
-                        <div className="h-1.5 w-8 rounded-full bg-foreground/10" />
-                        <div className="h-1.5 w-12 rounded-full bg-foreground/10" />
+                    <div className="h-32 rounded-md mb-3 p-2 flex gap-2" style={{ background: p.preview.bg, borderRadius: p.preview.radius }}>
+                      <div className="w-16 rounded p-2 space-y-1.5" style={{ background: p.preview.sidebar, borderRadius: p.preview.radius }}>
+                        <div className="h-1.5 w-8 rounded-full" style={{ background: p.preview.sidebarFg, opacity: 0.6 }} />
+                        <div className="h-1.5 w-6 rounded-full" style={{ background: p.preview.sidebarFg, opacity: 0.3 }} />
+                        <div className="h-1.5 w-10 rounded-full" style={{ background: p.preview.sidebarFg, opacity: 0.3 }} />
                       </div>
                       <div className="flex-1 rounded p-2 space-y-2" style={{ background: p.preview.surface, borderRadius: p.preview.radius }}>
-                        <div className="h-2 w-16 rounded-full bg-foreground/20" />
-                        <div className="h-8 rounded flex items-center px-2 gap-1.5" style={{ background: p.preview.bg, borderRadius: p.preview.radius }}>
+                        <div className="h-2 w-20 rounded-full bg-foreground/20" />
+                        <div className="h-6 rounded flex items-center px-2" style={{ background: p.preview.bg, borderRadius: p.preview.radius }}>
                           <div className="h-1.5 w-12 rounded-full bg-foreground/15" />
                         </div>
                         <div className="h-5 w-16 rounded flex items-center justify-center text-[10px] text-white font-medium" style={{ background: p.preview.accent, borderRadius: p.preview.radius }}>
@@ -215,62 +179,6 @@ export default function ThemeSettings() {
                   <span className="text-sm text-muted-foreground">Preview</span>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Accent Colors</CardTitle>
-            <CardDescription>Pick a preset or customize individually</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label className="mb-2 block">Color Presets</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {COLOR_PRESETS.map((p) => (
-                  <button key={p.name} onClick={() => applyPreset(p)} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 transition-colors text-left">
-                    <div className="flex gap-1">
-                      <div className="h-8 w-4 rounded-l" style={{ background: p.primary }} />
-                      <div className="h-8 w-4 rounded-r" style={{ background: p.sidebar }} />
-                    </div>
-                    <span className="text-sm font-medium">{p.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="primary-color">Primary</Label>
-                <div className="flex gap-2">
-                  <Input type="color" id="primary-color" value={form.primaryColor} onChange={(e) => setForm({ ...form, primaryColor: e.target.value, accentColor: e.target.value })} className="h-10 w-14 p-1 cursor-pointer" />
-                  <Input value={form.primaryColor} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} className="font-mono text-sm" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sidebar-color">Sidebar</Label>
-                <div className="flex gap-2">
-                  <Input type="color" id="sidebar-color" value={form.sidebarColor} onChange={(e) => setForm({ ...form, sidebarColor: e.target.value })} className="h-10 w-14 p-1 cursor-pointer" />
-                  <Input value={form.sidebarColor} onChange={(e) => setForm({ ...form, sidebarColor: e.target.value })} className="font-mono text-sm" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="accent-color">Accent</Label>
-                <div className="flex gap-2">
-                  <Input type="color" id="accent-color" value={form.accentColor} onChange={(e) => setForm({ ...form, accentColor: e.target.value })} className="h-10 w-14 p-1 cursor-pointer" />
-                  <Input value={form.accentColor} onChange={(e) => setForm({ ...form, accentColor: e.target.value })} className="font-mono text-sm" />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border p-4 bg-muted/30">
-              <p className="text-sm font-medium mb-3">Live Preview</p>
-              <div className="flex items-center gap-3">
-                <Button style={{ background: form.primaryColor }}>Primary Button</Button>
-                <Button variant="outline">Outline</Button>
-                <span className="text-sm" style={{ color: form.primaryColor }}>Sample link</span>
-              </div>
             </div>
           </CardContent>
         </Card>

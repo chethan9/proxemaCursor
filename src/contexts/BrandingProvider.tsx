@@ -72,17 +72,9 @@ function applyTheme(settings: BrandingSettings) {
     return;
   }
 
-  // Modern preset — applies live brand color overrides + tags root for scoped CSS
-  root.style.setProperty("--primary", hexToHsl(settings.primaryColor));
-  root.style.setProperty("--sidebar-primary", hexToHsl(settings.primaryColor));
-  root.style.setProperty("--ring", hexToHsl(settings.primaryColor));
-  root.style.setProperty("--sidebar", hexToHsl(settings.sidebarColor));
-  root.style.setProperty("--sidebar-accent", hexToHsl(settings.sidebarColor));
-  root.style.setProperty("--background", "220 13% 97%");
-  root.style.setProperty("--card", "0 0% 100%");
-  root.style.setProperty("--muted", "220 14% 95%");
-  root.style.setProperty("--border", "220 13% 91%");
-  root.style.setProperty("--radius", "0.75rem");
+  // Modern preset — all styling handled by globals.css [data-theme-preset="modern"] scope
+  // Clear any inline overrides so CSS variables from stylesheet take effect
+  ["--primary","--primary-foreground","--ring","--sidebar","--sidebar-foreground","--sidebar-primary","--sidebar-accent","--background","--card","--muted","--border","--radius"].forEach((v) => root.style.removeProperty(v));
   root.dataset.themePreset = "modern";
 }
 
