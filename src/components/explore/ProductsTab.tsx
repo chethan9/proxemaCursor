@@ -792,6 +792,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     </TableRow>
                   ) : (
                     products.map((p) => {
+                      const thumb = getProductThumbnail(p.images);
                       const isExpanded = expandedRowId === p.id;
                       const isSelected = selectedIds.has(p.id);
                       return (
