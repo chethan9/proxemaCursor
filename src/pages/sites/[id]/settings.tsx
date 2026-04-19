@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, RefreshCw, Settings as SettingsIcon, Zap, AlertTriangle, Trash2, Clock, Upload, X as XIcon } from "lucide-react";
+import { ArrowLeft, RefreshCw, Plug, AlertTriangle, Trash2, Clock, Upload, X as XIcon, Image as ImageIcon, CalendarClock, Zap } from "lucide-react";
 import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteIcon } from "@/components/site/SiteIcon";
@@ -126,7 +126,7 @@ function SettingsInner() {
   }, [id]);
 
   const formatDate = (d: string | null) =>
-    !d ? "-" : new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    !d ? "—" : new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
   const formatRelativeTime = (d: string | null) => {
     if (!d) return "Never";
@@ -148,6 +148,7 @@ function SettingsInner() {
       await updateStore(store.id, { sync_interval: interval || null, next_sync_at: nextSync });
       const s = await getStore(store.id);
       setStore(s);
+      toast({ title: "Schedule saved" });
     } finally {
       setSavingSettings(false);
     }
@@ -188,17 +189,19 @@ function SettingsInner() {
 
   if (loading && storeLoading) {
     return (
-      <div className="p-5 space-y-4 max-w-3xl">
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className="p-6 space-y-4 max-w-6xl">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     );
   }
 
   if (!store) {
     return (
-      <div className="p-5">
+      <div className="p-6">
         <p className="text-sm text-muted-foreground">Site not found.</p>
         <Link href="/sites"><Button variant="outline" size="sm" className="mt-3"><ArrowLeft className="h-3.5 w-3.5 mr-1.5" />Back to Sites</Button></Link>
       </div>
@@ -210,149 +213,168 @@ function SettingsInner() {
   const minsOverdue = nextMs ? Math.floor((Date.now() - nextMs) / 60000) : 0;
 
   return (
-    <div className="p-5 space-y-4 max-w-3xl">
-      <div className="flex items-center gap-2">
-        <SettingsIcon className="h-4 w-4 text-muted-foreground" />
-        <h1 className="text-lg font-semibold">Configuration</h1>
-        <span className="text-xs text-muted-foreground">· {store.name} · {store.url}</span>
+    <div className="p-6 max-w-6xl">
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold">Configuration</h1>
+        <p className="text-xs text-muted-foreground">{store.name} · {store.url.replace(/^https?:\/\//, "")}</p>
       </div>
 
-      {/* Site Logo */}
-      <Card>
-        <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm font-medium">Site Logo</CardTitle>
-        </CardHeader>
-        <CardContent className="py-3 px-4 pt-0">
-          <div className="flex items-center gap-3">
-            <SiteIcon site={store} size={48} />
-            <div className="flex items-center gap-2">
-              <label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
-                />
-                <Button asChild variant="outline" size="sm" disabled={uploadingLogo} className="h-8">
-                  <span>
-                    {uploadingLogo ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
-                    {store.logo_url ? "Replace" : "Upload"}
-                  </span>
-                </Button>
-              </label>
-              {store.logo_url && (
-                <Button variant="ghost" size="sm" onClick={handleLogoRemove} disabled={uploadingLogo} className="h-8">
-                  <XIcon className="h-3.5 w-3.5 mr-1.5" />Remove
-                </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LEFT COLUMN: Branding + Connection */}
+        <div className="space-y-4">
+          {/* Site Logo */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">Site Logo</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <SiteIcon site={store} size={44} />
+                <div className="flex-1 flex items-center gap-2">
+                  <label>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
+                    />
+                    <Button asChild variant="outline" size="sm" disabled={uploadingLogo} className="h-8">
+                      <span>
+                        {uploadingLogo ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                        {store.logo_url ? "Replace" : "Upload"}
+                      </span>
+                    </Button>
+                  </label>
+                  {store.logo_url && (
+                    <Button variant="ghost" size="sm" onClick={handleLogoRemove} disabled={uploadingLogo} className="h-8">
+                      <XIcon className="h-3.5 w-3.5 mr-1.5" />Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">250×250 · PNG/JPG/WebP · ≤ 2MB</p>
+            </CardContent>
+          </Card>
+
+          {/* Connection */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <Plug className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">Connection</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Store URL</p>
+                  <p className="truncate" title={store.url}>{store.url.replace(/^https?:\/\//, "")}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">API Status</p>
+                  <StatusBadge variant={store.consumer_key ? "success" : "warning"}>{store.consumer_key ? "Connected" : "Not Connected"}</StatusBadge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Last Sync</p>
+                  <p>{store.last_sync_at ? formatDate(store.last_sync_at) : "Never"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Created</p>
+                  <p>{formatDate(store.created_at)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* RIGHT COLUMN: Scheduled Sync + Danger Zone */}
+        <div className="space-y-4">
+          {/* Scheduled Sync */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">Scheduled Sync</h2>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="sync-interval" className="text-xs">Sync Interval</Label>
+                <Select value={syncInterval} onValueChange={setSyncInterval}>
+                  <SelectTrigger id="sync-interval" className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SYNC_INTERVALS.map((i) => (<SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Data syncs automatically at this interval.</p>
+              </div>
+
+              {store.next_sync_at && parseInt(syncInterval) > 0 && (
+                <div className={`rounded-md px-3 py-2 text-xs flex items-start gap-2 ${isOverdue ? "bg-warning/10 border border-warning/30" : "bg-muted/50"}`}>
+                  {isOverdue ? <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />}
+                  <div className="space-y-0.5 min-w-0">
+                    <p>
+                      Next: <span className={isOverdue ? "text-warning font-medium" : "font-medium"}>{formatDate(store.next_sync_at)}</span>
+                      {isOverdue && <span className="text-warning"> (overdue {minsOverdue}m)</span>}
+                    </p>
+                    {lastCron && <p className="text-muted-foreground">Last scheduler: {formatRelativeTime(lastCron.started_at)} ({lastCron.status})</p>}
+                  </div>
+                </div>
               )}
-            </div>
-            <p className="text-xs text-muted-foreground ml-auto">250×250 · PNG/JPG/WebP · ≤2MB</p>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Connection Details */}
-      <Card>
-        <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm font-medium">Connection</CardTitle>
-        </CardHeader>
-        <CardContent className="py-3 px-4 pt-0">
-          <div className="grid grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Store URL</p>
-              <p className="truncate" title={store.url}>{store.url.replace(/^https?:\/\//, "")}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">API Status</p>
-              <StatusBadge variant={store.consumer_key ? "success" : "warning"}>{store.consumer_key ? "Connected" : "Not Connected"}</StatusBadge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Last Sync</p>
-              <p>{store.last_sync_at ? formatDate(store.last_sync_at) : "Never"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Created</p>
-              <p>{formatDate(store.created_at)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              {cronResult && <div className="bg-muted/50 rounded-md px-3 py-2 text-xs">{cronResult}</div>}
 
-      {/* Scheduled Sync */}
-      <Card>
-        <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm font-medium">Scheduled Sync</CardTitle>
-        </CardHeader>
-        <CardContent className="py-3 px-4 pt-0 space-y-3">
-          <div className="flex items-end gap-2">
-            <div className="space-y-1.5 flex-1 max-w-xs">
-              <Label htmlFor="sync-interval" className="text-xs">Interval</Label>
-              <Select value={syncInterval} onValueChange={setSyncInterval}>
-                <SelectTrigger id="sync-interval" className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SYNC_INTERVALS.map((i) => (<SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button size="sm" onClick={handleSaveSettings} disabled={savingSettings} className="h-8">
-              {savingSettings ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-              Save
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleTriggerCron} disabled={triggeringCron} className="h-8">
-              {triggeringCron ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
-              Run now
-            </Button>
-          </div>
-
-          {store.next_sync_at && parseInt(syncInterval) > 0 && (
-            <div className={`rounded-md px-3 py-2 text-xs flex items-center gap-2 ${isOverdue ? "bg-warning/10 border border-warning/30" : "bg-muted/50"}`}>
-              {isOverdue ? <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-              <span>
-                Next: <span className={isOverdue ? "text-warning font-medium" : "font-medium"}>{formatDate(store.next_sync_at)}</span>
-                {isOverdue && <span className="text-warning"> (overdue {minsOverdue}m)</span>}
-                {lastCron && <span className="text-muted-foreground"> · Last scheduler: {formatRelativeTime(lastCron.started_at)} ({lastCron.status})</span>}
-              </span>
-            </div>
-          )}
-
-          {cronResult && (<div className="bg-muted/50 rounded-md px-3 py-2 text-xs">{cronResult}</div>)}
-        </CardContent>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card className="border-destructive/40">
-        <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm font-medium text-destructive flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5" />Danger Zone
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="py-3 px-4 pt-0">
-          <div className="flex items-end gap-2">
-            <div className="space-y-1.5 flex-1 max-w-xs">
-              <Label htmlFor="delete-confirm" className="text-xs">Type <span className="font-mono">{store.name}</span> to delete this site</Label>
-              <Input id="delete-confirm" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} placeholder={store.name} className="h-8 text-sm" />
-            </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive" disabled={deleteConfirmation !== store.name || deleting} className="h-8">
-                  {deleting ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete
+              <div className="flex justify-end gap-2 pt-1">
+                <Button size="sm" variant="outline" onClick={handleTriggerCron} disabled={triggeringCron} className="h-8">
+                  {triggeringCron ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
+                  Run now
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this site permanently?</AlertDialogTitle>
-                  <AlertDialogDescription>This will permanently delete <strong>{store.name}</strong> and all associated data. This action cannot be undone.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteStore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete permanently</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </CardContent>
-      </Card>
+                <Button size="sm" onClick={handleSaveSettings} disabled={savingSettings} className="h-8">
+                  {savingSettings ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
+                  Save Schedule
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone */}
+          <Card className="border-destructive/40">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-destructive/20">
+                <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                <h2 className="text-sm font-semibold text-destructive">Danger Zone</h2>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="delete-confirm" className="text-xs">
+                  Type <span className="font-mono font-semibold">{store.name}</span> to confirm deletion
+                </Label>
+                <Input id="delete-confirm" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} placeholder={store.name} className="h-9" />
+                <p className="text-[11px] text-muted-foreground">Permanently deletes the site and all synced data. Cannot be undone.</p>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="destructive" disabled={deleteConfirmation !== store.name || deleting} className="h-8">
+                      {deleting ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete Site
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this site permanently?</AlertDialogTitle>
+                      <AlertDialogDescription>This will permanently delete <strong>{store.name}</strong> and all associated data. This action cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteStore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete permanently</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
