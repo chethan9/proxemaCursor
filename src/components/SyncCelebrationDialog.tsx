@@ -1,31 +1,22 @@
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SiteIcon } from "@/components/site/SiteIcon";
+import dynamic from "next/dynamic";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
 interface Props {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
+  overlayOpen: boolean;
+  cardOpen: boolean;
+  onClose: () => void;
   store?: { id: string; name: string; url: string } | null;
+  animationData: object | null;
 }
 
-export function SyncCelebrationDialog({ open, onOpenChange, store }: Props) {
-  const [animationData, setAnimationData] = useState<object | null>(null);
-
-  useEffect(() => {
-    if (!open || animationData) return;
-    fetch("/confetti.json")
-      .then((r) => r.json())
-      .then((d) => setAnimationData(d))
-      .catch(() => {});
-  }, [open, animationData]);
-
+export function SyncCelebrationDialog({ overlayOpen, cardOpen, onClose, store, animationData }: Props) {
   return (
     <>
-      {open && animationData && (
+      {overlayOpen && animationData && (
         <div className="fixed inset-0 pointer-events-none z-[60]">
           <Lottie
             animationData={animationData}
@@ -35,7 +26,7 @@ export function SyncCelebrationDialog({ open, onOpenChange, store }: Props) {
           />
         </div>
       )}
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={cardOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
         <DialogContent className="max-w-md rounded-2xl border-0 shadow-2xl bg-white p-0 overflow-hidden">
           <div className="px-8 py-10 text-center flex flex-col items-center gap-4">
             {store ? (
@@ -50,7 +41,7 @@ export function SyncCelebrationDialog({ open, onOpenChange, store }: Props) {
             <Button
               size="lg"
               className="mt-2 px-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold"
-              onClick={() => onOpenChange(false)}
+              onClick={onClose}
             >
               Let&apos;s go →
             </Button>

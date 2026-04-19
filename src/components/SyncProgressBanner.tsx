@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useActiveSync } from "@/hooks/queries/useActiveSync";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -24,19 +25,39 @@ function formatElapsed(s: number): string {
   return `${m}m ${rem}s`;
 }
 
+let cachedConfetti: object | null = null;
+
 export function SyncProgressBanner() {
   const router = useRouter();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const storeId = (router.query.id as string) || null;
   const { data } = useActiveSync(storeId);
   const [dismissed, setDismissed] = useState(false);
   const [tick, setTick] = useState(0);
-  const [celebrateOpen, setCelebrateOpen] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [cardOpen, setCardOpen] = useState(false);
   const [store, setStore] = useState<{ id: string; name: string; url: string } | null>(null);
-  const [displayProgress, setDisplayProgress] = useState(0);
+  const [confettiData, setConfettiData] = useState<object | null>(cachedConfetti);
+  const storageKey = storeId ? `sync-display-progress:${storeId}` : null;
+  const [displayProgress, setDisplayProgress] = useState<number>(() => {
+    if (typeof window === "undefined" || !storageKey) return 0;
+    const v = window.localStorage.getItem(storageKey);
+    return v ? parseFloat(v) : 0;
+  });
+  const lastWriteRef = useRef(0);
   const prevRunningRef = useRef(false);
 
-  // Fetch store info for celebration dialog
+  // Prefetch confetti JSON once
+  useEffect(() => {
+    if (cachedConfetti) return;
+    fetch("/confetti.json")
+      .then((r) => r.json())
+      .then((d) => { cachedConfetti = d; setConfettiData(d); })
+      .catch(() => {});
+  }, []);
+
+  // Fetch store row for celebration
   useEffect(() => {
     if (!storeId) { setStore(null); return; }
     supabase
@@ -49,6 +70,16 @@ export function SyncProgressBanner() {
       });
   }, [storeId]);
 
+  // Invalidate store-scoped queries
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["orders"] });
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["taxonomy"] });
+    qc.invalidateQueries({ queryKey: ["webhooks"] });
+    qc.invalidateQueries({ queryKey: ["sync-runs"] });
+  };
+
+  // Detect sync completion
   useEffect(() => {
     if (!data) return;
     if (prevRunningRef.current && !data.running) {
@@ -56,7 +87,8 @@ export function SyncProgressBanner() {
         const key = `celebrated:${storeId}`;
         if (!localStorage.getItem(key)) {
           localStorage.setItem(key, "1");
-          setCelebrateOpen(true);
+          setOverlayOpen(true);
+          setTimeout(() => setCardOpen(true), 900);
         }
       } else {
         toast({
@@ -64,27 +96,44 @@ export function SyncProgressBanner() {
           description: `${data.processed.toLocaleString()} records synced in ${formatElapsed(data.elapsed_seconds)}`,
         });
       }
+      invalidateAll();
+      if (storageKey) localStorage.removeItem(storageKey);
       setDismissed(false);
     }
     prevRunningRef.current = data.running;
-  }, [data, toast, storeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, storeId]);
 
-  // Smooth displayProgress → data.progress via RAF spring ease
+  // Smooth displayProgress with RAF + floor step + persist
   useEffect(() => {
     const target = data?.progress ?? 0;
     let raf = 0;
     const step = () => {
       setDisplayProgress((cur) => {
         const diff = target - cur;
-        if (Math.abs(diff) < 0.1) return target;
-        const next = cur + diff * 0.05;
+        if (Math.abs(diff) < 0.1) {
+          if (storageKey) {
+            localStorage.setItem(storageKey, String(target));
+          }
+          return target;
+        }
+        const eased = diff * 0.05;
+        const minStep = Math.sign(diff) * 0.3;
+        const delta = Math.abs(eased) < Math.abs(minStep) ? minStep : eased;
+        const next = cur + delta;
+        // Throttle write
+        const now = Date.now();
+        if (storageKey && now - lastWriteRef.current > 500) {
+          lastWriteRef.current = now;
+          localStorage.setItem(storageKey, String(next));
+        }
         raf = requestAnimationFrame(step);
         return next;
       });
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [data?.progress]);
+  }, [data?.progress, storageKey]);
 
   useEffect(() => {
     if (!data?.running) return;
@@ -92,8 +141,22 @@ export function SyncProgressBanner() {
     return () => clearInterval(id);
   }, [data?.running]);
 
+  const handleCelebrationClose = () => {
+    setCardOpen(false);
+    setOverlayOpen(false);
+    invalidateAll();
+  };
+
   if (!storeId || !data || !data.running || dismissed) {
-    return <SyncCelebrationDialog open={celebrateOpen} onOpenChange={setCelebrateOpen} store={store} />;
+    return (
+      <SyncCelebrationDialog
+        overlayOpen={overlayOpen}
+        cardOpen={cardOpen}
+        onClose={handleCelebrationClose}
+        store={store}
+        animationData={confettiData}
+      />
+    );
   }
 
   const meta = data.currentAspect ? ASPECT_META[data.currentAspect] : null;
@@ -130,10 +193,10 @@ export function SyncProgressBanner() {
                 className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none"
                 style={{ left: `${displayProgress}%` }}
               >
-                <div className="relative">
-                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-0.5 w-1 h-1 rounded-full bg-emerald-500/70" />
-                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-2 w-0.5 h-0.5 rounded-full bg-emerald-500/50" />
-                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-3 w-0.5 h-0.5 rounded-full bg-emerald-500/30" />
+                <div className="relative animate-[rocket-bob_1.8s_ease-in-out_infinite]">
+                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-0.5 w-1 h-1 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite]" />
+                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-2 w-0.5 h-0.5 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite] [animation-delay:0.15s]" />
+                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-3 w-0.5 h-0.5 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite] [animation-delay:0.3s]" />
                   <Rocket className="h-4 w-4 text-primary drop-shadow-sm rotate-45" strokeWidth={2.5} />
                 </div>
               </div>
@@ -167,9 +230,23 @@ export function SyncProgressBanner() {
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
           }
+          @keyframes rocket-bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-1.5px); }
+          }
+          @keyframes trail-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+          }
         `}</style>
       </div>
-      <SyncCelebrationDialog open={celebrateOpen} onOpenChange={setCelebrateOpen} store={store} />
+      <SyncCelebrationDialog
+        overlayOpen={overlayOpen}
+        cardOpen={cardOpen}
+        onClose={handleCelebrationClose}
+        store={store}
+        animationData={confettiData}
+      />
     </>
   );
 }
