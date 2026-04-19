@@ -110,6 +110,22 @@ export function formToWooPayload(form: ProductFormState): Record<string, unknown
   }
   if (form.brands && form.brands.length) payload.brands = form.brands.map((b) => ({ id: b.id }));
   if (form.meta_data) payload.meta_data = form.meta_data;
+  if (form.type === "variable" && form.variations.length > 0) {
+    payload.variations = form.variations.map((v) => ({
+      id: v.id,
+      regular_price: v.regular_price,
+      sale_price: v.sale_price,
+      sku: v.sku,
+      manage_stock: v.manage_stock,
+      stock_quantity: v.stock_quantity,
+      stock_status: v.stock_status,
+      weight: v.weight,
+      dimensions: v.dimensions,
+      description: v.description,
+      image: v.image,
+      attributes: v.attributes,
+    }));
+  }
   return payload;
 }
 

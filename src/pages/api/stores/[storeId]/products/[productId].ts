@@ -60,22 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(404).json({ error: "Product not found" });
   }
 
-  const {
-    regular_price,
-    sale_price,
-    stock_quantity,
-    stock_status,
-    manage_stock,
-    status,
-  } = req.body || {};
-
-  const wooPayload: Record<string, unknown> = {};
-  if (regular_price !== undefined) wooPayload.regular_price = regular_price === null ? "" : String(regular_price);
-  if (sale_price !== undefined) wooPayload.sale_price = sale_price === null ? "" : String(sale_price);
-  if (stock_quantity !== undefined) wooPayload.stock_quantity = stock_quantity;
-  if (stock_status !== undefined) wooPayload.stock_status = stock_status;
-  if (manage_stock !== undefined) wooPayload.manage_stock = manage_stock;
-  if (status !== undefined) wooPayload.status = status;
+  const body = req.body || {};
+  const { variations, ...rest } = body as Record<string, unknown> & { variations?: Array<Record<string, unknown>> };
+  const wooPayload: Record<string, unknown> = { ...rest };
 
   const beforeSnapshot = toJson(localProduct);
 
@@ -89,6 +76,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `products/${localProduct.woo_id}`,
       wooPayload
     );
+
+    if (Array.isArray(variations) && updated.type === "variable") {
+      const toCreate = variations.filter((v) => !v.id).map((v) => {
+        const img = v.image && ((v.image as Record<string, unknown>).id || (v.image as Record<string, unknown>).src)
+          ? { image: (v.image as Record<string, unknown>).id ? { id: (v.image as Record<string, unknown>).id } : { src: (v.image as Record<string, unknown>).src, alt: (v.image as Record<string, unknown>).alt || "" } }
+          : {};
+        return {
+          regular_price: (v.regular_price as string) || "",
+          sale_price: (v.sale_price as string) || "",
+          sku: (v.sku as string) || "",
+          manage_stock: !!v.manage_stock,
+          stock_quantity: v.manage_stock ? v.stock_quantity : undefined,
+          stock_status: (v.stock_status as string) || "instock",
+          weight: (v.weight as string) || "",
+          dimensions: v.dimensions || { length: "", width: "", height: "" },
+          description: (v.description as string) || "",
+          attributes: v.attributes || [],
+          ...img,
+        };
+      });
+      const toUpdate = variations.filter((v) => !!v.id).map((v) => ({
+        id: v.id,
+        regular_price: (v.regular_price as string) || "",
+        sale_price: (v.sale_price as string) || "",
+        sku: (v.sku as string) || "",
+        manage_stock: !!v.manage_stock,
+        stock_quantity: v.manage_stock ? v.stock_quantity : undefined,
+        stock_status: (v.stock_status as string) || "instock",
+        weight: (v.weight as string) || "",
+        dimensions: v.dimensions || { length: "", width: "", height: "" },
+        description: (v.description as string) || "",
+      }));
+      const batch: Record<string, unknown> = {};
+      if (toCreate.length) batch.create = toCreate;
+      if (toUpdate.length) batch.update = toUpdate;
+      if (toCreate.length || toUpdate.length) {
+        try {
+          await wooRequest(store, "POST", `products/${localProduct.woo_id}/variations/batch`, batch);
+        } catch (ve) {
+          console.error("[variations-batch-update]", ve);
+        }
+      }
+    }
 
     const now = new Date().toISOString();
     const updatePayload = {
