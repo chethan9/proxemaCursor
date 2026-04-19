@@ -70,7 +70,7 @@ export function useSyncRunsPaged(
   pollingMs: number | false,
 ) {
   return useQuery({
-    queryKey: ["sync-runs", "paged", page, pageSize, filters] as const,
+    queryKey: ["sync-runs", "paged", page, pageSize, filters, stores.length] as const,
     queryFn: async () => {
       let q = supabase
         .from("sync_runs")

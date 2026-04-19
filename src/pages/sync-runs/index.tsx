@@ -139,21 +139,17 @@ export default function SyncRunsPage() {
   // Accumulate pages for infinite scroll
   useEffect(() => {
     if (!pageData) return;
-    if (currentPage === 0) {
-      setAccumulated(pageData.data);
-    } else {
-      setAccumulated(prev => {
-        const existing = new Set(prev.map(r => r.id));
-        const newOnes = pageData.data.filter(r => !existing.has(r.id));
-        return [...prev, ...newOnes];
-      });
-    }
+    setAccumulated(prev => {
+      if (currentPage === 0) return pageData.data;
+      const existing = new Set(prev.map(r => r.id));
+      const newOnes = pageData.data.filter(r => !existing.has(r.id));
+      return [...prev, ...newOnes];
+    });
   }, [pageData, currentPage]);
 
-  // Reset page 0 on filter change
+  // Reset to page 0 when filters change (accumulated is replaced by next page-0 fetch)
   useEffect(() => {
     setCurrentPage(0);
-    setAccumulated([]);
   }, [filterStore, filterStatus, filterAspect, searchQuery, dateFrom, dateTo]);
 
   const runs = accumulated;
@@ -164,7 +160,6 @@ export default function SyncRunsPage() {
 
   const resetAndLoad = useCallback(() => {
     setCurrentPage(0);
-    setAccumulated([]);
     qc.invalidateQueries({ queryKey: ["sync-runs"] });
   }, [qc]);
 
