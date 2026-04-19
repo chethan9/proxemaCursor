@@ -633,14 +633,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               {(() => {
                 const isCompact = viewMode === "compact";
                 const gridCls = isCompact
-                  ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2"
-                  : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3";
+                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3"
+                  : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
                 if (loading) {
                   return (
                     <div className={gridCls}>
-                      {Array.from({ length: isCompact ? 24 : 10 }).map((_, i) => (
-                        <div key={`skg-${i}`} className="border border-border rounded-md overflow-hidden bg-card">
+                      {Array.from({ length: isCompact ? 14 : 8 }).map((_, i) => (
+                        <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden bg-card">
                           <Skeleton className="aspect-square w-full rounded-none" />
+                          {!isCompact && (
+                            <div className="p-3 space-y-2">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -659,37 +665,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     {products.map((p) => {
                       const thumb = getProductThumbnail(p.images);
                       const cats = getCategoryNames(p.categories);
-                      const statusColor: Record<string, string> = {
-                        publish: "bg-success/10 text-success border-success/20",
-                        draft: "bg-muted text-muted-foreground border-border",
-                        pending: "bg-warning/10 text-warning border-warning/20",
-                        private: "bg-secondary text-secondary-foreground border-border",
-                      };
-                      const cls = statusColor[p.status || ""] || "bg-muted text-muted-foreground border-border";
-                      if (isCompact) {
-                        const stockLow = p.stock_quantity != null && p.stock_quantity < 5;
-                        const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
-                        return (
-                          <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
-                            <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                              {thumb ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
-                              ) : (
-                                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
-                              )}
-                              {stockOut && (
-                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-                                  <span className="text-[9px] font-semibold uppercase text-destructive">Out</span>
-                                </div>
-                              )}
-                              {!stockOut && stockLow && (
-                                <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      }
+                      const stockLow = p.stock_quantity != null && p.stock_quantity > 0 && p.stock_quantity < 5;
+                      const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
                       const dotColor: Record<string, string> = {
                         publish: "bg-success",
                         draft: "bg-muted-foreground/50",
@@ -697,29 +674,87 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         private: "bg-muted-foreground/50",
                       };
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
-                      const label = p.status === "publish" ? "Active" : (p.status || "—");
+                      const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
+                      if (isCompact) {
+                        return (
+                          <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-lg overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
+                            <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                              {thumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                              ) : (
+                                <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                              )}
+                              {stockOut && (
+                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center backdrop-blur-[1px]">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-destructive bg-background/90 px-2 py-0.5 rounded">Out of stock</span>
+                                </div>
+                              )}
+                              {!stockOut && stockLow && (
+                                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-warning ring-2 ring-background" title="Low stock" />
+                              )}
+                            </div>
+                            <div className="px-2 py-1.5 border-t border-border/60">
+                              <div className="text-[11px] font-medium leading-tight line-clamp-1">{p.name || "—"}</div>
+                              <div className="flex items-center justify-between gap-1 mt-0.5">
+                                <span className="text-[11px] font-semibold font-mono">{p.price || "—"}</span>
+                                <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dot}`} title={statusLabel} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
-                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
+                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-lg transition-all bg-card flex flex-col cursor-pointer">
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                             {thumb ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                              <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" loading="lazy" />
                             ) : (
-                              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                              <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
                             )}
-                            <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                            <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
                               <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-                              <span className="capitalize">{label}</span>
+                              <span className="capitalize">{statusLabel}</span>
                             </div>
-                          </div>
-                          <div className="p-2.5 space-y-1 flex-1 flex flex-col">
-                            <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
-                            <div className="text-[11px] text-muted-foreground truncate">{cats || "No category"}</div>
-                            <div className="flex items-end justify-between gap-2 pt-1 mt-auto border-t border-border/50">
-                              <div className="min-w-0">
-                                <div className="text-[10px] text-muted-foreground font-mono truncate">{p.sku || "—"}</div>
-                                <div className="text-xs font-semibold font-mono">{p.price || "—"}</div>
+                            {stockOut && (
+                              <div className="absolute top-2.5 right-2.5 inline-flex items-center rounded-full bg-destructive/95 backdrop-blur px-2.5 py-1 text-[10px] font-semibold text-destructive-foreground shadow-sm uppercase tracking-wide">
+                                Out
                               </div>
+                            )}
+                            {!stockOut && stockLow && (
+                              <div className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-warning/95 backdrop-blur px-2.5 py-1 text-[10px] font-semibold text-warning-foreground shadow-sm uppercase tracking-wide">
+                                Low · {p.stock_quantity}
+                              </div>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setQuickEditProduct(p); }}
+                              className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Quick edit
+                            </button>
+                          </div>
+                          <div className="p-3 space-y-1.5 flex-1 flex flex-col">
+                            <div className="text-sm font-medium leading-tight line-clamp-2 min-h-[36px]">{p.name || "—"}</div>
+                            <div className="text-[11px] text-muted-foreground truncate">{cats || "Uncategorized"}</div>
+                            <div className="flex items-end justify-between gap-2 pt-2 mt-auto border-t border-border/60">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wide truncate">{p.sku || "No SKU"}</div>
+                                {p.sale_price && p.sale_price !== p.regular_price ? (
+                                  <div className="flex items-baseline gap-1.5">
+                                    <span className="text-sm font-semibold font-mono text-foreground">{p.sale_price}</span>
+                                    <span className="text-[10px] font-mono line-through text-muted-foreground">{p.regular_price}</span>
+                                  </div>
+                                ) : (
+                                  <div className="text-sm font-semibold font-mono">{p.price || "—"}</div>
+                                )}
+                              </div>
+                              {p.stock_quantity != null && !stockOut && (
+                                <div className="text-[10px] text-muted-foreground whitespace-nowrap pb-0.5">
+                                  <span className={p.stock_quantity < 5 ? "text-warning font-semibold" : ""}>{p.stock_quantity}</span> in stock
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
