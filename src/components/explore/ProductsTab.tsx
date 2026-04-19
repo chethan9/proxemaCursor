@@ -911,7 +911,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               }
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
-                          </TableCell>
+                          </TableRow>
                         </>
                       );
                     })
