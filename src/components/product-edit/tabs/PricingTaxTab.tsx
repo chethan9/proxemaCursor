@@ -1,0 +1,59 @@
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProductFormState } from "@/services/productEditService";
+
+type Props = {
+  form: ProductFormState;
+  setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
+};
+
+export function PricingTaxTab({ form, setForm }: Props) {
+  const hasOffer = form.sale_price && Number(form.sale_price) > 0;
+  const invalidOffer = hasOffer && Number(form.sale_price) >= Number(form.regular_price || 0);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="text-sm font-medium text-primary mb-2">Price</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Regular Price</Label>
+            <Input type="number" step="0.01" value={form.regular_price} onChange={(e) => setForm((p) => ({ ...p, regular_price: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Offer Price</Label>
+            <Input type="number" step="0.01" value={form.sale_price} onChange={(e) => setForm((p) => ({ ...p, sale_price: e.target.value }))} />
+            {invalidOffer && <div className="text-[11px] text-destructive">Offer must be less than regular price.</div>}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-sm font-medium text-primary mb-2">Tax</div>
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <Checkbox checked={form.tax_status === "taxable"} onCheckedChange={(v) => setForm((p) => ({ ...p, tax_status: v ? "taxable" : "none" }))} />
+            Charge tax on this product
+          </label>
+          {form.tax_status === "taxable" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tax Class</Label>
+                <Select value={form.tax_class || "standard"} onValueChange={(v) => setForm((p) => ({ ...p, tax_class: v === "standard" ? "" : v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="reduced-rate">Reduced rate</SelectItem>
+                    <SelectItem value="zero-rate">Zero rate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
