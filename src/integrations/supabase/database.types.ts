@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1091,6 +1091,44 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_benchmarks: {
+        Row: {
+          aspect: string
+          completed_at: string
+          duration_seconds: number
+          id: string
+          is_initial: boolean
+          record_count: number
+          store_id: string
+        }
+        Insert: {
+          aspect: string
+          completed_at?: string
+          duration_seconds?: number
+          id?: string
+          is_initial?: boolean
+          record_count?: number
+          store_id: string
+        }
+        Update: {
+          aspect?: string
+          completed_at?: string
+          duration_seconds?: number
+          id?: string
+          is_initial?: boolean
+          record_count?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_benchmarks_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
