@@ -379,9 +379,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               </SelectContent>
             </Select>
             <div className="flex items-center gap-0.5 rounded-md border border-border bg-card shadow-polaris-xs px-1 h-9">
-              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "table" ? "bg-muted" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-muted" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-muted" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "table" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
           <div className="flex-1 flex justify-center">
