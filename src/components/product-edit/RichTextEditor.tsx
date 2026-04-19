@@ -95,7 +95,7 @@ export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props
     if (!editor) return;
     const current = editor.isEmpty ? "" : editor.getHTML();
     if (value !== current && mode === "visual") {
-      editor.commands.setContent(value || "", false);
+      editor.commands.setContent(value || "");
     }
   }, [value, editor, mode]);
 
@@ -119,7 +119,7 @@ export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
-            editor.commands.setContent(e.target.value || "", false);
+            editor.commands.setContent(e.target.value || "");
           }}
           className="w-full font-mono text-xs px-3 py-2.5 bg-background outline-none resize-y"
           style={{ minHeight: `${rows * 24}px` }}
