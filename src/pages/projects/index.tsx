@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,39 +35,51 @@ export default function SitesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editStore, setEditStore] = useState<StoreWithClient | null>(null);
+  const [editStoreId, setEditStoreId] = useState<string | null>(null);
+  const handledRef = useRef<string | null>(null);
 
   const reloadData = () => {
     qc.invalidateQueries({ queryKey: queryKeys.stores });
     qc.invalidateQueries({ queryKey: queryKeys.clients });
   };
 
+  // Always read fresh store from latest stores array
+  const editStore = editStoreId ? stores.find((s) => s.id === editStoreId) || null : null;
+
+  // Handle return from WP authorization callback
   useEffect(() => {
     if (!router.isReady) return;
-    const { wp_connected, wp_error, edit_store } = router.query;
-    if (wp_connected === "1" || wp_error) {
-      qc.invalidateQueries({ queryKey: queryKeys.stores });
-      if (wp_connected === "1") {
-        toast({ title: "WordPress connected", description: "Media library access is now active." });
-      } else {
-        toast({ title: "WordPress authorization failed", description: String(wp_error || "Unknown error"), variant: "destructive" });
-      }
+    const wp = typeof router.query.wp === "string" ? router.query.wp : null;
+    const storeParam = typeof router.query.store === "string" ? router.query.store : null;
+    if (!wp || !storeParam) return;
+
+    const key = `${wp}:${storeParam}`;
+    if (handledRef.current === key) return;
+    handledRef.current = key;
+
+    if (wp === "ok") {
+      toast({ title: "WordPress connected", description: "Media library access is now active." });
+    } else if (wp === "rejected") {
+      toast({ title: "Authorization cancelled", description: "WordPress access was not granted.", variant: "destructive" });
+    } else if (wp === "error") {
+      toast({ title: "Authorization failed", description: "Unable to save WordPress credentials.", variant: "destructive" });
+    } else if (wp === "missing") {
+      toast({ title: "Authorization incomplete", description: "WordPress did not return credentials.", variant: "destructive" });
     }
-    if (edit_store && typeof edit_store === "string") {
-      const findAndOpen = () => {
-        const s = stores.find(s => s.id === edit_store);
-        if (s) { setEditStore(s); setEditOpen(true); }
-      };
-      findAndOpen();
-    }
-    if (wp_connected || wp_error || edit_store) {
-      const { wp_connected: _w, wp_error: _e, edit_store: _es, ...rest } = router.query;
-      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
-    }
-  }, [router.isReady, router.query.wp_connected, router.query.wp_error, router.query.edit_store, stores.length]);
+
+    // Force fresh data + reopen dialog
+    qc.invalidateQueries({ queryKey: queryKeys.stores }).then(() => {
+      setEditStoreId(storeParam);
+      setEditOpen(true);
+    });
+
+    // Strip query params from URL so refresh doesn't re-trigger
+    const { wp: _w, store: _s, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router.isReady, router.query.wp, router.query.store]);
 
   const openEditDialog = (store: StoreWithClient) => {
-    setEditStore(store);
+    setEditStoreId(store.id);
     setEditOpen(true);
   };
 
@@ -146,7 +158,7 @@ export default function SitesPage() {
         />
         <EditSiteDialog
           open={editOpen}
-          onOpenChange={(o) => { setEditOpen(o); if (!o) setEditStore(null); }}
+          onOpenChange={(o) => { setEditOpen(o); if (!o) setEditStoreId(null); }}
           store={editStore}
           clients={clients}
           isSuperAdmin={isSuperAdmin}

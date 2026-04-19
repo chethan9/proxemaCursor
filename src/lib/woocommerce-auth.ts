@@ -90,7 +90,7 @@ export function validateStoreUrl(url: string): { valid: boolean; error?: string;
 export function buildWpAppPasswordUrl({
   storeUrl,
   storeId,
-  appName = "WooSync Media",
+  appName = "Proxima",
   returnTo,
 }: {
   storeUrl: string;

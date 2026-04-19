@@ -292,7 +292,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
                     <span className="text-xs">Authorize WordPress</span>
                   </Button>
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    Opens a WordPress page where you grant WooSync media-library access. You&apos;ll be redirected back here.
+                    Opens a WordPress page where you grant Proxima media-library access. You&apos;ll be redirected back here.
                   </p>
                 </div>
               )}
@@ -314,7 +314,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
           <AlertDialogHeader>
             <AlertDialogTitle>Disconnect WordPress?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will revoke WooSync&apos;s media library access for <strong>{store?.name}</strong>. WooCommerce API credentials are not affected. You can re-authorize anytime.
+              This will revoke Proxima&apos;s media library access for <strong>{store?.name}</strong>. WooCommerce API credentials are not affected. You can re-authorize anytime.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
