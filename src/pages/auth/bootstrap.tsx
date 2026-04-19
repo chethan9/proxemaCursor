@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { BrandLoader } from "@/components/BrandLoader";
 import { useAuth } from "@/contexts/AuthProvider";
 
 export default function BootstrapPage() {
@@ -39,7 +40,7 @@ export default function BootstrapPage() {
   if (authLoading || canBootstrap === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <BrandLoader size={120} />
       </div>
     );
   }

@@ -3,15 +3,14 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { useBranding } from "@/contexts/BrandingProvider";
-import { Zap, ArrowRight } from "lucide-react";
+import { BrandLoader } from "@/components/BrandLoader";
+import { ArrowRight } from "lucide-react";
 
 const REDIRECT_SECONDS = 5;
 const REDIRECT_TO = "/projects";
 
 export default function NotFound() {
   const router = useRouter();
-  const { brandName, logoUrl } = useBranding();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -30,17 +29,9 @@ export default function NotFound() {
 
       <main className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center space-y-6">
-          <Link href="/projects" className="inline-flex items-center gap-2">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={brandName} className="h-10 w-10 rounded-lg object-contain" />
-            ) : (
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Zap className="h-5 w-5 text-primary" />
-              </div>
-            )}
-            <span className="text-lg font-semibold">{brandName}</span>
-          </Link>
+          <div className="flex justify-center">
+            <BrandLoader size={160} />
+          </div>
 
           <div className="space-y-2">
             <h1 className="text-6xl font-bold tracking-tight">404</h1>
