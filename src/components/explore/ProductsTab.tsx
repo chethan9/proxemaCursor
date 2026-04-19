@@ -368,7 +368,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 w-[200px] text-xs bg-background">
+              <SelectTrigger className="h-9 w-[180px] text-xs gap-1.5 px-2.5">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -378,10 +378,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
-              <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "grid" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "compact" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+            <div className="flex items-center gap-0.5 rounded-md border border-input bg-background px-1 h-9">
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "table" ? "bg-muted" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-muted" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-muted" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
           <div className="flex-1 flex justify-center">
