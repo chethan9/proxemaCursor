@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    router.push("/auth/login");
+    router.replace("/auth/login");
   };
 
   const permissions = role?.permissions ?? [];

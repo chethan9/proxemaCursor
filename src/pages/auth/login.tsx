@@ -40,7 +40,7 @@ export default function LoginPage() {
         .maybeSingle();
       if (prof?.default_landing_path) dest = prof.default_landing_path;
     }
-    router.push(dest);
+    router.replace(dest);
   };
 
   return (
