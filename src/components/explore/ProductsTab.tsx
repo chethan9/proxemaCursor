@@ -39,6 +39,7 @@ import { createBulkJob } from "@/services/bulkJobService";
 import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "next/router";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -361,6 +362,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
+
+  const router = useRouter();
 
   return (
     <div className="space-y-2">
@@ -732,11 +735,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); setQuickEditProduct(p); }}
+                              onClick={(e) => { e.stopPropagation(); router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
                               className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
                             >
                               <Pencil className="h-3 w-3" />
-                              Quick edit
+                              Edit
                             </button>
                           </div>
                           <div className="p-3 space-y-1.5 flex-1 flex flex-col">
