@@ -39,3 +39,10 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 - `next lint` — warnings only (unused imports, exhaustive-deps, 2 non-null assertions). No errors.
 - Committed with message `chore: stable release v2`.
 **Follow-ups:** User to click **Publish** to push to GitHub.
+
+## 2026-04-19 — Add "Bulk Jobs" to site sidebar
+
+**Why:** Bulk Jobs page existed at `/sites/<id>/bulk-jobs` but had no nav entry, so users couldn't find it.
+**Changes:**
+- `src/lib/menu-registry.ts`: registered `site-bulk-jobs` item (Layers icon, "Manage" group, path `/bulk-jobs`). Added `Layers` to ICON_MAP.
+**Impact:** Bulk Jobs now appears in site sidebar under "Manage" for new menu configs. Existing saved site menu configs per role will show it under "Unassigned (new)" group until re-saved via menu editor.
