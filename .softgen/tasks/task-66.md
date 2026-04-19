@@ -1,9 +1,9 @@
 ---
 title: Async onboarding — estimate + background sync + space-themed progress
-status: todo
+status: done
 priority: urgent
 type: feature
-tags: [ux, onboarding, sync, branding]
+tags: [onboarding, ux, sync, progress]
 created_by: agent
 created_at: 2026-04-19
 position: 66
