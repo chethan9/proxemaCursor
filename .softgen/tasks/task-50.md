@@ -1,6 +1,6 @@
 ---
 title: Wire ProductQuickEdit sheet to grid and compact views
-status: todo
+status: done
 priority: high
 type: feature
 tags: [explore, products, grid]
