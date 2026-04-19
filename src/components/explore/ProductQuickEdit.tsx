@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,13 +72,13 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
   const permalink = product.raw_data?.permalink as string | undefined;
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Quick edit</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Quick edit</DialogTitle>
+        </DialogHeader>
 
-        <div className="mt-5 space-y-5">
+        <div className="mt-2 space-y-5">
           {/* Header row */}
           <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
             <div className="h-16 w-16 rounded-md border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0">
@@ -112,10 +112,9 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-6">
             {/* Left: form */}
             <div className="space-y-5">
-              {/* Price */}
               <div>
                 <Label className="text-sm font-semibold">Price</Label>
                 <div className="mt-2 space-y-2">
@@ -149,7 +148,6 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                 </div>
               </div>
 
-              {/* Stock */}
               <div>
                 <Label className="text-sm font-semibold">Stock</Label>
                 <div className="mt-2 space-y-3">
@@ -233,7 +231,7 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
             </div>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
