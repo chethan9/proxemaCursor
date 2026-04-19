@@ -100,3 +100,10 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 **Files:** `src/components/layout/AppSidebar.tsx`
 **Why:** Before profile/role loaded, permission checks returned false so only perm-less items (Projects, Settings) rendered, then the rest popped in — looked broken.
 **What:** Render 8-row skeleton while `auth.loading` is true and no cached menu tree is available. Real menu swaps in once role + permissions resolve.
+
+## 2026-04-19 — Fix role constants: staff/readonly → user
+
+**Scope:** bug
+**Files:** `src/services/menuConfigService.ts`, `src/components/layout/AppSidebar.tsx`, `src/components/layout/SiteSidebar.tsx`
+**Why:** Code referenced `staff`/`readonly` roles that don't exist in the DB (actual roles: `super_admin`, `admin`, `user`). This caused wrong menu caching keys and possible menu resolution mismatches.
+**What:** Updated `RoleKey` type and `roleKeyFor` fallbacks to return `user`. Cached menu candidate list updated.
