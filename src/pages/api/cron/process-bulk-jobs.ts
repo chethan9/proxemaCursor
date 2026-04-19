@@ -125,9 +125,9 @@ async function updateProductPrice(
   await supabaseAdmin
     .from("products")
     .update({
-      price: updated.price ?? newRegularPrice ?? null,
-      regular_price: updated.regular_price ?? newRegularPrice ?? null,
-      sale_price: updated.sale_price ?? newSalePrice ?? null,
+      price: (updated.price ?? newRegularPrice ?? null) as unknown as number | null,
+      regular_price: (updated.regular_price ?? newRegularPrice ?? null) as unknown as number | null,
+      sale_price: (updated.sale_price ?? newSalePrice ?? null) as unknown as number | null,
       synced_at: new Date().toISOString(),
     })
     .eq("store_id", store.id)
