@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ImageIcon, Pencil, ExternalLink, TrendingUp, Trash2, Loader2, Save, RefreshCw } from "lucide-react";
+import { ImageIcon, Pencil, ExternalLink, TrendingUp, Trash2, Loader2, Save, RefreshCw, CheckCircle2, XCircle, Clock, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateProduct, getProductThumbnail, type ProductRow } from "@/services/productService";
 
@@ -71,17 +69,23 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
 
   const permalink = product.raw_data?.permalink as string | undefined;
 
+  const stockOptions: { value: "instock" | "outofstock" | "onbackorder"; label: string; icon: typeof CheckCircle2; cls: string }[] = [
+    { value: "instock", label: "In stock", icon: CheckCircle2, cls: "data-[active=true]:border-success data-[active=true]:bg-success/10 data-[active=true]:text-success" },
+    { value: "outofstock", label: "Out of stock", icon: XCircle, cls: "data-[active=true]:border-destructive data-[active=true]:bg-destructive/10 data-[active=true]:text-destructive" },
+    { value: "onbackorder", label: "Backorder", icon: Clock, cls: "data-[active=true]:border-warning data-[active=true]:bg-warning/10 data-[active=true]:text-warning" },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Quick edit</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
+          <DialogTitle className="text-base">Quick edit</DialogTitle>
         </DialogHeader>
 
-        <div className="mt-2 space-y-5">
+        <div className="px-6 py-5 space-y-5">
           {/* Header row */}
-          <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
-            <div className="h-16 w-16 rounded-md border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0">
+          <div className="flex items-start gap-3">
+            <div className="h-14 w-14 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0">
               {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={thumb} alt="" className="h-full w-full object-cover" />
@@ -90,99 +94,122 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-medium truncate">{product.name || "—"}</div>
-              <div className="mt-1 flex items-center gap-2">
-                {product.type && <Badge variant="outline" className="text-[10px] uppercase">{product.type}</Badge>}
-                <span className="text-xs text-muted-foreground font-mono truncate">{product.sku || "—"}</span>
-              </div>
-              <div className="mt-1 text-sm font-semibold font-mono">
-                {onSalePrice ? (
-                  <>
-                    <span>{currency} {salePrice}</span>
-                    <span className="ml-2 text-xs line-through text-muted-foreground">{currency} {regularPrice}</span>
-                  </>
-                ) : (
-                  <span>{currency} {regularPrice || "—"}</span>
-                )}
+              <div className="font-semibold text-sm truncate leading-tight">{product.name || "—"}</div>
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                {product.type && <Badge variant="outline" className="text-[9px] uppercase tracking-wide h-4 px-1.5">{product.type}</Badge>}
+                <span className="font-mono truncate">SKU: {product.sku || "—"}</span>
+                <span className="font-mono">#{product.woo_id}</span>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <Switch checked={available} onCheckedChange={setAvailable} />
-              <span className="text-[10px] text-muted-foreground">{available ? "Active" : "Draft"}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
+                <Switch checked={available} onCheckedChange={setAvailable} />
+                <span className="text-[11px] font-medium">{available ? "Published" : "Draft"}</span>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-5">
             {/* Left: form */}
             <div className="space-y-5">
-              <div>
-                <Label className="text-sm font-semibold">Price</Label>
-                <div className="mt-2 space-y-2">
+              {/* Pricing */}
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={regularPrice}
-                      onChange={(e) => setRegularPrice(e.target.value)}
-                      placeholder="Regular price"
-                      className="h-9"
-                    />
-                    {currency && <Badge variant="secondary" className="h-9 px-2.5">{currency}</Badge>}
+                    <div className="h-6 w-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                    </div>
+                    <Label className="text-xs font-semibold">Pricing</Label>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={salePrice}
-                      onChange={(e) => setSalePrice(e.target.value)}
-                      placeholder="Sale price (optional)"
-                      className="h-9"
-                    />
-                    {currency && <Badge variant="secondary" className="h-9 px-2.5">{currency}</Badge>}
-                    {onSalePrice && (
-                      <span className="text-xs text-muted-foreground line-through font-mono whitespace-nowrap">
-                        {currency} {regularPrice}
-                      </span>
-                    )}
+                  {onSalePrice && (
+                    <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/20">On sale</Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Regular price</Label>
+                    <div className="relative">
+                      {currency && (
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono pointer-events-none">{currency}</span>
+                      )}
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={regularPrice}
+                        onChange={(e) => setRegularPrice(e.target.value)}
+                        placeholder="0.00"
+                        className={`h-9 font-mono text-sm ${currency ? "pl-10" : ""}`}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Sale price</Label>
+                    <div className="relative">
+                      {currency && (
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono pointer-events-none">{currency}</span>
+                      )}
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={salePrice}
+                        onChange={(e) => setSalePrice(e.target.value)}
+                        placeholder="—"
+                        className={`h-9 font-mono text-sm ${currency ? "pl-10" : ""}`}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <Label className="text-sm font-semibold">Stock</Label>
-                <div className="mt-2 space-y-3">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={manageStock} onCheckedChange={(v) => setManageStock(!!v)} />
-                    Manage stock?
-                  </label>
+              {/* Stock */}
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                      <Package className="h-3.5 w-3.5" />
+                    </div>
+                    <Label className="text-xs font-semibold">Stock</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">Manage</span>
+                    <Switch checked={manageStock} onCheckedChange={(v) => setManageStock(!!v)} />
+                  </div>
+                </div>
 
-                  {manageStock && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Quantity</Label>
-                      <Input
-                        type="number"
-                        value={stockQuantity}
-                        onChange={(e) => setStockQuantity(e.target.value)}
-                        placeholder="0"
-                        className="h-9 mt-1"
-                      />
-                    </div>
-                  )}
+                {manageStock && (
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Quantity</Label>
+                    <Input
+                      type="number"
+                      value={stockQuantity}
+                      onChange={(e) => setStockQuantity(e.target.value)}
+                      placeholder="0"
+                      className="h-9 font-mono text-sm"
+                    />
+                  </div>
+                )}
 
-                  <RadioGroup value={stockStatus} onValueChange={(v) => setStockStatus(v as "instock" | "outofstock" | "onbackorder")}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="instock" id="rg-instock" />
-                      <Label htmlFor="rg-instock" className="font-normal cursor-pointer text-success">In stock</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="outofstock" id="rg-outofstock" />
-                      <Label htmlFor="rg-outofstock" className="font-normal cursor-pointer text-destructive">Out of stock</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="onbackorder" id="rg-backorder" />
-                      <Label htmlFor="rg-backorder" className="font-normal cursor-pointer text-warning">On backorder</Label>
-                    </div>
-                  </RadioGroup>
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 block">Status</Label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {stockOptions.map((opt) => {
+                      const Icon = opt.icon;
+                      const active = stockStatus === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          data-active={active}
+                          onClick={() => setStockStatus(opt.value)}
+                          className={`flex flex-col items-center justify-center gap-1 rounded-md border border-border px-2 py-2.5 text-[11px] font-medium hover:bg-muted/50 transition-colors ${opt.cls}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -193,40 +220,48 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
             </div>
 
             {/* Right: actions */}
-            <div>
-              <Label className="text-sm font-semibold">Actions</Label>
-              <div className="mt-2 flex flex-col gap-2">
-                {permalink && (
-                  <>
-                    <Button variant="outline" size="sm" className="justify-between h-9" asChild>
-                      <a href={permalink.replace(/\/$/, "") + "/wp-admin/post.php?post=" + product.woo_id + "&action=edit"} target="_blank" rel="noreferrer">
-                        <span className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5" /> Edit Product</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" className="justify-between h-9" asChild>
-                      <a href={permalink} target="_blank" rel="noreferrer">
-                        <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> View Product</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </Button>
-                  </>
-                )}
-                <Button variant="outline" size="sm" className="justify-start h-9" disabled>
-                  <TrendingUp className="h-3.5 w-3.5 mr-2" /> Statistics
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start h-9" disabled>
-                  <RefreshCw className="h-3.5 w-3.5 mr-2" /> Re-sync
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start h-9 text-destructive hover:text-destructive" disabled>
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-                </Button>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 block">Actions</Label>
+                <div className="flex flex-col gap-1.5">
+                  {permalink && (
+                    <>
+                      <Button variant="outline" size="sm" className="justify-between h-8 text-xs" asChild>
+                        <a href={permalink.replace(/\/$/, "") + "/wp-admin/post.php?post=" + product.woo_id + "&action=edit"} target="_blank" rel="noreferrer">
+                          <span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" /> Edit in Woo</span>
+                          <ExternalLink className="h-3 w-3 opacity-60" />
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" className="justify-between h-8 text-xs" asChild>
+                        <a href={permalink} target="_blank" rel="noreferrer">
+                          <span className="flex items-center gap-1.5"><ExternalLink className="h-3 w-3" /> View public</span>
+                          <ExternalLink className="h-3 w-3 opacity-60" />
+                        </a>
+                      </Button>
+                    </>
+                  )}
+                  <Button variant="outline" size="sm" className="justify-start h-8 text-xs" disabled>
+                    <RefreshCw className="h-3 w-3 mr-1.5" /> Re-sync
+                  </Button>
+                  <Button variant="outline" size="sm" className="justify-start h-8 text-xs text-destructive hover:text-destructive" disabled>
+                    <Trash2 className="h-3 w-3 mr-1.5" /> Delete
+                  </Button>
+                </div>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-border space-y-1.5 text-xs text-muted-foreground">
-                <div className="flex justify-between"><span>Woo ID</span><span className="font-mono">{product.woo_id}</span></div>
-                <div className="flex justify-between"><span>Slug</span><span className="font-mono truncate max-w-[120px]">{product.slug || "—"}</span></div>
-                <div className="flex justify-between"><span>Last sync</span><span>{product.synced_at ? new Date(product.synced_at).toLocaleDateString() : "—"}</span></div>
+              <div className="pt-3 border-t border-border space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Slug</span>
+                  <span className="font-mono truncate max-w-[120px]">{product.slug || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Last sync</span>
+                  <span>{product.synced_at ? new Date(product.synced_at).toLocaleDateString() : "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span>{product.updated_at ? new Date(product.updated_at).toLocaleDateString() : "—"}</span>
+                </div>
               </div>
             </div>
           </div>

@@ -165,7 +165,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [priceMin, setPriceMin] = useState("");
@@ -187,7 +186,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [debouncedSearch, statusFilter, sort, storeId, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
   const { data: productsResult, isLoading: loading } = useProducts({
     storeId,
@@ -474,7 +473,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       key={s}
                       size="sm"
                       variant="ghost"
-                      className={`h-8 px-2.5 text-xs capitalize ${statusFilter === s ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`h-8 px-2.5 text-xs capitalize ${statusFilter === s ? "bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary" : "text-muted-foreground hover:text-foreground"}`}
                       onClick={() => setStatusFilter(s)}
                     >
                       {s === "all" ? "All" : s}
@@ -482,33 +481,29 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   ))}
                 </div>
                 <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 h-9">
-                  {(["all", "instock", "outofstock"] as const).map((s) => (
-                    <Button
-                      key={s}
-                      size="sm"
-                      variant="ghost"
-                      className={`h-8 px-2.5 text-xs ${
-                        (s === "all" && !excludeOutOfStock && stockStatusFilter === "all") ||
-                        (s === "instock" && (excludeOutOfStock || stockStatusFilter === "instock")) ||
-                        (s === "outofstock" && stockStatusFilter === "outofstock")
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => {
-                        if (s === "all") { setExcludeOutOfStock(false); setStockStatusFilter("all"); }
-                        else if (s === "instock") { setExcludeOutOfStock(true); setStockStatusFilter("all"); }
-                        else { setExcludeOutOfStock(false); setStockStatusFilter("outofstock"); }
-                      }}
-                    >
-                      {s === "all" ? "Stock: All" : s === "instock" ? "In stock" : "Out of stock"}
-                    </Button>
-                  ))}
+                  {(["all", "instock", "outofstock"] as const).map((s) => {
+                    const active =
+                      (s === "all" && !excludeOutOfStock && stockStatusFilter === "all") ||
+                      (s === "instock" && (excludeOutOfStock || stockStatusFilter === "instock")) ||
+                      (s === "outofstock" && stockStatusFilter === "outofstock");
+                    return (
+                      <Button
+                        key={s}
+                        size="sm"
+                        variant="ghost"
+                        className={`h-8 px-2.5 text-xs ${active ? "bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => {
+                          if (s === "all") { setExcludeOutOfStock(false); setStockStatusFilter("all"); }
+                          else if (s === "instock") { setExcludeOutOfStock(true); setStockStatusFilter("all"); }
+                          else { setExcludeOutOfStock(false); setStockStatusFilter("outofstock"); }
+                        }}
+                      >
+                        {s === "all" ? "Stock: All" : s === "instock" ? "In stock" : "Out of stock"}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
-              <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
-                <Switch checked={excludeOutOfStock} onCheckedChange={(v) => setExcludeOutOfStock(!!v)} />
-                <span>Exclude out of stock</span>
-              </label>
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger className="h-9 w-[180px] text-xs">
@@ -713,6 +708,27 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
                               )}
                             </div>
+                            <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                              <span className="capitalize">{label}</span>
+                            </div>
+                            {(() => {
+                              const qty = p.stock_quantity;
+                              const st = p.stock_status;
+                              const isOut = qty === 0 || st === "outofstock";
+                              const isLow = qty != null && qty > 0 && qty < 5;
+                              const cls = isOut
+                                ? "bg-destructive/10 text-destructive border-destructive/20"
+                                : isLow
+                                ? "bg-warning/10 text-warning border-warning/20"
+                                : "bg-success/10 text-success border-success/20";
+                              const stockLabel = isOut ? "Out" : qty != null ? `${qty} in stock` : "In stock";
+                              return (
+                                <div className={`absolute top-2 right-2 inline-flex items-center rounded-full backdrop-blur px-2 py-0.5 text-[10px] font-medium shadow-sm border ${cls}`}>
+                                  {stockLabel}
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       }
@@ -962,21 +978,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               }
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
-                          </TableRow>
-                          {isExpanded && (
-                            <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
-                              <TableCell colSpan={visibleColList.length + 1} className="p-0">
-                                <ProductRowExpanded
-                                  product={p}
-                                  storeUrl={storeUrl}
-                                  onClose={() => setExpandedRowId(null)}
-                                  onSaved={(updated) => {
-                                    setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
-                                  }}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          )}
+                          </TableCell>
                         </>
                       );
                     })
