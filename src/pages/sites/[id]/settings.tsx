@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
+import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -188,38 +188,43 @@ function SettingsInner() {
 
   if (loading && storeLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="p-5 space-y-4 max-w-3xl">
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
       </div>
     );
   }
 
   if (!store) {
     return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Site not found.</p>
-        <Link href="/sites"><Button variant="outline" className="mt-4"><ArrowLeft className="h-4 w-4 mr-2" />Back to Sites</Button></Link>
+      <div className="p-5">
+        <p className="text-sm text-muted-foreground">Site not found.</p>
+        <Link href="/sites"><Button variant="outline" size="sm" className="mt-3"><ArrowLeft className="h-3.5 w-3.5 mr-1.5" />Back to Sites</Button></Link>
       </div>
     );
   }
 
+  const nextMs = store.next_sync_at ? new Date(store.next_sync_at).getTime() : null;
+  const isOverdue = nextMs ? nextMs < Date.now() : false;
+  const minsOverdue = nextMs ? Math.floor((Date.now() - nextMs) / 60000) : 0;
+
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2"><SettingsIcon className="h-5 w-5" />Configuration</h1>
-        <p className="text-sm text-muted-foreground">{store.name} · {store.url}</p>
+    <div className="p-5 space-y-4 max-w-3xl">
+      <div className="flex items-center gap-2">
+        <SettingsIcon className="h-4 w-4 text-muted-foreground" />
+        <h1 className="text-lg font-semibold">Configuration</h1>
+        <span className="text-xs text-muted-foreground">· {store.name} · {store.url}</span>
       </div>
 
+      {/* Site Logo */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Site Logo</CardTitle>
-          <CardDescription>Custom logo shown in sidebars. Recommended 250×250 square (PNG, JPG, WebP, ≤ 2MB).</CardDescription>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-medium">Site Logo</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <SiteIcon site={store} size={80} />
+        <CardContent className="py-3 px-4 pt-0">
+          <div className="flex items-center gap-3">
+            <SiteIcon site={store} size={48} />
             <div className="flex items-center gap-2">
               <label>
                 <input
@@ -229,119 +234,115 @@ function SettingsInner() {
                   disabled={uploadingLogo}
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
                 />
-                <Button asChild variant="outline" disabled={uploadingLogo}>
+                <Button asChild variant="outline" size="sm" disabled={uploadingLogo} className="h-8">
                   <span>
-                    {uploadingLogo ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-                    {store.logo_url ? "Replace logo" : "Upload logo"}
+                    {uploadingLogo ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                    {store.logo_url ? "Replace" : "Upload"}
                   </span>
                 </Button>
               </label>
               {store.logo_url && (
-                <Button variant="ghost" onClick={handleLogoRemove} disabled={uploadingLogo}>
-                  <XIcon className="h-4 w-4 mr-2" />Remove
+                <Button variant="ghost" size="sm" onClick={handleLogoRemove} disabled={uploadingLogo} className="h-8">
+                  <XIcon className="h-3.5 w-3.5 mr-1.5" />Remove
                 </Button>
               )}
             </div>
+            <p className="text-xs text-muted-foreground ml-auto">250×250 · PNG/JPG/WebP · ≤2MB</p>
           </div>
         </CardContent>
       </Card>
 
+      {/* Connection Details */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Connection Details</CardTitle>
-          <CardDescription>API connection and sync configuration</CardDescription>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-medium">Connection</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div><p className="text-sm font-medium">Store URL</p><p className="text-sm text-muted-foreground">{store.url}</p></div>
+        <CardContent className="py-3 px-4 pt-0">
+          <div className="grid grid-cols-4 gap-4 text-sm">
             <div>
-              <p className="text-sm font-medium">API Status</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Store URL</p>
+              <p className="truncate" title={store.url}>{store.url.replace(/^https?:\/\//, "")}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">API Status</p>
               <StatusBadge variant={store.consumer_key ? "success" : "warning"}>{store.consumer_key ? "Connected" : "Not Connected"}</StatusBadge>
             </div>
-            <div><p className="text-sm font-medium">Last Sync</p><p className="text-sm text-muted-foreground">{store.last_sync_at ? formatDate(store.last_sync_at) : "Never"}</p></div>
-            <div><p className="text-sm font-medium">Created</p><p className="text-sm text-muted-foreground">{formatDate(store.created_at)}</p></div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Scheduled Sync</CardTitle>
-          <CardDescription>Configure automatic data synchronization</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="sync-interval">Sync Interval</Label>
-            <Select value={syncInterval} onValueChange={setSyncInterval}>
-              <SelectTrigger id="sync-interval" className="w-full max-w-xs"><SelectValue placeholder="Select interval" /></SelectTrigger>
-              <SelectContent>
-                {SYNC_INTERVALS.map((i) => (<SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Data will sync automatically at this interval.</p>
-          </div>
-
-          {store.next_sync_at && parseInt(syncInterval) > 0 && (() => {
-            const nextMs = new Date(store.next_sync_at).getTime();
-            const isOverdue = nextMs < Date.now();
-            const minsOverdue = Math.floor((Date.now() - nextMs) / 60000);
-            return (
-              <div className={`rounded-lg p-3 space-y-2 ${isOverdue ? "bg-warning/10 border border-warning/30" : "bg-muted/50"}`}>
-                <div className="flex items-start gap-2">
-                  {isOverdue ? <AlertTriangle className="h-4 w-4 text-warning mt-0.5" /> : <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />}
-                  <div className="flex-1 text-sm space-y-1">
-                    <p><span className="font-medium">Next scheduled sync:</span>{" "}
-                      <span className={isOverdue ? "text-warning font-medium" : "text-muted-foreground"}>
-                        {formatDate(store.next_sync_at)}{isOverdue && ` (overdue by ${minsOverdue}m)`}
-                      </span>
-                    </p>
-                    {lastCron && (<p className="text-xs text-muted-foreground">Last scheduler run: <span className="font-medium">{formatRelativeTime(lastCron.started_at)}</span> ({lastCron.status})</p>)}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="flex items-center gap-2">
-            <Button onClick={handleSaveSettings} disabled={savingSettings}>
-              {savingSettings ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <SettingsIcon className="h-4 w-4 mr-2" />}
-              Save Configuration
-            </Button>
-            <Button variant="outline" onClick={handleTriggerCron} disabled={triggeringCron}>
-              {triggeringCron ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-              Run Scheduler Now
-            </Button>
-          </div>
-
-          {cronResult && (<div className="bg-muted/50 rounded-lg p-3 text-sm">{cronResult}</div>)}
-        </CardContent>
-      </Card>
-
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-lg text-destructive flex items-center gap-2"><AlertTriangle className="h-5 w-5" />Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions. Proceed with caution.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-destructive/10 rounded-lg p-4 space-y-4">
             <div>
-              <p className="font-medium text-destructive">Delete this site</p>
-              <p className="text-sm text-muted-foreground">This will permanently delete the site and all associated data.</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Last Sync</p>
+              <p>{store.last_sync_at ? formatDate(store.last_sync_at) : "Never"}</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="delete-confirm" className="text-destructive">Type <strong>{store.name}</strong> to confirm</Label>
-              <Input id="delete-confirm" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} placeholder={store.name} className="max-w-xs" />
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Created</p>
+              <p>{formatDate(store.created_at)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Scheduled Sync */}
+      <Card>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-medium">Scheduled Sync</CardTitle>
+        </CardHeader>
+        <CardContent className="py-3 px-4 pt-0 space-y-3">
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5 flex-1 max-w-xs">
+              <Label htmlFor="sync-interval" className="text-xs">Interval</Label>
+              <Select value={syncInterval} onValueChange={setSyncInterval}>
+                <SelectTrigger id="sync-interval" className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SYNC_INTERVALS.map((i) => (<SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" onClick={handleSaveSettings} disabled={savingSettings} className="h-8">
+              {savingSettings ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleTriggerCron} disabled={triggeringCron} className="h-8">
+              {triggeringCron ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
+              Run now
+            </Button>
+          </div>
+
+          {store.next_sync_at && parseInt(syncInterval) > 0 && (
+            <div className={`rounded-md px-3 py-2 text-xs flex items-center gap-2 ${isOverdue ? "bg-warning/10 border border-warning/30" : "bg-muted/50"}`}>
+              {isOverdue ? <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+              <span>
+                Next: <span className={isOverdue ? "text-warning font-medium" : "font-medium"}>{formatDate(store.next_sync_at)}</span>
+                {isOverdue && <span className="text-warning"> (overdue {minsOverdue}m)</span>}
+                {lastCron && <span className="text-muted-foreground"> · Last scheduler: {formatRelativeTime(lastCron.started_at)} ({lastCron.status})</span>}
+              </span>
+            </div>
+          )}
+
+          {cronResult && (<div className="bg-muted/50 rounded-md px-3 py-2 text-xs">{cronResult}</div>)}
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/40">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-medium text-destructive flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" />Danger Zone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="py-3 px-4 pt-0">
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5 flex-1 max-w-xs">
+              <Label htmlFor="delete-confirm" className="text-xs">Type <span className="font-mono">{store.name}</span> to delete this site</Label>
+              <Input id="delete-confirm" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} placeholder={store.name} className="h-8 text-sm" />
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={deleteConfirmation !== store.name || deleting}>
-                  {deleting ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}Delete Site
+                <Button size="sm" variant="destructive" disabled={deleteConfirmation !== store.name || deleting} className="h-8">
+                  {deleting ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>This action cannot be undone. This will permanently delete <strong>{store.name}</strong> and remove all associated data.</AlertDialogDescription>
+                  <AlertDialogTitle>Delete this site permanently?</AlertDialogTitle>
+                  <AlertDialogDescription>This will permanently delete <strong>{store.name}</strong> and all associated data. This action cannot be undone.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
