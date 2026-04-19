@@ -47,6 +47,7 @@ import { OrderRowExpanded } from "./OrderRowExpanded";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
 import { fetchOrders } from "@/services/orderService";
+import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
