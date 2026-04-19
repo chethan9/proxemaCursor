@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -53,6 +61,7 @@ function BulkJobsInner() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selectedJob, setSelectedJob] = useState<BulkJob | null>(null);
 
   const stats = useMemo(() => ({
     total: jobs.length,
@@ -301,6 +310,9 @@ function BulkJobsInner() {
                               <AlertCircle className="h-3 w-3" /> error
                             </span>
                           )}
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedJob(j)}>
+                            View
+                          </Button>
                           {running && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleCancel(j)}>
                               Cancel
@@ -316,7 +328,126 @@ function BulkJobsInner() {
           </Table>
         </CardContent>
       </Card>
+
+      <JobDetailsDialog job={selectedJob} onClose={() => setSelectedJob(null)} />
     </div>
+  );
+}
+
+function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () => void }) {
+  if (!job) return null;
+  const meta = STATUS_META[job.status] ?? STATUS_META.pending;
+  const Icon = meta.icon;
+  const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
+  const errors = Array.isArray(job.errors) ? (job.errors as Array<{ id: number | string; error: string }>) : [];
+  const payload = job.payload as Record<string, unknown> | null;
+  const fmt = (d: string | null) => d ? new Date(d).toLocaleString() : "—";
+  const dur = (() => {
+    if (!job.started_at) return "—";
+    const end = job.completed_at ? new Date(job.completed_at).getTime() : Date.now();
+    const ms = end - new Date(job.started_at).getTime();
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${(ms / 60000).toFixed(1)}m`;
+  })();
+
+  return (
+    <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Icon className={`h-5 w-5 ${meta.cls}`} />
+            {JOB_TYPE_LABEL[job.job_type as keyof typeof JOB_TYPE_LABEL] || job.job_type}
+            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{job.status}</Badge>
+          </DialogTitle>
+          <DialogDescription>Job ID: <code className="text-xs">{job.id}</code></DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <div className="space-y-5 pb-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Total</p>
+                <p className="text-lg font-semibold font-mono">{job.total}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Processed</p>
+                <p className="text-lg font-semibold font-mono">{job.processed}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Succeeded</p>
+                <p className="text-lg font-semibold font-mono text-emerald-600">{job.succeeded}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Failed</p>
+                <p className="text-lg font-semibold font-mono text-destructive">{job.failed}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Progress</span>
+                <span className="font-mono">{pct}%</span>
+              </div>
+              <Progress value={pct} className="h-2" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Created</p>
+                <p>{fmt(job.created_at)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Started</p>
+                <p>{fmt(job.started_at)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Completed</p>
+                <p>{fmt(job.completed_at)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Duration</p>
+                <p className="font-mono">{dur}</p>
+              </div>
+            </div>
+
+            {job.error_message && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-xs font-medium text-destructive mb-1 inline-flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" /> Job Error
+                </p>
+                <p className="text-sm text-destructive/90">{job.error_message}</p>
+              </div>
+            )}
+
+            {payload && (
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1.5">Payload</p>
+                <pre className="rounded-lg border bg-muted/30 p-3 text-xs font-mono overflow-x-auto max-h-64">
+{JSON.stringify(payload, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {errors.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1.5">
+                  Per-item Errors ({errors.length})
+                </p>
+                <div className="rounded-lg border divide-y max-h-72 overflow-y-auto">
+                  {errors.map((e, i) => (
+                    <div key={i} className="px-3 py-2 text-xs">
+                      <span className="font-mono text-muted-foreground mr-2">#{e.id}</span>
+                      <span className="text-destructive">{e.error}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }
 
