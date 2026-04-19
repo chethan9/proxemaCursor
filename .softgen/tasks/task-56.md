@@ -1,6 +1,6 @@
 ---
 title: WP Application Password OAuth capture in site connect
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [auth, wordpress, media, oauth]
