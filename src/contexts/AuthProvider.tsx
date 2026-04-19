@@ -86,18 +86,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setLoading(true);
-        setTimeout(async () => {
-          await loadProfileAndRole(session.user.id);
-          setLoading(false);
-        }, 0);
-      } else {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+        setUser(session?.user ?? null);
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          setLoading(true);
+          setTimeout(async () => {
+            await loadProfileAndRole(session.user.id);
+            setLoading(false);
+          }, 0);
+        }
+        return;
+      }
+      if (event === "SIGNED_OUT") {
+        setUser(null);
         setProfile(null);
         setRole(null);
         setLoading(false);
+        return;
       }
     });
 
