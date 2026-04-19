@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import { useClients } from "@/hooks/queries/useClients";
 import { queryKeys } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/router";
+import { useToast } from "@/hooks/use-toast";
 import { AddSiteDialog } from "@/components/project/AddSiteDialog";
 import { EditSiteDialog } from "@/components/project/EditSiteDialog";
 import { SitesTable } from "@/components/project/SitesTable";
@@ -24,6 +26,8 @@ import { SitesTable } from "@/components/project/SitesTable";
 export default function SitesPage() {
   const { isSuperAdmin } = useAuth();
   const qc = useQueryClient();
+  const router = useRouter();
+  const { toast } = useToast();
   const { data: stores = [], isLoading: loading } = useStores();
   const { data: clients = [] } = useClients();
 
@@ -37,6 +41,30 @@ export default function SitesPage() {
     qc.invalidateQueries({ queryKey: queryKeys.stores });
     qc.invalidateQueries({ queryKey: queryKeys.clients });
   };
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { wp_connected, wp_error, edit_store } = router.query;
+    if (wp_connected === "1" || wp_error) {
+      qc.invalidateQueries({ queryKey: queryKeys.stores });
+      if (wp_connected === "1") {
+        toast({ title: "WordPress connected", description: "Media library access is now active." });
+      } else {
+        toast({ title: "WordPress authorization failed", description: String(wp_error || "Unknown error"), variant: "destructive" });
+      }
+    }
+    if (edit_store && typeof edit_store === "string") {
+      const findAndOpen = () => {
+        const s = stores.find(s => s.id === edit_store);
+        if (s) { setEditStore(s); setEditOpen(true); }
+      };
+      findAndOpen();
+    }
+    if (wp_connected || wp_error || edit_store) {
+      const { wp_connected: _w, wp_error: _e, edit_store: _es, ...rest } = router.query;
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query.wp_connected, router.query.wp_error, router.query.edit_store, stores.length]);
 
   const openEditDialog = (store: StoreWithClient) => {
     setEditStore(store);
