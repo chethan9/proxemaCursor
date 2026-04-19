@@ -44,7 +44,7 @@ export function resolveIcon(name: string): LucideIcon {
 export const ICON_NAMES = Object.keys(ICON_MAP);
 
 export const MENU_REGISTRY: MenuRegistryItem[] = [
-  { id: "dashboard", defaultLabel: "Dashboard", defaultIcon: "LayoutDashboard", href: "/", defaultGroup: "Overview", defaultOrder: 0 },
+  { id: "dashboard", defaultLabel: "Health", defaultIcon: "Activity", href: "/", defaultGroup: "Overview", defaultOrder: 0 },
   { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW, superAdminOnly: true },
   { id: "sites", defaultLabel: "Projects", defaultIcon: "Store", href: "/projects", defaultGroup: "Stores", defaultOrder: 0, permission: PERMISSIONS.SITES_VIEW },
   { id: "sync-runs", defaultLabel: "Sync Runs", defaultIcon: "RefreshCw", href: "/sync-runs", defaultGroup: "Operations", defaultOrder: 0, permission: PERMISSIONS.SYNC_VIEW },
@@ -56,7 +56,7 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings", defaultGroup: "System", defaultOrder: 0 },
 ];
 
-export const DEFAULT_GROUPS = ["Overview", "Management", "Stores", "Operations", "Developer", "Administration", "System"];
+export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Operations", "Developer", "Administration", "System"];
 
 export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "", defaultGroup: "Main", defaultOrder: 0 },

@@ -25,13 +25,22 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     localStorage.setItem("sb-remember-me", remember ? "true" : "false");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       setError(error.message);
       return;
     }
-    router.push("/");
+    let dest = "/";
+    if (data.user) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("default_landing_path")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      if (prof?.default_landing_path) dest = prof.default_landing_path;
+    }
+    router.push(dest);
   };
 
   return (

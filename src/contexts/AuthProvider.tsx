@@ -11,6 +11,7 @@ export interface Profile {
   role: string;
   client_id: string | null;
   is_active: boolean;
+  default_landing_path: string | null;
 }
 
 export interface Role {
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfileAndRole = async (userId: string) => {
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, client_id, is_active")
+      .select("id, email, full_name, role, client_id, is_active, default_landing_path")
       .eq("id", userId)
       .maybeSingle();
     setProfile(prof as Profile | null);
