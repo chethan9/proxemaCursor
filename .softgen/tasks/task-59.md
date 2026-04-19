@@ -1,9 +1,9 @@
 ---
 title: Product edit page - Basic mode
-status: todo
+status: done
 priority: high
 type: feature
-tags: [product-edit, ui]
+tags: [product-edit, ui, basic-mode]
 created_by: agent
 created_at: 2026-04-19
 position: 59
