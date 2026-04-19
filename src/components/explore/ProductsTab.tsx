@@ -469,6 +469,19 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 h-9">
+                  {(["all", "publish", "draft", "pending", "private"] as const).map((s) => (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant="ghost"
+                      className={`h-8 px-2.5 text-xs capitalize ${statusFilter === s ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      onClick={() => setStatusFilter(s)}
+                    >
+                      {s === "all" ? "All" : s}
+                    </Button>
+                  ))}
+                </div>
+                <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 h-9">
                   {(["all", "instock", "outofstock"] as const).map((s) => (
                     <Button
                       key={s}
