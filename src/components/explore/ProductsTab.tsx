@@ -53,8 +53,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     pageSize,
     search: debouncedSearch,
     statusFilter: statusFilter === "all" ? undefined : statusFilter,
-    categoryFilter: categoryFilter === "all" ? undefined : Number(categoryFilter),
-    sortField: "date_created",
+    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+    sortField: "woo_date_created",
     sortDirection: "desc",
     excludeOutOfStock: false,
   });
@@ -97,9 +97,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            {categoryOptions.map((c) => (
-              <SelectItem key={c.woo_id} value={String(c.woo_id)}>{c.name}</SelectItem>
-            ))}
+            {categoryOptions.map((c) => {
+              const opt = c as unknown as { woo_id: number; name: string };
+              return (
+                <SelectItem key={opt.woo_id} value={String(opt.woo_id)}>{opt.name}</SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-1 border border-border rounded-md p-0.5">
