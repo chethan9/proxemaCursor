@@ -15,7 +15,6 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
   const router = useRouter();
   const { user, profile, loading, can, isSuperAdmin } = useAuth();
 
-  // Fast-path: if auth already resolved and user passes checks, don't show loader.
   const fastPassed =
     !loading &&
     !!user &&
