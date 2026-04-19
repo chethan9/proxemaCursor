@@ -307,6 +307,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
+    // Track the "all" placeholder row (created by sync-start) so we can close it
+    const { data: allRow } = await supabase
+      .from("sync_runs")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("aspect", "all")
+      .eq("status", "running")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const allRunId = allRow?.id || null;
+
     const syncFunctions: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
       products: syncProducts,
       orders: syncOrders,
@@ -372,6 +384,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       last_sync_at: new Date().toISOString(),
     }).eq("id", storeId);
 
+    // Close the "all" placeholder row with aggregated totals
+    if (allRunId) {
+      await supabase.from("sync_runs").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        records_processed: totalProcessed,
+        records_created: totalCreated,
+        records_updated: totalUpdated,
+      }).eq("id", allRunId);
+    }
+
     return res.status(200).json({
       success: true,
       store_id: storeId,
@@ -382,6 +405,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error("[Sync API] Error:", error);
     await supabase.from("stores").update({ status: "error" }).eq("id", storeId);
+    // Fail the "all" row too so banner unmounts
+    await supabase
+      .from("sync_runs")
+      .update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      })
+      .eq("store_id", storeId)
+      .eq("aspect", "all")
+      .eq("status", "running");
     return res.status(500).json({
       error: "Sync failed",
       message: error instanceof Error ? error.message : "Unknown error",
