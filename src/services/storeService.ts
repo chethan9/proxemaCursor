@@ -132,7 +132,7 @@ export async function updateStore(
   return updated;
 }
 
-export async function deleteStore(id: string): Promise<void> {
+export async function deleteStore(id: string): Promise<{ webhooks_removed: number; webhooks_failed: number }> {
   let token: string | null = null;
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -158,6 +158,12 @@ export async function deleteStore(id: string): Promise<void> {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || "Failed to delete store");
   }
+
+  const result = await res.json().catch(() => ({ webhooks_removed: 0, webhooks_failed: 0 }));
+  return {
+    webhooks_removed: result.webhooks_removed ?? 0,
+    webhooks_failed: result.webhooks_failed ?? 0,
+  };
 }
 
 export async function updateStoreStatus(

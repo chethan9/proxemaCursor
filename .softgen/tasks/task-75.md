@@ -1,6 +1,6 @@
 ---
 title: Sync progress accuracy - checkpoint model, all-row completion, green UI
-status: todo
+status: done
 priority: high
 type: bug
 tags: [sync, progress, ux]

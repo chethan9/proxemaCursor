@@ -1,6 +1,6 @@
 ---
 title: Onboarding flow polish - lock nav, rename app, sync UX
-status: todo
+status: done
 priority: high
 type: bug
 tags: [onboarding, ux, sync]
