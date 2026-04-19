@@ -129,7 +129,7 @@ export default function ConnectSuccessPage() {
       setStep("liftoff", "done");
       setStage("done");
       toast({ title: "🚀 Liftoff!", description: "Syncing in background. Explore freely — progress is at the top." });
-      router.push(`/sites/${siteId}`);
+      router.push(`/sites/${siteId}/products`);
     } catch (e) {
       toast({ title: "Couldn't start sync", description: e instanceof Error ? e.message : "Try again from site settings", variant: "destructive" });
     }
