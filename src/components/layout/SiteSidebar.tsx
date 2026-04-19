@@ -67,8 +67,7 @@ function SiteIcon({ site, size = 24 }: { site: StoreWithClient; size?: number })
 function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): RoleKey {
   if (isSuperAdmin) return "super_admin";
   if (profileRole === "admin") return "admin";
-  if (profileRole === "readonly") return "readonly";
-  return "staff";
+  return "user";
 }
 
 export function SiteSidebar({ siteId }: Props) {
