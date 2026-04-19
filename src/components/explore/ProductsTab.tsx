@@ -112,6 +112,28 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [priceOp, setPriceOp] = useState<"set" | "increase_pct" | "decrease_pct" | "increase_fixed" | "decrease_fixed" | "set_sale">("set");
+  const [priceValue, setPriceValue] = useState("");
+  const [stockOp, setStockOp] = useState<"set" | "adjust" | "set_status">("set");
+  const [stockValue, setStockValue] = useState("");
+  const [stockStatusVal, setStockStatusVal] = useState<"instock" | "outofstock" | "onbackorder">("instock");
+  const [newProductStatus, setNewProductStatus] = useState<"publish" | "draft" | "pending" | "private">("publish");
+  const [categoryMode, setCategoryMode] = useState<"add" | "remove" | "replace">("add");
+  const [bulkCategoryIds, setBulkCategoryIds] = useState<Set<number>>(new Set());
+  const MAX_BULK = 500;
+  const overLimit = selectedIds.size > MAX_BULK;
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
   }, [viewMode]);
