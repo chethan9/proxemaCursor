@@ -98,19 +98,38 @@ export async function updateStore(
   id: string,
   updates: StoreUpdate
 ): Promise<Store> {
-  const { data, error } = await supabase
-    .from("stores")
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error updating store:", error);
-    throw error;
+  let token: string | null = null;
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+    const key = `sb-${projectRef}-auth-token`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      token = parsed?.access_token ?? null;
+    }
+  } catch (e) {
+    console.error("[updateStore] failed to read session:", e);
   }
 
-  return data;
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`/api/stores/${id}/update`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error || "Failed to update store");
+  }
+
+  const { store: updated } = await res.json();
+  return updated;
 }
 
 export async function deleteStore(id: string): Promise<void> {

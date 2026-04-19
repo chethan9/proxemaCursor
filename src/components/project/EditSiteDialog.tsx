@@ -157,13 +157,13 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
     try {
       await disconnectWpCredentials(store.id);
       toast({ title: "WordPress disconnected", description: "Media library access has been revoked." });
-      setConfirmDisconnect(false);
       onSaved?.();
       onOpenChange(false);
     } catch (e) {
       toast({ title: "Disconnect failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setDisconnecting(false);
+      setConfirmDisconnect(false);
     }
   };
 

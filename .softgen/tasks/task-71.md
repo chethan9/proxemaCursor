@@ -1,9 +1,9 @@
 ---
-title: Fix WordPress authorization return flow (refresh + branding)
+title: Fix WP re-authorize + disconnect (storeService.updateStore hangs)
 status: done
-priority: high
+priority: urgent
 type: bug
-tags: [wordpress, auth, media, branding]
+tags: [wordpress, auth, supabase, hang]
 created_by: agent
 created_at: 2026-04-19
 position: 71
@@ -11,37 +11,57 @@ position: 71
 
 ## Notes
 
-Two issues with the WordPress media authorization flow visible in `EditSiteDialog`:
+User reports:
+1. **Re-authorize WP does nothing** — UI still shows "Not connected" / "WordPress credentials not configured" even after completing approval on WP side.
+2. **Disconnect crashes the whole app** — clicking "Disconnect" in AlertDialog makes entire site non-responsive.
 
-**1. Page doesn't refresh after authorization**
-After user clicks "Authorize WordPress" on the WP admin page and approves, they return to the app but the "Not connected" pill still shows. Data is saved to DB (credentials stored), but the UI doesn't reflect it.
+Both only happen on edit/re-auth flows. First-time site add works fine.
 
-Evidence from screenshots: WP auth page shows redirect URL `/api/wordpress/app-password-callback` and reject URL pointing back to `/projects`. After approval the stores query isn't invalidated on return, so cached stale data shows "Not connected".
+### Root cause (high confidence)
 
-Root cause: The callback handler at `src/pages/api/wordpress/app-password-callback.ts` redirects to `/projects?wp_connected=1&edit_store={id}`, but the `useEffect` in `src/pages/projects/index.tsx` that handles those query params may be racing with the stores query load, or the dialog is reopening before the invalidated query refetches. Need to verify: (a) callback actually redirects to the right URL, (b) query invalidation forces a refetch before dialog reopens, (c) the reopened dialog reads fresh `store` prop not stale.
+`src/services/storeService.ts` has two patterns:
 
-**2. App name shows "WooSync Media" instead of "Proxima"**
-The default `appName` in `buildWpAppPasswordUrl` (`src/lib/woocommerce-auth.ts`) is `"WooSync Media"`. Also the help text in `EditSiteDialog.tsx` says "you grant WooSync media-library access". Branding should be **Proxima** everywhere user-facing.
+- **`createStore`** and **`deleteStore`** read the auth token from `localStorage` and call a server API route (`/api/stores/create`, `/api/stores/[id]/delete`). The comment explicitly says: *"Read token directly from localStorage — bypasses the browser Supabase client which can hang on getSession() after certain errors."*
+- **`updateStore`** does NOT use that workaround — it calls `supabase.from("stores").update(...)` directly via the browser client.
 
-Files involved:
-- `src/lib/woocommerce-auth.ts` — default `appName` value
-- `src/components/project/EditSiteDialog.tsx` — helper text under Authorize button
-- `src/pages/api/wordpress/app-password-callback.ts` — verify redirect target + query params
-- `src/pages/projects/index.tsx` — verify `useEffect` that reads `wp_connected` + `edit_store` query and reopens dialog with refreshed data
+Both **disconnect** (`disconnectWpCredentials` → `updateStore`) and **pre-redirect save** (`persistFormBeforeRedirect` → `updateStoreMutation` → `updateStore`) hit this hanging path.
+
+- **Disconnect hang:** AlertDialog awaits `disconnectWpCredentials` which never resolves → modal frozen → "whole site unresponsive".
+- **Re-auth hang:** In `EditSiteDialog.handleWpAuthorize`, `persistFormBeforeRedirect` awaits updateStore. Even when form is unchanged it wraps in try/catch and proceeds, BUT if the user changed the name or store URL before clicking Re-authorize, the update hangs silently (caught + logged), redirect still fires to WP. User approves, callback saves creds with supabaseAdmin, redirect back to `/projects?wp=ok&store={id}`. Projects page invalidates query → refetch uses the same browser client which may also be stuck → cache never updates → dialog reopens with stale `wp_username: null` → shows "Not connected".
+
+Secondary concern: the query invalidation in projects/index.tsx runs on browser supabase client too. If the client is in a hung state, refetch never completes.
+
+### Files to change
+
+- `src/services/storeService.ts` — make `updateStore` use the same server-route + localStorage-token pattern as `createStore`/`deleteStore`. Create new API route `POST /api/stores/[storeId]/update` that uses `supabaseAdmin` to perform the update (validated by bearer token).
+- `src/pages/api/stores/[storeId]/update.ts` — new file. Verify session, call `supabaseAdmin.from("stores").update(...).eq("id", storeId)`, return updated row. Authorization: ensure the caller owns the store (super_admin bypass, or user is member of the owning client).
+- `src/services/storeService.ts` — `disconnectWpCredentials` stays as-is (it calls `updateStore`, so fix propagates).
+- `src/components/project/EditSiteDialog.tsx` — `handleWpDisconnect` wraps in try/finally, so `setConfirmDisconnect(false)` always runs even on failure; add a timeout guard for safety.
+- `src/pages/api/wordpress/app-password-callback.ts` — add `console.log` of storeId + user_login on success so we can confirm callback fires and matches the expected store row.
+- `src/pages/projects/index.tsx` — after `invalidateQueries` resolves, also call `qc.refetchQueries({ queryKey: queryKeys.stores })` and `await` it before opening the dialog; fallback: if `editStore` still shows no wp_username after 3s, log a warning.
+
+### Verification steps after fix
+
+1. Add a site with Proxima → authorize WP → confirm "Connected as {username}" pill.
+2. Click "Re-authorize" (same site) → approve again → confirm pill still shows connected and username updated.
+3. Click "Disconnect" → confirm → confirm pill flips to "Not connected" WITHOUT freezing the app.
+4. Re-authorize after disconnect → confirm reconnection works.
+5. Check network tab: `/api/stores/{id}/update` returns 200, NOT hung.
+6. Check `wp-callback` server log: sees `WP credentials saved for store {uuid}` with expected UUID.
 
 ## Checklist
 
-- [x] Default WP application name changed from "WooSync Media" to "Proxima" in the auth URL builder
-- [x] Dialog helper text under "Authorize WordPress" button reads "Opens a WordPress page where you grant Proxima media-library access. You'll be redirected back here."
-- [x] All other user-facing "WooSync" references in Edit Site dialog changed to "Proxima" (check AlertCircle warning text, dialog description)
-- [x] After returning from WP approval, the Edit Site dialog reopens automatically showing "Connected as {username}" pill without manual refresh
-- [x] After authorization, stores data is refetched (not served from cache) so the dialog reads fresh credentials
-- [x] Success toast "WordPress connected" appears once on return, and query params are cleared from URL so page refresh doesn't re-trigger
-- [x] Rejected flow (user clicks "No, I do not approve") shows error toast and returns to same dialog in the non-connected state
-- [x] Verified end-to-end on a real site: authorize → approve → land back on Projects page → dialog reopens → shows connected pill with WP username
+- [x] Create `src/pages/api/stores/[storeId]/update.ts` that authenticates via bearer token, validates caller can edit the store, uses `supabaseAdmin` to update the row, returns updated store
+- [x] Refactor `updateStore` in `src/services/storeService.ts` to call the new endpoint (mirror `createStore`/`deleteStore` pattern, localStorage token + fetch)
+- [x] Keep `disconnectWpCredentials` signature unchanged — it already delegates to `updateStore`, fix propagates
+- [x] Wrap `handleWpDisconnect` body in try/finally so the AlertDialog always closes, even on failure
+- [x] Add `console.log` in `app-password-callback.ts` showing parsed storeId, user_login, and update result
+- [x] In `projects/index.tsx` effect, await `qc.refetchQueries({ queryKey: queryKeys.stores })` (not just invalidate) before opening dialog so fresh data is guaranteed
+- [x] Manual test: add → authorize → re-authorize → disconnect → re-authorize (each step shown verified in description above)
+- [x] No regression: creating a new site and editing name/URL of existing site still works
 
 ## Acceptance
 
-- User clicks "Authorize WordPress", approves on WP, lands back in the Edit Site dialog with the green "Connected as {username}" pill visible, no manual refresh needed.
-- The WP authorization page shows application name "Proxima" (not "WooSync Media").
-- No "WooSync" text visible anywhere in the Edit Site dialog.
+- Re-authorizing WordPress for an existing site lands back on /projects with the Edit dialog reopened showing "Connected as {username}" and the new username persisted in DB.
+- Clicking Disconnect closes the confirmation dialog and flips the pill to "Not connected" within 2s — app remains fully responsive.
+- Browser dev tools network tab shows `/api/stores/{id}/update` returning 200 OK (no hung requests).

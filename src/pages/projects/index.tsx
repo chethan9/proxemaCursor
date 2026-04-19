@@ -68,7 +68,7 @@ export default function SitesPage() {
     }
 
     // Force fresh data + reopen dialog
-    qc.invalidateQueries({ queryKey: queryKeys.stores }).then(() => {
+    qc.refetchQueries({ queryKey: queryKeys.stores }).then(() => {
       setEditStoreId(storeParam);
       setEditOpen(true);
     });
