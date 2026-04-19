@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,9 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Eye, EyeOff, ExternalLink, Copy, Check, ImageIcon, ShoppingBag, AlertCircle, Unlink, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ExternalLink, Copy, Check, ImageIcon, ShoppingBag, AlertCircle, Unlink, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import { buildWooCommerceAuthUrl, buildWpAppPasswordUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
-import { useUpdateStore } from "@/hooks/queries/useStores";
+import { useUpdateStore, useDeleteStore } from "@/hooks/queries/useStores";
 import { disconnectWpCredentials } from "@/services/storeService";
 import { useToast } from "@/hooks/use-toast";
 import type { StoreWithClient } from "@/services/storeService";
@@ -36,7 +37,9 @@ interface Props {
 }
 
 export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmin, onSaved }: Props) {
+  const router = useRouter();
   const updateStoreMutation = useUpdateStore();
+  const deleteStoreMutation = useDeleteStore();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -44,6 +47,8 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [wpConfirmMode, setWpConfirmMode] = useState<"idle" | "confirming">("idle");
   const [disconnecting, setDisconnecting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
 
   const wpConnected = !!(store?.wp_username && store?.wp_app_password);
@@ -61,6 +66,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
       setUrlError(null);
       setShowSecrets(false);
       setWpConfirmMode("idle");
+      setDeleteConfirmation("");
     }
   }, [store]);
 
@@ -120,10 +126,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
   const handleWooReauth = async () => {
     if (!store) return;
     const validation = validateStoreUrl(form.url);
-    if (!validation.valid) {
-      setUrlError(validation.error || "Invalid URL");
-      return;
-    }
+    if (!validation.valid) { setUrlError(validation.error || "Invalid URL"); return; }
     const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(form.url);
     try { await persistFormBeforeRedirect(cleanedUrl); } catch (e) { console.error("[WooReAuth] Pre-save failed:", e); }
     window.location.href = buildWooCommerceAuthUrl({ storeUrl: cleanedUrl, storeId: store.id });
@@ -132,10 +135,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
   const handleWpAuthorize = async () => {
     if (!store) return;
     const validation = validateStoreUrl(form.url);
-    if (!validation.valid) {
-      setUrlError(validation.error || "Invalid URL");
-      return;
-    }
+    if (!validation.valid) { setUrlError(validation.error || "Invalid URL"); return; }
     const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(form.url);
     try { await persistFormBeforeRedirect(cleanedUrl); } catch (e) { console.error("[WpAuth] Pre-save failed:", e); }
     const returnTo = typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : undefined;
@@ -155,6 +155,22 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
     } finally {
       setDisconnecting(false);
       setWpConfirmMode("idle");
+    }
+  };
+
+  const handleDeleteSite = async () => {
+    if (!store || deleteConfirmation !== store.name) return;
+    setDeleting(true);
+    try {
+      await deleteStoreMutation.mutateAsync(store.id);
+      toast({ title: "Site deleted", description: `${store.name} and all associated data removed.` });
+      onSaved?.();
+      onOpenChange(false);
+      router.push("/projects");
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -251,7 +267,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
                   </div>
                 </div>
                 <StatusBadge variant={wpConnected ? "success" : "warning"}>
-                  {wpConnected ? `Connected as ${store?.wp_username}` : "Not connected"}
+                  {wpConnected ? "Connected" : "Not connected"}
                 </StatusBadge>
               </div>
 
@@ -309,11 +325,46 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
               )}
             </div>
           </div>
+
+          {/* Danger Zone — Delete Site */}
+          <div className="rounded-lg border border-destructive/40 bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-destructive/20">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+              <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="delete-confirm" className="text-xs">
+                  Type <span className="font-mono font-semibold">{store?.name}</span> to confirm deletion
+                </Label>
+                <Input
+                  id="delete-confirm"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder={store?.name || ""}
+                  className="h-9"
+                  disabled={deleting}
+                />
+                <p className="text-[11px] text-muted-foreground">Permanently deletes the site and all synced data. Cannot be undone.</p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="h-9 gap-1.5"
+                disabled={!store || deleteConfirmation !== store.name || deleting}
+                onClick={handleDeleteSite}
+              >
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                <span className="text-xs">{deleting ? "Deleting..." : "Delete Site"}</span>
+              </Button>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.name.trim() || !form.url.trim()}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || deleting}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || deleting || !form.name.trim() || !form.url.trim()}>
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
