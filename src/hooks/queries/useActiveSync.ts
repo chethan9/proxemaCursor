@@ -17,7 +17,7 @@ export function useActiveSync(storeId: string | undefined) {
     queryKey: ["active-sync", storeId],
     enabled: !!storeId,
     refetchInterval: (q) => (q.state.data?.running ? 2500 : false),
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!storeId) throw new Error("no store");
       const { data: runs } = await supabase

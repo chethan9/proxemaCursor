@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,25 +14,32 @@ interface AuthGuardProps {
 export function AuthGuard({ children, requirePermission, requireSuperAdmin }: AuthGuardProps) {
   const router = useRouter();
   const { user, profile, loading, can, isSuperAdmin } = useAuth();
+  const passedOnceRef = useRef(false);
+
+  const userId = user?.id ?? null;
+  const profileActive = profile ? profile.is_active : true;
 
   const fastPassed =
     !loading &&
-    !!user &&
-    (!profile || profile.is_active) &&
+    !!userId &&
+    profileActive &&
     (!requireSuperAdmin || isSuperAdmin) &&
     (!requirePermission || can(requirePermission));
 
-  const [checking, setChecking] = useState(!fastPassed);
-  const [needsBootstrap, setNeedsBootstrap] = useState(false);
+  const [checking, setChecking] = useState(!passedOnceRef.current && !fastPassed);
 
   useEffect(() => {
     if (loading) return;
-    if (fastPassed) { setChecking(false); return; }
+    if (fastPassed) {
+      passedOnceRef.current = true;
+      setChecking(false);
+      return;
+    }
+    if (passedOnceRef.current) return;
     (async () => {
-      if (!user) {
+      if (!userId) {
         const { data } = await supabase.rpc("can_bootstrap_super_admin");
         if (data) {
-          setNeedsBootstrap(true);
           router.replace("/auth/bootstrap");
           return;
         }
@@ -54,9 +61,9 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
       }
       setChecking(false);
     })();
-  }, [loading, user, profile, requirePermission, requireSuperAdmin, isSuperAdmin, router, can, fastPassed]);
+  }, [loading, userId, profile, profileActive, requirePermission, requireSuperAdmin, isSuperAdmin, router, can, fastPassed]);
 
-  if (!fastPassed && (loading || checking || needsBootstrap)) {
+  if (!passedOnceRef.current && (loading || checking)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
