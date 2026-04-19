@@ -3,8 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useWpMedia, useUploadWpMedia, type WpMediaItem } from "@/hooks/queries/useWpMedia";
+import { useInfiniteWpMedia, useUploadWpMedia, type WpMediaItem } from "@/hooks/queries/useWpMedia";
 import { cn } from "@/lib/utils";
 import { Search, Upload, ImageOff, Loader2, AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
@@ -34,24 +33,33 @@ export function ImagePickerDialog({
 }: Props) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [items, setItems] = useState<WpMediaItem[]>([]);
   const [selected, setSelected] = useState<Map<number, WpMediaItem>>(new Map());
   const [justUploadedIds, setJustUploadedIds] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading, isError, error } = useWpMedia(storeId, {
-    search: debouncedSearch,
-    page,
-    per_page: 28,
-    enabled: open,
-  });
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteWpMedia(storeId, { search: debouncedSearch, per_page: 28, enabled: open });
+
   const upload = useUploadWpMedia(storeId);
+
+  const items = useMemo<WpMediaItem[]>(() => {
+    if (!data) return [];
+    const flat = data.pages.flatMap((p) => p.data);
+    const seen = new Set<number>();
+    return flat.filter((it) => (seen.has(it.id) ? false : (seen.add(it.id), true)));
+  }, [data]);
 
   const wpMissing = useMemo(() => {
     const msg = error instanceof Error ? error.message : "";
-    return /wp credentials/i.test(msg) || /missing wp/i.test(msg) || /401/.test(msg);
+    return /wp credentials/i.test(msg) || /missing wp/i.test(msg) || /412/.test(msg);
   }, [error]);
 
   useEffect(() => {
@@ -61,40 +69,24 @@ export function ImagePickerDialog({
   }, [search, open]);
 
   useEffect(() => {
-    setPage(1);
-    setItems([]);
-  }, [debouncedSearch, open]);
-
-  useEffect(() => {
-    if (!data) return;
-    setItems((prev) => {
-      const map = new Map(prev.map((i) => [i.id, i]));
-      for (const it of data) map.set(it.id, it);
-      return Array.from(map.values());
-    });
-  }, [data]);
-
-  useEffect(() => {
     if (!open) {
       setSelected(new Map());
       setJustUploadedIds(new Set());
       setSearch("");
       setDebouncedSearch("");
-      setPage(1);
-      setItems([]);
     }
   }, [open]);
 
   useEffect(() => {
-    if (open && initialSelectedIds.length && items.length) {
+    if (open && initialSelectedIds.length && items.length && selected.size === 0) {
       const sel = new Map<number, WpMediaItem>();
       for (const id of initialSelectedIds) {
         const it = items.find((i) => i.id === id);
         if (it) sel.set(id, it);
       }
-      if (sel.size) setSelected((prev) => (prev.size ? prev : sel));
+      if (sel.size) setSelected(sel);
     }
-  }, [open, initialSelectedIds, items]);
+  }, [open, initialSelectedIds, items, selected.size]);
 
   const toggleItem = (item: WpMediaItem) => {
     setSelected((prev) => {
@@ -133,7 +125,6 @@ export function ImagePickerDialog({
     for (const file of Array.from(files)) {
       try {
         const res = await upload.mutateAsync({ file, alt: file.name });
-        setItems((prev) => [res, ...prev.filter((i) => i.id !== res.id)]);
         uploadedIds.push(res.id);
       } catch (e) {
         console.error("Upload failed", file.name, e);
@@ -147,9 +138,9 @@ export function ImagePickerDialog({
 
   const handleScroll = () => {
     const el = scrollRef.current;
-    if (!el || isLoading) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) {
-      if (data && data.length >= 28) setPage((p) => p + 1);
+    if (!el || isFetchingNextPage || !hasNextPage) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
+      fetchNextPage();
     }
   };
 
@@ -157,8 +148,8 @@ export function ImagePickerDialog({
     const images: SelectedImage[] = Array.from(selected.values()).map((it) => ({
       id: it.id,
       src: it.source_url,
-      alt: it.alt_text || it.title?.rendered || "",
-      name: it.title?.rendered || it.slug,
+      alt: it.alt || it.title,
+      name: it.title,
     }));
     onConfirm(images);
     onOpenChange(false);
@@ -166,8 +157,8 @@ export function ImagePickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-3 border-b">
+      <DialogContent className="max-w-4xl w-[95vw] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-3 border-b shrink-0">
           <div className="flex items-center justify-between gap-4">
             <DialogTitle className="text-lg">{title}</DialogTitle>
           </div>
@@ -210,7 +201,7 @@ export function ImagePickerDialog({
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-6 py-4"
+          className="flex-1 min-h-0 overflow-y-auto px-6 py-4"
         >
           {wpMissing && (
             <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
@@ -251,7 +242,6 @@ export function ImagePickerDialog({
               {items.map((item) => {
                 const isSelected = selected.has(item.id);
                 const isNew = justUploadedIds.has(item.id);
-                const thumb = item.media_details?.sizes?.thumbnail?.source_url || item.source_url;
                 return (
                   <button
                     type="button"
@@ -264,8 +254,8 @@ export function ImagePickerDialog({
                     )}
                   >
                     <img
-                      src={thumb}
-                      alt={item.alt_text || ""}
+                      src={item.thumbnail_url}
+                      alt={item.alt}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
@@ -283,14 +273,20 @@ export function ImagePickerDialog({
             </div>
           )}
 
-          {isLoading && (
+          {(isLoading || isFetchingNextPage) && (
             <div className="flex justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
+
+          {!hasNextPage && items.length > 0 && !isLoading && (
+            <div className="text-center text-xs text-muted-foreground py-4">
+              {items.length} {items.length === 1 ? "image" : "images"} total
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 p-4 border-t bg-muted/30">
+        <div className="flex items-center justify-between gap-2 p-4 border-t bg-muted/30 shrink-0">
           <div className="flex items-center gap-3">
             {mode === "multi" && items.length > 0 && (
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -298,7 +294,7 @@ export function ImagePickerDialog({
                   checked={selected.size === items.length && items.length > 0}
                   onCheckedChange={selectAll}
                 />
-                Select All
+                Select All ({items.length} loaded)
               </label>
             )}
             {selected.size > 0 && (

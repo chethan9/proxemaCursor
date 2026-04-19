@@ -1,21 +1,21 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listWpMedia, uploadWpMedia, WpMediaItem } from "@/services/wpMediaService";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { listWpMedia, uploadWpMedia, WpMediaItem, WpMediaPage } from "@/services/wpMediaService";
 
 export type { WpMediaItem };
 
-type MediaOptions = { search?: string; page?: number; per_page?: number; enabled?: boolean };
+type MediaOptions = { search?: string; per_page?: number; enabled?: boolean };
 
-export function useWpMedia(storeId: string, opts: MediaOptions = {}) {
-  const { search = "", page = 1, per_page = 28, enabled = true } = opts;
-  return useQuery({
-    queryKey: ["wp", "media", storeId, search, page, per_page] as const,
-    queryFn: async () => {
-      const res = await listWpMedia(storeId, { search, page, perPage: per_page });
-      return res.data;
-    },
+export function useInfiniteWpMedia(storeId: string, opts: MediaOptions = {}) {
+  const { search = "", per_page = 28, enabled = true } = opts;
+  return useInfiniteQuery({
+    queryKey: ["wp", "media", "infinite", storeId, search, per_page] as const,
+    queryFn: ({ pageParam = 1 }) =>
+      listWpMedia(storeId, { search, page: pageParam as number, perPage: per_page }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: WpMediaPage) => lastPage.nextPage ?? undefined,
     enabled: enabled && !!storeId,
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 
@@ -24,7 +24,7 @@ export function useUploadWpMedia(storeId: string) {
   return useMutation({
     mutationFn: ({ file }: { file: File; alt?: string }) => uploadWpMedia(storeId, file),
     onSuccess: (item: WpMediaItem) => {
-      qc.invalidateQueries({ queryKey: ["wp", "media", storeId] });
+      qc.invalidateQueries({ queryKey: ["wp", "media", "infinite", storeId] });
       return item;
     },
   });

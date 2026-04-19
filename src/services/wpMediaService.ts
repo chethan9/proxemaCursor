@@ -1,28 +1,25 @@
 export type WpMediaItem = {
   id: number;
-  date: string;
-  slug: string;
-  title: { rendered: string };
   source_url: string;
-  media_details?: {
-    width?: number;
-    height?: number;
-    sizes?: Record<string, { source_url: string; width: number; height: number }>;
-  };
-  alt_text?: string;
-  mime_type?: string;
+  thumbnail_url: string;
+  alt: string;
+  title: string;
+  mime_type: string;
+  date: string;
 };
 
-export type WpMediaListResult = {
+export type WpMediaPage = {
   data: WpMediaItem[];
   total: number;
   totalPages: number;
+  hasNextPage: boolean;
+  nextPage: number | null;
 };
 
 export async function listWpMedia(
   storeId: string,
   params: { search?: string; page?: number; perPage?: number } = {}
-): Promise<WpMediaListResult> {
+): Promise<WpMediaPage> {
   const qs = new URLSearchParams();
   if (params.search) qs.set("search", params.search);
   qs.set("page", String(params.page || 1));
@@ -35,7 +32,7 @@ export async function listWpMedia(
     (error as Error & { code?: string }).code = err.code;
     throw error;
   }
-  return (await res.json()) as WpMediaListResult;
+  return (await res.json()) as WpMediaPage;
 }
 
 export async function uploadWpMedia(storeId: string, file: File): Promise<WpMediaItem> {
@@ -52,7 +49,5 @@ export async function uploadWpMedia(storeId: string, file: File): Promise<WpMedi
     (error as Error & { code?: string }).code = err.code;
     throw error;
   }
-  const data = (await res.json()) as WpMediaItem;
-  console.log("uploadWpMedia:", { data });
-  return data;
+  return (await res.json()) as WpMediaItem;
 }
