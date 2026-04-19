@@ -467,30 +467,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         <Card>
           <CardContent className="p-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 h-9">
-                  {(["all", "instock", "outofstock"] as const).map((s) => (
-                    <Button
-                      key={s}
-                      size="sm"
-                      variant="ghost"
-                      className={`h-8 px-2.5 text-xs ${
-                        (s === "all" && !excludeOutOfStock && stockStatusFilter === "all") ||
-                        (s === "instock" && (excludeOutOfStock || stockStatusFilter === "instock")) ||
-                        (s === "outofstock" && stockStatusFilter === "outofstock")
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => {
-                        if (s === "all") { setExcludeOutOfStock(false); setStockStatusFilter("all"); }
-                        else if (s === "instock") { setExcludeOutOfStock(true); setStockStatusFilter("all"); }
-                        else { setExcludeOutOfStock(false); setStockStatusFilter("outofstock"); }
-                      }}
-                    >
-                      {s === "all" ? "Stock: All" : s === "instock" ? "In stock" : "Out of stock"}
-                    </Button>
-                  ))}
-                </div>
+              <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
+                {["all", "publish", "draft", "pending", "private"].map((s) => (
+                  <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>
+                    {s === "all" ? "All" : s}
+                  </Button>
+                ))}
               </div>
               <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
                 <Switch checked={excludeOutOfStock} onCheckedChange={(v) => setExcludeOutOfStock(!!v)} />
