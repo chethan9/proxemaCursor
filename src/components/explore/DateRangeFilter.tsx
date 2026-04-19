@@ -87,18 +87,18 @@ export function DateRangeFilter({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0" sideOffset={4}>
-        <div className="flex">
-          <div className="border-r border-border py-2 min-w-[170px]">
+        <div className="flex text-xs">
+          <div className="border-r border-border py-1 w-[140px]">
             {PRESETS.map((p) => {
               const isActive = draftRange === p.v;
               return (
                 <button
                   key={p.v}
                   onClick={() => handlePresetClick(p.v)}
-                  className={`w-full text-left text-sm px-3 py-2 transition-colors ${
+                  className={`w-full text-left px-2.5 py-1.5 transition-colors ${
                     isActive
-                      ? "bg-accent border-l-2 border-primary font-medium pl-[10px]"
-                      : "border-l-2 border-transparent hover:bg-muted pl-[10px]"
+                      ? "bg-accent border-l-2 border-primary font-medium pl-[8px]"
+                      : "border-l-2 border-transparent hover:bg-muted pl-[8px]"
                   }`}
                 >
                   {p.l}
@@ -107,10 +107,10 @@ export function DateRangeFilter({
             })}
           </div>
           {draftRange === "custom" && (
-            <div className="min-w-[300px] flex flex-col">
-              <div className="p-4 space-y-4 flex-1">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="w-[220px] flex flex-col">
+              <div className="p-3 space-y-2.5 flex-1">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
                     From date
                   </label>
                   <Popover open={fromOpen} onOpenChange={setFromOpen}>
@@ -120,9 +120,9 @@ export function DateRangeFilter({
                           readOnly
                           value={draftFrom ? format(draftFrom, "dd/MM/yyyy") : ""}
                           placeholder="dd/mm/yyyy"
-                          className="h-10 pr-9 cursor-pointer"
+                          className="h-8 pr-7 text-xs cursor-pointer"
                         />
-                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <CalendarIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                       </div>
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-auto p-0">
@@ -138,8 +138,8 @@ export function DateRangeFilter({
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
                     To date
                   </label>
                   <Popover open={toOpen} onOpenChange={setToOpen}>
@@ -149,9 +149,9 @@ export function DateRangeFilter({
                           readOnly
                           value={draftTo ? format(draftTo, "dd/MM/yyyy") : ""}
                           placeholder="dd/mm/yyyy"
-                          className="h-10 pr-9 cursor-pointer"
+                          className="h-8 pr-7 text-xs cursor-pointer"
                         />
-                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <CalendarIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                       </div>
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-auto p-0">
@@ -168,11 +168,11 @@ export function DateRangeFilter({
                   </Popover>
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
-                <Button variant="ghost" size="sm" onClick={handleCancel}>
+              <div className="flex items-center justify-end gap-1.5 px-3 py-2 border-t border-border">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleApply} disabled={!canApply}>
+                <Button size="sm" className="h-7 text-xs" onClick={handleApply} disabled={!canApply}>
                   Apply
                 </Button>
               </div>
