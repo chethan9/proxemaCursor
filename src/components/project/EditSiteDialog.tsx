@@ -16,19 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Eye, EyeOff, ExternalLink, Copy, Check, ImageIcon, ShoppingBag, AlertCircle, Unlink } from "lucide-react";
+import { Eye, EyeOff, ExternalLink, Copy, Check, ImageIcon, ShoppingBag, AlertCircle, Unlink, Loader2 } from "lucide-react";
 import { buildWooCommerceAuthUrl, buildWpAppPasswordUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { useUpdateStore } from "@/hooks/queries/useStores";
 import { disconnectWpCredentials } from "@/services/storeService";
@@ -52,7 +42,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
   const [urlError, setUrlError] = useState<string | null>(null);
   const [showSecrets, setShowSecrets] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [wpConfirmMode, setWpConfirmMode] = useState<"idle" | "confirming">("idle");
   const [disconnecting, setDisconnecting] = useState(false);
   const [form, setForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
 
@@ -70,6 +60,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
       });
       setUrlError(null);
       setShowSecrets(false);
+      setWpConfirmMode("idle");
     }
   }, [store]);
 
@@ -163,50 +154,49 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
       toast({ title: "Disconnect failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setDisconnecting(false);
-      setConfirmDisconnect(false);
+      setWpConfirmMode("idle");
     }
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Site</DialogTitle>
-            <DialogDescription>Manage site details, WooCommerce API, and WordPress media access.</DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Site</DialogTitle>
+          <DialogDescription>Manage site details, WooCommerce API, and WordPress media access.</DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-5 py-2">
-            {/* Site basics */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className={isSuperAdmin ? "space-y-2" : "space-y-2 col-span-2"}>
-                  <Label htmlFor="edit-name">Site Name</Label>
-                  <Input id="edit-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <div className="space-y-5 py-2">
+          {/* Site basics */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className={isSuperAdmin ? "space-y-2" : "space-y-2 col-span-2"}>
+                <Label htmlFor="edit-name">Site Name</Label>
+                <Input id="edit-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Client</Label>
+                  <Select value={form.client_id || "none"} onValueChange={(v) => setForm({ ...form, client_id: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {isSuperAdmin && (
-                  <div className="space-y-2">
-                    <Label>Client</Label>
-                    <Select value={form.client_id || "none"} onValueChange={(v) => setForm({ ...form, client_id: v === "none" ? "" : v })}>
-                      <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Unassigned</SelectItem>
-                        {clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-url">Store URL</Label>
-                <Input id="edit-url" value={form.url} onChange={(e) => { setForm({ ...form, url: e.target.value }); setUrlError(null); }} className={urlError ? "border-destructive" : ""} />
-                {urlError && <p className="text-sm text-destructive">{urlError}</p>}
-                <p className="text-xs text-muted-foreground">Changing the URL may break connections — you may need to re-authorize.</p>
-              </div>
+              )}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-url">Store URL</Label>
+              <Input id="edit-url" value={form.url} onChange={(e) => { setForm({ ...form, url: e.target.value }); setUrlError(null); }} className={urlError ? "border-destructive" : ""} />
+              {urlError && <p className="text-sm text-destructive">{urlError}</p>}
+              <p className="text-xs text-muted-foreground">Changing the URL may break connections — you may need to re-authorize.</p>
+            </div>
+          </div>
 
-            {/* Two-column: WooCommerce + WordPress */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Two-column: WooCommerce + WordPress */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* WooCommerce section */}
             <div className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -265,7 +255,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
                 </StatusBadge>
               </div>
 
-              {!wpConnected && wcConnected && (
+              {!wpConnected && wcConnected && wpConfirmMode === "idle" && (
                 <div className="flex items-start gap-2 rounded-md bg-warning/10 border border-warning/30 px-3 py-2">
                   <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
                   <p className="text-xs text-foreground leading-relaxed">
@@ -274,13 +264,34 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
                 </div>
               )}
 
-              {wpConnected ? (
+              {wpConfirmMode === "confirming" ? (
+                <div className="space-y-3 rounded-md bg-destructive/5 border border-destructive/30 px-3 py-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-foreground">Disconnect WordPress?</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        This will revoke Proxima&apos;s media library access for <strong>{store?.name}</strong>. WooCommerce API credentials are not affected. You can re-authorize anytime.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end">
+                    <Button type="button" variant="ghost" size="sm" className="h-8" disabled={disconnecting} onClick={() => setWpConfirmMode("idle")}>
+                      Cancel
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" className="h-8 gap-1.5" disabled={disconnecting} onClick={handleWpDisconnect}>
+                      {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
+                      <span className="text-xs">{disconnecting ? "Disconnecting..." : "Yes, Disconnect"}</span>
+                    </Button>
+                  </div>
+                </div>
+              ) : wpConnected ? (
                 <div className="flex items-center gap-2 pt-1">
                   <Button type="button" variant="outline" size="sm" className="h-8 px-2.5 gap-1.5" onClick={handleWpAuthorize}>
                     <ExternalLink className="h-3.5 w-3.5" />
                     <span className="text-xs">Re-authorize</span>
                   </Button>
-                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2.5 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setConfirmDisconnect(true)}>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2.5 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setWpConfirmMode("confirming")}>
                     <Unlink className="h-3.5 w-3.5" />
                     <span className="text-xs">Disconnect</span>
                   </Button>
@@ -297,34 +308,16 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
                 </div>
               )}
             </div>
-            </div>
           </div>
+        </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !form.name.trim() || !form.url.trim()}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect WordPress?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will revoke Proxima&apos;s media library access for <strong>{store?.name}</strong>. WooCommerce API credentials are not affected. You can re-authorize anytime.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={disconnecting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleWpDisconnect} disabled={disconnecting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {disconnecting ? "Disconnecting..." : "Disconnect"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !form.name.trim() || !form.url.trim()}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
