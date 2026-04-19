@@ -24,28 +24,24 @@ export const SYNC_MESSAGES: Record<string, string[]> = {
     "Putting everything in its right place 📂",
     "Turning chaos into neat categories 🗂️",
     "Sorting like a perfectionist 🎯",
-    "Your structure is getting smarter 🧠",
-    "Everything is finally where it belongs ✅",
   ],
   tags: [
     "Tagging everything with care 🏷️",
     "Labels are lining up nicely ✨",
     "Every tag gets a proper home 📂",
-    "Turning tags into a tidy taxonomy 🧠",
-    "Your structure is getting smarter 🧠",
   ],
   coupons: [
     "Rounding up your coupons and discounts 🎟️",
     "Making sure every deal is accounted for 💸",
     "Your promotions are syncing up ✨",
-    "Deals are falling into place nicely 📦",
-    "Still faster than doing it manually 😄",
   ],
   general: [
     "Feeding the hamsters powering Proxima 🐹",
     "Brewing coffee for your data ☕",
     "This is the part where magic happens ✨",
     "Still faster than doing it manually 😄",
+    "Your structure is getting smarter 🧠",
+    "Almost there — hang tight 🚀",
   ],
   progress: [
     "Getting things ready…",
@@ -65,6 +61,20 @@ export const SYNC_MESSAGES: Record<string, string[]> = {
     "Ready any second now…",
   ],
 };
+
+export const ALL_MESSAGES: string[] = [
+  ...SYNC_MESSAGES.products,
+  ...SYNC_MESSAGES.orders,
+  ...SYNC_MESSAGES.customers,
+  ...SYNC_MESSAGES.categories,
+  ...SYNC_MESSAGES.tags,
+  ...SYNC_MESSAGES.coupons,
+  ...SYNC_MESSAGES.general,
+];
+
+export function pickAnyMessage(tick: number): string {
+  return ALL_MESSAGES[tick % ALL_MESSAGES.length];
+}
 
 export function pickMessage(aspect: string | null, tick: number): string {
   const pool = tick % 4 === 3

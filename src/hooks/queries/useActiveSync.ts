@@ -2,7 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const ASPECTS = ["products", "orders", "customers", "categories", "tags", "coupons"];
-const WEIGHT = 100 / ASPECTS.length;
+const ASPECT_WEIGHTS: Record<string, number> = {
+  orders: 45,
+  products: 25,
+  customers: 20,
+  categories: 4,
+  tags: 3,
+  coupons: 3,
+};
 
 export function useActiveSync(storeId: string | null) {
   return useQuery({
@@ -46,17 +53,18 @@ export function useActiveSync(storeId: string | null) {
       let currentAspect: string | null = null;
       let totalProcessed = 0;
       for (const asp of ASPECTS) {
+        const weight = ASPECT_WEIGHTS[asp] || 0;
         const s = statusByAspect.get(asp);
         if (!s) continue;
         if (s.status === "completed") {
-          progress += WEIGHT;
+          progress += weight;
           totalProcessed += s.processed;
         } else if (s.status === "running") {
-          progress += WEIGHT * 0.4;
+          progress += weight * 0.4;
           currentAspect = asp;
           totalProcessed += s.processed;
         } else if (s.status === "failed") {
-          progress += WEIGHT;
+          progress += weight;
         }
       }
 

@@ -1,6 +1,6 @@
 ---
 title: Post-liftoff redirect + mixed slower messages + weighted smooth progress + Lottie confetti + site icon in celebration
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sync, ui, polish, onboarding]
