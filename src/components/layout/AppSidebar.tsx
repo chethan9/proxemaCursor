@@ -179,7 +179,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         aria-label="Primary navigation"
         className={cn(
           "flex shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200",
-          collapsed ? "w-14" : "w-52"
+          collapsed ? "w-14" : "w-44"
         )}
       >
         <div className={cn("flex h-12 items-center border-b border-sidebar-border", collapsed ? "justify-center px-0" : "px-3 justify-between")}>
@@ -235,7 +235,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           {menuTree.map((node) => {
             if (node.type === "item") {
               return (
-                <div key={node.id} className={cn("mb-1", collapsed ? "px-1.5" : "px-2")}>
+                <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
                   <ul><>{renderItem(node)}</></ul>
                 </div>
               );
@@ -243,12 +243,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             const isStoresGroup = node.id === "group-stores";
             if (isStoresGroup) {
               return (
-                <div key={node.id} className={cn("mb-1", collapsed ? "px-1.5" : "px-2")}>
+                <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
                   <ul className="space-y-0.5">
                     {node.children?.map(renderItem)}
                     {can(PERMISSIONS.SITES_VIEW) && sites.map((site) => {
                       const href = `/explore/${site.id}`;
-                      const isActive = router.asPath.startsWith(`/explore/${site.id}`);
+                      const isActive = router.asPath.startsWith(`/explore/${site.id}`) || router.asPath.startsWith(`/sites/${site.id}`);
                       if (collapsed) {
                         return (
                           <li key={site.id}>
@@ -289,7 +289,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               );
             }
             return (
-              <div key={node.id} className={cn("mb-3", collapsed ? "px-1.5" : "px-2")}>
+              <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
                 <ul className="space-y-0.5">
                   {node.children?.map(renderItem)}
                 </ul>
