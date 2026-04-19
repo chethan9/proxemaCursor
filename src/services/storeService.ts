@@ -147,3 +147,7 @@ export async function updateStoreStatus(
 ): Promise<Store> {
   return updateStore(id, { status });
 }
+
+export async function disconnectWpCredentials(id: string): Promise<Store> {
+  return updateStore(id, { wp_username: null, wp_app_password: null });
+}
