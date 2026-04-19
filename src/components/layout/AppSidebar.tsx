@@ -26,6 +26,25 @@ import { queryKeys } from "@/lib/query-client";
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
 
+function menuStorageKey(role: RoleKey) {
+  return `sidebar-menu-cache:${role}`;
+}
+
+function loadCachedMenu(role: RoleKey): ResolvedMenuNode[] {
+  const mem = cachedMenuByRole.get(role);
+  if (mem) return mem;
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(menuStorageKey(role));
+    if (raw) {
+      const parsed = JSON.parse(raw) as ResolvedMenuNode[];
+      cachedMenuByRole.set(role, parsed);
+      return parsed;
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
 function loadCachedSites(): StoreWithClient[] {
   if (cachedSites) return cachedSites;
   if (typeof window === "undefined") return [];
@@ -92,9 +111,16 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   });
   const collapsed = locked ? collapsedPref : (forceCollapsed || collapsedPref);
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
+  const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
-    const roleKey = roleKeyFor(undefined, false);
-    return cachedMenuByRole.get(roleKey) || [];
+    if (typeof window === "undefined") return [];
+    // On first render we don't yet know the role; try loading cache for any known role.
+    const candidates: RoleKey[] = ["super_admin", "admin", "staff", "readonly"];
+    for (const r of candidates) {
+      const cached = loadCachedMenu(r);
+      if (cached.length > 0) return cached;
+    }
+    return [];
   });
 
   useEffect(() => {
@@ -108,17 +134,20 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, []);
 
   useEffect(() => {
-    const roleKey = roleKeyFor(profile?.role, isSuperAdmin);
-    const cached = cachedMenuByRole.get(roleKey);
-    if (cached) setMenuTree(cached);
+    // Wait for auth to resolve before fetching menu so we use correct role + permissions.
+    if (authLoading) return;
+    const roleKey = currentRoleKey;
+    const cached = loadCachedMenu(roleKey);
+    if (cached.length > 0) setMenuTree(cached);
     getMenuConfig(roleKey).then((cfg) => {
       const { tree } = mergeMenu(cfg);
       const resolved = resolveForSidebar(tree, can, isSuperAdmin);
       cachedMenuByRole.set(roleKey, resolved);
+      try { localStorage.setItem(menuStorageKey(roleKey), JSON.stringify(resolved)); } catch { /* ignore */ }
       setMenuTree(resolved);
-    }).catch(() => { if (!cached) setMenuTree([]); });
+    }).catch(() => { if (cached.length === 0) setMenuTree([]); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.role, isSuperAdmin, permissions.join(",")]);
+  }, [authLoading, currentRoleKey, permissions.join(",")]);
 
   const toggle = () => {
     if (forceCollapsed) return;
