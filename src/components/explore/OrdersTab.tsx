@@ -15,8 +15,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2 } from "lucide-react";
 import {
   getCustomerName,
   getCustomerEmail,
@@ -113,6 +122,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast } = useToast();
 
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     id: false,
@@ -159,25 +169,66 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   });
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
 
-  useEffect(() => {
-    if (prefsLoaded.current) return;
-    if (typeof window !== "undefined") localStorage.setItem("orders-col-order", JSON.stringify(columnOrder));
-  }, [columnOrder]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<{ type: "update_status"; status: string } | { type: "delete" } | null>(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("orders-page-size", String(pageSize));
-  }, [pageSize]);
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(t);
-  }, [search]);
+  const MAX_BULK = 500;
+  const overLimit = selectedIds.size > MAX_BULK;
 
-  useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, pageSize, paymentFilter, totalMin, totalMax]);
+  const submitBulk = useCallback(async () => {
+    if (!bulkAction || selectedIds.size === 0 || overLimit) return;
+    const orderIds = orders
+      .filter((o) => selectedIds.has(o.id))
+      .map((o) => o.woo_id);
+    if (orderIds.length === 0) {
+      toast({ title: "Nothing to process", description: "Selected orders not found on this page", variant: "destructive" });
+      return;
+    }
+    setBulkSubmitting(true);
+    try {
+      const payload = bulkAction.type === "update_status"
+        ? { order_ids: orderIds, new_status: bulkAction.status }
+        : { order_ids: orderIds };
+      const jobType = bulkAction.type === "update_status" ? "update_order_status" : "delete_orders";
+      await createBulkJob({
+        store_id: storeId,
+        job_type: jobType,
+        total: orderIds.length,
+        payload,
+      });
+      toast({
+        title: "Bulk job queued",
+        description: `Processing ${orderIds.length} orders in the background. Check progress in the bulk jobs panel.`,
+      });
+      setSelectedIds(new Set());
+      setBulkAction(null);
+    } catch (err) {
+      toast({
+        title: "Failed to queue bulk job",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
 
-  const visibleColList = useMemo(
+  // Clear selection when data/filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [storeId, debouncedSearch, statusFilter, paymentFilter, totalMin, totalMax, page, pageSize]);
+
+  const [visibleColList, setVisibleColList] = useMemo(
     () => columnOrder
       .map((k) => COLUMNS.find((c) => c.key === k))
       .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
@@ -575,10 +626,57 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
       <Card>
         <CardContent className="p-0">
+          {selectedIds.size > 0 && (
+            <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-mono text-xs">{selectedIds.size}</Badge>
+                <span className="text-xs font-medium">selected</span>
+                {overLimit && (
+                  <span className="text-[11px] text-destructive ml-1">(max {MAX_BULK} per job)</span>
+                )}
+              </div>
+              <div className="flex-1" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit}>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Mark status
+                    <ChevronRight className="h-3 w-3 rotate-90 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Change status to…</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {ORDER_STATUS_OPTIONS.map((s) => (
+                    <DropdownMenuItem key={s} onClick={() => setBulkAction({ type: "update_status", status: s })} className="capitalize text-xs">
+                      {s}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={overLimit} onClick={() => setBulkAction({ type: "delete" })}>
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}>
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
+                  <TableHead className="w-8 pl-3 pr-0">
+                    <Checkbox
+                      checked={orders.length > 0 && orders.every((o) => selectedIds.has(o.id))}
+                      onCheckedChange={(v) => {
+                        if (v) setSelectedIds(new Set(orders.map((o) => o.id)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                  </TableHead>
                   {visibleColList.map((c) => {
                     const dragProps = {
                       draggable: true,
@@ -655,6 +753,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 {loading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={`sk-${i}`}>
+                      <TableCell className="w-8 pl-3 pr-0"><Skeleton className="h-4 w-4" /></TableCell>
                       {visibleColList.map((c) => (
                         <TableCell key={c.key}>
                           <Skeleton className="h-4 w-24" />
@@ -664,7 +763,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   ))
                 ) : orders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={visibleColList.length} className="text-center py-16">
+                    <TableCell colSpan={visibleColList.length + 1} className="text-center py-16">
                       <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
                       <p className="text-sm text-muted-foreground">No orders found</p>
                     </TableCell>
@@ -672,9 +771,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 ) : (
                   orders.map((o) => {
                     const isExpanded = expandedRowId === o.id;
+                    const isSelected = selectedIds.has(o.id);
                     return (
                       <>
-                        <TableRow key={o.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
+                        <TableRow key={o.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
+                          <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(o.id)} />
+                          </TableCell>
                           {visibleColList.map((c) => {
                             if (c.key === "id") {
                               return <TableCell key={c.key} className="font-mono text-[10px] text-muted-foreground">{o.id.slice(0, 8)}</TableCell>;
@@ -789,7 +892,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                         </TableRow>
                         {isExpanded && (
                           <TableRow key={`${o.id}-exp`} className="hover:bg-transparent">
-                            <TableCell colSpan={visibleColList.length} className="p-0">
+                            <TableCell colSpan={visibleColList.length + 1} className="p-0">
                               <OrderRowExpanded
                                 order={o}
                                 storeUrl={storeUrl}
@@ -807,6 +910,33 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!bulkAction} onOpenChange={(v) => !v && setBulkAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction?.type === "delete"
+                ? `Delete ${selectedIds.size} orders?`
+                : `Update ${selectedIds.size} orders to "${bulkAction?.type === "update_status" ? bulkAction.status : ""}"?`}
+            </DialogTitle>
+            <DialogDescription>
+              This queues a background job that pushes changes to WooCommerce one order at a time.
+              Processing {selectedIds.size} orders may take {Math.ceil(selectedIds.size * 1.5 / 60)}–{Math.ceil(selectedIds.size * 3 / 60)} minutes.
+              You can close this page; progress is saved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAction(null)} disabled={bulkSubmitting}>Cancel</Button>
+            <Button
+              onClick={submitBulk}
+              disabled={bulkSubmitting}
+              variant={bulkAction?.type === "delete" ? "destructive" : "default"}
+            >
+              {bulkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : "Queue job"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

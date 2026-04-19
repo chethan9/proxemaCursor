@@ -1,6 +1,6 @@
 ---
 title: Orders bulk actions - selection UI, confirm modal, job submit
-status: todo
+status: done
 priority: high
 type: feature
 tags: [bulk-ops, orders, ui]
