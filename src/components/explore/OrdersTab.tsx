@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -117,6 +119,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [totalMin, setTotalMin] = useState("");
   const [totalMax, setTotalMax] = useState("");
+  const [dateRange, setDateRange] = useState<string>("all");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
 
   const { data: paymentOptions = [] } = useOrderPaymentOptions(storeId);
@@ -198,6 +203,24 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     [visibleCols, columnOrder]
   );
 
+  const dateBounds = useMemo(() => {
+    const now = new Date();
+    const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+    const endOfDay = (d: Date) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+    if (dateRange === "today") return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+    if (dateRange === "yesterday") { const y = new Date(now); y.setDate(y.getDate() - 1); return { from: startOfDay(y).toISOString(), to: endOfDay(y).toISOString() }; }
+    if (dateRange === "7d") { const f = new Date(now); f.setDate(f.getDate() - 7); return { from: f.toISOString(), to: now.toISOString() }; }
+    if (dateRange === "30d") { const f = new Date(now); f.setDate(f.getDate() - 30); return { from: f.toISOString(), to: now.toISOString() }; }
+    if (dateRange === "90d") { const f = new Date(now); f.setDate(f.getDate() - 90); return { from: f.toISOString(), to: now.toISOString() }; }
+    if (dateRange === "custom") {
+      return {
+        from: customFrom ? startOfDay(customFrom).toISOString() : undefined,
+        to: customTo ? endOfDay(customTo).toISOString() : undefined,
+      };
+    }
+    return { from: undefined, to: undefined };
+  }, [dateRange, customFrom, customTo]);
+
   const { data: ordersResult, isLoading: loading, isPlaceholderData } = useOrders({
     storeId,
     page,
@@ -209,6 +232,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     paymentMethodFilter: paymentFilter,
     totalMin: totalMin ? parseFloat(totalMin) : undefined,
     totalMax: totalMax ? parseFloat(totalMax) : undefined,
+    dateFrom: dateBounds.from,
+    dateTo: dateBounds.to,
   });
   const orders = ordersResult?.data ?? [];
   const orderCount = ordersResult?.count ?? 0;
@@ -252,7 +277,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     }
   }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
 
-  const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax;
+  const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
@@ -272,7 +297,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     paymentMethodFilter: paymentFilter,
     totalMin: totalMin ? Number(totalMin) : undefined,
     totalMax: totalMax ? Number(totalMax) : undefined,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, paymentFilter, totalMin, totalMax]);
+    dateFrom: dateBounds.from,
+    dateTo: dateBounds.to,
+  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, paymentFilter, totalMin, totalMax, dateBounds.from, dateBounds.to]);
 
   useBackgroundPagination({
     enabled: !!storeId && orderCount > 0,
@@ -318,6 +345,41 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </PopoverContent>
               </Popover>
             )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={dateRange !== "all" ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5">
+                  <Filter className="h-3.5 w-3.5" />
+                  <span>{dateRange === "all" ? "Date" : dateRange === "today" ? "Today" : dateRange === "yesterday" ? "Yesterday" : dateRange === "7d" ? "Last 7 days" : dateRange === "30d" ? "Last 30 days" : dateRange === "90d" ? "Last 90 days" : "Custom"}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-auto p-0">
+                <div className="p-1">
+                  {[
+                    { v: "all", l: "All time" },
+                    { v: "today", l: "Today" },
+                    { v: "yesterday", l: "Yesterday" },
+                    { v: "7d", l: "Last 7 days" },
+                    { v: "30d", l: "Last 30 days" },
+                    { v: "90d", l: "Last 90 days" },
+                    { v: "custom", l: "Custom range…" },
+                  ].map((o) => (
+                    <button key={o.v} onClick={() => setDateRange(o.v)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${dateRange === o.v ? "bg-accent" : ""}`}>{o.l}</button>
+                  ))}
+                </div>
+                {dateRange === "custom" && (
+                  <div className="border-t p-3 flex gap-4">
+                    <div>
+                      <div className="text-[10px] font-semibold text-muted-foreground mb-1">From</div>
+                      <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-semibold text-muted-foreground mb-1">To</div>
+                      <Calendar mode="single" selected={customTo} onSelect={setCustomTo} />
+                    </div>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="flex-1 flex justify-center min-w-0">
             <div className="w-full max-w-[288px]">
@@ -451,6 +513,44 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </Popover>
               )}
 
+              {!embedHeader && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant={dateRange !== "all" ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5">
+                      <Filter className="h-3.5 w-3.5" />
+                      <span>{dateRange === "all" ? "Date" : dateRange === "today" ? "Today" : dateRange === "yesterday" ? "Yesterday" : dateRange === "7d" ? "Last 7 days" : dateRange === "30d" ? "Last 30 days" : dateRange === "90d" ? "Last 90 days" : "Custom"}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-auto p-0">
+                    <div className="p-1">
+                      {[
+                        { v: "all", l: "All time" },
+                        { v: "today", l: "Today" },
+                        { v: "yesterday", l: "Yesterday" },
+                        { v: "7d", l: "Last 7 days" },
+                        { v: "30d", l: "Last 30 days" },
+                        { v: "90d", l: "Last 90 days" },
+                        { v: "custom", l: "Custom range…" },
+                      ].map((o) => (
+                        <button key={o.v} onClick={() => setDateRange(o.v)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${dateRange === o.v ? "bg-accent" : ""}`}>{o.l}</button>
+                      ))}
+                    </div>
+                    {dateRange === "custom" && (
+                      <div className="border-t p-3 flex gap-4">
+                        <div>
+                          <div className="text-[10px] font-semibold text-muted-foreground mb-1">From</div>
+                          <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} />
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-semibold text-muted-foreground mb-1">To</div>
+                          <Calendar mode="single" selected={customTo} onSelect={setCustomTo} />
+                        </div>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              )}
+
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
@@ -461,6 +561,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     setPaymentFilter("all");
                     setTotalMin("");
                     setTotalMax("");
+                    setDateRange("all");
+                    setCustomFrom(undefined);
+                    setCustomTo(undefined);
                   }}
                 >
                   Clear filters

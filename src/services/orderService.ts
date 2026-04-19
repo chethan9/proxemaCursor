@@ -16,6 +16,8 @@ export interface FetchOrdersOptions {
   paymentMethodFilter?: string;
   totalMin?: number;
   totalMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export async function fetchOrders({
@@ -29,6 +31,8 @@ export async function fetchOrders({
   paymentMethodFilter,
   totalMin,
   totalMax,
+  dateFrom,
+  dateTo,
 }: FetchOrdersOptions): Promise<{ data: OrderRow[]; count: number }> {
   let query = supabase
     .from("orders")
@@ -64,6 +68,13 @@ export async function fetchOrders({
   }
   if (totalMax !== undefined && !isNaN(totalMax)) {
     query = query.lte("total", String(totalMax));
+  }
+
+  if (dateFrom) {
+    query = query.gte("date_created", dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte("date_created", dateTo);
   }
 
   query = query.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
