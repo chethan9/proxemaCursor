@@ -579,6 +579,21 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
       <Card>
         <CardContent className="p-0">
+          {selectedIds.size > 0 && (
+            <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-mono text-xs">{selectedIds.size}</Badge>
+                <span className="text-xs font-medium">selected</span>
+                {overLimit && <span className="text-[11px] text-destructive ml-1">(max {MAX_BULK} per job)</span>}
+              </div>
+              <div className="flex-1" />
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("price")}><DollarSign className="h-3.5 w-3.5" />Price</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
+              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />Clear</Button>
+            </div>
+          )}
           {viewMode !== "table" ? (
             <div className="p-4">
               {(() => {
@@ -621,22 +636,27 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         const stockLow = p.stock_quantity != null && p.stock_quantity < 5;
                         const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
                         return (
-                          <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
-                            <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                              {thumb ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
-                              ) : (
-                                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
-                              )}
-                              {stockOut && (
-                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-                                  <span className="text-[9px] font-semibold uppercase text-destructive">Out</span>
-                                </div>
-                              )}
-                              {!stockOut && stockLow && (
-                                <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
-                              )}
+                          <div key={p.id} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition">
+                            <div className="absolute top-1 left-1 z-10" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} className="bg-background/90 border-border shadow-sm" />
+                            </div>
+                            <div onClick={() => setQuickEditProduct(p)} className="cursor-pointer">
+                              <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                                {thumb ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                ) : (
+                                  <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                )}
+                                {stockOut && (
+                                  <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                                    <span className="text-[9px] font-semibold uppercase text-destructive">Out</span>
+                                  </div>
+                                )}
+                                {!stockOut && stockLow && (
+                                  <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -650,26 +670,31 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
                       const label = p.status === "publish" ? "Active" : (p.status || "—");
                       return (
-                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
-                          <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                            {thumb ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
-                            ) : (
-                              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                            )}
-                            <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
-                              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-                              <span className="capitalize">{label}</span>
-                            </div>
+                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col">
+                          <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} className="bg-background/95 border-border shadow-sm" />
                           </div>
-                          <div className="p-2.5 space-y-1 flex-1 flex flex-col">
-                            <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
-                            <div className="text-[11px] text-muted-foreground truncate">{cats || "No category"}</div>
-                            <div className="flex items-end justify-between gap-2 pt-1 mt-auto border-t border-border/50">
-                              <div className="min-w-0">
-                                <div className="text-[10px] text-muted-foreground font-mono truncate">{p.sku || "—"}</div>
-                                <div className="text-xs font-semibold font-mono">{p.price || "—"}</div>
+                          <div onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))} className="cursor-pointer flex-1 flex flex-col">
+                            <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                              {thumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                              ) : (
+                                <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                              )}
+                              <div className="absolute top-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                                <span className="capitalize">{label}</span>
+                              </div>
+                            </div>
+                            <div className="p-2.5 space-y-1 flex-1 flex flex-col">
+                              <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
+                              <div className="text-[11px] text-muted-foreground truncate">{cats || "No category"}</div>
+                              <div className="flex items-end justify-between gap-2 pt-1 mt-auto border-t border-border/50">
+                                <div className="min-w-0">
+                                  <div className="text-[10px] text-muted-foreground font-mono truncate">{p.sku || "—"}</div>
+                                  <div className="text-xs font-semibold font-mono">{p.price || "—"}</div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -685,6 +710,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
+                    <TableHead className="w-8 pl-3 pr-0">
+                      <Checkbox
+                        checked={products.length > 0 && products.every((p) => selectedIds.has(p.id))}
+                        onCheckedChange={(v) => {
+                          if (v) setSelectedIds(new Set(products.map((p) => p.id)));
+                          else setSelectedIds(new Set());
+                        }}
+                      />
+                    </TableHead>
                     {visibleColList.map((c) => {
                       const baseCls = c.key === "image" ? "w-14" : "";
                       const numericKeys: ColumnKey[] = ["price", "regular_price", "sale_price", "stock", "wooId", "parent_id", "images_count"];
@@ -740,9 +774,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     products.map((p) => {
                       const thumb = getProductThumbnail(p.images);
                       const isExpanded = expandedRowId === p.id;
+                      const isSelected = selectedIds.has(p.id);
                       return (
                         <>
-                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                            <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
+                            </TableCell>
                             {visibleColList.map((c) => {
                               if (c.key === "image") {
                                 return (
@@ -819,8 +857,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "sales") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.synced_at ? new Date(p.synced_at).toLocaleString() : "—"}</TableCell>;
                               if (c.key === "created") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}</TableCell>;
                               if (c.key === "updated") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.updated_at ? new Date(p.updated_at).toLocaleString() : "—"}</TableCell>;
-                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.regular_price || "—"}</TableCell>;
-                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.sale_price || "—"}</TableCell>;
+                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-xs text-right">{p.regular_price || "—"}</TableCell>;
+                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-xs text-right">{p.sale_price || "—"}</TableCell>;
                               if (c.key === "stock_status") {
                                 const s = p.stock_status;
                                 return (
@@ -873,21 +911,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               }
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
-                          </TableRow>
-                          {isExpanded && (
-                            <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
-                              <TableCell colSpan={visibleColList.length} className="p-0">
-                                <ProductRowExpanded
-                                  product={p}
-                                  storeUrl={storeUrl}
-                                  onClose={() => setExpandedRowId(null)}
-                                  onSaved={(updated) => {
-                                    setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
-                                  }}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          )}
+                          </TableCell>
                         </>
                       );
                     })
