@@ -1,0 +1,1 @@
+ALTER TABLE sync_runs ADD COLUMN IF NOT EXISTS is_initial boolean DEFAULT false, ADD COLUMN IF NOT EXISTS estimated_total integer DEFAULT 0, ADD COLUMN IF NOT EXISTS processed_total integer DEFAULT 0;

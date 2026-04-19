@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1098,7 +1098,10 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           error_message: string | null
+          estimated_total: number | null
           id: string
+          is_initial: boolean | null
+          processed_total: number | null
           records_created: number | null
           records_processed: number | null
           records_updated: number | null
@@ -1111,7 +1114,10 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           error_message?: string | null
+          estimated_total?: number | null
           id?: string
+          is_initial?: boolean | null
+          processed_total?: number | null
           records_created?: number | null
           records_processed?: number | null
           records_updated?: number | null
@@ -1124,7 +1130,10 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           error_message?: string | null
+          estimated_total?: number | null
           id?: string
+          is_initial?: boolean | null
+          processed_total?: number | null
           records_created?: number | null
           records_processed?: number | null
           records_updated?: number | null
