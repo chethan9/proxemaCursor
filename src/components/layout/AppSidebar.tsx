@@ -12,6 +12,7 @@ import { getStores, getStore, type StoreWithClient } from "@/services/storeServi
 import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
+import { SiteIcon } from "@/components/site/SiteIcon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,33 +58,6 @@ function loadCachedSites(): StoreWithClient[] {
     }
   } catch { /* ignore */ }
   return [];
-}
-
-function getSiteFavicon(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
-    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
-  } catch { return null; }
-}
-
-function SiteIcon({ site, size = "sm" }: { site: StoreWithClient; size?: "sm" | "md" }) {
-  const [failed, setFailed] = useState(false);
-  const favicon = getSiteFavicon(site.url);
-  const initial = (site.name || site.url || "?").trim().charAt(0).toUpperCase();
-  const cls = size === "md" ? "h-6 w-6 text-[11px]" : "h-5 w-5 text-[10px]";
-  if (favicon && !failed) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={favicon} alt="" onError={() => setFailed(true)}
-        className={cn(cls, "rounded-sm object-contain bg-white p-0.5 flex-shrink-0")} />
-    );
-  }
-  return (
-    <div className={cn(cls, "rounded-sm bg-white text-slate-900 font-semibold flex items-center justify-center flex-shrink-0")}>
-      {initial}
-    </div>
-  );
 }
 
 function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): RoleKey {
