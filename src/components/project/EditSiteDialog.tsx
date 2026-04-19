@@ -265,7 +265,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
               {!wpConnected && wcConnected && (
                 <div className="flex items-start gap-2 rounded-md bg-warning/10 border border-warning/30 px-3 py-2">
                   <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-                  <p className="text-xs text-warning-foreground">
+                  <p className="text-xs text-foreground/80">
                     Media library upload and browsing requires a separate WordPress Application Password authorization.
                   </p>
                 </div>
