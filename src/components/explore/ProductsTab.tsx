@@ -673,7 +673,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const priceHtml = (p.raw_data?.price_html as string) || "";
                       const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
                       const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
-                      const fmtPrice = (v: string | null | undefined) => v ? `${currency ? currency + " " : ""}${v}` : "—";
+                      const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
                       const dotColor: Record<string, string> = {
                         publish: "bg-success",
                         draft: "bg-muted-foreground/50",
