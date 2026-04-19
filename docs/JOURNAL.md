@@ -83,3 +83,13 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 **Files:** `src/pages/404.tsx`
 **Why:** Requested friendlier 404 — show brand and send users home.
 **What:** 404 page now renders logo + brand name, message, "Go to Projects" button, auto-redirects to `/projects` after 5s.
+
+## 2026-04-19 — Instant site sub-nav: cached store + hover prefetch
+
+**Scope:** performance
+**Files:** `src/components/site/shared.tsx`, `src/pages/sites/[id]/settings.tsx`, `src/components/layout/SiteSidebar.tsx`
+**Why:** Clicking Products/Orders/etc in a site showed a 2-3s full-page blank/skeleton because each page re-fetched the store with local state.
+**What:**
+- `useSiteFromRoute` now uses React Query with `initialData` seeded from the sidebar's cached sites list in localStorage — store data is synchronous on navigation.
+- Sub-pages get `loading = false` when seeded, so shell stays visible; only inner tables show their own loading state.
+- Site sidebar items prefetch first page of products/orders/categories/tags on hover/focus, warming the React Query cache.
