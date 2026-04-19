@@ -64,7 +64,7 @@ export function SyncProgressBanner() {
 
   useEffect(() => {
     if (!data?.running) return;
-    const id = setInterval(() => setTick((t) => t + 1), 4000);
+    const id = setInterval(() => setTick((t) => t + 1), 5000);
     return () => clearInterval(id);
   }, [data?.running]);
 
@@ -79,13 +79,10 @@ export function SyncProgressBanner() {
     ? data.currentAspect.charAt(0).toUpperCase() + data.currentAspect.slice(1)
     : "Preparing";
 
-  // Time-based rocket position: 5min = 99%, caps there
-  const rocketPct = Math.min((data.elapsed_seconds / 300) * 100, 99);
-
   return (
     <div className="sticky top-0 z-40 bg-card border-b border-border/60 px-4 py-2.5 shadow-sm">
       <div className="flex items-center gap-4 max-w-7xl mx-auto">
-        {/* Left: fixed width, no text flow */}
+        {/* Left: fixed width */}
         <div className="flex items-center gap-2 shrink-0">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -97,8 +94,8 @@ export function SyncProgressBanner() {
           <span className="text-xs font-medium text-foreground">{aspectLabel}</span>
         </div>
 
-        {/* Center: progress bar with rocket */}
-        <div className="flex-1 min-w-0 relative">
+        {/* Center: progress bar — constrained width */}
+        <div className="w-full max-w-sm relative">
           <div className="h-2.5 rounded-full bg-emerald-500/10 overflow-visible relative">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500 ease-out relative overflow-hidden"
@@ -106,20 +103,30 @@ export function SyncProgressBanner() {
             >
               <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]" />
             </div>
+            {/* Rocket synced to progress % */}
             <div
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-[left] duration-1000 ease-linear pointer-events-none"
-              style={{ left: `${rocketPct}%` }}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-[left] duration-700 ease-out pointer-events-none"
+              style={{ left: `${data.progress}%` }}
             >
-              <Rocket className="h-4 w-4 text-primary drop-shadow-sm animate-[rocketWiggle_2s_ease-in-out_infinite]" strokeWidth={2.5} />
+              <div className="relative">
+                {/* Particle trail */}
+                <span className="absolute top-1/2 right-full -translate-y-1/2 mr-0.5 w-1 h-1 rounded-full bg-emerald-500/70" />
+                <span className="absolute top-1/2 right-full -translate-y-1/2 mr-2 w-0.5 h-0.5 rounded-full bg-emerald-500/50" />
+                <span className="absolute top-1/2 right-full -translate-y-1/2 mr-3 w-0.5 h-0.5 rounded-full bg-emerald-500/30" />
+                <Rocket
+                  className="h-4 w-4 text-primary drop-shadow-sm rotate-45"
+                  strokeWidth={2.5}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right: fixed-width region, fun message truncates */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Right: fun message + meta */}
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
           <span
             key={`${data.currentAspect}-${tick}`}
-            className="text-xs text-muted-foreground w-48 truncate hidden md:inline animate-in fade-in slide-in-from-bottom-1 duration-500 text-right"
+            className="text-xs text-muted-foreground w-64 truncate hidden md:inline animate-in fade-in slide-in-from-bottom-1 duration-500 text-right"
           >
             {message}
           </span>
@@ -142,10 +149,6 @@ export function SyncProgressBanner() {
         @keyframes shimmer {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
-        }
-        @keyframes rocketWiggle {
-          0%, 100% { transform: translateY(0) rotate(-8deg); }
-          50% { transform: translateY(-2px) rotate(-4deg); }
         }
       `}</style>
     </div>

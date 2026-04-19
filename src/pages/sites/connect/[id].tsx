@@ -54,7 +54,7 @@ export default function ConnectSuccessPage() {
 
   useEffect(() => {
     if (stage !== "estimating") return;
-    const id = setInterval(() => setProgressTick((t) => t + 1), 2500);
+    const id = setInterval(() => setProgressTick((t) => t + 1), 4000);
     return () => clearInterval(id);
   }, [stage]);
 
@@ -104,13 +104,6 @@ export default function ConnectSuccessPage() {
     advanceFrom("webhooks");
     setStep("webhooks", "done");
     setStep("estimate", "active");
-
-    try {
-      const whRes = await fetch(`/api/stores/${siteId}/register-webhooks`, { method: "POST" });
-      if (!whRes.ok) console.warn("webhook register non-ok");
-    } catch (e) {
-      console.warn("webhook register err", e);
-    }
 
     // Wait up to 10s for the parallel-fired estimate; otherwise fire one now
     if (!estimate) {
