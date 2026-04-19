@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, X, Loader2, ImageIcon, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductFormState, ProductAttribute, Variation } from "@/services/productEditService";
-import { useWooAttributes, useCreateWooAttribute, useAttributeTerms, useCreateAttributeTerm } from "@/hooks/queries/useWooAttributes";
+import { useWooAttributes, useCreateWooAttribute } from "@/hooks/queries/useWooAttributes";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 
 type Props = {
