@@ -1,6 +1,6 @@
 ---
 title: Product image picker dialog
-status: todo
+status: done
 priority: high
 type: feature
 tags: [ui, media, product-edit]
