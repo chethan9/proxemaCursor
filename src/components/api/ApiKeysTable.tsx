@@ -38,7 +38,7 @@ export function ApiKeysTable({ keys, keyStats, loading, onRevoke, onDelete }: Ap
             <Key className="h-6 w-6 text-muted-foreground/60" />
           </div>
           <p className="mt-4 text-sm font-medium">No API keys yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">Create one to start using the WooSync REST API</p>
+          <p className="mt-1 text-xs text-muted-foreground">Create one to start using the Proxima REST API</p>
         </CardContent>
       </Card>
     );

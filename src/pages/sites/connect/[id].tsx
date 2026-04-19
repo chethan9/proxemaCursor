@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { ConnectLayout } from "@/components/layout/ConnectLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, Rocket, Package, ShoppingCart, Users, Tag as TagIcon, Percent, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ export default function ConnectSuccessPage() {
     const clean = storeUrl.replace(/\/$/, "");
     const successUrl = encodeURIComponent(baseCallback);
     const rejectUrl = encodeURIComponent(`${baseCallback}&rejected=1`);
-    return `${clean}/wp-admin/authorize-application.php?app_name=WooSync&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
+    return `${clean}/wp-admin/authorize-application.php?app_name=Proxima&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
   }, [storeUrl, siteId, baseCallback]);
 
   const runEstimateAndLiftoff = async () => {
@@ -221,16 +221,16 @@ export default function ConnectSuccessPage() {
 
   if (!siteId) {
     return (
-      <AppLayout>
+      <ConnectLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </AppLayout>
+      </ConnectLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <ConnectLayout>
       <div className="flex items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-lg w-full">
           <CardContent className="pt-6 pb-6">
@@ -395,6 +395,6 @@ export default function ConnectSuccessPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </ConnectLayout>
   );
 }

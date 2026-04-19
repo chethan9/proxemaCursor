@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { Rocket, Sparkles, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useActiveSync } from "@/hooks/queries/useActiveSync";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const SPACE_MESSAGES = [
   "🚀 Calibrating thrusters…",
@@ -25,9 +26,12 @@ function formatEta(s: number): string {
 
 export function SyncProgressBanner({ storeId }: { storeId: string }) {
   const router = useRouter();
+  const { toast } = useToast();
   const { data } = useActiveSync(storeId);
   const [msgIdx, setMsgIdx] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const prevRunningRef = useRef(false);
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
     if (!data?.running) return;
@@ -36,8 +40,24 @@ export function SyncProgressBanner({ storeId }: { storeId: string }) {
   }, [data?.running]);
 
   useEffect(() => {
-    if (data?.running) setDismissed(false);
+    if (data?.running) {
+      setDismissed(false);
+      hasStartedRef.current = true;
+    }
   }, [data?.running]);
+
+  useEffect(() => {
+    const wasRunning = prevRunningRef.current;
+    const isRunning = !!data?.running;
+    if (wasRunning && !isRunning && hasStartedRef.current) {
+      toast({
+        title: "✨ Sync complete",
+        description: "Your store is live on Proxima — all data is up to date.",
+      });
+      hasStartedRef.current = false;
+    }
+    prevRunningRef.current = isRunning;
+  }, [data?.running, toast]);
 
   if (!data?.running || dismissed) return null;
 

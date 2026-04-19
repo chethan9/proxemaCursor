@@ -111,7 +111,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Connect WooCommerce Store</DialogTitle>
-          <DialogDescription>Add a store and authorize WooSync to access it.</DialogDescription>
+          <DialogDescription>Add a store and authorize Proxima to access it.</DialogDescription>
         </DialogHeader>
         <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />

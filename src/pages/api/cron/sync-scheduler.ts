@@ -328,7 +328,7 @@ async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
       const response = await fetch(`${store.url}/wp-json/wc/v3/webhooks`, {
         method: "POST",
         headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ name: `WooSync - ${topic}`, topic, delivery_url: deliveryUrl, status: "active", secret: `woosync_${store.id}_${Date.now()}` }),
+        body: JSON.stringify({ name: `Proxima - ${topic}`, topic, delivery_url: deliveryUrl, status: "active", secret: `woosync_${store.id}_${Date.now()}` }),
       });
       if (response.ok) {
         const wooWebhook = await response.json();

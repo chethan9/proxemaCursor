@@ -38,7 +38,7 @@ export function cleanStoreUrl(url: string): string {
 export function buildWooCommerceAuthUrl({
   storeUrl,
   storeId,
-  appName = "WooSync",
+  appName = "Proxima",
   scope = "read_write",
 }: WooAuthParams): string {
   // Clean and normalize store URL

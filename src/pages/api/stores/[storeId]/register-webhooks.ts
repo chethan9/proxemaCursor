@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: authHeader },
           body: JSON.stringify({
-            name: `WooSync - ${name}`,
+            name: `Proxima - ${name}`,
             topic,
             delivery_url: deliveryUrl,
             status: "active",
