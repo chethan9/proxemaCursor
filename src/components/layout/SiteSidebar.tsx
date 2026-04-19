@@ -7,6 +7,7 @@ import { getStores, type StoreWithClient } from "@/services/storeService";
 import { getSiteMenuConfig } from "@/services/menuConfigService";
 import { mergeSiteMenu, resolveForSiteSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
+import { SiteIcon } from "@/components/site/SiteIcon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,33 +36,6 @@ function loadCachedSites(): StoreWithClient[] {
     }
   } catch { /* ignore */ }
   return [];
-}
-
-function getFavicon(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
-    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
-  } catch { return null; }
-}
-
-function SiteIcon({ site, size = 24 }: { site: StoreWithClient; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const favicon = getFavicon(site.url);
-  const initial = (site.name || site.url || "?").trim().charAt(0).toUpperCase();
-  const style = { width: size, height: size };
-  if (favicon && !failed) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={favicon} alt="" style={style} onError={() => setFailed(true)}
-        className="rounded object-contain bg-white p-0.5 flex-shrink-0 border border-border" />
-    );
-  }
-  return (
-    <div style={style} className="rounded bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center flex-shrink-0">
-      {initial}
-    </div>
-  );
 }
 
 function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): RoleKey {
