@@ -65,7 +65,7 @@ const COLUMNS: { key: ColumnKey; label: string; group: string }[] = [
   { key: "source", label: "Source (UTM)", group: "Order" },
   { key: "created_via", label: "Created via", group: "Order" },
   { key: "customer_id", label: "Customer ID", group: "Customer" },
-  { key: "customer", label: "Customer (full name)", group: "Customer" },
+  { key: "customer", label: "Name", group: "Customer" },
   { key: "first_name", label: "First name", group: "Customer" },
   { key: "last_name", label: "Last name", group: "Customer" },
   { key: "email", label: "Email", group: "Customer" },
