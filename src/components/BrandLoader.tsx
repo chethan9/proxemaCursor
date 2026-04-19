@@ -26,7 +26,6 @@ export function BrandLoader({ size = 120, className }: Props) {
 
   return (
     <div style={{ width: size, height: size }} className={className}>
-      {/* @ts-expect-error animationData type mismatch from dynamic import */}
       <Lottie animationData={data} loop autoplay />
     </div>
   );
