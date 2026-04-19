@@ -720,7 +720,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             ) : (
                               <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
                             )}
-                            <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                            <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background">
                               <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
                               <span className="capitalize">{statusLabel}</span>
                             </div>
