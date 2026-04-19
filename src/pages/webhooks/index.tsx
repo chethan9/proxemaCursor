@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAllWebhooks, useAllWebhookEvents } from "@/hooks/queries/useWebhooks";
 import { exportCsv } from "@/lib/exportCsv";
+import { Input } from "@/components/ui/input";
 
 type WebhookRow = Tables<"webhooks"> & { store_name?: string; store_url?: string };
 type WebhookEventRow = Tables<"webhook_events"> & { store_name?: string };
@@ -40,6 +41,37 @@ export default function WebhooksPage() {
   const loading = whLoading || evLoading;
   const fetching = whFetching || evFetching;
   void fetching;
+
+  const [evSearch, setEvSearch] = useState("");
+  const [evFrom, setEvFrom] = useState("");
+  const [evTo, setEvTo] = useState("");
+  const [evPage, setEvPage] = useState(1);
+  const evPageSize = 20;
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      if (evSearch && !(e.topic || "").toLowerCase().includes(evSearch.toLowerCase()) && !(e.store_name || "").toLowerCase().includes(evSearch.toLowerCase())) return false;
+      if (evFrom) { const t = new Date(e.created_at || 0).getTime(); if (t < new Date(evFrom).getTime()) return false; }
+      if (evTo) { const t = new Date(e.created_at || 0).getTime(); const end = new Date(evTo).getTime() + 86400000; if (t > end) return false; }
+      return true;
+    });
+  }, [events, evSearch, evFrom, evTo]);
+
+  useEffect(() => { setEvPage(1); }, [evSearch, evFrom, evTo]);
+  const evTotalPages = Math.max(1, Math.ceil(filteredEvents.length / evPageSize));
+  const evPaged = filteredEvents.slice((evPage - 1) * evPageSize, evPage * evPageSize);
+
+  const exportEventsCsv = () => {
+    exportCsv(filteredEvents, [
+      { key: "store_name", label: "Site", accessor: (e) => e.store_name },
+      { key: "topic", label: "Topic", accessor: (e) => e.topic },
+      { key: "processing_status", label: "Status", accessor: (e) => e.processing_status },
+      { key: "created_at", label: "Received", accessor: (e) => e.created_at },
+      { key: "processed_at", label: "Processed", accessor: (e) => e.processed_at },
+      { key: "error_message", label: "Error", accessor: (e) => e.error_message ?? "" },
+    ], "webhook-events");
+  };
+
   const loadData = () => {
     qc.invalidateQueries({ queryKey: ["webhooks", "all"] });
     qc.invalidateQueries({ queryKey: ["webhook-events", "all"] });
@@ -301,23 +333,36 @@ export default function WebhooksPage() {
           <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Webhook Events</CardTitle>
-                <CardDescription>
-                  Incoming events received from WooCommerce stores
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-lg">Webhook Events</CardTitle>
+                    <CardDescription>
+                      Incoming events received from WooCommerce stores
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input placeholder="Search topic or site" value={evSearch} onChange={(e) => setEvSearch(e.target.value)} className="h-9 w-48" />
+                    <Input type="date" value={evFrom} onChange={(e) => setEvFrom(e.target.value)} className="h-9 w-36" />
+                    <Input type="date" value={evTo} onChange={(e) => setEvTo(e.target.value)} className="h-9 w-36" />
+                    <Button variant="outline" size="sm" onClick={exportEventsCsv} disabled={filteredEvents.length === 0}>
+                      <Download className="h-4 w-4 mr-2" />Export CSV
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : events.length === 0 ? (
+                ) : filteredEvents.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No webhook events received</p>
-                    <p className="text-sm">Events appear here when WooCommerce sends updates</p>
+                    <p>No webhook events {events.length > 0 ? "match your filters" : "received"}</p>
+                    <p className="text-sm">{events.length > 0 ? "Try adjusting date range or search" : "Events appear here when WooCommerce sends updates"}</p>
                   </div>
                 ) : (
+                  <>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -330,7 +375,7 @@ export default function WebhooksPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {events.map((event) => (
+                      {evPaged.map((event) => (
                         <TableRow key={event.id}>
                           <TableCell className="font-medium">{event.store_name}</TableCell>
                           <TableCell>
@@ -365,6 +410,17 @@ export default function WebhooksPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      Showing {(evPage - 1) * evPageSize + 1}–{Math.min(evPage * evPageSize, filteredEvents.length)} of {filteredEvents.length}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setEvPage((p) => Math.max(1, p - 1))} disabled={evPage === 1}>Previous</Button>
+                      <span className="text-xs text-muted-foreground tabular-nums">Page {evPage} of {evTotalPages}</span>
+                      <Button variant="outline" size="sm" onClick={() => setEvPage((p) => Math.min(evTotalPages, p + 1))} disabled={evPage >= evTotalPages}>Next</Button>
+                    </div>
+                  </div>
+                  </>
                 )}
               </CardContent>
             </Card>
