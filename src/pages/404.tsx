@@ -3,8 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { BrandLoader } from "@/components/BrandLoader";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 
 const REDIRECT_SECONDS = 5;
 const REDIRECT_TO = "/projects";
@@ -30,7 +29,9 @@ export default function NotFound() {
       <main className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center space-y-6">
           <div className="flex justify-center">
-            <BrandLoader size={160} />
+            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Zap className="h-10 w-10 text-primary" />
+            </div>
           </div>
 
           <div className="space-y-2">

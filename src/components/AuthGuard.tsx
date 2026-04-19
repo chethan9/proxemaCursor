@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { BrandLoader } from "@/components/BrandLoader";
+import { Loader2 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 
 interface AuthGuardProps {
@@ -66,7 +66,7 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
   if (!passedOnceRef.current && (loading || checking)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <BrandLoader size={120} />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
