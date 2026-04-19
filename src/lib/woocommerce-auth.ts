@@ -91,22 +91,25 @@ export function buildWpAppPasswordUrl({
   storeUrl,
   storeId,
   appName = "WooSync Media",
+  returnTo,
 }: {
   storeUrl: string;
   storeId: string;
   appName?: string;
+  returnTo?: string;
 }): string {
   const normalizedUrl = cleanStoreUrl(storeUrl);
   const baseUrl = typeof window !== "undefined"
     ? window.location.origin
     : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const successUrl = `${baseUrl}/api/wordpress/app-password-callback`;
-  const rejectUrl = `${successUrl}?rejected=1&state=${encodeURIComponent(storeId)}`;
+  const state = returnTo ? `${storeId}|${encodeURIComponent(returnTo)}` : storeId;
+  const rejectUrl = `${successUrl}?rejected=1&state=${encodeURIComponent(state)}`;
   const params = new URLSearchParams({
     app_name: appName,
     success_url: successUrl,
     reject_url: rejectUrl,
-    state: storeId,
+    state,
   });
   return `${normalizedUrl}/wp-admin/authorize-application.php?${params.toString()}`;
 }

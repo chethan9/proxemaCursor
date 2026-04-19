@@ -147,7 +147,8 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
     }
     const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(form.url);
     try { await persistFormBeforeRedirect(cleanedUrl); } catch (e) { console.error("[WpAuth] Pre-save failed:", e); }
-    window.location.href = buildWpAppPasswordUrl({ storeUrl: cleanedUrl, storeId: store.id });
+    const returnTo = typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : undefined;
+    window.location.href = buildWpAppPasswordUrl({ storeUrl: cleanedUrl, storeId: store.id, returnTo });
   };
 
   const handleWpDisconnect = async () => {
