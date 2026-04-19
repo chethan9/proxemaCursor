@@ -47,11 +47,33 @@ export const SYNC_MESSAGES: Record<string, string[]> = {
     "This is the part where magic happens ✨",
     "Still faster than doing it manually 😄",
   ],
+  progress: [
+    "Getting things ready…",
+    "Warming things up…",
+    "We're on it…",
+    "Making good progress…",
+    "Halfway there…",
+    "Picking up speed…",
+    "Putting things together…",
+    "Almost in place…",
+    "Just a few more moments…",
+    "Wrapping things up…",
+    "Finishing touches…",
+    "Nearly there…",
+    "Almost ready…",
+    "Just about done…",
+    "Ready any second now…",
+  ],
 };
 
 export function pickMessage(aspect: string | null, tick: number): string {
   const pool = tick % 4 === 3
     ? SYNC_MESSAGES.general
     : SYNC_MESSAGES[aspect || "general"] || SYNC_MESSAGES.general;
+  return pool[tick % pool.length];
+}
+
+export function pickProgressMessage(tick: number): string {
+  const pool = SYNC_MESSAGES.progress;
   return pool[tick % pool.length];
 }

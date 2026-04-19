@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { pickProgressMessage } from "@/lib/sync-messages";
 
 type StepStatus = "pending" | "active" | "done" | "error";
 interface Step { id: string; label: string; status: StepStatus; }
@@ -49,6 +50,13 @@ export default function ConnectSuccessPage() {
   const [manualBusy, setManualBusy] = useState(false);
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const estimateStartedRef = useRef(false);
+  const [progressTick, setProgressTick] = useState(0);
+
+  useEffect(() => {
+    if (stage !== "estimating") return;
+    const id = setInterval(() => setProgressTick((t) => t + 1), 2500);
+    return () => clearInterval(id);
+  }, [stage]);
 
   const setStep = (id: string, status: StepStatus) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
@@ -391,8 +399,12 @@ export default function ConnectSuccessPage() {
               <div className="text-center py-3">
                 <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <Percent className="h-3.5 w-3.5" />
-                  Counting products, orders, and customers…
+                  <span
+                    key={progressTick}
+                    className="animate-in fade-in slide-in-from-bottom-1 duration-500"
+                  >
+                    {pickProgressMessage(progressTick)}
+                  </span>
                 </div>
               </div>
             )}
