@@ -745,12 +745,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             <div className="pt-2 mt-auto border-t border-border/60 space-y-1.5">
                               <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground font-mono uppercase tracking-wide">
                                 <span className="truncate">{p.sku ? `SKU: ${p.sku}` : p.woo_id ? `ID: ${p.woo_id}` : "—"}</span>
-                                {p.stock_quantity != null && !stockOut && (
+                                {stockOut ? (
+                                  <span className="text-destructive font-semibold whitespace-nowrap">Out of stock</span>
+                                ) : p.stock_quantity != null ? (
                                   <span className="whitespace-nowrap">
                                     Stock: <span className={p.stock_quantity < 5 ? "text-warning font-semibold" : "text-foreground font-semibold"}>{p.stock_quantity}</span>
                                   </span>
-                                )}
-                                {stockOut && <span className="text-destructive font-semibold whitespace-nowrap">Out of stock</span>}
+                                ) : p.stock_status === "instock" ? (
+                                  <span className="text-success font-semibold whitespace-nowrap">In stock</span>
+                                ) : p.stock_status === "onbackorder" ? (
+                                  <span className="text-warning font-semibold whitespace-nowrap">Backorder</span>
+                                ) : null}
                               </div>
                               <div className="flex items-baseline justify-between gap-2">
                                 <div className="flex items-baseline gap-1.5">
