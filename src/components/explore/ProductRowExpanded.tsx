@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -112,14 +113,12 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
         {/* Actions */}
         <div className="space-y-2">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</div>
-          {storeUrl && (
-            <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/post.php?post=${product.woo_id}&action=edit`} target="_blank" rel="noreferrer" className="block">
-              <Button variant="outline" size="sm" className="w-full justify-between h-9">
-                <span className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5" />Edit Product</span>
-                <span className="text-muted-foreground">→</span>
-              </Button>
-            </a>
-          )}
+          <Link href={`/sites/${product.store_id}/products/edit/${product.id}`} className="block">
+            <Button variant="outline" size="sm" className="w-full justify-between h-9">
+              <span className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5" />Edit Product</span>
+              <span className="text-muted-foreground">→</span>
+            </Button>
+          </Link>
           {permalink && (
             <a href={permalink} target="_blank" rel="noreferrer" className="block">
               <Button variant="outline" size="sm" className="w-full justify-between h-9">

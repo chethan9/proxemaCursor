@@ -196,21 +196,19 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
             <div>
               <Label className="text-sm font-semibold">Actions</Label>
               <div className="mt-2 flex flex-col gap-2">
+                <Button variant="outline" size="sm" className="justify-between h-9" asChild>
+                  <a href={`/sites/${product.store_id}/products/edit/${product.id}`}>
+                    <span className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5" /> Edit Product</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
                 {permalink && (
-                  <>
-                    <Button variant="outline" size="sm" className="justify-between h-9" asChild>
-                      <a href={permalink.replace(/\/$/, "") + "/wp-admin/post.php?post=" + product.woo_id + "&action=edit"} target="_blank" rel="noreferrer">
-                        <span className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5" /> Edit Product</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" className="justify-between h-9" asChild>
-                      <a href={permalink} target="_blank" rel="noreferrer">
-                        <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> View Product</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </Button>
-                  </>
+                  <Button variant="outline" size="sm" className="justify-between h-9" asChild>
+                    <a href={permalink} target="_blank" rel="noreferrer">
+                      <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> View Product</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
                 )}
                 <Button variant="outline" size="sm" className="justify-start h-9" disabled>
                   <TrendingUp className="h-3.5 w-3.5 mr-2" /> Statistics
