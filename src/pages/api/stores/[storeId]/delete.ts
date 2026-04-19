@@ -83,6 +83,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     webhookResults.push(...results);
   }
 
+  // Cancel any running sync runs for this store so workers exit early
+  await supabaseAdmin
+    .from("sync_runs")
+    .update({
+      status: "cancelled",
+      completed_at: new Date().toISOString(),
+      error_message: "Store deleted",
+    })
+    .eq("store_id", storeId)
+    .eq("status", "running");
+
   // Delete store (cascade removes local webhooks, sync_runs, etc via FK)
   const { error: delErr } = await supabaseAdmin
     .from("stores")

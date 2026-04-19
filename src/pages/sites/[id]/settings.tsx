@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useActiveSync } from "@/hooks/queries/useActiveSync";
 
 const SYNC_INTERVALS = [
   { value: "0", label: "Manual only" },
@@ -124,6 +125,9 @@ function SettingsInner() {
       } catch { /* ignore */ }
     })();
   }, [id]);
+
+  const { data: activeSync } = useActiveSync(id as string | null);
+  const isSyncing = !!activeSync?.running;
 
   const formatDate = (d: string | null) =>
     !d ? "—" : new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -368,7 +372,15 @@ function SettingsInner() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete this site permanently?</AlertDialogTitle>
-                      <AlertDialogDescription>This will permanently delete <strong>{store.name}</strong> and all associated data. This action cannot be undone.</AlertDialogDescription>
+                      <AlertDialogDescription>
+                        {isSyncing ? (
+                          <>
+                            <strong className="text-destructive">This site is currently syncing.</strong> Deleting will cancel the sync and permanently remove <strong>{store.name}</strong> along with all synced data. This action cannot be undone.
+                          </>
+                        ) : (
+                          <>This will permanently delete <strong>{store.name}</strong> and all associated data. This action cannot be undone.</>
+                        )}
+                      </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
