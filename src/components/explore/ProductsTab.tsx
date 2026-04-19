@@ -983,6 +983,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       );
                     })
                   )}
+                  {isExpanded && (
+                    <TableRow key={`${p.id}-expanded`} className="bg-muted/30">
+                      <TableCell colSpan={visibleColList.length + 1} className="p-0">
+                        <ProductRowExpanded product={p} storeId={storeId} storeUrl={storeUrl} onEdit={() => { setQuickEditProduct(p); setExpandedRowId(null); }} />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
