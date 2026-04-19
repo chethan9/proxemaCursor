@@ -5,13 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Lock } from "lucide-react";
+import { MENU_REGISTRY } from "@/lib/menu-registry";
+import { User, Mail, Lock, Home } from "lucide-react";
 
 export default function ProfileSettings() {
-  const { user, profile, refresh, loading } = useAuth();
+  const { user, profile, refresh, loading, can, isSuperAdmin } = useAuth();
   const { toast } = useToast();
 
   const [fullName, setFullName] = useState("");
@@ -23,10 +25,40 @@ export default function ProfileSettings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  const [landingPath, setLandingPath] = useState<string>("/");
+  const [savingLanding, setSavingLanding] = useState(false);
+
   useEffect(() => {
-    if (profile) setFullName(profile.full_name ?? "");
+    if (profile) {
+      setFullName(profile.full_name ?? "");
+      setLandingPath(profile.default_landing_path ?? "/");
+    }
     if (user?.email) setEmail(user.email);
   }, [profile, user]);
+
+  const landingOptions = MENU_REGISTRY.filter((m) => {
+    if (m.superAdminOnly && !isSuperAdmin) return false;
+    if (m.permission && !can(m.permission)) return false;
+    return true;
+  }).map((m) => ({ value: m.href, label: `${m.defaultLabel} (${m.href})` }));
+
+  const handleSaveLanding = async () => {
+    if (!user) return;
+    setSavingLanding(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ default_landing_path: landingPath })
+        .eq("id", user.id);
+      if (error) throw error;
+      await refresh();
+      toast({ title: "Default landing page saved" });
+    } catch (err) {
+      toast({ title: "Save failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setSavingLanding(false);
+    }
+  };
 
   const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
@@ -237,6 +269,40 @@ export default function ProfileSettings() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Home className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Default Landing Page</CardTitle>
+            </div>
+            <CardDescription>Choose where you land after logging in.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="landing_page">Landing Page</Label>
+                <Select onValueChange={(v) => setLandingPath(v)} value={landingPath}>
+                  <SelectTrigger id="landing_page">
+                    <SelectValue placeholder="Select a page" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {landingOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleSaveLanding} disabled={savingLanding}>
+                  {savingLanding ? "Saving..." : "Save Landing Page"}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
