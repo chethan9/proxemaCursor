@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest, type WooStoreCreds } from "@/lib/woo-client";
 import type { Json } from "@/integrations/supabase/database.types";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 // Budget per invocation: leave headroom under Vercel's function timeout.
 const MAX_RUNTIME_MS = 50_000;
@@ -23,6 +24,8 @@ type JobRow = {
 };
 
 type ItemError = { id: number | string; error: string };
+
+type BulkJobUpdate = TablesUpdate<"bulk_jobs">;
 
 function toJson<T>(v: T): Json {
   return JSON.parse(JSON.stringify(v)) as Json;
@@ -100,26 +103,22 @@ async function deleteOrder(store: WooStoreCreds, orderId: number, force = false)
 async function processJob(job: JobRow, deadline: number): Promise<"done" | "partial" | "cancelled"> {
   const store = await getStoreCreds(job.store_id);
   if (!store) {
-    await supabaseAdmin
-      .from("bulk_jobs")
-      .update({
-        status: "failed" as const,
-        completed_at: new Date().toISOString(),
-        error_message: "Store credentials unavailable",
-      })
-      .eq("id", job.id);
+    const payload: BulkJobUpdate = {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_message: "Store credentials unavailable",
+    };
+    await supabaseAdmin.from("bulk_jobs").update(payload).eq("id", job.id);
     return "done";
   }
 
   // Mark running if still pending
   if (job.status === "pending") {
-    await supabaseAdmin
-      .from("bulk_jobs")
-      .update({
-        status: "running" as const,
-        started_at: new Date().toISOString(),
-      })
-      .eq("id", job.id);
+    const payload: BulkJobUpdate = {
+      status: "running",
+      started_at: new Date().toISOString(),
+    };
+    await supabaseAdmin.from("bulk_jobs").update(payload).eq("id", job.id);
   }
 
   const payload = job.payload as Record<string, unknown>;
@@ -137,14 +136,12 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
   if (job.job_type === "update_order_status" || job.job_type === "delete_orders") {
     itemIds = (payload.order_ids as number[]) ?? [];
   } else {
-    await supabaseAdmin
-      .from("bulk_jobs")
-      .update({
-        status: "failed" as const,
-        completed_at: new Date().toISOString(),
-        error_message: `Unsupported job_type: ${job.job_type}`,
-      })
-      .eq("id", job.id);
+    const payload: BulkJobUpdate = {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_message: `Unsupported job_type: ${job.job_type}`,
+    };
+    await supabaseAdmin.from("bulk_jobs").update(payload).eq("id", job.id);
     return "done";
   }
 
@@ -185,17 +182,15 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
   }
 
   // Completed all items
-  await supabaseAdmin
-    .from("bulk_jobs")
-    .update({
-      status: "completed" as const,
-      completed_at: new Date().toISOString(),
-      processed,
-      succeeded,
-      failed,
-      errors: toJson(errors),
-    })
-    .eq("id", job.id);
+  const completedPayload: BulkJobUpdate = {
+    status: "completed",
+    completed_at: new Date().toISOString(),
+    processed,
+    succeeded,
+    failed,
+    errors: toJson(errors),
+  };
+  await supabaseAdmin.from("bulk_jobs").update(completedPayload).eq("id", job.id);
 
   return "done";
 }
