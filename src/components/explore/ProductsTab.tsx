@@ -207,41 +207,43 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
 
-  const prefetchOpts = useMemo(() => ({
-    storeId,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-    statusFilter,
-    excludeOutOfStock,
-    categoryFilter,
-    stockStatusFilter,
-    priceMin: priceMin ? Number(priceMin) : undefined,
-    priceMax: priceMax ? Number(priceMax) : undefined,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  const submitBulk = useCallback(async () => {
+    if (!bulkDialog || selectedIds.size === 0 || overLimit) return;
+    const wooIds = products.filter((p) => selectedIds.has(p.id)).map((p) => p.woo_id).filter((id): id is number => id != null);
+    if (wooIds.length === 0) return;
+    setBulkSubmitting(true);
+    try {
+      if (bulkDialog === "price") {
+        const num = Number(priceValue);
+        if (!priceValue || Number.isNaN(num)) { setBulkSubmitting(false); return; }
+        await createBulkJob({ store_id: storeId, job_type: "update_product_price", total: wooIds.length, payload: { type: "update_product_price", product_ids: wooIds, operation: priceOp, value: num } });
+      } else if (bulkDialog === "stock") {
+        if (stockOp === "set_status") {
+          await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload: { type: "update_product_stock", product_ids: wooIds, operation: "set_status", stock_status: stockStatusVal } });
+        } else {
+          const num = Number(stockValue);
+          if (!stockValue || Number.isNaN(num)) { setBulkSubmitting(false); return; }
+          await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload: { type: "update_product_stock", product_ids: wooIds, operation: stockOp, value: num } });
+        }
+      } else if (bulkDialog === "status") {
+        await createBulkJob({ store_id: storeId, job_type: "update_product_status", total: wooIds.length, payload: { type: "update_product_status", product_ids: wooIds, new_status: newProductStatus } });
+      } else if (bulkDialog === "category") {
+        if (bulkCategoryIds.size === 0) { setBulkSubmitting(false); return; }
+        await createBulkJob({ store_id: storeId, job_type: "assign_product_categories", total: wooIds.length, payload: { type: "assign_product_categories", product_ids: wooIds, mode: categoryMode, category_ids: Array.from(bulkCategoryIds) } });
+      } else if (bulkDialog === "delete") {
+        await createBulkJob({ store_id: storeId, job_type: "delete_products", total: wooIds.length, payload: { type: "delete_products", product_ids: wooIds, force: false } });
+      }
+      setSelectedIds(new Set());
+      setBulkDialog(null);
+      setPriceValue(""); setStockValue(""); setBulkCategoryIds(new Set());
+    } catch (err) {
+      console.error("[bulk]", err);
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatusVal, newProductStatus, categoryMode, bulkCategoryIds]);
 
-  useBackgroundPagination({
-    enabled: !!storeId && productCount > 0,
-    totalCount: productCount,
-    pageSize,
-    currentPage: page,
-    queryKeyFn: (p) => queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
-    queryFn: (p) => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 5000,
-    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
-  });
-
-  const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
-    // Inline mutations should invalidate query; placeholder no-op.
-  };
-  void setProducts;
-
-  const visibleColList = useMemo(
-    () => columnOrder
-      .map((k) => COLUMNS.find((c) => c.key === k))
-      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
-    [visibleCols, columnOrder]
-  );
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
 
   const exportCsv = useCallback(() => {
     if (products.length === 0) return;
@@ -324,6 +326,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
+
+  const visibleColList = useMemo(
+    () => columnOrder
+      .map((k) => COLUMNS.find((c) => c.key === k))
+      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
+    [visibleCols, columnOrder]
+  );
 
   return (
     <div className="space-y-2">
