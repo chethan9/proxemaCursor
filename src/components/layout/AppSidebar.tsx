@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useQueryClient } from "@tanstack/react-query";
 import { getStores, getStore, type StoreWithClient } from "@/services/storeService";
 import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
@@ -21,11 +23,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, ChevronsLeft, ChevronsRight, LogOut, CornerDownRight, Store, Lock, Unlock } from "lucide-react";
+import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal, Check } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
+
+const SIDEBAR_SITE_CAP = 5;
 
 function menuStorageKey(role: RoleKey) {
   return `sidebar-menu-cache:${role}`;
@@ -66,6 +70,11 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
   return "user";
 }
 
+function extractActiveSiteId(asPath: string): string | null {
+  const m = asPath.match(/^\/(?:sites|explore)\/([^/?#]+)/);
+  return m ? m[1] : null;
+}
+
 export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
@@ -84,6 +93,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   });
   const collapsed = locked ? collapsedPref : (forceCollapsed || collapsedPref);
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
+  const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     if (typeof window === "undefined") return [];
@@ -106,7 +116,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, []);
 
   useEffect(() => {
-    // Wait for auth to resolve AND profile to be loaded before fetching menu.
     if (authLoading) return;
     if (!profile && !role) return;
     const roleKey = currentRoleKey;
@@ -121,6 +130,34 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     }).catch(() => { if (cached.length === 0) setMenuTree([]); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, currentRoleKey, permissions.join(","), !!profile]);
+
+  const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
+
+  // Sort by created_at DESC (fallback to id for stability)
+  const sortedSites = useMemo(() => {
+    return [...sites].sort((a, b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    });
+  }, [sites]);
+
+  // Visible = active site (if any) + newest sites, capped at 5, preserving newest-first order
+  const visibleSites = useMemo(() => {
+    if (sortedSites.length <= SIDEBAR_SITE_CAP) return sortedSites;
+    const top = sortedSites.slice(0, SIDEBAR_SITE_CAP);
+    const active = activeSiteId ? sortedSites.find((s) => s.id === activeSiteId) : null;
+    if (!active || top.some((s) => s.id === active.id)) return top;
+    // Replace the oldest of the top-5 with the active one, keep newest-first order
+    const withActive = [active, ...top.slice(0, SIDEBAR_SITE_CAP - 1)];
+    return [...withActive].sort((a, b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    });
+  }, [sortedSites, activeSiteId]);
+
+  const overflowCount = Math.max(0, sortedSites.length - visibleSites.length);
 
   const toggle = () => {
     if (forceCollapsed) return;
@@ -172,6 +209,41 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       </li>
     );
   };
+
+  const sitesPopoverContent = (
+    <PopoverContent side="right" align="start" sideOffset={8} className="w-72 p-0 z-[100]">
+      <Command>
+        <CommandInput placeholder="Search sites..." />
+        <CommandList>
+          <CommandEmpty>No sites found.</CommandEmpty>
+          <CommandGroup heading={`${sortedSites.length} site${sortedSites.length === 1 ? "" : "s"}`}>
+            {sortedSites.map((site) => {
+              const isActive = site.id === activeSiteId;
+              return (
+                <CommandItem
+                  key={site.id}
+                  value={`${site.name} ${site.url || ""}`}
+                  onSelect={() => {
+                    setSitePopoverOpen(false);
+                    router.push(`/sites/${site.id}/products`);
+                  }}
+                  className="gap-2"
+                >
+                  <SiteIcon site={site} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{site.name}</p>
+                    {site.url && <p className="text-[10px] text-muted-foreground truncate">{site.url}</p>}
+                  </div>
+                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-muted-foreground/40")} />
+                  {isActive && <Check className="h-3.5 w-3.5 text-primary ml-1" />}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </PopoverContent>
+  );
 
   const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
 
@@ -257,9 +329,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
                   <ul className="space-y-0.5">
                     {node.children?.map(renderItem)}
-                    {can(PERMISSIONS.SITES_VIEW) && sites.map((site) => {
+                    {can(PERMISSIONS.SITES_VIEW) && visibleSites.map((site) => {
                       const href = `/sites/${site.id}/products`;
-                      const isActive = router.asPath.startsWith(`/explore/${site.id}`) || router.asPath.startsWith(`/sites/${site.id}`);
+                      const isActive = site.id === activeSiteId;
                       if (collapsed) {
                         return (
                           <li key={site.id}>
@@ -295,6 +367,43 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                         </li>
                       );
                     })}
+
+                    {can(PERMISSIONS.SITES_VIEW) && overflowCount > 0 && (
+                      <li>
+                        <Popover open={sitePopoverOpen} onOpenChange={setSitePopoverOpen}>
+                          {collapsed ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label={`Show ${overflowCount} more sites`}
+                                    className="relative flex items-center justify-center rounded-md h-9 w-9 mx-auto text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-sidebar-primary text-[9px] font-semibold text-sidebar-primary-foreground flex items-center justify-center ring-1 ring-sidebar">
+                                      +{overflowCount}
+                                    </span>
+                                  </button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" sideOffset={8} className="z-[100]">{overflowCount} more sites</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-colors"
+                              >
+                                <MoreHorizontal className="h-4 w-4 shrink-0" />
+                                <span className="truncate">+{overflowCount} more site{overflowCount === 1 ? "" : "s"}</span>
+                              </button>
+                            </PopoverTrigger>
+                          )}
+                          {sitesPopoverContent}
+                        </Popover>
+                      </li>
+                    )}
                   </ul>
                 </div>
               );
@@ -355,5 +464,3 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     </TooltipProvider>
   );
 }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _unused = Store;
