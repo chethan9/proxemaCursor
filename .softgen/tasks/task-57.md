@@ -1,6 +1,6 @@
 ---
 title: WooCommerce attributes + media + taxonomy services
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [services, woocommerce, attributes]
