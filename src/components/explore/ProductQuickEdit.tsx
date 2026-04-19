@@ -69,10 +69,10 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
 
   const permalink = product.raw_data?.permalink as string | undefined;
 
-  const stockOptions: { value: "instock" | "outofstock" | "onbackorder"; label: string; icon: typeof CheckCircle2; cls: string }[] = [
-    { value: "instock", label: "In stock", icon: CheckCircle2, cls: "data-[active=true]:border-success data-[active=true]:bg-success/10 data-[active=true]:text-success" },
-    { value: "outofstock", label: "Out of stock", icon: XCircle, cls: "data-[active=true]:border-destructive data-[active=true]:bg-destructive/10 data-[active=true]:text-destructive" },
-    { value: "onbackorder", label: "Backorder", icon: Clock, cls: "data-[active=true]:border-warning data-[active=true]:bg-warning/10 data-[active=true]:text-warning" },
+  const stockOptions: { value: "instock" | "outofstock" | "onbackorder"; label: string; icon: typeof CheckCircle2; activeCls: string }[] = [
+    { value: "instock", label: "In stock", icon: CheckCircle2, activeCls: "border-success bg-success/10 text-success" },
+    { value: "outofstock", label: "Out of stock", icon: XCircle, activeCls: "border-destructive bg-destructive/10 text-destructive" },
+    { value: "onbackorder", label: "Backorder", icon: Clock, activeCls: "border-warning bg-warning/10 text-warning" },
   ];
 
   return (
@@ -83,7 +83,6 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-5">
-          {/* Header row */}
           <div className="flex items-start gap-3">
             <div className="h-14 w-14 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0">
               {thumb ? (
@@ -110,9 +109,7 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-5">
-            {/* Left: form */}
             <div className="space-y-5">
-              {/* Pricing */}
               <div className="rounded-lg border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -162,7 +159,6 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                 </div>
               </div>
 
-              {/* Stock */}
               <div className="rounded-lg border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -200,9 +196,8 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                         <button
                           key={opt.value}
                           type="button"
-                          data-active={active}
                           onClick={() => setStockStatus(opt.value)}
-                          className={`flex flex-col items-center justify-center gap-1 rounded-md border border-border px-2 py-2.5 text-[11px] font-medium hover:bg-muted/50 transition-colors ${opt.cls}`}
+                          className={`flex flex-col items-center justify-center gap-1 rounded-md border px-2 py-2.5 text-[11px] font-medium transition-colors ${active ? opt.activeCls : "border-border text-muted-foreground hover:bg-muted/50"}`}
                         >
                           <Icon className="h-4 w-4" />
                           <span>{opt.label}</span>
@@ -219,7 +214,6 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
               </Button>
             </div>
 
-            {/* Right: actions */}
             <div className="space-y-3">
               <div>
                 <Label className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 block">Actions</Label>
