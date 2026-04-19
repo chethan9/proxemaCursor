@@ -169,7 +169,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Site</DialogTitle>
             <DialogDescription>Manage site details, WooCommerce API, and WordPress media access.</DialogDescription>
@@ -204,6 +204,8 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
               </div>
             </div>
 
+            {/* Two-column: WooCommerce + WordPress */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* WooCommerce section */}
             <div className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -293,6 +295,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
                   </p>
                 </div>
               )}
+            </div>
             </div>
           </div>
 
