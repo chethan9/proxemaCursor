@@ -130,3 +130,5 @@ export const JOB_TYPE_LABEL: Record<BulkJobType, string> = {
   assign_product_categories: "Assign categories",
   delete_products: "Delete products",
 };
+
+export const ORDER_STATUS_OPTIONS = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"] as const;

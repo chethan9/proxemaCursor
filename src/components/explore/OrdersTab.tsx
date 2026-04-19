@@ -186,44 +186,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
 
-  const submitBulk = useCallback(async () => {
-    if (!bulkAction || selectedIds.size === 0 || overLimit) return;
-    const orderIds = orders
-      .filter((o) => selectedIds.has(o.id))
-      .map((o) => o.woo_id);
-    if (orderIds.length === 0) {
-      toast({ title: "Nothing to process", description: "Selected orders not found on this page", variant: "destructive" });
-      return;
-    }
-    setBulkSubmitting(true);
-    try {
-      const payload = bulkAction.type === "update_status"
-        ? { order_ids: orderIds, new_status: bulkAction.status }
-        : { order_ids: orderIds };
-      const jobType = bulkAction.type === "update_status" ? "update_order_status" : "delete_orders";
-      await createBulkJob({
-        store_id: storeId,
-        job_type: jobType,
-        total: orderIds.length,
-        payload,
-      });
-      toast({
-        title: "Bulk job queued",
-        description: `Processing ${orderIds.length} orders in the background. Check progress in the bulk jobs panel.`,
-      });
-      setSelectedIds(new Set());
-      setBulkAction(null);
-    } catch (err) {
-      toast({
-        title: "Failed to queue bulk job",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
-    } finally {
-      setBulkSubmitting(false);
-    }
-  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
-
   // Clear selection when data/filters change
   useEffect(() => {
     setSelectedIds(new Set());
@@ -252,55 +214,43 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const orderCount = ordersResult?.count ?? 0;
   void isPlaceholderData;
 
-  const setOrders = (_updater: (prev: OrderRow[]) => OrderRow[]) => {
-    // Optimistic update handled via React Query cache elsewhere; no-op placeholder for inline edits.
-  };
-  void setOrders;
-
-  const exportCsv = useCallback(() => {
-    if (orders.length === 0) return;
-    const header = visibleColList.map((c) => c.label).join(",");
-    const rows = orders.map((o) => visibleColList.map((c) => {
-      let v: string | number = "";
-      switch (c.key) {
-        case "id": v = o.id; break;
-        case "order_number": v = o.order_number || ""; break;
-        case "woo_id": v = o.woo_id; break;
-        case "status": v = o.status || ""; break;
-        case "customer": v = getCustomerName(o.billing); break;
-        case "first_name": v = getBillingFirstName(o.billing); break;
-        case "last_name": v = getBillingLastName(o.billing); break;
-        case "email": v = getCustomerEmail(o.billing); break;
-        case "phone": v = getCustomerPhone(o.billing); break;
-        case "customer_id": v = o.customer_id ?? ""; break;
-        case "items": v = getItemCount(o.line_items); break;
-        case "line_items_summary": v = getLineItemsSummary(o.line_items); break;
-        case "total": v = String(o.total ?? ""); break;
-        case "subtotal": v = String(o.subtotal ?? ""); break;
-        case "tax": v = String(o.total_tax ?? ""); break;
-        case "shipping": v = String(o.shipping_total ?? ""); break;
-        case "discount": v = String(o.discount_total ?? ""); break;
-        case "currency": v = o.currency || ""; break;
-        case "payment": v = o.payment_method_title || ""; break;
-        case "payment_method": v = o.payment_method || ""; break;
-        case "source": v = getOrderSource(o); break;
-        case "created_via": v = (o.raw_data as { created_via?: string } | null)?.created_via || ""; break;
-        case "date_created": v = o.date_created || ""; break;
-        case "date_modified": v = o.date_modified || ""; break;
-        case "synced_at": v = o.synced_at || ""; break;
-      }
-      const s = String(v).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(",")).join("\n");
-    const csv = `${header}\n${rows}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `orders-${storeId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [orders, visibleColList, storeId]);
+  const submitBulk = useCallback(async () => {
+    if (!bulkAction || selectedIds.size === 0 || overLimit) return;
+    const orderIds = orders
+      .filter((o) => selectedIds.has(o.id))
+      .map((o) => o.woo_id);
+    if (orderIds.length === 0) {
+      toast({ title: "Nothing to process", description: "Selected orders not found on this page", variant: "destructive" });
+      return;
+    }
+    setBulkSubmitting(true);
+    try {
+      const payload = bulkAction.type === "update_status"
+        ? { type: "update_order_status" as const, order_ids: orderIds, new_status: bulkAction.status }
+        : { type: "delete_orders" as const, order_ids: orderIds };
+      const jobType = bulkAction.type === "update_status" ? "update_order_status" : "delete_orders";
+      await createBulkJob({
+        store_id: storeId,
+        job_type: jobType,
+        total: orderIds.length,
+        payload,
+      });
+      toast({
+        title: "Bulk job queued",
+        description: `Processing ${orderIds.length} orders in the background. Check progress in the bulk jobs panel.`,
+      });
+      setSelectedIds(new Set());
+      setBulkAction(null);
+    } catch (err) {
+      toast({
+        title: "Failed to queue bulk job",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
 
   const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax;
 
