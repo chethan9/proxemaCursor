@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,7 +18,7 @@ const PRESETS: { v: PresetValue; l: string }[] = [
   { v: "custom", l: "Custom range…" },
 ];
 
-function labelFor(range: PresetValue, from?: Date, to?: Date): string {
+function triggerLabel(range: PresetValue, from?: Date, to?: Date): string {
   if (range === "all") return "Date";
   if (range === "custom") {
     if (from && to) return `${format(from, "MMM d")} – ${format(to, "MMM d")}`;
@@ -40,108 +40,141 @@ export function DateRangeFilter({
   onChange: (range: PresetValue, from?: Date, to?: Date) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<PresetValue>(range);
+  const [draftFrom, setDraftFrom] = useState<Date | undefined>(from);
+  const [draftTo, setDraftTo] = useState<Date | undefined>(to);
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
-  const [fromText, setFromText] = useState(from ? format(from, "yyyy-MM-dd") : "");
-  const [toText, setToText] = useState(to ? format(to, "yyyy-MM-dd") : "");
 
-  const applyFromText = (v: string) => {
-    setFromText(v);
-    const d = new Date(v);
-    if (!isNaN(d.getTime())) onChange("custom", d, to);
+  useEffect(() => {
+    if (open) {
+      setDraftRange(range);
+      setDraftFrom(from);
+      setDraftTo(to);
+    }
+  }, [open, range, from, to]);
+
+  const handlePresetClick = (v: PresetValue) => {
+    if (v === "custom") {
+      setDraftRange("custom");
+      return;
+    }
+    onChange(v, undefined, undefined);
+    setOpen(false);
   };
-  const applyToText = (v: string) => {
-    setToText(v);
-    const d = new Date(v);
-    if (!isNaN(d.getTime())) onChange("custom", from, d);
+
+  const handleApply = () => {
+    onChange("custom", draftFrom, draftTo);
+    setOpen(false);
+  };
+
+  const handleCancel = () => {
+    setDraftRange(range);
+    setDraftFrom(from);
+    setDraftTo(to);
+    setOpen(false);
   };
 
   const active = range !== "all";
+  const canApply = !!(draftFrom && draftTo);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant={active ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5">
           <Filter className="h-3.5 w-3.5" />
-          <span>{labelFor(range, from, to)}</span>
+          <span>{triggerLabel(range, from, to)}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
+      <PopoverContent align="start" className="w-auto p-0" sideOffset={4}>
         <div className="flex">
-          <div className="border-r border-border p-1 min-w-[160px]">
-            {PRESETS.map((p) => (
-              <button
-                key={p.v}
-                onClick={() => {
-                  onChange(p.v, from, to);
-                  if (p.v !== "custom") setOpen(false);
-                }}
-                className={`w-full text-left text-xs px-2.5 py-2 rounded hover:bg-muted ${range === p.v ? "bg-accent font-medium" : ""}`}
-              >
-                {p.l}
-              </button>
-            ))}
+          <div className="border-r border-border py-2 min-w-[170px]">
+            {PRESETS.map((p) => {
+              const isActive = draftRange === p.v;
+              return (
+                <button
+                  key={p.v}
+                  onClick={() => handlePresetClick(p.v)}
+                  className={`w-full text-left text-sm px-3 py-2 transition-colors ${
+                    isActive
+                      ? "bg-accent border-l-2 border-primary font-medium pl-[10px]"
+                      : "border-l-2 border-transparent hover:bg-muted pl-[10px]"
+                  }`}
+                >
+                  {p.l}
+                </button>
+              );
+            })}
           </div>
-          {range === "custom" && (
-            <div className="p-3 space-y-3 min-w-[280px]">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">From date</label>
-                <Popover open={fromOpen} onOpenChange={setFromOpen}>
-                  <PopoverTrigger asChild>
-                    <div className="relative">
-                      <Input
-                        type="date"
-                        value={fromText}
-                        onChange={(e) => applyFromText(e.target.value)}
-                        className="h-9 pr-8"
+          {draftRange === "custom" && (
+            <div className="min-w-[300px] flex flex-col">
+              <div className="p-4 space-y-4 flex-1">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    From date
+                  </label>
+                  <Popover open={fromOpen} onOpenChange={setFromOpen}>
+                    <PopoverTrigger asChild>
+                      <div className="relative cursor-pointer">
+                        <Input
+                          readOnly
+                          value={draftFrom ? format(draftFrom, "dd/MM/yyyy") : ""}
+                          placeholder="dd/mm/yyyy"
+                          className="h-10 pr-9 cursor-pointer"
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={draftFrom}
+                        onSelect={(d) => {
+                          setDraftFrom(d ?? undefined);
+                          setFromOpen(false);
+                        }}
+                        disabled={(date) => (draftTo ? date > draftTo : false)}
                       />
-                      <CalendarIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={from}
-                      onSelect={(d) => {
-                        onChange("custom", d ?? undefined, to);
-                        setFromText(d ? format(d, "yyyy-MM-dd") : "");
-                        setFromOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">To date</label>
-                <Popover open={toOpen} onOpenChange={setToOpen}>
-                  <PopoverTrigger asChild>
-                    <div className="relative">
-                      <Input
-                        type="date"
-                        value={toText}
-                        onChange={(e) => applyToText(e.target.value)}
-                        className="h-9 pr-8"
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    To date
+                  </label>
+                  <Popover open={toOpen} onOpenChange={setToOpen}>
+                    <PopoverTrigger asChild>
+                      <div className="relative cursor-pointer">
+                        <Input
+                          readOnly
+                          value={draftTo ? format(draftTo, "dd/MM/yyyy") : ""}
+                          placeholder="dd/mm/yyyy"
+                          className="h-10 pr-9 cursor-pointer"
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={draftTo}
+                        onSelect={(d) => {
+                          setDraftTo(d ?? undefined);
+                          setToOpen(false);
+                        }}
+                        disabled={(date) => (draftFrom ? date < draftFrom : false)}
                       />
-                      <CalendarIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={to}
-                      onSelect={(d) => {
-                        onChange("custom", from, d ?? undefined);
-                        setToText(d ? format(d, "yyyy-MM-dd") : "");
-                        setToOpen(false);
-                      }}
-                      disabled={(date) => (from ? date < from : false)}
-                    />
-                  </PopoverContent>
-                </Popover>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
-              <div className="flex justify-end gap-2 pt-1 border-t border-border">
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { onChange("all"); setOpen(false); }}>Cancel</Button>
-                <Button size="sm" className="h-8 text-xs" onClick={() => setOpen(false)} disabled={!from || !to}>Apply</Button>
+              <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
+                <Button variant="ghost" size="sm" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleApply} disabled={!canApply}>
+                  Apply
+                </Button>
               </div>
             </div>
           )}
