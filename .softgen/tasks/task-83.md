@@ -1,6 +1,6 @@
 ---
 title: Safe site deletion during active sync (abort + cleanup + UI guards)
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [sync, delete, safety, multi-site]
