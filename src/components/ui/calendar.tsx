@@ -5,18 +5,22 @@ import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  cellSize?: number
+}
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  cellSize = 28,
   ...props
 }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      style={{ ["--rdp-cell-size" as string]: `${cellSize}px` } as React.CSSProperties}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-2",

@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2 } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX } from "lucide-react";
 import { DateRangeFilter } from "./DateRangeFilter";
 import {
   getCustomerName,
@@ -506,7 +506,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 text-xs ml-auto"
+                  className="h-9 text-xs ml-auto gap-1.5"
                   onClick={() => {
                     setStatusFilter("all");
                     setPaymentFilter("all");
@@ -517,7 +517,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     setCustomTo(undefined);
                   }}
                 >
-                  Clear filters
+                  <FilterX className="h-3.5 w-3.5" />
+                  Clear
                 </Button>
               )}
 
