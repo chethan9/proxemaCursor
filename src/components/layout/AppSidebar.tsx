@@ -89,8 +89,7 @@ function SiteIcon({ site, size = "sm" }: { site: StoreWithClient; size?: "sm" | 
 function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): RoleKey {
   if (isSuperAdmin) return "super_admin";
   if (profileRole === "admin") return "admin";
-  if (profileRole === "readonly") return "readonly";
-  return "staff";
+  return "user";
 }
 
 export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
@@ -114,8 +113,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     if (typeof window === "undefined") return [];
-    // On first render we don't yet know the role; try loading cache for any known role.
-    const candidates: RoleKey[] = ["super_admin", "admin", "staff", "readonly"];
+    const candidates: RoleKey[] = ["super_admin", "admin", "user"];
     for (const r of candidates) {
       const cached = loadCachedMenu(r);
       if (cached.length > 0) return cached;
