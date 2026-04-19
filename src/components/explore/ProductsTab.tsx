@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -799,7 +799,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         <>
                           <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
+                              <div className="flex items-center gap-1">
+                                <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
+                                <Link href={`/sites/${storeId}/products/edit/${p.id}`} onClick={(e) => e.stopPropagation()} title="Edit product" className="text-muted-foreground hover:text-foreground">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Link>
+                              </div>
                             </TableCell>
                             {visibleColList.map((c) => {
                               if (c.key === "image") {
