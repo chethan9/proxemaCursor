@@ -7,6 +7,7 @@ const supabase = createClient(
 );
 
 const STUCK_THRESHOLD_MINUTES = 10;
+const BULK_STUCK_THRESHOLD_MINUTES = 30;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST" && req.method !== "GET") {
@@ -24,27 +25,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (findErr) throw findErr;
 
-    if (!stuckRuns || stuckRuns.length === 0) {
-      return res.status(200).json({ success: true, stuck_count: 0, message: "No stuck runs found" });
+    let failedSyncCount = 0;
+    if (stuckRuns && stuckRuns.length > 0) {
+      const ids = stuckRuns.map((r) => r.id);
+      const { error: updateErr } = await supabase
+        .from("sync_runs")
+        .update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+          error_message: `Auto-failed: no progress for ${STUCK_THRESHOLD_MINUTES}+ minutes`,
+        })
+        .in("id", ids);
+      if (updateErr) throw updateErr;
+      failedSyncCount = stuckRuns.length;
     }
 
-    const ids = stuckRuns.map((r) => r.id);
-    const { error: updateErr } = await supabase
-      .from("sync_runs")
-      .update({
-        status: "failed",
-        completed_at: new Date().toISOString(),
-        error_message: `Auto-failed: no progress for ${STUCK_THRESHOLD_MINUTES}+ minutes`,
-      })
-      .in("id", ids);
+    // Bulk jobs stuck > 30 minutes
+    const bulkThreshold = new Date(Date.now() - BULK_STUCK_THRESHOLD_MINUTES * 60 * 1000).toISOString();
+    const { data: stuckBulk } = await supabase
+      .from("bulk_jobs")
+      .select("id")
+      .eq("status", "running")
+      .lt("started_at", bulkThreshold);
 
-    if (updateErr) throw updateErr;
+    let failedBulkCount = 0;
+    if (stuckBulk && stuckBulk.length > 0) {
+      const ids = stuckBulk.map((r) => r.id);
+      await supabase
+        .from("bulk_jobs")
+        .update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+          error_message: `Auto-failed: bulk job stalled for ${BULK_STUCK_THRESHOLD_MINUTES}+ minutes`,
+        })
+        .in("id", ids);
+      failedBulkCount = stuckBulk.length;
+    }
 
     return res.status(200).json({
       success: true,
-      stuck_count: stuckRuns.length,
-      failed_ids: ids,
-      message: `Marked ${stuckRuns.length} stuck sync(s) as failed`,
+      stuck_sync_count: failedSyncCount,
+      stuck_bulk_count: failedBulkCount,
+      message: `Auto-failed ${failedSyncCount} sync(s) and ${failedBulkCount} bulk job(s)`,
     });
   } catch (error) {
     console.error("[auto-fail-stuck] Error:", error);

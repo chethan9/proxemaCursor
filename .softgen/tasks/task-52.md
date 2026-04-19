@@ -1,6 +1,6 @@
 ---
 title: Bulk jobs worker cron with 2x parallel processing
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [bulk-ops, cron, worker]
