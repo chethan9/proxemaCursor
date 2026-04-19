@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X, ImageIcon, Loader2 } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
-import { useWooTaxonomy, useCreateWooTerm } from "@/hooks/queries/useWooTaxonomy";
+import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 
 interface Props {
   storeId: string;
@@ -27,7 +27,7 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
   const [tagInput, setTagInput] = useState("");
   const [catInput, setCatInput] = useState("");
   const { data: categories = [] } = useWooTaxonomy(storeId, "categories");
-  const createCategory = useCreateWooTerm(storeId);
+  const createCategory = useCreateWooTaxonomy(storeId, "categories");
 
   const mainImage = form.images[0];
   const galleryImages = form.images.slice(1);
@@ -41,7 +41,7 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
         setForm((p) => ({ ...p, categories: [...p.categories, { id: existing.id, name: existing.name }] }));
       }
     } else {
-      const created = await createCategory.mutateAsync({ kind: "categories", data: { name: trimmed } });
+      const created = await createCategory.mutateAsync({ name: trimmed });
       setForm((p) => ({ ...p, categories: [...p.categories, { id: created.id, name: created.name }] }));
     }
     setCatInput("");
@@ -224,9 +224,9 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
         <ImagePickerDialog
           storeId={storeId}
           open={!!imageOpen}
-          onClose={() => setImageOpen(null)}
-          multiple={imageOpen === "gallery"}
-          onSelect={(items) => {
+          onOpenChange={(o) => { if (!o) setImageOpen(null); }}
+          mode={imageOpen === "gallery" ? "multi" : "single"}
+          onConfirm={(items) => {
             setForm((p) => {
               if (imageOpen === "main") {
                 const [first] = items;
