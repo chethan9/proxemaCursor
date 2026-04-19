@@ -103,7 +103,7 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
     await supabaseAdmin
       .from("bulk_jobs")
       .update({
-        status: "failed",
+        status: "failed" as const,
         completed_at: new Date().toISOString(),
         error_message: "Store credentials unavailable",
       })
@@ -116,7 +116,7 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
     await supabaseAdmin
       .from("bulk_jobs")
       .update({
-        status: "running",
+        status: "running" as const,
         started_at: new Date().toISOString(),
       })
       .eq("id", job.id);
@@ -140,7 +140,7 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
     await supabaseAdmin
       .from("bulk_jobs")
       .update({
-        status: "failed",
+        status: "failed" as const,
         completed_at: new Date().toISOString(),
         error_message: `Unsupported job_type: ${job.job_type}`,
       })
@@ -188,7 +188,7 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
   await supabaseAdmin
     .from("bulk_jobs")
     .update({
-      status: "completed",
+      status: "completed" as const,
       completed_at: new Date().toISOString(),
       processed,
       succeeded,
