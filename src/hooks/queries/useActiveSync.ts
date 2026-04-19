@@ -15,19 +15,19 @@ export function useActiveSync(storeId: string | null) {
       const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
       const { data: runs } = await supabase
         .from("sync_runs")
-        .select("id, aspect, status, records_processed, started_at, completed_at")
+        .select("id, aspect, status, records_processed, started_at, completed_at, is_initial")
         .eq("store_id", storeId)
         .gte("started_at", since)
         .order("started_at", { ascending: false })
         .limit(40);
 
       if (!runs || runs.length === 0) {
-        return { running: false, progress: 0, currentAspect: null, elapsed_seconds: 0, estimated_total: 0, processed: 0 };
+        return { running: false, progress: 0, currentAspect: null, elapsed_seconds: 0, estimated_total: 0, processed: 0, is_initial: false };
       }
 
       const allRow = runs.find((r) => r.aspect === "all");
       if (!allRow) {
-        return { running: false, progress: 0, currentAspect: null, elapsed_seconds: 0, estimated_total: 0, processed: 0 };
+        return { running: false, progress: 0, currentAspect: null, elapsed_seconds: 0, estimated_total: 0, processed: 0, is_initial: false };
       }
 
       const running = allRow.status === "running";
@@ -74,6 +74,7 @@ export function useActiveSync(storeId: string | null) {
         estimated_total: 0,
         processed: totalProcessed,
         started_at: batchStart,
+        is_initial: !!allRow.is_initial,
       };
     },
   });

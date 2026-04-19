@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { X, Rocket, Package, ShoppingCart, Users, Tag, FolderTree, Ticket } from "lucide-react";
 import { pickMessage } from "@/lib/sync-messages";
+import { SyncCelebrationDialog } from "@/components/SyncCelebrationDialog";
 
 const ASPECT_META: Record<string, { Icon: typeof Package }> = {
   products: { Icon: Package },
@@ -29,20 +30,29 @@ export function SyncProgressBanner() {
   const { data } = useActiveSync(storeId);
   const [dismissed, setDismissed] = useState(false);
   const [tick, setTick] = useState(0);
+  const [celebrateOpen, setCelebrateOpen] = useState(false);
   const prevRunningRef = useRef(false);
   const prevAspectRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!data) return;
     if (prevRunningRef.current && !data.running) {
-      toast({
-        title: "Sync complete ✨",
-        description: `${data.processed.toLocaleString()} records synced in ${formatElapsed(data.elapsed_seconds)}`,
-      });
+      if (data.is_initial && storeId) {
+        const key = `celebrated:${storeId}`;
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, "1");
+          setCelebrateOpen(true);
+        }
+      } else {
+        toast({
+          title: "Sync complete ✨",
+          description: `${data.processed.toLocaleString()} records synced in ${formatElapsed(data.elapsed_seconds)}`,
+        });
+      }
       setDismissed(false);
     }
     prevRunningRef.current = data.running;
-  }, [data, toast]);
+  }, [data, toast, storeId]);
 
   useEffect(() => {
     const current = data?.currentAspect || null;
@@ -58,7 +68,9 @@ export function SyncProgressBanner() {
     return () => clearInterval(id);
   }, [data?.running]);
 
-  if (!storeId || !data || !data.running || dismissed) return null;
+  if (!storeId || !data || !data.running || dismissed) {
+    return <SyncCelebrationDialog open={celebrateOpen} onOpenChange={setCelebrateOpen} />;
+  }
 
   const meta = data.currentAspect ? ASPECT_META[data.currentAspect] : null;
   const Icon = meta?.Icon || Rocket;
