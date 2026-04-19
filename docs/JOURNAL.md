@@ -93,3 +93,10 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 - `useSiteFromRoute` now uses React Query with `initialData` seeded from the sidebar's cached sites list in localStorage — store data is synchronous on navigation.
 - Sub-pages get `loading = false` when seeded, so shell stays visible; only inner tables show their own loading state.
 - Site sidebar items prefetch first page of products/orders/categories/tags on hover/focus, warming the React Query cache.
+
+## 2026-04-19 — Sidebar skeleton while auth loads
+
+**Scope:** ui/bug
+**Files:** `src/components/layout/AppSidebar.tsx`
+**Why:** Before profile/role loaded, permission checks returned false so only perm-less items (Projects, Settings) rendered, then the rest popped in — looked broken.
+**What:** Render 8-row skeleton while `auth.loading` is true and no cached menu tree is available. Real menu swaps in once role + permissions resolve.
