@@ -66,7 +66,6 @@ async function saveProgress(
     succeeded,
     failed,
     errors: toJson(errors),
-    updated_at: new Date().toISOString(),
   };
   await supabaseAdmin.from("bulk_jobs").update(payload).eq("id", jobId);
 }

@@ -316,6 +316,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const visibleColList = useMemo(
+    () => columnOrder
+      .map((k) => COLUMNS.find((c) => c.key === k))
+      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
+    [visibleCols, columnOrder]
+  );
+
+  const exportCsv = useCallback(() => {
+    toast({ title: "Export", description: "CSV export coming soon" });
+  }, [toast]);
+
   useEffect(() => {
     if (prefsLoaded.current) return;
     const hasLocal = typeof window !== "undefined" && (localStorage.getItem("explore-col-order") || localStorage.getItem("explore-page-size") || localStorage.getItem("explore-view-mode"));
@@ -893,7 +904,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   storeUrl={storeUrl}
                                   onClose={() => setExpandedRowId(null)}
                                   onSaved={(updated) => {
-                                    setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                                    queryClient.invalidateQueries({ queryKey: ["products", storeId] });
                                   }}
                                 />
                               </TableCell>
