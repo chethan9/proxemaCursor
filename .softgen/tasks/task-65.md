@@ -1,9 +1,9 @@
 ---
 title: Product + variations publish to WooCommerce
-status: todo
+status: done
 priority: urgent
 type: feature
-tags: [product-edit, sync, woocommerce]
+tags: [product-edit, woocommerce, publish]
 created_by: agent
 created_at: 2026-04-19
 position: 65

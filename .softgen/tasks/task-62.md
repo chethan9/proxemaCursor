@@ -1,9 +1,9 @@
 ---
 title: Advanced - Pricing & Tax tab
-status: todo
+status: done
 priority: high
 type: feature
-tags: [product-edit, advanced]
+tags: [product-edit, advanced-mode, pricing]
 created_by: agent
 created_at: 2026-04-19
 position: 62

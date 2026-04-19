@@ -1,9 +1,9 @@
 ---
 title: Advanced - Basic Info tab (name, description, media, taxonomy)
-status: todo
+status: done
 priority: high
 type: feature
-tags: [product-edit, advanced]
+tags: [product-edit, advanced-mode]
 created_by: agent
 created_at: 2026-04-19
 position: 61
