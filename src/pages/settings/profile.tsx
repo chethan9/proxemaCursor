@@ -1,19 +1,21 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useMemo, FormEvent } from "react";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MENU_REGISTRY } from "@/lib/menu-registry";
+import { MENU_REGISTRY, SITE_MENU_REGISTRY } from "@/lib/menu-registry";
+import { useStores } from "@/hooks/queries/useStores";
 import { User, Mail, Lock, Home } from "lucide-react";
 
 export default function ProfileSettings() {
   const { user, profile, refresh, loading, can, isSuperAdmin } = useAuth();
   const { toast } = useToast();
+  const { data: stores = [] } = useStores();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,6 +40,15 @@ export default function ProfileSettings() {
     if (m.permission && !can(m.permission)) return false;
     return true;
   }).map((m) => ({ value: m.href, label: m.defaultLabel }));
+
+  const siteLandingOptions = useMemo(() => {
+    return stores.flatMap((s) =>
+      SITE_MENU_REGISTRY.filter((m) => !m.permission || can(m.permission)).map((m) => ({
+        value: `/sites/${s.id}${m.path}`,
+        label: `${s.name} · ${m.defaultLabel}`,
+      }))
+    );
+  }, [stores, can]);
 
   const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
@@ -141,7 +152,16 @@ export default function ProfileSettings() {
                   <Select onValueChange={(v) => setLandingPath(v)} value={landingPath}>
                     <SelectTrigger id="landing_page" className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {landingOptions.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                      <SelectGroup>
+                        <SelectLabel className="text-[10px] uppercase tracking-wide">App</SelectLabel>
+                        {landingOptions.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                      </SelectGroup>
+                      {siteLandingOptions.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel className="text-[10px] uppercase tracking-wide">Sites</SelectLabel>
+                          {siteLandingOptions.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                        </SelectGroup>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
