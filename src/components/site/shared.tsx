@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
 import { SiteLayout } from "@/components/layout/SiteLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Search, type LucideIcon } from "lucide-react";
 import { getStore } from "@/services/storeService";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 import type { Database } from "@/integrations/supabase/types";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -21,17 +22,36 @@ export function SitePageShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function getSeededStore(id: string): StoreRow | undefined {
+  if (!id || typeof window === "undefined") return undefined;
+  try {
+    const raw = localStorage.getItem("sidebar-sites-cache");
+    if (!raw) return undefined;
+    const list = JSON.parse(raw) as Array<StoreRow & { client_name?: string | null }>;
+    const found = list.find((s) => s.id === id);
+    if (!found) return undefined;
+    const { client_name: _cn, ...rest } = found as StoreRow & { client_name?: string | null };
+    void _cn;
+    return rest as StoreRow;
+  } catch {
+    return undefined;
+  }
+}
+
 export function useSiteFromRoute() {
   const router = useRouter();
   const id = typeof router.query.id === "string" ? router.query.id : "";
-  const [store, setStore] = useState<StoreRow | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    getStore(id).then((s) => setStore(s)).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
-  return { id, store, loading };
+  const seeded = getSeededStore(id);
+  const { data: store, isLoading } = useQuery({
+    queryKey: queryKeys.store(id),
+    queryFn: () => getStore(id),
+    enabled: !!id,
+    initialData: seeded,
+    staleTime: 60_000,
+  });
+  // If we have seeded data, never show full-page loading.
+  const loading = !seeded && isLoading;
+  return { id, store: store ?? null, loading };
 }
 
 interface SiteSectionHeaderProps {
