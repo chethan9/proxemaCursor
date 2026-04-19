@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { AppSidebar } from "./AppSidebar";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SyncProgressBanner } from "@/components/SyncProgressBanner";
 
 type Props = { children: React.ReactNode };
 
@@ -22,6 +23,7 @@ export function SiteLayout({ children }: Props) {
         </aside>
       )}
       <main className="flex-1 overflow-y-auto">
+        {siteId && <SyncProgressBanner storeId={siteId} />}
         {children}
       </main>
     </div>

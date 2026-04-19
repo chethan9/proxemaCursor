@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, Rocket, Package, ShoppingCart, Users, Tag as TagIcon, Percent, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,21 +11,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 type StepStatus = "pending" | "active" | "done" | "error";
-
-interface Step {
-  id: string;
-  label: string;
-  status: StepStatus;
-}
+interface Step { id: string; label: string; status: StepStatus; }
 
 const INITIAL_STEPS: Step[] = [
   { id: "auth", label: "Authorizing with WooCommerce", status: "active" },
   { id: "creds", label: "Receiving API credentials", status: "pending" },
   { id: "wp", label: "Authorize WordPress media access", status: "pending" },
   { id: "webhooks", label: "Registering webhooks", status: "pending" },
-  { id: "sync", label: "Starting initial data sync", status: "pending" },
-  { id: "redirect", label: "Redirecting to site dashboard", status: "pending" },
+  { id: "estimate", label: "Scanning store inventory", status: "pending" },
+  { id: "liftoff", label: "Preparing for liftoff", status: "pending" },
 ];
+
+interface Estimate {
+  counts: { products: number; orders: number; customers: number; categories: number; tags: number; coupons: number };
+  total: number;
+  eta_seconds: number;
+}
+
+function formatEta(s: number): string {
+  if (s < 60) return `~${s} seconds`;
+  const m = Math.ceil(s / 60);
+  return `~${m} minute${m === 1 ? "" : "s"}`;
+}
 
 export default function ConnectSuccessPage() {
   const router = useRouter();
@@ -34,17 +41,17 @@ export default function ConnectSuccessPage() {
   const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
   const [failed, setFailed] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [stage, setStage] = useState<"woo" | "wp" | "finishing">("woo");
+  const [stage, setStage] = useState<"woo" | "wp" | "estimating" | "liftoff" | "done">("woo");
   const [storeUrl, setStoreUrl] = useState<string>("");
   const [showManual, setShowManual] = useState(false);
   const [manualUser, setManualUser] = useState("");
   const [manualPass, setManualPass] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
+  const [estimate, setEstimate] = useState<Estimate | null>(null);
 
   const setStep = (id: string, status: StepStatus) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
   };
-
   const advanceFrom = (id: string) => {
     setSteps((prev) => {
       const idx = prev.findIndex((s) => s.id === id);
@@ -57,12 +64,10 @@ export default function ConnectSuccessPage() {
   };
 
   const siteId = typeof id === "string" ? id : null;
-
   const baseCallback = useMemo(() => {
     if (typeof window === "undefined" || !siteId) return "";
     return `${window.location.origin}/api/wordpress/app-password-callback?state=${siteId}`;
   }, [siteId]);
-
   const authorizeUrl = useMemo(() => {
     if (!storeUrl || !siteId) return "";
     const clean = storeUrl.replace(/\/$/, "");
@@ -71,58 +76,69 @@ export default function ConnectSuccessPage() {
     return `${clean}/wp-admin/authorize-application.php?app_name=WooSync&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
   }, [storeUrl, siteId, baseCallback]);
 
-  const finishRemainingSteps = async () => {
+  const runEstimateAndLiftoff = async () => {
     if (!siteId) return;
-    setStage("finishing");
+    setStage("estimating");
     advanceFrom("webhooks");
+    setStep("webhooks", "done");
+    setStep("estimate", "active");
+
     try {
       const whRes = await fetch(`/api/stores/${siteId}/register-webhooks`, { method: "POST" });
-      setStep("webhooks", whRes.ok ? "done" : "error");
-    } catch {
-      setStep("webhooks", "error");
+      if (!whRes.ok) console.warn("webhook register non-ok");
+    } catch (e) {
+      console.warn("webhook register err", e);
     }
 
-    advanceFrom("sync");
     try {
-      const syncRes = await fetch(`/api/stores/${siteId}/sync`, {
+      const estRes = await fetch(`/api/stores/${siteId}/estimate`);
+      const estData: Estimate = await estRes.json();
+      setEstimate(estData);
+      setStep("estimate", "done");
+    } catch (e) {
+      console.error("estimate err", e);
+      setEstimate({ counts: { products: 0, orders: 0, customers: 0, categories: 0, tags: 0, coupons: 0 }, total: 0, eta_seconds: 60 });
+      setStep("estimate", "done");
+    }
+
+    setStep("liftoff", "active");
+    setStage("liftoff");
+  };
+
+  const handleLiftoff = async () => {
+    if (!siteId || !estimate) return;
+    try {
+      await fetch(`/api/stores/${siteId}/sync-start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estimated_total: estimate.total, is_initial: true }),
       });
-      setStep("sync", syncRes.ok ? "done" : "error");
-    } catch {
-      setStep("sync", "error");
+      setStep("liftoff", "done");
+      setStage("done");
+      toast({ title: "🚀 Liftoff!", description: "Syncing in background. Explore freely — progress is at the top." });
+      router.push(`/sites/${siteId}`);
+    } catch (e) {
+      toast({ title: "Couldn't start sync", description: e instanceof Error ? e.message : "Try again from site settings", variant: "destructive" });
     }
-
-    advanceFrom("redirect");
-    await new Promise((r) => setTimeout(r, 600));
-    setStep("redirect", "done");
-    router.push(`/sites/${siteId}`);
   };
 
   useEffect(() => {
     if (!siteId || success !== "1") return;
 
-    // Return trip from WP authorize
     if (wp) {
       if (wp === "ok") {
-        setStage("finishing");
-        setSteps((prev) =>
-          prev.map((s) => {
-            if (["auth", "creds", "wp"].includes(s.id)) return { ...s, status: "done" };
-            return s;
-          })
-        );
-        finishRemainingSteps();
+        setSteps((prev) => prev.map((s) => {
+          if (["auth", "creds", "wp"].includes(s.id)) return { ...s, status: "done" };
+          return s;
+        }));
+        runEstimateAndLiftoff();
       } else {
-        // rejected / missing / error - show manual fallback
         setStage("wp");
-        setSteps((prev) =>
-          prev.map((s) => {
-            if (["auth", "creds"].includes(s.id)) return { ...s, status: "done" };
-            if (s.id === "wp") return { ...s, status: "error" };
-            return s;
-          })
-        );
+        setSteps((prev) => prev.map((s) => {
+          if (["auth", "creds"].includes(s.id)) return { ...s, status: "done" };
+          if (s.id === "wp") return { ...s, status: "error" };
+          return s;
+        }));
         setShowManual(true);
         setErrorMessage(
           wp === "rejected"
@@ -133,7 +149,6 @@ export default function ConnectSuccessPage() {
       return;
     }
 
-    // Fresh arrival - poll for Woo keys
     let cancelled = false;
     let attempts = 0;
     const maxAttempts = 20;
@@ -147,16 +162,14 @@ export default function ConnectSuccessPage() {
           .select("id, url, consumer_key, consumer_secret, wp_username")
           .eq("id", siteId)
           .maybeSingle();
-
         if (data?.consumer_key && data?.consumer_secret) {
           setStoreUrl(data.url);
           if (!cancelled) {
             setStep("auth", "done");
             setStep("creds", "done");
             if (data.wp_username) {
-              // already have WP creds - skip
               setStep("wp", "done");
-              finishRemainingSteps();
+              runEstimateAndLiftoff();
             } else {
               setStage("wp");
               advanceFrom("wp");
@@ -166,16 +179,13 @@ export default function ConnectSuccessPage() {
         }
         await new Promise((r) => setTimeout(r, 1500));
       }
-
       if (cancelled) return;
       setStep("auth", "error");
       setFailed(true);
       setErrorMessage("We did not receive credentials from WooCommerce within 30 seconds. This is often caused by an ad blocker or firewall blocking the callback.");
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [siteId, success, wp]);
 
   const handleManualSave = async () => {
@@ -191,7 +201,7 @@ export default function ConnectSuccessPage() {
       if (json.ok) {
         toast({ title: "WordPress credentials saved" });
         setStep("wp", "done");
-        finishRemainingSteps();
+        runEstimateAndLiftoff();
       } else {
         toast({ title: "Credentials invalid", description: json.message, variant: "destructive" });
       }
@@ -204,7 +214,7 @@ export default function ConnectSuccessPage() {
 
   const handleSkipWp = () => {
     setStep("wp", "error");
-    finishRemainingSteps();
+    runEstimateAndLiftoff();
   };
 
   const completedCount = steps.filter((s) => s.status === "done").length;
@@ -226,41 +236,83 @@ export default function ConnectSuccessPage() {
           <CardContent className="pt-6 pb-6">
             <div className="text-center mb-6">
               <h1 className="text-xl font-semibold mb-1">
-                {failed ? "Connection Pending" : stage === "wp" ? "Authorize WordPress" : "Connecting Store"}
+                {failed ? "Connection Pending"
+                  : stage === "wp" ? "Authorize WordPress"
+                  : stage === "liftoff" ? "Ready for Liftoff"
+                  : stage === "estimating" ? "Scanning your store"
+                  : "Connecting Store"}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {failed
-                  ? "Something didn't complete as expected"
-                  : `Step ${Math.min(completedCount + 1, steps.length)} of ${steps.length}`}
+                {failed ? "Something didn't complete as expected" : `Step ${Math.min(completedCount + 1, steps.length)} of ${steps.length}`}
               </p>
             </div>
 
             <div className="space-y-2 mb-5">
               {steps.map((step) => (
-                <div
-                  key={step.id}
-                  className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2"
-                >
+                <div key={step.id} className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2">
                   <div className="shrink-0">
                     {step.status === "done" && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
                     {step.status === "active" && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
                     {step.status === "pending" && <Circle className="h-5 w-5 text-muted-foreground/40" />}
                     {step.status === "error" && <AlertTriangle className="h-5 w-5 text-warning" />}
                   </div>
-                  <span
-                    className={
-                      step.status === "pending"
-                        ? "text-sm text-muted-foreground"
-                        : step.status === "error"
-                        ? "text-sm text-warning font-medium"
-                        : "text-sm text-foreground font-medium"
-                    }
-                  >
-                    {step.label}
-                  </span>
+                  <span className={
+                    step.status === "pending" ? "text-sm text-muted-foreground"
+                    : step.status === "error" ? "text-sm text-warning font-medium"
+                    : "text-sm text-foreground font-medium"
+                  }>{step.label}</span>
                 </div>
               ))}
             </div>
+
+            {stage === "liftoff" && estimate && (
+              <div className="space-y-4 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="relative">
+                    <Rocket className="h-6 w-6 text-primary" />
+                    <Sparkles className="h-3 w-3 text-primary/70 absolute -top-1 -right-1 animate-pulse" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-0.5">Ready for liftoff to Proxima</p>
+                    <p className="text-xs text-muted-foreground">
+                      Your store is prepped. Estimated sync time: <span className="font-medium text-foreground">{formatEta(estimate.eta_seconds)}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
+                    <Package className="h-3.5 w-3.5 text-primary/70" />
+                    <span className="text-muted-foreground">Products:</span>
+                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.products.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
+                    <ShoppingCart className="h-3.5 w-3.5 text-primary/70" />
+                    <span className="text-muted-foreground">Orders:</span>
+                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.orders.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
+                    <Users className="h-3.5 w-3.5 text-primary/70" />
+                    <span className="text-muted-foreground">Customers:</span>
+                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.customers.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
+                    <TagIcon className="h-3.5 w-3.5 text-primary/70" />
+                    <span className="text-muted-foreground">Categories:</span>
+                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.categories.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground italic text-center">
+                  You can close this tab and come back — progress stays at the top of every page.
+                </p>
+
+                <Button onClick={handleLiftoff} className="w-full" size="lg">
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Launch & Go to Dashboard
+                </Button>
+              </div>
+            )}
 
             {stage === "wp" && !failed && (
               <div className="space-y-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
@@ -269,7 +321,7 @@ export default function ConnectSuccessPage() {
                   <div className="space-y-1">
                     <p className="text-sm font-semibold">WordPress Media Access</p>
                     <p className="text-xs text-muted-foreground">
-                      To upload product images directly to your WooCommerce media library, we need a WordPress Application Password. Click Authorize — you'll approve on your own site, no password needed here.
+                      To upload product images directly to your WooCommerce media library, we need a WordPress Application Password. Click Authorize — you&apos;ll approve on your own site, no password needed here.
                     </p>
                   </div>
                 </div>
@@ -288,11 +340,7 @@ export default function ConnectSuccessPage() {
                 )}
 
                 <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowManual((v) => !v)}
-                    className="text-xs text-muted-foreground hover:text-foreground underline"
-                  >
+                  <button type="button" onClick={() => setShowManual((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground underline">
                     {showManual ? "Hide manual entry" : "Having trouble? Enter credentials manually"}
                   </button>
                 </div>
@@ -301,56 +349,36 @@ export default function ConnectSuccessPage() {
                   <div className="space-y-3 pt-2 border-t border-border/60">
                     <p className="text-xs text-muted-foreground">
                       Generate an app password at{" "}
-                      <a
-                        href={`${storeUrl.replace(/\/$/, "")}/wp-admin/profile.php#application-passwords-section`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-primary underline"
-                      >
-                        your WP profile page
-                      </a>
-                      .
+                      <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/profile.php#application-passwords-section`} target="_blank" rel="noreferrer" className="text-primary underline">your WP profile page</a>.
                     </p>
                     <div className="space-y-1.5">
                       <Label htmlFor="wp-user" className="text-xs">Username or email</Label>
-                      <Input
-                        id="wp-user"
-                        value={manualUser}
-                        onChange={(e) => setManualUser(e.target.value)}
-                        placeholder="admin"
-                        className="h-9"
-                      />
+                      <Input id="wp-user" value={manualUser} onChange={(e) => setManualUser(e.target.value)} placeholder="admin" className="h-9" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="wp-pass" className="text-xs">Application password</Label>
-                      <Input
-                        id="wp-pass"
-                        type="password"
-                        value={manualPass}
-                        onChange={(e) => setManualPass(e.target.value)}
-                        placeholder="xxxx xxxx xxxx xxxx"
-                        className="h-9 font-mono"
-                      />
+                      <Input id="wp-pass" type="password" value={manualPass} onChange={(e) => setManualPass(e.target.value)} placeholder="xxxx xxxx xxxx xxxx" className="h-9 font-mono" />
                     </div>
-                    <Button
-                      onClick={handleManualSave}
-                      disabled={!manualUser || !manualPass || manualBusy}
-                      className="w-full"
-                      size="sm"
-                    >
+                    <Button onClick={handleManualSave} disabled={!manualUser || !manualPass || manualBusy} className="w-full" size="sm">
                       {manualBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test & Save"}
                     </Button>
                   </div>
                 )}
 
                 <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={handleSkipWp}
-                    className="text-xs text-muted-foreground hover:text-foreground underline"
-                  >
+                  <button type="button" onClick={handleSkipWp} className="text-xs text-muted-foreground hover:text-foreground underline">
                     Skip for now — I&apos;ll set this up later
                   </button>
+                </div>
+              </div>
+            )}
+
+            {stage === "estimating" && (
+              <div className="text-center py-3">
+                <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Percent className="h-3.5 w-3.5" />
+                  Counting products, orders, and customers…
                 </div>
               </div>
             )}
@@ -359,12 +387,8 @@ export default function ConnectSuccessPage() {
               <div className="mt-5 space-y-3">
                 <p className="text-xs text-muted-foreground text-center">{errorMessage}</p>
                 <div className="flex gap-2 justify-center">
-                  <Link href={`/sites/${siteId}`}>
-                    <Button variant="outline" size="sm">Go to Site</Button>
-                  </Link>
-                  <Link href="/projects">
-                    <Button size="sm">Back to Sites</Button>
-                  </Link>
+                  <Link href={`/sites/${siteId}`}><Button variant="outline" size="sm">Go to Site</Button></Link>
+                  <Link href="/projects"><Button size="sm">Back to Sites</Button></Link>
                 </div>
               </div>
             )}
