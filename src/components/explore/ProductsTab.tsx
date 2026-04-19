@@ -368,7 +368,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 w-[180px] text-xs gap-1.5 px-2.5">
+              <SelectTrigger className="h-9 w-[180px] text-xs gap-1.5 px-2.5 border-border bg-card shadow-polaris-xs hover:bg-muted">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -378,7 +378,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-0.5 rounded-md border border-input bg-background px-1 h-9">
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-card shadow-polaris-xs px-1 h-9">
               <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "table" ? "bg-muted" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
               <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-muted" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
               <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-muted" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
@@ -625,7 +625,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={overLimit} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />Clear</Button>
             </div>
           )}
