@@ -1,6 +1,6 @@
 ---
 title: Compact date range filter calendar
-status: todo
+status: done
 priority: high
 type: bug
 tags: [ui, calendar, date-filter]

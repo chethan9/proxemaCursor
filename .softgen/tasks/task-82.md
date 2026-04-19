@@ -1,6 +1,6 @@
 ---
 title: Multi-site concurrent sync support + fix site-switch freeze
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [sync, ui, bug, multi-site]
