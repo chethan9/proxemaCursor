@@ -35,6 +35,10 @@ import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
+import { createBulkJob } from "@/services/bulkJobService";
+import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
