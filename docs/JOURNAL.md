@@ -59,3 +59,13 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 - Settings → Profile now has a "Default Landing Page" card (dropdown of all menu items the user can access).
 - Login now redirects to the saved `default_landing_path` (fallback `/`).
 **Follow-ups:** Existing saved role menu configs won't reflect the rename/reorder until re-saved via Menu Editor.
+
+## 2026-04-19 — Sidebar polish: width, spacing, site active state
+
+**Scope:** bug + ui
+**Files:** `src/components/layout/AppSidebar.tsx`
+**Why:** Uneven group gaps (leftover `mb-1`/`mb-3`), site rows didn't highlight when on `/sites/<id>/*`, sidebar was too wide.
+**What:**
+- Width: `w-52` → `w-44`.
+- Unified all group wrappers to `mb-2`.
+- Active site check now matches `/explore/<id>` OR `/sites/<id>` prefix.
