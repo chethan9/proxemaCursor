@@ -132,8 +132,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, []);
 
   useEffect(() => {
-    // Wait for auth to resolve before fetching menu so we use correct role + permissions.
+    // Wait for auth to resolve AND profile to be loaded before fetching menu.
     if (authLoading) return;
+    if (!profile && !role) return;
     const roleKey = currentRoleKey;
     const cached = loadCachedMenu(roleKey);
     if (cached.length > 0) setMenuTree(cached);
@@ -145,7 +146,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       setMenuTree(resolved);
     }).catch(() => { if (cached.length === 0) setMenuTree([]); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentRoleKey, permissions.join(",")]);
+  }, [authLoading, currentRoleKey, permissions.join(","), !!profile]);
 
   const toggle = () => {
     if (forceCollapsed) return;
