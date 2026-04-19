@@ -29,7 +29,7 @@ const SYNC_INTERVALS = [
 
 function SettingsInner() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, store: storeFromRoute, loading: storeLoading } = useSiteFromRoute();
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncInterval, setSyncInterval] = useState("0");
@@ -41,13 +41,17 @@ function SettingsInner() {
   const [lastCron, setLastCron] = useState<{ started_at: string; status: string } | null>(null);
 
   useEffect(() => {
-    if (!id || typeof id !== "string") return;
+    if (storeFromRoute) {
+      setStore(storeFromRoute);
+      setSyncInterval(storeFromRoute.sync_interval?.toString() || "0");
+      setLoading(false);
+    }
+  }, [storeFromRoute]);
+
+  useEffect(() => {
+    if (!id) return;
     (async () => {
-      setLoading(true);
       try {
-        const s = await getStore(id);
-        setStore(s);
-        setSyncInterval(s?.sync_interval?.toString() || "0");
         const { data } = await supabase
           .from("cron_logs")
           .select("started_at,status")
@@ -56,9 +60,7 @@ function SettingsInner() {
           .limit(1)
           .maybeSingle();
         if (data) setLastCron(data);
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* ignore */ }
     })();
   }, [id]);
 
@@ -123,7 +125,7 @@ function SettingsInner() {
     }
   };
 
-  if (loading) {
+  if (loading && storeLoading) {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-8 w-64" />
