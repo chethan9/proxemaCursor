@@ -34,8 +34,6 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
       items: [
         { href: "/settings/menu-editor", icon: ListTree, label: "Menu Editor", show: isSuperAdmin },
         { href: "/settings/payment-methods", icon: CreditCard, label: "Payment Methods", show: isSuperAdmin },
-        { href: "/settings/users", icon: UserCog, label: "Users", show: can(PERMISSIONS.USERS_VIEW) },
-        { href: "/settings/roles", icon: Shield, label: "Roles & Permissions", show: can(PERMISSIONS.ROLES_VIEW) },
       ],
     },
   ];
