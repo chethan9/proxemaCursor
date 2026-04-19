@@ -6,7 +6,8 @@ export function useStores() {
   return useQuery({
     queryKey: queryKeys.stores,
     queryFn: getStores,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 
