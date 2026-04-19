@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { getAppBaseUrl } from "@/lib/app-url";
+import { getAppUrl } from "@/lib/app-url";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .single();
 
   // Fire-and-forget: trigger actual sync without awaiting
-  const base = getAppBaseUrl();
+  const base = getAppUrl(req);
   fetch(`${base}/api/stores/${storeId}/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
