@@ -115,11 +115,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
+  const { toast } = useToast();
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
-  const { toast } = useToast();
-
   const [priceOp, setPriceOp] = useState<"set" | "increase_pct" | "decrease_pct" | "increase_fixed" | "decrease_fixed" | "set_sale">("set");
   const [priceValue, setPriceValue] = useState("");
   const [stockOp, setStockOp] = useState<"set" | "adjust" | "set_status">("set");
@@ -129,6 +129,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [categoryMode, setCategoryMode] = useState<"add" | "remove" | "replace">("add");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(new Set());
   const [allCategories, setAllCategories] = useState<{ woo_id: number; name: string }[]>([]);
+  const MAX_BULK = 500;
+  const overLimit = selectedIds.size > MAX_BULK;
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -139,8 +141,103 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     });
   }, []);
 
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
+
+  const products = productsResult?.data ?? [];
+  const productCount = productsResult?.count ?? 0;
+
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
+    image: true, id: false, name: true, status: true, sku: true, price: true,
+    regular_price: false, sale_price: false, stock: true, stock_status: false,
+    manage_stock: false, category: true, type: false, slug: false, wooId: false,
+    parent_id: false, permalink: false, tax_status: false, tax_class: false,
+    shipping_required: false, images_count: false, short_desc: false, description: false,
+    attributes: false, sales: false, date_created: false, date_modified: false,
+    created: false, updated: false,
+  });
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("explore-col-order");
+        if (saved) {
+          const parsed = JSON.parse(saved) as ColumnKey[];
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = parsed.filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          return [...valid, ...missing];
+        }
+      } catch { /* ignore */ }
+    }
+    return COLUMNS.map((c) => c.key);
+  });
+  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [sort, setSort] = useState(SORT_OPTIONS[0]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
+  }, [columnOrder]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("explore-page-size", String(pageSize));
+  }, [pageSize]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+
+  const { data: productsResult, isLoading: loading } = useProducts({
+    storeId,
+    page,
+    pageSize,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+    statusFilter,
+    excludeOutOfStock,
+    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+    stockStatusFilter,
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
+  });
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [priceOp, setPriceOp] = useState<"set" | "increase_pct" | "decrease_pct" | "increase_fixed" | "decrease_fixed" | "set_sale">("set");
+  const [priceValue, setPriceValue] = useState("");
+  const [stockOp, setStockOp] = useState<"set" | "adjust" | "set_status">("set");
+  const [stockValue, setStockValue] = useState("");
+  const [stockStatus, setStockStatus] = useState<"instock" | "outofstock" | "onbackorder">("instock");
+  const [newProductStatus, setNewProductStatus] = useState<"publish" | "draft" | "pending" | "private">("publish");
+  const [categoryMode, setCategoryMode] = useState<"add" | "remove" | "replace">("add");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(new Set());
+  const [allCategories, setAllCategories] = useState<{ woo_id: number; name: string }[]>([]);
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
 
   useEffect(() => {
     if (bulkDialog === "category" && allCategories.length === 0 && storeId) {
@@ -214,162 +311,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       setBulkSubmitting(false);
     }
   }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatus, newProductStatus, categoryMode, selectedCategoryIds, toast]);
-
-  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
-
-  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
-    image: true, id: false, name: true, status: true, sku: true, price: true,
-    regular_price: false, sale_price: false, stock: true, stock_status: false,
-    manage_stock: false, category: true, type: false, slug: false, wooId: false,
-    parent_id: false, permalink: false, tax_status: false, tax_class: false,
-    shipping_required: false, images_count: false, short_desc: false, description: false,
-    attributes: false, sales: false, date_created: false, date_modified: false,
-    created: false, updated: false,
-  });
-  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("explore-col-order");
-        if (saved) {
-          const parsed = JSON.parse(saved) as ColumnKey[];
-          const allKeys = COLUMNS.map((c) => c.key);
-          const valid = parsed.filter((k) => allKeys.includes(k));
-          const missing = allKeys.filter((k) => !valid.includes(k));
-          return [...valid, ...missing];
-        }
-      } catch { /* ignore */ }
-    }
-    return COLUMNS.map((c) => c.key);
-  });
-  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
-
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [sort, setSort] = useState(SORT_OPTIONS[0]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
-  }, [columnOrder]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("explore-page-size", String(pageSize));
-  }, [pageSize]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
-
-  const { data: productsResult, isLoading: loading } = useProducts({
-    storeId,
-    page,
-    pageSize,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-    statusFilter,
-    excludeOutOfStock,
-    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-    stockStatusFilter,
-    priceMin: priceMin ? Number(priceMin) : undefined,
-    priceMax: priceMax ? Number(priceMax) : undefined,
-  });
-  const products = productsResult?.data ?? [];
-  const productCount = productsResult?.count ?? 0;
-
-  const prefetchOpts = useMemo(() => ({
-    storeId,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-    statusFilter,
-    excludeOutOfStock,
-    categoryFilter,
-    stockStatusFilter,
-    priceMin: priceMin ? Number(priceMin) : undefined,
-    priceMax: priceMax ? Number(priceMax) : undefined,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
-
-  useBackgroundPagination({
-    enabled: !!storeId && productCount > 0,
-    totalCount: productCount,
-    pageSize,
-    currentPage: page,
-    queryKeyFn: (p) => queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
-    queryFn: (p) => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 5000,
-    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
-  });
-
-  const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
-    // Inline mutations should invalidate query; placeholder no-op.
-  };
-  void setProducts;
-
-  const visibleColList = useMemo(
-    () => columnOrder
-      .map((k) => COLUMNS.find((c) => c.key === k))
-      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
-    [visibleCols, columnOrder]
-  );
-
-  const exportCsv = useCallback(() => {
-    if (products.length === 0) return;
-    const cols = visibleColList.filter((c) => c.key !== "image");
-    const header = cols.map((c) => c.label).join(",");
-    const rows = products.map((p) => cols.map((c) => {
-      let v: string | number = "";
-      switch (c.key) {
-        case "id": v = p.id; break;
-        case "name": v = p.name || ""; break;
-        case "status": v = p.status || ""; break;
-        case "sku": v = p.sku || ""; break;
-        case "price": v = (p.price as string) || ""; break;
-        case "regular_price": v = (p.regular_price as string) || ""; break;
-        case "sale_price": v = (p.sale_price as string) || ""; break;
-        case "stock": v = p.stock_quantity ?? ""; break;
-        case "stock_status": v = p.stock_status || ""; break;
-        case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
-        case "category": v = getCategoryNames(p.categories); break;
-        case "type": v = p.type || ""; break;
-        case "slug": v = p.slug || ""; break;
-        case "wooId": v = p.woo_id ?? ""; break;
-        case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
-        case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
-        case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
-        case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
-        case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
-        case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
-        case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
-        case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
-        case "attributes": v = JSON.stringify(p.attributes || []); break;
-        case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
-        case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
-        case "sales": v = p.synced_at || ""; break;
-        case "created": v = p.created_at || ""; break;
-        case "updated": v = p.updated_at || ""; break;
-      }
-      const s = String(v).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(",")).join("\n");
-    const csv = `${header}\n${rows}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `products-${storeId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, visibleColList, storeId]);
 
   const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
   const prefsLoaded = useRef(false);

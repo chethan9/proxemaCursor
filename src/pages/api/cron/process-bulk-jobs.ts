@@ -61,16 +61,14 @@ async function saveProgress(
   failed: number,
   errors: ItemError[],
 ) {
-  await supabaseAdmin
-    .from("bulk_jobs")
-    .update({
-      processed,
-      succeeded,
-      failed,
-      errors: toJson(errors),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", jobId);
+  const payload: BulkJobUpdate = {
+    processed,
+    succeeded,
+    failed,
+    errors: toJson(errors),
+    updated_at: new Date().toISOString(),
+  };
+  await supabaseAdmin.from("bulk_jobs").update(payload).eq("id", jobId);
 }
 
 // --- Job handlers ----------------------------------------------------------
