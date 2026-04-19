@@ -81,7 +81,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const prefetchStore = (id: string) => {
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
-  const { profile, role, can, isSuperAdmin, signOut, permissions } = useAuth();
+  const { profile, role, can, isSuperAdmin, signOut, permissions, loading: authLoading } = useAuth();
   const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
@@ -232,7 +232,16 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          {menuTree.map((node) => {
+          {authLoading && menuTree.length === 0 ? (
+            <div className={cn("mb-2 space-y-1.5", collapsed ? "px-1.5" : "px-2")}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={cn("flex items-center gap-2.5 rounded-md px-2.5 py-1.5", collapsed && "justify-center px-0 py-1.5")}>
+                  <div className="h-4 w-4 rounded bg-sidebar-foreground/10 animate-pulse" />
+                  {!collapsed && <div className="h-3 flex-1 rounded bg-sidebar-foreground/10 animate-pulse" />}
+                </div>
+              ))}
+            </div>
+          ) : menuTree.map((node) => {
             if (node.type === "item") {
               return (
                 <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
