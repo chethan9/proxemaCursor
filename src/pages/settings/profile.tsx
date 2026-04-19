@@ -1,7 +1,6 @@
 import { useState, useEffect, FormEvent } from "react";
-import Link from "next/link";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,11 +19,9 @@ export default function ProfileSettings() {
   const [email, setEmail] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
-
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
-
   const [landingPath, setLandingPath] = useState<string>("/");
   const [savingLanding, setSavingLanding] = useState(false);
 
@@ -40,46 +37,36 @@ export default function ProfileSettings() {
     if (m.superAdminOnly && !isSuperAdmin) return false;
     if (m.permission && !can(m.permission)) return false;
     return true;
-  }).map((m) => ({ value: m.href, label: `${m.defaultLabel} (${m.href})` }));
-
-  const handleSaveLanding = async () => {
-    if (!user) return;
-    setSavingLanding(true);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ default_landing_path: landingPath })
-        .eq("id", user.id);
-      if (error) throw error;
-      await refresh();
-      toast({ title: "Default landing page saved" });
-    } catch (err) {
-      toast({ title: "Save failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setSavingLanding(false);
-    }
-  };
+  }).map((m) => ({ value: m.href, label: m.defaultLabel }));
 
   const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setSavingProfile(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: fullName.trim() || null })
-        .eq("id", user.id);
+      const { error } = await supabase.from("profiles").update({ full_name: fullName.trim() || null, default_landing_path: landingPath }).eq("id", user.id);
       if (error) throw error;
       await refresh();
-      toast({ title: "Profile updated" });
+      toast({ title: "Profile saved" });
     } catch (err) {
-      toast({
-        title: "Update failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast({ title: "Save failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleSaveLanding = async () => {
+    if (!user) return;
+    setSavingLanding(true);
+    try {
+      const { error } = await supabase.from("profiles").update({ default_landing_path: landingPath }).eq("id", user.id);
+      if (error) throw error;
+      await refresh();
+      toast({ title: "Landing page saved" });
+    } catch (err) {
+      toast({ title: "Save failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
+    } finally {
+      setSavingLanding(false);
     }
   };
 
@@ -90,16 +77,9 @@ export default function ProfileSettings() {
     try {
       const { error } = await supabase.auth.updateUser({ email: email.trim() });
       if (error) throw error;
-      toast({
-        title: "Email change requested",
-        description: "Check your new email address for a confirmation link.",
-      });
+      toast({ title: "Confirmation sent", description: "Check your new email." });
     } catch (err) {
-      toast({
-        title: "Email update failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast({ title: "Update failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
     } finally {
       setSavingEmail(false);
     }
@@ -107,204 +87,120 @@ export default function ProfileSettings() {
 
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      toast({ title: "Password too short", description: "Minimum 6 characters.", variant: "destructive" });
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast({ title: "Passwords don't match", variant: "destructive" });
-      return;
-    }
+    if (newPassword.length < 6) { toast({ title: "Min 6 characters", variant: "destructive" }); return; }
+    if (newPassword !== confirmPassword) { toast({ title: "Passwords don't match", variant: "destructive" }); return; }
     setSavingPassword(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      setNewPassword("");
-      setConfirmPassword("");
+      setNewPassword(""); setConfirmPassword("");
       toast({ title: "Password updated" });
     } catch (err) {
-      toast({
-        title: "Password update failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast({ title: "Update failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
     } finally {
       setSavingPassword(false);
     }
   };
 
-  if (loading) {
-    return (
-      <SettingsLayout title="Profile">
-        <div className="p-8 text-sm text-muted-foreground">Loading...</div>
-      </SettingsLayout>
-    );
-  }
-
-  if (!user) {
-    return (
-      <SettingsLayout title="Profile">
-        <div className="p-8 text-sm text-muted-foreground">Not signed in.</div>
-      </SettingsLayout>
-    );
-  }
+  if (loading) return <SettingsLayout title="Profile"><div className="p-6 text-sm text-muted-foreground">Loading...</div></SettingsLayout>;
+  if (!user) return <SettingsLayout title="Profile"><div className="p-6 text-sm text-muted-foreground">Not signed in.</div></SettingsLayout>;
 
   return (
     <SettingsLayout title="Profile">
-      <div className="p-8 space-y-6 max-w-2xl">
-        <div>
-          <h1 className="text-2xl font-semibold">My Profile</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your personal account information</p>
+      <div className="p-6 max-w-5xl">
+        <div className="mb-4">
+          <h1 className="text-xl font-semibold">My Profile</h1>
+          <p className="text-xs text-muted-foreground">Personal account information</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Personal Information</CardTitle>
-            </div>
-            <CardDescription>Update your display name. Role and client assignment are managed by admins.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
-                <Input
-                  id="full_name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Jane Doe"
-                />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Personal Info + Landing */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <User className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">Personal Information</h2>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Role</Label>
-                  <div className="text-sm font-medium px-3 py-2 rounded-md bg-muted">{profile?.role ?? "—"}</div>
+              <form onSubmit={handleSaveProfile} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="full_name" className="text-xs">Full Name</Label>
+                  <Input id="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" className="h-9" />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Status</Label>
-                  <div className="text-sm font-medium px-3 py-2 rounded-md bg-muted">
-                    {profile?.is_active ? "Active" : "Inactive"}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Role</Label>
+                    <div className="text-xs font-medium px-2.5 py-2 rounded-md bg-muted h-9 flex items-center capitalize">{profile?.role ?? "—"}</div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Status</Label>
+                    <div className="text-xs font-medium px-2.5 py-2 rounded-md bg-muted h-9 flex items-center">{profile?.is_active ? "Active" : "Inactive"}</div>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={savingProfile || fullName === (profile?.full_name ?? "")}>
-                  {savingProfile ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="space-y-1.5">
+                  <Label htmlFor="landing_page" className="text-xs flex items-center gap-1.5"><Home className="h-3 w-3" /> Default Landing Page</Label>
+                  <Select onValueChange={(v) => setLandingPath(v)} value={landingPath}>
+                    <SelectTrigger id="landing_page" className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {landingOptions.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button type="button" size="sm" variant="outline" onClick={handleSaveLanding} disabled={savingLanding}>
+                    {savingLanding ? "Saving..." : "Save Landing"}
+                  </Button>
+                  <Button type="submit" size="sm" disabled={savingProfile}>
+                    {savingProfile ? "Saving..." : "Save Profile"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Email Address</CardTitle>
-            </div>
-            <CardDescription>
-              Changing your email will send a confirmation link to the new address. You must click it to complete the change.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSaveEmail} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
+          {/* Email + Password */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <Mail className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">Email Address</h2>
               </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={savingEmail || !email.trim() || email === user.email}>
-                  {savingEmail ? "Sending..." : "Update Email"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              <form onSubmit={handleSaveEmail} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs">Email</Label>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" />
+                  <p className="text-[10px] text-muted-foreground">A confirmation link will be sent to the new address.</p>
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" size="sm" disabled={savingEmail || !email.trim() || email === user.email}>
+                    {savingEmail ? "Sending..." : "Update Email"}
+                  </Button>
+                </div>
+              </form>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Change Password</CardTitle>
-            </div>
-            <CardDescription>Use a strong password with at least 6 characters.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new_password">New Password</Label>
-                <Input
-                  id="new_password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
+              <div className="flex items-center gap-2 pt-3 pb-2 border-b border-t">
+                <Lock className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">Change Password</h2>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm_password">Confirm New Password</Label>
-                <Input
-                  id="confirm_password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={savingPassword || !newPassword || !confirmPassword}
-                >
-                  {savingPassword ? "Updating..." : "Update Password"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Home className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Default Landing Page</CardTitle>
-            </div>
-            <CardDescription>Choose where you land after logging in.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="landing_page">Landing Page</Label>
-                <Select onValueChange={(v) => setLandingPath(v)} value={landingPath}>
-                  <SelectTrigger id="landing_page">
-                    <SelectValue placeholder="Select a page" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {landingOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleSaveLanding} disabled={savingLanding}>
-                  {savingLanding ? "Saving..." : "Save Landing Page"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new_password" className="text-xs">New</Label>
+                    <Input id="new_password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="h-9" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirm_password" className="text-xs">Confirm</Label>
+                    <Input id="confirm_password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="h-9" />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" size="sm" disabled={savingPassword || !newPassword || !confirmPassword}>
+                    {savingPassword ? "Updating..." : "Update Password"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </SettingsLayout>
   );
