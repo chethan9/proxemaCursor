@@ -1,6 +1,6 @@
 ---
 title: Initial sync completion celebration modal with confetti
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [sync, ui, onboarding, delight]
