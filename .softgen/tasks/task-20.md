@@ -1,6 +1,6 @@
 ---
 title: Replace loading spinners with skeleton placeholders
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ui, performance, ux]

@@ -1,6 +1,6 @@
 ---
 title: Auth foundation - roles, permissions, login, bootstrap
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [auth, rbac, security]

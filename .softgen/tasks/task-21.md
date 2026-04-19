@@ -1,6 +1,6 @@
 ---
 title: Add Explore section with per-site product browser
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ui, products, explore]

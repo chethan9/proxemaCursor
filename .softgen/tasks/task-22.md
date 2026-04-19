@@ -1,6 +1,6 @@
 ---
 title: Payment method registry + orders column fix
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [orders, settings, admin]

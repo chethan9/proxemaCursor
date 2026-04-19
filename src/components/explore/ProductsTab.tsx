@@ -27,12 +27,14 @@ import {
 } from "@/services/productService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
+import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts, useProductCategoryOptions } from "@/hooks/queries/useProducts";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
+import { useQueryClient } from "@tanstack/react-query";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -92,6 +94,7 @@ interface ProductsTabProps {
 }
 
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -103,6 +106,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
@@ -582,7 +586,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         const stockLow = p.stock_quantity != null && p.stock_quantity < 5;
                         const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
                         return (
-                          <div key={p.id} onClick={() => setExpandedRowId(p.id)} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
+                          <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
                             <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                               {thumb ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -611,7 +615,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
                       const label = p.status === "publish" ? "Active" : (p.status || "—");
                       return (
-                        <div key={p.id} onClick={() => setExpandedRowId(p.id)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
+                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                             {thumb ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -859,6 +863,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           )}
         </CardContent>
       </Card>
+
+      <ProductQuickEdit
+        product={quickEditProduct}
+        open={!!quickEditProduct}
+        onClose={() => setQuickEditProduct(null)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+          setQuickEditProduct(null);
+        }}
+      />
     </div>
   );
 }
