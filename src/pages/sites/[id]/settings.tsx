@@ -13,9 +13,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, RefreshCw, Settings as SettingsIcon, Zap, AlertTriangle, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, RefreshCw, Settings as SettingsIcon, Zap, AlertTriangle, Trash2, Clock, Upload, X as XIcon } from "lucide-react";
 import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
 import { supabase } from "@/integrations/supabase/client";
+import { SiteIcon } from "@/components/site/SiteIcon";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SYNC_INTERVALS = [
   { value: "0", label: "Manual only" },
@@ -39,6 +42,64 @@ function SettingsInner() {
   const [triggeringCron, setTriggeringCron] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [lastCron, setLastCron] = useState<{ started_at: string; status: string } | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const refreshSidebarCache = () => {
+    try { localStorage.removeItem("sidebar-sites-cache"); } catch { /* ignore */ }
+    qc.invalidateQueries({ queryKey: ["stores"] });
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!store) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Logo must be ≤ 2MB", variant: "destructive" });
+      return;
+    }
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+      toast({ title: "Unsupported format", description: "Use PNG, JPG, or WebP", variant: "destructive" });
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${store.id}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("site-logos").upload(path, file, { upsert: true, cacheControl: "3600" });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("site-logos").getPublicUrl(path);
+      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      await updateStore(store.id, { logo_url: url });
+      const s = await getStore(store.id);
+      setStore(s);
+      refreshSidebarCache();
+      toast({ title: "Logo updated" });
+    } catch (e) {
+      toast({ title: "Upload failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    if (!store) return;
+    setUploadingLogo(true);
+    try {
+      const { data: list } = await supabase.storage.from("site-logos").list("", { search: store.id });
+      if (list && list.length > 0) {
+        await supabase.storage.from("site-logos").remove(list.map((f) => f.name));
+      }
+      await updateStore(store.id, { logo_url: null });
+      const s = await getStore(store.id);
+      setStore(s);
+      refreshSidebarCache();
+      toast({ title: "Logo removed" });
+    } catch (e) {
+      toast({ title: "Remove failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   useEffect(() => {
     if (storeFromRoute) {
@@ -150,6 +211,40 @@ function SettingsInner() {
         <h1 className="text-2xl font-semibold flex items-center gap-2"><SettingsIcon className="h-5 w-5" />Configuration</h1>
         <p className="text-sm text-muted-foreground">{store.name} · {store.url}</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Site Logo</CardTitle>
+          <CardDescription>Custom logo shown in sidebars. Recommended 250×250 square (PNG, JPG, WebP, ≤ 2MB).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <SiteIcon site={store} size={80} />
+            <div className="flex items-center gap-2">
+              <label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  disabled={uploadingLogo}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
+                />
+                <Button asChild variant="outline" disabled={uploadingLogo}>
+                  <span>
+                    {uploadingLogo ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {store.logo_url ? "Replace logo" : "Upload logo"}
+                  </span>
+                </Button>
+              </label>
+              {store.logo_url && (
+                <Button variant="ghost" onClick={handleLogoRemove} disabled={uploadingLogo}>
+                  <XIcon className="h-4 w-4 mr-2" />Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

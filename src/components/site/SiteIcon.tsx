@@ -1,23 +1,13 @@
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-type SiteLike = { name?: string | null; url?: string | null };
+type SiteLike = { name?: string | null; url?: string | null; logo_url?: string | null };
+type SizeToken = "sm" | "md" | "lg" | number;
 
 const PALETTE = [
-  { bg: "bg-rose-500", fg: "text-white" },
-  { bg: "bg-orange-500", fg: "text-white" },
-  { bg: "bg-amber-500", fg: "text-white" },
-  { bg: "bg-lime-600", fg: "text-white" },
-  { bg: "bg-emerald-600", fg: "text-white" },
-  { bg: "bg-teal-600", fg: "text-white" },
-  { bg: "bg-cyan-600", fg: "text-white" },
-  { bg: "bg-sky-600", fg: "text-white" },
-  { bg: "bg-blue-600", fg: "text-white" },
-  { bg: "bg-indigo-600", fg: "text-white" },
-  { bg: "bg-violet-600", fg: "text-white" },
-  { bg: "bg-purple-600", fg: "text-white" },
-  { bg: "bg-fuchsia-600", fg: "text-white" },
-  { bg: "bg-pink-600", fg: "text-white" },
+  "bg-rose-500", "bg-orange-500", "bg-amber-500", "bg-lime-600",
+  "bg-emerald-600", "bg-teal-600", "bg-cyan-600", "bg-sky-600",
+  "bg-blue-600", "bg-indigo-600", "bg-violet-600", "bg-purple-600",
+  "bg-fuchsia-600", "bg-pink-600",
 ];
 
 function hashString(s: string): number {
@@ -30,46 +20,41 @@ function pickColor(seed: string) {
   return PALETTE[hashString(seed) % PALETTE.length];
 }
 
-function getFaviconUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
-    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
-  } catch { return null; }
+function resolveSize(size: SizeToken): number {
+  if (typeof size === "number") return size;
+  if (size === "sm") return 20;
+  if (size === "lg") return 40;
+  return 28;
 }
 
-export function SiteIcon({ site, size = 20, className }: { site: SiteLike; size?: number; className?: string }) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const favicon = getFaviconUrl(site.url);
+export function SiteIcon({
+  site,
+  size = 20,
+  className,
+}: {
+  site: SiteLike;
+  size?: SizeToken;
+  className?: string;
+}) {
+  const px = resolveSize(size);
   const label = (site.name || site.url || "?").trim();
-  const initial = label.charAt(0).toUpperCase();
+  const initial = label.charAt(0).toUpperCase() || "?";
   const seed = (site.url || site.name || "x").toLowerCase();
-  const color = pickColor(seed);
-  const style = { width: size, height: size };
-  const fontSize = size <= 18 ? 10 : size <= 22 ? 11 : size <= 28 ? 12 : 14;
+  const colorBg = pickColor(seed);
+  const style = { width: px, height: px };
+  const fontSize = px <= 18 ? 10 : px <= 22 ? 11 : px <= 28 ? 12 : px <= 36 ? 15 : 18;
 
-  if (favicon && !imgFailed) {
+  if (site.logo_url) {
     return (
       <span
         style={style}
         className={cn(
-          "relative inline-flex items-center justify-center rounded-md overflow-hidden flex-shrink-0 ring-1 ring-border/60",
-          color.bg,
+          "inline-flex items-center justify-center rounded-full overflow-hidden flex-shrink-0 bg-muted ring-1 ring-border/60",
           className
         )}
       >
-        <span className={cn("absolute inset-0 flex items-center justify-center font-semibold select-none", color.fg)}
-          style={{ fontSize }}>
-          {initial}
-        </span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={favicon}
-          alt=""
-          onError={() => setImgFailed(true)}
-          className="relative h-full w-full object-contain p-0.5"
-          style={{ background: "transparent" }}
-        />
+        <img src={site.logo_url} alt="" className="h-full w-full object-cover" />
       </span>
     );
   }
@@ -78,9 +63,8 @@ export function SiteIcon({ site, size = 20, className }: { site: SiteLike; size?
     <span
       style={{ ...style, fontSize }}
       className={cn(
-        "inline-flex items-center justify-center rounded-md font-semibold flex-shrink-0 select-none",
-        color.bg,
-        color.fg,
+        "inline-flex items-center justify-center rounded-full font-bold text-white flex-shrink-0 select-none",
+        colorBg,
         className
       )}
     >

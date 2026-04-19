@@ -1032,6 +1032,7 @@ export type Database = {
           health_score: number | null
           id: string
           last_sync_at: string | null
+          logo_url: string | null
           name: string
           next_sync_at: string | null
           short_id: string | null
@@ -1052,6 +1053,7 @@ export type Database = {
           health_score?: number | null
           id?: string
           last_sync_at?: string | null
+          logo_url?: string | null
           name: string
           next_sync_at?: string | null
           short_id?: string | null
@@ -1072,6 +1074,7 @@ export type Database = {
           health_score?: number | null
           id?: string
           last_sync_at?: string | null
+          logo_url?: string | null
           name?: string
           next_sync_at?: string | null
           short_id?: string | null
