@@ -69,3 +69,10 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 - Width: `w-52` → `w-44`.
 - Unified all group wrappers to `mb-2`.
 - Active site check now matches `/explore/<id>` OR `/sites/<id>` prefix.
+
+## 2026-04-19 — Fix blank flash on clicking site after fresh login
+
+**Scope:** bug
+**Files:** `src/components/layout/AppSidebar.tsx`
+**Why:** Sidebar linked sites to `/explore/<id>`, a redirect-only page. Users saw a blank render tick before `router.replace` fired.
+**What:** Direct link to `/sites/<id>/products`, skipping the redirect page.
