@@ -1,6 +1,6 @@
 ---
 title: Products bulk actions - price, stock, category, status
-status: in_progress
+status: done
 priority: medium
 type: feature
 tags: [bulk-ops, products, ui]
