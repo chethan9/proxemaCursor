@@ -27,50 +27,75 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const authHeader = `Basic ${Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64")}`;
     const results: Array<{ topic: string; success: boolean; action?: string; error?: string; woo_id?: number }> = [];
 
-    const { data: existingWebhooks } = await supabase
+    // Fetch all existing WooCommerce webhooks once
+    let wooWebhooks: Array<{ id: number; topic: string; delivery_url: string; status: string }> = [];
+    try {
+      const listResp = await fetch(`${store.url}/wp-json/wc/v3/webhooks?per_page=100`, {
+        headers: { Authorization: authHeader },
+      });
+      if (listResp.ok) {
+        wooWebhooks = await listResp.json();
+      }
+    } catch (e) {
+      console.warn("Failed to list existing webhooks:", e);
+    }
+
+    const { data: existingLocal } = await supabase
       .from("webhooks")
       .select("*")
       .eq("store_id", storeId);
 
-    const existingByTopic = new Map((existingWebhooks || []).map((w) => [w.topic, w]));
+    const localByTopic = new Map((existingLocal || []).map((w) => [w.topic, w]));
 
     for (const { topic, name } of WEBHOOK_TOPICS) {
-      const existing = existingByTopic.get(topic);
+      const localRow = localByTopic.get(topic);
+
+      // Find matching WooCommerce webhook: same topic + same delivery URL
+      const matchingWoo = wooWebhooks.find(
+        (w) => w.topic === topic && w.delivery_url === deliveryUrl
+      );
 
       try {
-        if (existing?.woo_webhook_id) {
-          const putResp = await fetch(
-            `${store.url}/wp-json/wc/v3/webhooks/${existing.woo_webhook_id}`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json", Authorization: authHeader },
-              body: JSON.stringify({ delivery_url: deliveryUrl, status: "active" }),
+        // Path 1: local row exists and points to a valid WC webhook
+        if (localRow?.woo_webhook_id && matchingWoo && matchingWoo.id === localRow.woo_webhook_id) {
+          if (matchingWoo.status !== "active") {
+            const putResp = await fetch(
+              `${store.url}/wp-json/wc/v3/webhooks/${matchingWoo.id}`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: authHeader },
+                body: JSON.stringify({ status: "active" }),
+              }
+            );
+            if (putResp.ok) {
+              await supabase
+                .from("webhooks")
+                .update({ status: "active", updated_at: new Date().toISOString() })
+                .eq("id", localRow.id);
             }
-          );
-
-          if (putResp.ok) {
-            const wooWh = await putResp.json();
-            await supabase
-              .from("webhooks")
-              .update({
-                delivery_url: deliveryUrl,
-                status: "active",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", existing.id);
-            results.push({ topic, success: true, action: "updated", woo_id: wooWh.id });
-            continue;
           }
-
-          if (putResp.status === 404) {
-            // webhook was deleted from WooCommerce — fall through to create
-          } else {
-            const errorText = await putResp.text();
-            results.push({ topic, success: false, action: "update-failed", error: errorText.slice(0, 200) });
-            continue;
-          }
+          results.push({ topic, success: true, action: "kept", woo_id: matchingWoo.id });
+          continue;
         }
 
+        // Path 2: WC has a matching webhook but local row is missing/mismatched -> adopt
+        if (matchingWoo) {
+          await supabase.from("webhooks").upsert(
+            {
+              store_id: storeId,
+              topic,
+              woo_webhook_id: matchingWoo.id,
+              delivery_url: deliveryUrl,
+              status: "active",
+              secret: localRow?.secret || generateWebhookSecret(),
+            },
+            { onConflict: "store_id,topic" }
+          );
+          results.push({ topic, success: true, action: "adopted", woo_id: matchingWoo.id });
+          continue;
+        }
+
+        // Path 3: no existing webhook anywhere -> create
         const secret = generateWebhookSecret();
         const postResp = await fetch(`${store.url}/wp-json/wc/v3/webhooks`, {
           method: "POST",
@@ -109,12 +134,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const successCount = results.filter((r) => r.success).length;
-    const updatedCount = results.filter((r) => r.action === "updated").length;
     const createdCount = results.filter((r) => r.action === "created").length;
+    const adoptedCount = results.filter((r) => r.action === "adopted").length;
+    const keptCount = results.filter((r) => r.action === "kept").length;
 
     return res.status(200).json({
       success: true,
-      message: `${successCount}/${WEBHOOK_TOPICS.length} OK (${updatedCount} updated, ${createdCount} created)`,
+      message: `${successCount}/${WEBHOOK_TOPICS.length} OK (${createdCount} created, ${adoptedCount} adopted, ${keptCount} kept)`,
       delivery_url: deliveryUrl,
       results,
     });
