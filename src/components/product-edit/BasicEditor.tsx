@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X, ImageIcon, Loader2 } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
+import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 
 interface Props {
@@ -66,11 +66,11 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <Textarea rows={5} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+              <RichTextEditor value={form.description} onChange={(html) => setForm((p) => ({ ...p, description: html }))} rows={6} />
             </div>
             <div className="space-y-1.5">
               <Label>Short description</Label>
-              <Textarea rows={2} value={form.short_description || ""} onChange={(e) => setForm((p) => ({ ...p, short_description: e.target.value }))} />
+              <RichTextEditor value={form.short_description || ""} onChange={(html) => setForm((p) => ({ ...p, short_description: html }))} rows={3} />
             </div>
           </CardContent>
         </Card>

@@ -397,4 +397,18 @@
     background-color: hsl(220 14% 94%) !important;
     color: hsl(222 47% 11%) !important;
   }
+
+  .ProseMirror {
+    outline: none;
+  }
+  .ProseMirror p { margin: 0 0 0.5rem; }
+  .ProseMirror p:last-child { margin-bottom: 0; }
+  .ProseMirror h2 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+  .ProseMirror h3 { font-size: 1.05rem; font-weight: 600; margin: 0.5rem 0 0.375rem; }
+  .ProseMirror ul { list-style: disc; padding-left: 1.25rem; margin: 0.25rem 0 0.5rem; }
+  .ProseMirror ol { list-style: decimal; padding-left: 1.25rem; margin: 0.25rem 0 0.5rem; }
+  .ProseMirror blockquote { border-left: 3px solid hsl(var(--border)); padding-left: 0.75rem; color: hsl(var(--muted-foreground)); margin: 0.5rem 0; }
+  .ProseMirror a { color: hsl(var(--primary)); text-decoration: underline; }
+  .ProseMirror code { background: hsl(var(--muted)); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
+  .ProseMirror strong { font-weight: 600; }
 }

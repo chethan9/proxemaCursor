@@ -1,5 +1,4 @@
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +6,7 @@ import { Plus, X, ImageIcon, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
+import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 
 type Props = {
@@ -73,11 +73,11 @@ export function BasicInfoTab({ storeId, form, setForm }: Props) {
       </div>
       <div className="space-y-1.5">
         <Label>Description</Label>
-        <Textarea rows={6} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+        <RichTextEditor value={form.description} onChange={(html) => setForm((p) => ({ ...p, description: html }))} rows={6} />
       </div>
       <div className="space-y-1.5">
         <Label>Short Description</Label>
-        <Textarea rows={2} value={form.short_description || ""} onChange={(e) => setForm((p) => ({ ...p, short_description: e.target.value }))} />
+        <RichTextEditor value={form.short_description || ""} onChange={(html) => setForm((p) => ({ ...p, short_description: html }))} rows={3} />
       </div>
 
       <div className="flex items-start gap-4">
