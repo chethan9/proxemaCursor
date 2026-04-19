@@ -667,6 +667,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const cats = getCategoryNames(p.categories);
                       const stockLow = p.stock_quantity != null && p.stock_quantity > 0 && p.stock_quantity < 5;
                       const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
+                      const priceHtml = (p.raw_data?.price_html as string) || "";
+                      const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
+                      const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
+                      const fmtPrice = (v: string | null | undefined) => v ? `${currency ? currency + " " : ""}${v}` : "—";
                       const dotColor: Record<string, string> = {
                         publish: "bg-success",
                         draft: "bg-muted-foreground/50",
@@ -697,7 +701,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             <div className="px-2 py-1.5 border-t border-border/60">
                               <div className="text-[11px] font-medium leading-tight line-clamp-1">{p.name || "—"}</div>
                               <div className="flex items-center justify-between gap-1 mt-0.5">
-                                <span className="text-[11px] font-semibold font-mono">{p.price || "—"}</span>
+                                <span className="text-[11px] font-semibold font-mono">{fmtPrice(p.price)}</span>
                                 <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dot}`} title={statusLabel} />
                               </div>
                             </div>
@@ -738,23 +742,28 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           <div className="p-3 space-y-1.5 flex-1 flex flex-col">
                             <div className="text-sm font-medium leading-tight line-clamp-2 min-h-[36px]">{p.name || "—"}</div>
                             <div className="text-[11px] text-muted-foreground truncate">{cats || "Uncategorized"}</div>
-                            <div className="flex items-end justify-between gap-2 pt-2 mt-auto border-t border-border/60">
-                              <div className="min-w-0 flex-1">
-                                <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wide truncate">{p.sku || "No SKU"}</div>
-                                {p.sale_price && p.sale_price !== p.regular_price ? (
-                                  <div className="flex items-baseline gap-1.5">
-                                    <span className="text-sm font-semibold font-mono text-foreground">{p.sale_price}</span>
-                                    <span className="text-[10px] font-mono line-through text-muted-foreground">{p.regular_price}</span>
-                                  </div>
-                                ) : (
-                                  <div className="text-sm font-semibold font-mono">{p.price || "—"}</div>
+                            <div className="pt-2 mt-auto border-t border-border/60 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground font-mono uppercase tracking-wide">
+                                <span className="truncate">{p.sku ? `SKU: ${p.sku}` : p.woo_id ? `ID: ${p.woo_id}` : "—"}</span>
+                                {p.stock_quantity != null && !stockOut && (
+                                  <span className="whitespace-nowrap">
+                                    Stock: <span className={p.stock_quantity < 5 ? "text-warning font-semibold" : "text-foreground font-semibold"}>{p.stock_quantity}</span>
+                                  </span>
                                 )}
+                                {stockOut && <span className="text-destructive font-semibold whitespace-nowrap">Out of stock</span>}
                               </div>
-                              {p.stock_quantity != null && !stockOut && (
-                                <div className="text-[10px] text-muted-foreground whitespace-nowrap pb-0.5">
-                                  <span className={p.stock_quantity < 5 ? "text-warning font-semibold" : ""}>{p.stock_quantity}</span> in stock
+                              <div className="flex items-baseline justify-between gap-2">
+                                <div className="flex items-baseline gap-1.5">
+                                  {p.sale_price && p.sale_price !== p.regular_price ? (
+                                    <>
+                                      <span className="text-base font-semibold font-mono text-foreground">{fmtPrice(p.sale_price)}</span>
+                                      <span className="text-[11px] font-mono line-through text-muted-foreground">{fmtPrice(p.regular_price)}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-base font-semibold font-mono text-foreground">{fmtPrice(p.price)}</span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </div>
                         </div>
