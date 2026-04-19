@@ -4,8 +4,11 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { storeId } = req.query;
+  const { storeId: storeIdRaw } = req.query;
+  const storeId = Array.isArray(storeIdRaw) ? storeIdRaw[0] : storeIdRaw;
   const { username, password } = (req.body || {}) as { username?: string; password?: string };
+
+  if (!storeId) return res.status(400).json({ ok: false, message: "Missing store id" });
 
   const { data: store, error } = await supabaseAdmin
     .from("stores")
