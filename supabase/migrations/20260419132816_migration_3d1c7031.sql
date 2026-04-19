@@ -1,0 +1,1 @@
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS wp_username text, ADD COLUMN IF NOT EXISTS wp_app_password text;

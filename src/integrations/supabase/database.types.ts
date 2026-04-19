@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1039,6 +1039,8 @@ export type Database = {
           sync_interval: number | null
           updated_at: string | null
           url: string
+          wp_app_password: string | null
+          wp_username: string | null
         }
         Insert: {
           client_id?: string | null
@@ -1057,6 +1059,8 @@ export type Database = {
           sync_interval?: number | null
           updated_at?: string | null
           url: string
+          wp_app_password?: string | null
+          wp_username?: string | null
         }
         Update: {
           client_id?: string | null
@@ -1075,6 +1079,8 @@ export type Database = {
           sync_interval?: number | null
           updated_at?: string | null
           url?: string
+          wp_app_password?: string | null
+          wp_username?: string | null
         }
         Relationships: [
           {
