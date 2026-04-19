@@ -349,8 +349,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select()
         .single();
 
+      const aspectStart = Date.now();
       try {
         const result = await syncFunctions[asp](store as StoreToSync, syncRun?.id || "");
+        const durationSec = (Date.now() - aspectStart) / 1000;
         results[asp] = result;
         totalProcessed += result.processed;
         totalCreated += result.created;
@@ -365,6 +367,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             records_updated: result.updated,
           }).eq("id", syncRun.id);
         }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("sync_benchmarks").insert({
+          store_id: storeId,
+          aspect: asp,
+          record_count: result.processed,
+          duration_seconds: durationSec,
+          is_initial: !!allRunId,
+        });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Unknown error";
         results[asp] = { processed: 0, created: 0, updated: 0, error: errorMsg };
@@ -386,6 +397,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Close the "all" placeholder row with aggregated totals
     if (allRunId) {
+      const allStart = allRow?.id ? new Date((await supabase.from("sync_runs").select("started_at").eq("id", allRunId).single()).data?.started_at || Date.now()).getTime() : Date.now();
+      const overallDuration = (Date.now() - allStart) / 1000;
+
       await supabase.from("sync_runs").update({
         status: "completed",
         completed_at: new Date().toISOString(),
@@ -393,6 +407,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         records_created: totalCreated,
         records_updated: totalUpdated,
       }).eq("id", allRunId);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("sync_benchmarks").insert({
+        store_id: storeId,
+        aspect: "all",
+        record_count: totalProcessed,
+        duration_seconds: overallDuration,
+        is_initial: true,
+      });
     }
 
     return res.status(200).json({

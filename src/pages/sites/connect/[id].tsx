@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { ConnectLayout } from "@/components/layout/ConnectLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +48,7 @@ export default function ConnectSuccessPage() {
   const [manualPass, setManualPass] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
   const [estimate, setEstimate] = useState<Estimate | null>(null);
+  const estimateStartedRef = useRef(false);
 
   const setStep = (id: string, status: StepStatus) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
@@ -76,6 +77,19 @@ export default function ConnectSuccessPage() {
     return `${clean}/wp-admin/authorize-application.php?app_name=Proxima&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
   }, [storeUrl, siteId, baseCallback]);
 
+  const startEstimate = async (sid: string) => {
+    if (estimateStartedRef.current) return;
+    estimateStartedRef.current = true;
+    try {
+      const estRes = await fetch(`/api/stores/${sid}/estimate`);
+      const estData: Estimate = await estRes.json();
+      setEstimate(estData);
+    } catch (e) {
+      console.error("estimate err", e);
+      setEstimate({ counts: { products: 0, orders: 0, customers: 0, categories: 0, tags: 0, coupons: 0 }, total: 0, eta_seconds: 60 });
+    }
+  };
+
   const runEstimateAndLiftoff = async () => {
     if (!siteId) return;
     setStage("estimating");
@@ -90,17 +104,15 @@ export default function ConnectSuccessPage() {
       console.warn("webhook register err", e);
     }
 
-    try {
-      const estRes = await fetch(`/api/stores/${siteId}/estimate`);
-      const estData: Estimate = await estRes.json();
-      setEstimate(estData);
-      setStep("estimate", "done");
-    } catch (e) {
-      console.error("estimate err", e);
-      setEstimate({ counts: { products: 0, orders: 0, customers: 0, categories: 0, tags: 0, coupons: 0 }, total: 0, eta_seconds: 60 });
-      setStep("estimate", "done");
+    // Wait up to 10s for the parallel-fired estimate; otherwise fire one now
+    if (!estimate) {
+      await startEstimate(siteId);
+      const deadline = Date.now() + 10000;
+      while (!estimate && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
     }
-
+    setStep("estimate", "done");
     setStep("liftoff", "active");
     setStage("liftoff");
   };
@@ -167,6 +179,8 @@ export default function ConnectSuccessPage() {
           if (!cancelled) {
             setStep("auth", "done");
             setStep("creds", "done");
+            // Fire estimate in parallel - user is about to spend time on WP auth
+            startEstimate(siteId);
             if (data.wp_username) {
               setStep("wp", "done");
               runEstimateAndLiftoff();
