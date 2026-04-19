@@ -229,7 +229,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     setSelectedIds(new Set());
   }, [storeId, debouncedSearch, statusFilter, paymentFilter, totalMin, totalMax, page, pageSize]);
 
-  const [visibleColList, setVisibleColList] = useMemo(
+  const visibleColList = useMemo(
     () => columnOrder
       .map((k) => COLUMNS.find((c) => c.key === k))
       .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
