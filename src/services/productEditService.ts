@@ -1,3 +1,28 @@
+export type ProductAttribute = {
+  id?: number;
+  name: string;
+  slug?: string;
+  options: string[];
+  variation: boolean;
+  visible: boolean;
+};
+
+export type Variation = {
+  id?: number;
+  key: string;
+  attributes: { name: string; option: string }[];
+  regular_price: string;
+  sale_price: string;
+  sku: string;
+  stock_quantity: number | null;
+  stock_status: "instock" | "outofstock" | "onbackorder";
+  manage_stock: boolean;
+  weight: string;
+  dimensions: { length: string; width: string; height: string };
+  description: string;
+  image: { id?: number; src: string; alt?: string } | null;
+};
+
 export type ProductFormState = {
   name: string;
   description: string;
@@ -20,14 +45,8 @@ export type ProductFormState = {
   tags: { id?: number; name: string }[];
   brands?: { id: number; name?: string }[];
   images: { id?: number; src: string; alt?: string }[];
-  attributes: {
-    id?: number;
-    name: string;
-    slug?: string;
-    options: string[];
-    variation: boolean;
-    visible: boolean;
-  }[];
+  attributes: ProductAttribute[];
+  variations: Variation[];
   meta_data?: { key: string; value: unknown }[];
 };
 
@@ -54,6 +73,7 @@ export function emptyProductForm(): ProductFormState {
     brands: [],
     images: [],
     attributes: [],
+    variations: [],
   };
 }
 
