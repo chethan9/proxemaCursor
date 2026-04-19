@@ -1,6 +1,6 @@
 ---
 title: Bulk jobs progress toast + history page
-status: todo
+status: done
 priority: high
 type: feature
 tags: [bulk-ops, ui, realtime]
