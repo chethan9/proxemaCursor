@@ -1,6 +1,6 @@
 ---
 title: Sync banner redesign - animated rocket on bar, fixed-width message, generic progress pool
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [sync, ui, polish]
