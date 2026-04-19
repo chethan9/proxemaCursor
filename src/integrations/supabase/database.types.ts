@@ -252,6 +252,68 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          errors: Json
+          failed: number
+          id: string
+          job_type: string
+          payload: Json
+          processed: number
+          started_at: string | null
+          status: string
+          store_id: string
+          succeeded: number
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json
+          failed?: number
+          id?: string
+          job_type: string
+          payload?: Json
+          processed?: number
+          started_at?: string | null
+          status?: string
+          store_id: string
+          succeeded?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json
+          failed?: number
+          id?: string
+          job_type?: string
+          payload?: Json
+          processed?: number
+          started_at?: string | null
+          status?: string
+          store_id?: string
+          succeeded?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_jobs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           count: number | null
