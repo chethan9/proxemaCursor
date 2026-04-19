@@ -12,6 +12,12 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 
 const REMEMBER_KEY = 'sb-remember-me';
 
+const isRemembered = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const v = localStorage.getItem(REMEMBER_KEY);
+  return v === null ? true : v === 'true';
+};
+
 const customStorage = {
   getItem: (key: string): string | null => {
     if (typeof window === 'undefined') return null;
@@ -19,8 +25,7 @@ const customStorage = {
   },
   setItem: (key: string, value: string): void => {
     if (typeof window === 'undefined') return;
-    const remember = localStorage.getItem(REMEMBER_KEY) === 'true';
-    if (remember) {
+    if (isRemembered()) {
       localStorage.setItem(key, value);
       sessionStorage.removeItem(key);
     } else {
