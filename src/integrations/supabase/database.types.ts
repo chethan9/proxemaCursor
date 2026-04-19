@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -256,6 +256,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          error_message: string | null
           errors: Json
           failed: number
           id: string
@@ -273,6 +274,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          error_message?: string | null
           errors?: Json
           failed?: number
           id?: string
@@ -290,6 +292,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          error_message?: string | null
           errors?: Json
           failed?: number
           id?: string
