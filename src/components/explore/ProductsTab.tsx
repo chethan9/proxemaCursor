@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -501,10 +501,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 </Select>
               )}
               {(excludeOutOfStock || statusFilter !== "all" || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
-                <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => {
+                <Button variant="ghost" size="sm" className="h-9 text-xs gap-1.5" onClick={() => {
                   setStatusFilter("all"); setExcludeOutOfStock(false); setCategoryFilter("all");
                   setStockStatusFilter("all"); setPriceMin(""); setPriceMax("");
-                }}>Clear</Button>
+                }}>
+                  <FilterX className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
               )}
               <div className="flex-1" />
               <div className="flex items-center gap-2 ml-auto">

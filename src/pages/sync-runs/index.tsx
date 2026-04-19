@@ -44,6 +44,7 @@ import {
   Download,
   Loader2,
   Trash2,
+  FilterX,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -500,6 +501,7 @@ export default function SyncRunsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="gap-1.5"
                   onClick={() => {
                     setFilterStore("all");
                     setFilterStatus("all");
@@ -509,7 +511,8 @@ export default function SyncRunsPage() {
                     setDateTo("");
                   }}
                 >
-                  Clear filters
+                  <FilterX className="h-3.5 w-3.5" />
+                  Clear
                 </Button>
               )}
             </div>
