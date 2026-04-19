@@ -729,6 +729,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
+                    <TableHead className="w-8 pl-3 pr-0">
+                      <Checkbox
+                        checked={products.length > 0 && products.every((p) => selectedIds.has(p.id))}
+                        onCheckedChange={(v) => {
+                          if (v) setSelectedIds(new Set(products.map((p) => p.id)));
+                          else setSelectedIds(new Set());
+                        }}
+                      />
+                    </TableHead>
                     {visibleColList.map((c) => {
                       const baseCls = c.key === "image" ? "w-14" : "";
                       const numericKeys: ColumnKey[] = ["price", "regular_price", "sale_price", "stock", "wooId", "parent_id", "images_count"];
@@ -766,6 +775,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   {loading ? (
                     Array.from({ length: 10 }).map((_, i) => (
                       <TableRow key={`sk-${i}`}>
+                        <TableCell className="w-8 pl-3 pr-0"><Checkbox disabled /></TableCell>
                         {visibleColList.map((c) => (
                           <TableCell key={c.key}>
                             {c.key === "image" ? <Skeleton className="h-10 w-10 rounded" /> : <Skeleton className="h-4 w-24" />}
@@ -775,18 +785,21 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     ))
                   ) : products.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={visibleColList.length} className="text-center py-16">
+                      <TableCell colSpan={visibleColList.length + 1} className="text-center text-xs text-muted-foreground py-8">
                         <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
                         <p className="text-sm text-muted-foreground">No products found</p>
                       </TableCell>
                     </TableRow>
                   ) : (
                     products.map((p) => {
-                      const thumb = getProductThumbnail(p.images);
                       const isExpanded = expandedRowId === p.id;
+                      const isSelected = selectedIds.has(p.id);
                       return (
                         <>
-                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                            <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
+                            </TableCell>
                             {visibleColList.map((c) => {
                               if (c.key === "image") {
                                 return (
@@ -920,7 +933,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           </TableRow>
                           {isExpanded && (
                             <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
-                              <TableCell colSpan={visibleColList.length} className="p-0">
+                              <TableCell colSpan={visibleColList.length + 1} className="p-0">
                                 <ProductRowExpanded
                                   product={p}
                                   storeUrl={storeUrl}
