@@ -76,3 +76,10 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 **Files:** `src/components/layout/AppSidebar.tsx`
 **Why:** Sidebar linked sites to `/explore/<id>`, a redirect-only page. Users saw a blank render tick before `router.replace` fired.
 **What:** Direct link to `/sites/<id>/products`, skipping the redirect page.
+
+## 2026-04-19 — Branded 404 with auto-redirect to Projects
+
+**Scope:** ui
+**Files:** `src/pages/404.tsx`
+**Why:** Requested friendlier 404 — show brand and send users home.
+**What:** 404 page now renders logo + brand name, message, "Go to Projects" button, auto-redirects to `/projects` after 5s.
