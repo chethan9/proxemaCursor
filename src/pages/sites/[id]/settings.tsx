@@ -158,8 +158,14 @@ function SettingsInner() {
     if (!store || deleteConfirmation !== store.name) return;
     setDeleting(true);
     try {
-      await deleteStore(store.id);
+      const result = await deleteStore(store.id);
+      const parts = [`${store.name} removed.`];
+      if (result.webhooks_removed > 0) parts.push(`${result.webhooks_removed} webhook${result.webhooks_removed === 1 ? "" : "s"} cleaned up from WooCommerce.`);
+      if (result.webhooks_failed > 0) parts.push(`${result.webhooks_failed} webhook${result.webhooks_failed === 1 ? "" : "s"} could not be removed (site may be offline).`);
+      toast({ title: "Site deleted", description: parts.join(" ") });
       router.push("/sites");
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setDeleting(false);
     }

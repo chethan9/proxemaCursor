@@ -162,8 +162,11 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
     if (!store || deleteConfirmation !== store.name) return;
     setDeleting(true);
     try {
-      await deleteStoreMutation.mutateAsync(store.id);
-      toast({ title: "Site deleted", description: `${store.name} and all associated data removed.` });
+      const result = await deleteStoreMutation.mutateAsync(store.id);
+      const parts = [`${store.name} and all synced data removed.`];
+      if (result?.webhooks_removed > 0) parts.push(`${result.webhooks_removed} webhook${result.webhooks_removed === 1 ? "" : "s"} cleaned up from WooCommerce.`);
+      if (result?.webhooks_failed > 0) parts.push(`${result.webhooks_failed} webhook${result.webhooks_failed === 1 ? "" : "s"} could not be removed.`);
+      toast({ title: "Site deleted", description: parts.join(" ") });
       onSaved?.();
       onOpenChange(false);
       router.push("/projects");
