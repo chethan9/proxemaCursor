@@ -1,32 +1,84 @@
-import { useRouter } from "next/router";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { useState, useMemo } from "react";
+import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Ban } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Ban,
+  Briefcase,
+  Clock,
+  Search,
+  Filter,
+  RefreshCw,
+} from "lucide-react";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 import { cancelBulkJob, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useStore } from "@/hooks/queries/useStores";
 
-const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string }> = {
-  pending: { icon: Loader2, cls: "text-muted-foreground" },
-  running: { icon: Loader2, cls: "text-primary animate-spin" },
-  completed: { icon: CheckCircle2, cls: "text-success" },
-  failed: { icon: XCircle, cls: "text-destructive" },
-  cancelled: { icon: Ban, cls: "text-muted-foreground" },
+const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string; badge: string }> = {
+  pending: { icon: Clock, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
+  running: { icon: Loader2, cls: "text-primary animate-spin", badge: "bg-primary/10 text-primary border-primary/20" },
+  completed: { icon: CheckCircle2, cls: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  failed: { icon: XCircle, cls: "text-destructive", badge: "bg-destructive/10 text-destructive border-destructive/20" },
+  cancelled: { icon: Ban, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
 };
 
-export default function BulkJobsPage() {
-  const router = useRouter();
-  const storeId = typeof router.query.id === "string" ? router.query.id : null;
-  const { data: store } = useStore(storeId);
-  const { data: jobs = [], isLoading } = useStoreBulkJobs(storeId, 100);
+function BulkJobsInner() {
+  const { id, store, loading } = useSiteFromRoute();
+  const { data: jobs = [], isLoading, isFetching } = useStoreBulkJobs(id, 200);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const stats = useMemo(() => ({
+    total: jobs.length,
+    running: jobs.filter((j) => j.status === "running" || j.status === "pending").length,
+    completed: jobs.filter((j) => j.status === "completed").length,
+    failed: jobs.filter((j) => j.status === "failed").length,
+    totalProcessed: jobs.reduce((s, j) => s + (j.processed || 0), 0),
+  }), [jobs]);
+
+  const jobTypes = useMemo(() => {
+    const set = new Set(jobs.map((j) => j.job_type));
+    return Array.from(set);
+  }, [jobs]);
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((j) => {
+      if (statusFilter !== "all" && j.status !== statusFilter) return false;
+      if (typeFilter !== "all" && j.job_type !== typeFilter) return false;
+      if (search) {
+        const label = JOB_TYPE_LABEL[j.job_type as keyof typeof JOB_TYPE_LABEL] || j.job_type;
+        const hay = `${label} ${j.error_message || ""}`.toLowerCase();
+        if (!hay.includes(search.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [jobs, statusFilter, typeFilter, search]);
 
   const handleCancel = async (j: BulkJob) => {
     try {
@@ -38,84 +90,240 @@ export default function BulkJobsPage() {
     }
   };
 
+  if (loading) return <SiteLoadingSkeleton />;
+  if (!store) return <div className="p-6">Store not found</div>;
+
+  const formatDate = (d: string | null) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleString("en-US", {
+      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+  };
+
+  const formatDuration = (start: string | null, end: string | null) => {
+    if (!start) return "—";
+    const endTime = end ? new Date(end).getTime() : Date.now();
+    const ms = endTime - new Date(start).getTime();
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${(ms / 60000).toFixed(1)}m`;
+  };
+
   return (
-    <AppLayout title={`Bulk Jobs · ${store?.name ?? ""}`}>
-      <div className="p-6 space-y-4">
+    <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Bulk Jobs</h1>
-          <p className="text-sm text-muted-foreground">Background jobs for {store?.name ?? "this store"}</p>
+          <p className="text-sm text-muted-foreground">Background jobs for {store.name}</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => qc.invalidateQueries({ queryKey: ["bulk-jobs"] })}
+          disabled={isFetching}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Job history</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[220px]">Progress</TableHead>
-                  <TableHead className="text-right">Success</TableHead>
-                  <TableHead className="text-right">Failed</TableHead>
-                  <TableHead>Started</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-sm text-muted-foreground">Loading…</TableCell></TableRow>
-                ) : jobs.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-sm text-muted-foreground">No bulk jobs yet</TableCell></TableRow>
-                ) : (
-                  jobs.map((j) => {
-                    const meta = STATUS_META[j.status] ?? STATUS_META.pending;
-                    const Icon = meta.icon;
-                    const pct = j.total > 0 ? Math.round((j.processed / j.total) * 100) : 0;
-                    const running = j.status === "running" || j.status === "pending";
-                    return (
-                      <TableRow key={j.id}>
-                        <TableCell className="font-medium text-sm">{JOB_TYPE_LABEL[j.job_type as keyof typeof JOB_TYPE_LABEL] || j.job_type}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
-                            <Badge variant="outline" className="text-[10px] capitalize">{j.status}</Badge>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                <Briefcase className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total Jobs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Loader2 className={`h-5 w-5 text-primary ${stats.running > 0 ? "animate-spin" : ""}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold">{stats.running}</p>
+                <p className="text-xs text-muted-foreground">Active</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold">{stats.completed}</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <XCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold">{stats.failed}</p>
+                <p className="text-xs text-muted-foreground">Failed</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold">{stats.totalProcessed.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Records Processed</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input placeholder="Search jobs..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="running">Running</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {jobTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {JOB_TYPE_LABEL[t as keyof typeof JOB_TYPE_LABEL] || t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(search || statusFilter !== "all" || typeFilter !== "all") && (
+              <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); }}>
+                Clear
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Job History</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[240px]">Progress</TableHead>
+                <TableHead className="text-right">Success</TableHead>
+                <TableHead className="text-right">Failed</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Started</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />Loading jobs…
+                </TableCell></TableRow>
+              ) : filteredJobs.length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
+                  <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  {jobs.length === 0 ? "No bulk jobs yet" : "No jobs match your filters"}
+                </TableCell></TableRow>
+              ) : (
+                filteredJobs.map((j) => {
+                  const meta = STATUS_META[j.status] ?? STATUS_META.pending;
+                  const Icon = meta.icon;
+                  const pct = j.total > 0 ? Math.round((j.processed / j.total) * 100) : 0;
+                  const running = j.status === "running" || j.status === "pending";
+                  return (
+                    <TableRow key={j.id}>
+                      <TableCell className="font-medium text-sm">
+                        {JOB_TYPE_LABEL[j.job_type as keyof typeof JOB_TYPE_LABEL] || j.job_type}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
+                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{j.status}</Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span className="font-mono">{j.processed}/{j.total}</span>
+                            <span>{pct}%</span>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                              <span className="font-mono">{j.processed}/{j.total}</span>
-                              <span>{pct}%</span>
-                            </div>
-                            <Progress value={pct} className="h-1.5" />
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-success">{j.succeeded}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-destructive">{j.failed}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {j.started_at ? new Date(j.started_at).toLocaleString() : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {running && (
-                            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleCancel(j)}>Cancel</Button>
-                          )}
+                          <Progress value={pct} className="h-1.5" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-emerald-600">{j.succeeded}</TableCell>
+                      <TableCell className="text-right font-mono text-xs text-destructive">{j.failed}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {formatDuration(j.started_at, j.completed_at)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(j.started_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
                           {j.error_message && (
                             <span title={j.error_message} className="text-[11px] text-destructive inline-flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" /> error
                             </span>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    </AppLayout>
+                          {running && (
+                            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleCancel(j)}>
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function BulkJobsPage() {
+  return (
+    <SitePageShell>
+      <BulkJobsInner />
+    </SitePageShell>
   );
 }
