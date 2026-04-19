@@ -46,3 +46,16 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 **Changes:**
 - `src/lib/menu-registry.ts`: registered `site-bulk-jobs` item (Layers icon, "Manage" group, path `/bulk-jobs`). Added `Layers` to ICON_MAP.
 **Impact:** Bulk Jobs now appears in site sidebar under "Manage" for new menu configs. Existing saved site menu configs per role will show it under "Unassigned (new)" group until re-saved via menu editor.
+
+## 2026-04-19 — Sidebar reorder + user default landing page
+
+**Scope:** feature + schema
+**Files:** `src/lib/menu-registry.ts`, `src/contexts/AuthProvider.tsx`, `src/pages/auth/login.tsx`, `src/pages/settings/profile.tsx`, `profiles` table
+**Why:** Users wanted Stores first in the sidebar and a way to pick their own post-login landing page.
+**What:**
+- Renamed "Dashboard" → "Health".
+- Reordered default groups: Stores → Overview → Management → Operations → Developer → Administration → System.
+- Added `profiles.default_landing_path text` column.
+- Settings → Profile now has a "Default Landing Page" card (dropdown of all menu items the user can access).
+- Login now redirects to the saved `default_landing_path` (fallback `/`).
+**Follow-ups:** Existing saved role menu configs won't reflect the rename/reorder until re-saved via Menu Editor.
