@@ -19,12 +19,22 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-2", className)}
       style={{ ["--rdp-cell-size" as string]: `${cellSize}px` } as React.CSSProperties}
+      styles={{
+        month: { margin: 0 },
+        table: { margin: 0, borderCollapse: "collapse" },
+        head_row: { height: cellSize },
+        row: { height: cellSize, marginTop: 0 },
+        cell: { height: cellSize, width: cellSize, padding: 0 },
+        day: { height: cellSize, width: cellSize, fontSize: 12 },
+        head_cell: { height: cellSize, width: cellSize, fontSize: 11 },
+        caption: { height: cellSize, marginBottom: 2 },
+      }}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-2",
-        caption: "flex justify-center pt-1 relative items-center",
+        months: "flex flex-col sm:flex-row gap-2",
+        month: "space-y-1",
+        caption: "flex justify-center relative items-center",
         caption_label: "text-xs font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
@@ -35,18 +45,17 @@ function Calendar({
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse",
         head_row: "flex",
-        head_cell:
-          "text-muted-foreground rounded-md w-7 font-normal text-[0.7rem]",
-        row: "flex w-full mt-1",
+        head_cell: "text-muted-foreground font-normal flex items-center justify-center",
+        row: "flex w-full",
         cell: cn(
-          "relative p-0 text-center text-xs focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
+          "relative text-center focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
           props.mode === "range"
             ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
             : "[&:has([aria-selected])]:rounded-md"
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 p-0 font-normal text-xs aria-selected:opacity-100"
+          "p-0 font-normal aria-selected:opacity-100"
         ),
         day_range_start: "day-range-start",
         day_range_end: "day-range-end",
