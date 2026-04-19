@@ -389,7 +389,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={orders.length === 0} title="Export CSV">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0} title="Export CSV">
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
             </Button>
@@ -847,7 +847,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               <OrderRowExpanded
                                 order={o}
                                 storeUrl={storeUrl}
-                                onSaved={(updated) => setOrders((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+                                onSaved={() => { /* react-query will refetch */ }}
                               />
                             </TableCell>
                           </TableRow>
