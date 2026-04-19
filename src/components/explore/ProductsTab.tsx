@@ -112,13 +112,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
 
-  const visibleColList = useMemo(
-    () => columnOrder
-      .map((k) => COLUMNS.find((c) => c.key === k))
-      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
-    [visibleCols, columnOrder]
-  );
-
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
@@ -132,7 +125,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [bulkCategoryIds, setBulkCategoryIds] = useState<Set<number>>(new Set());
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
-
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -145,6 +137,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
   }, [viewMode]);
 
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
+    image: true, id: false, name: true, status: true, sku: true, price: true,
+    regular_price: false, sale_price: false, stock: true, stock_status: false,
+    manage_stock: false, category: true, type: false, slug: false, wooId: false,
+    parent_id: false, permalink: false, tax_status: false, tax_class: false,
+    shipping_required: false, images_count: false, short_desc: false, description: false,
+    attributes: false, sales: false, date_created: false, date_modified: false,
+    created: false, updated: false,
+  });
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -241,269 +242,36 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     }
   }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatusVal, newProductStatus, categoryMode, bulkCategoryIds]);
 
-  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, page, pageSize]);
 
-  const exportCsv = useCallback(() => {
-    if (products.length === 0) return;
-    const cols = visibleColList.filter((c) => c.key !== "image");
-    const header = cols.map((c) => c.label).join(",");
-    const rows = products.map((p) => cols.map((c) => {
-      let v: string | number = "";
-      switch (c.key) {
-        case "id": v = p.id; break;
-        case "name": v = p.name || ""; break;
-        case "status": v = p.status || ""; break;
-        case "sku": v = p.sku || ""; break;
-        case "price": v = (p.price as string) || ""; break;
-        case "regular_price": v = (p.regular_price as string) || ""; break;
-        case "sale_price": v = (p.sale_price as string) || ""; break;
-        case "stock": v = p.stock_quantity ?? ""; break;
-        case "stock_status": v = p.stock_status || ""; break;
-        case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
-        case "category": v = getCategoryNames(p.categories); break;
-        case "type": v = p.type || ""; break;
-        case "slug": v = p.slug || ""; break;
-        case "wooId": v = p.woo_id ?? ""; break;
-        case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
-        case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
-        case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
-        case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
-        case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
-        case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
-        case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
-        case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
-        case "attributes": v = JSON.stringify(p.attributes || []); break;
-        case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
-        case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
-        case "sales": v = p.synced_at || ""; break;
-        case "created": v = p.created_at || ""; break;
-        case "updated": v = p.updated_at || ""; break;
-      }
-      const s = String(v).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(",")).join("\n");
-    const csv = `${header}\n${rows}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `products-${storeId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, visibleColList, storeId]);
-
-  const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
-  const prefsLoaded = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (prefsLoaded.current) return;
-    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("explore-col-order") || localStorage.getItem("explore-page-size") || localStorage.getItem("explore-view-mode"));
-    if (hasLocal) { prefsLoaded.current = true; return; }
-    fetchPreferences("products").then((remote) => {
-      if (remote) {
-        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
-        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
-        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
-        if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
-        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
-        if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
-        if (typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
-        if (typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
-        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
-      }
-      prefsLoaded.current = true;
-    }).catch(() => { prefsLoaded.current = true; });
-  }, []);
-
-  useEffect(() => {
-    if (!prefsLoaded.current) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      savePreferences("products", { columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort }).catch(() => {});
-    }, 800);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
-
-  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("explore-col-order");
-        if (saved) {
-          const parsed = JSON.parse(saved) as ColumnKey[];
-          const allKeys = COLUMNS.map((c) => c.key);
-          const valid = parsed.filter((k) => allKeys.includes(k));
-          const missing = allKeys.filter((k) => !valid.includes(k));
-          return [...valid, ...missing];
-        }
-      } catch { /* ignore */ }
-    }
-    return COLUMNS.map((c) => c.key);
-  });
-  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
-
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [sort, setSort] = useState(SORT_OPTIONS[0]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
-  }, [columnOrder]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("explore-page-size", String(pageSize));
-  }, [pageSize]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
-
-  const { data: productsResult, isLoading: loading } = useProducts({
+  const prefetchOpts = useMemo(() => ({
     storeId,
-    page,
-    pageSize,
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
     statusFilter,
     excludeOutOfStock,
-    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
+    categoryFilter,
     stockStatusFilter,
     priceMin: priceMin ? Number(priceMin) : undefined,
     priceMax: priceMax ? Number(priceMax) : undefined,
+  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+
+  useBackgroundPagination({
+    enabled: !!storeId && productCount > 0,
+    totalCount: productCount,
+    pageSize,
+    currentPage: page,
+    queryKeyFn: (p) => queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
+    queryFn: (p) => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
+    maxRecords: 5000,
+    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
   });
-  const products = productsResult?.data ?? [];
-  const productCount = productsResult?.count ?? 0;
 
-  const submitBulk = useCallback(async () => {
-    if (!bulkDialog || selectedIds.size === 0 || overLimit) return;
-    const wooIds = products.filter((p) => selectedIds.has(p.id)).map((p) => p.woo_id).filter((id): id is number => id != null);
-    if (wooIds.length === 0) return;
-    setBulkSubmitting(true);
-    try {
-      if (bulkDialog === "price") {
-        const num = Number(priceValue);
-        if (!priceValue || Number.isNaN(num)) { setBulkSubmitting(false); return; }
-        await createBulkJob({ store_id: storeId, job_type: "update_product_price", total: wooIds.length, payload: { type: "update_product_price", product_ids: wooIds, operation: priceOp, value: num } });
-      } else if (bulkDialog === "stock") {
-        if (stockOp === "set_status") {
-          await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload: { type: "update_product_stock", product_ids: wooIds, operation: "set_status", stock_status: stockStatusVal } });
-        } else {
-          const num = Number(stockValue);
-          if (!stockValue || Number.isNaN(num)) { setBulkSubmitting(false); return; }
-          await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload: { type: "update_product_stock", product_ids: wooIds, operation: stockOp, value: num } });
-        }
-      } else if (bulkDialog === "status") {
-        await createBulkJob({ store_id: storeId, job_type: "update_product_status", total: wooIds.length, payload: { type: "update_product_status", product_ids: wooIds, new_status: newProductStatus } });
-      } else if (bulkDialog === "category") {
-        if (bulkCategoryIds.size === 0) { setBulkSubmitting(false); return; }
-        await createBulkJob({ store_id: storeId, job_type: "assign_product_categories", total: wooIds.length, payload: { type: "assign_product_categories", product_ids: wooIds, mode: categoryMode, category_ids: Array.from(bulkCategoryIds) } });
-      } else if (bulkDialog === "delete") {
-        await createBulkJob({ store_id: storeId, job_type: "delete_products", total: wooIds.length, payload: { type: "delete_products", product_ids: wooIds, force: false } });
-      }
-      setSelectedIds(new Set());
-      setBulkDialog(null);
-      setPriceValue(""); setStockValue(""); setBulkCategoryIds(new Set());
-    } catch (err) {
-      console.error("[bulk]", err);
-    } finally {
-      setBulkSubmitting(false);
-    }
-  }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatusVal, newProductStatus, categoryMode, bulkCategoryIds]);
-
-  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
-
-  const exportCsv = useCallback(() => {
-    if (products.length === 0) return;
-    const cols = visibleColList.filter((c) => c.key !== "image");
-    const header = cols.map((c) => c.label).join(",");
-    const rows = products.map((p) => cols.map((c) => {
-      let v: string | number = "";
-      switch (c.key) {
-        case "id": v = p.id; break;
-        case "name": v = p.name || ""; break;
-        case "status": v = p.status || ""; break;
-        case "sku": v = p.sku || ""; break;
-        case "price": v = (p.price as string) || ""; break;
-        case "regular_price": v = (p.regular_price as string) || ""; break;
-        case "sale_price": v = (p.sale_price as string) || ""; break;
-        case "stock": v = p.stock_quantity ?? ""; break;
-        case "stock_status": v = p.stock_status || ""; break;
-        case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
-        case "category": v = getCategoryNames(p.categories); break;
-        case "type": v = p.type || ""; break;
-        case "slug": v = p.slug || ""; break;
-        case "wooId": v = p.woo_id ?? ""; break;
-        case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
-        case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
-        case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
-        case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
-        case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
-        case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
-        case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
-        case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
-        case "attributes": v = JSON.stringify(p.attributes || []); break;
-        case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
-        case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
-        case "sales": v = p.synced_at || ""; break;
-        case "created": v = p.created_at || ""; break;
-        case "updated": v = p.updated_at || ""; break;
-      }
-      const s = String(v).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(",")).join("\n");
-    const csv = `${header}\n${rows}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `products-${storeId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, visibleColList, storeId]);
-
-  const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
-  const prefsLoaded = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (prefsLoaded.current) return;
-    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("explore-col-order") || localStorage.getItem("explore-page-size") || localStorage.getItem("explore-view-mode"));
-    if (hasLocal) { prefsLoaded.current = true; return; }
-    fetchPreferences("products").then((remote) => {
-      if (remote) {
-        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
-        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
-        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
-        if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
-        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
-        if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
-        if (typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
-        if (typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
-        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
-      }
-      prefsLoaded.current = true;
-    }).catch(() => { prefsLoaded.current = true; });
-  }, []);
-
-  useEffect(() => {
-    if (!prefsLoaded.current) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      savePreferences("products", { columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort }).catch(() => {});
-    }, 800);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
+  const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
+    // Inline mutations should invalidate query; placeholder no-op.
+  };
+  void setProducts;
 
   const visibleColList = useMemo(
     () => columnOrder
@@ -511,6 +279,88 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
     [visibleCols, columnOrder]
   );
+
+  const exportCsv = useCallback(() => {
+    if (products.length === 0) return;
+    const cols = visibleColList.filter((c) => c.key !== "image");
+    const header = cols.map((c) => c.label).join(",");
+    const rows = products.map((p) => cols.map((c) => {
+      let v: string | number = "";
+      switch (c.key) {
+        case "id": v = p.id; break;
+        case "name": v = p.name || ""; break;
+        case "status": v = p.status || ""; break;
+        case "sku": v = p.sku || ""; break;
+        case "price": v = (p.price as string) || ""; break;
+        case "regular_price": v = (p.regular_price as string) || ""; break;
+        case "sale_price": v = (p.sale_price as string) || ""; break;
+        case "stock": v = p.stock_quantity ?? ""; break;
+        case "stock_status": v = p.stock_status || ""; break;
+        case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
+        case "category": v = getCategoryNames(p.categories); break;
+        case "type": v = p.type || ""; break;
+        case "slug": v = p.slug || ""; break;
+        case "wooId": v = p.woo_id ?? ""; break;
+        case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
+        case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
+        case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
+        case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
+        case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
+        case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
+        case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
+        case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
+        case "attributes": v = JSON.stringify(p.attributes || []); break;
+        case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
+        case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
+        case "sales": v = p.synced_at || ""; break;
+        case "created": v = p.created_at || ""; break;
+        case "updated": v = p.updated_at || ""; break;
+      }
+      const s = String(v).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    }).join(",")).join("\n");
+    const csv = `${header}\n${rows}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `products-${storeId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [products, visibleColList, storeId]);
+
+  const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
+  const prefsLoaded = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (prefsLoaded.current) return;
+    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("explore-col-order") || localStorage.getItem("explore-page-size") || localStorage.getItem("explore-view-mode"));
+    if (hasLocal) { prefsLoaded.current = true; return; }
+    fetchPreferences("products").then((remote) => {
+      if (remote) {
+        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
+        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
+        if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
+        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
+        if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
+        if (typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
+        if (typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
+        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+      }
+      prefsLoaded.current = true;
+    }).catch(() => { prefsLoaded.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      savePreferences("products", { columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort }).catch(() => {});
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
 
   return (
     <div className="space-y-2">
@@ -769,6 +619,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={overLimit} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />Clear</Button>
             </div>
           )}
@@ -814,27 +665,22 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         const stockLow = p.stock_quantity != null && p.stock_quantity < 5;
                         const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
                         return (
-                          <div key={p.id} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition">
-                            <div className="absolute top-1 left-1 z-10" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} className="bg-background/90 border-border shadow-sm" />
-                            </div>
-                            <div onClick={() => setQuickEditProduct(p)} className="cursor-pointer">
-                              <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                {thumb ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                ) : (
-                                  <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
-                                )}
-                                {stockOut && (
-                                  <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-                                    <span className="text-[9px] font-semibold uppercase text-destructive">Out</span>
-                                  </div>
-                                )}
-                                {!stockOut && stockLow && (
-                                  <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
-                                )}
-                              </div>
+                          <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-md overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
+                            <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                              {thumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+                              ) : (
+                                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                              )}
+                              {stockOut && (
+                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                                  <span className="text-[9px] font-semibold uppercase text-destructive">Out</span>
+                                </div>
+                              )}
+                              {!stockOut && stockLow && (
+                                <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-warning ring-1 ring-background" />
+                              )}
                             </div>
                           </div>
                         );
@@ -848,31 +694,26 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
                       const label = p.status === "publish" ? "Active" : (p.status || "—");
                       return (
-                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col">
-                          <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} className="bg-background/95 border-border shadow-sm" />
-                          </div>
-                          <div onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))} className="cursor-pointer flex-1 flex flex-col">
-                            <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                              {thumb ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
-                              ) : (
-                                <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                              )}
-                              <div className="absolute top-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
-                                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-                                <span className="capitalize">{label}</span>
-                              </div>
+                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group border border-border rounded-lg overflow-hidden hover:border-primary/40 hover:shadow-md transition bg-card flex flex-col cursor-pointer">
+                          <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                            {thumb ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                            ) : (
+                              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                            )}
+                            <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                              <span className="capitalize">{label}</span>
                             </div>
-                            <div className="p-2.5 space-y-1 flex-1 flex flex-col">
-                              <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
-                              <div className="text-[11px] text-muted-foreground truncate">{cats || "No category"}</div>
-                              <div className="flex items-end justify-between gap-2 pt-1 mt-auto border-t border-border/50">
-                                <div className="min-w-0">
-                                  <div className="text-[10px] text-muted-foreground font-mono truncate">{p.sku || "—"}</div>
-                                  <div className="text-xs font-semibold font-mono">{p.price || "—"}</div>
-                                </div>
+                          </div>
+                          <div className="p-2.5 space-y-1 flex-1 flex flex-col">
+                            <div className="text-[13px] font-medium leading-tight line-clamp-2 min-h-[32px]">{p.name || "—"}</div>
+                            <div className="text-[11px] text-muted-foreground truncate">{cats || "No category"}</div>
+                            <div className="flex items-end justify-between gap-2 pt-1 mt-auto border-t border-border/50">
+                              <div className="min-w-0">
+                                <div className="text-[10px] text-muted-foreground font-mono truncate">{p.sku || "—"}</div>
+                                <div className="text-xs font-semibold font-mono">{p.price || "—"}</div>
                               </div>
                             </div>
                           </div>
@@ -888,15 +729,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
-                    <TableHead className="w-8 pl-3 pr-0">
-                      <Checkbox
-                        checked={products.length > 0 && products.every((p) => selectedIds.has(p.id))}
-                        onCheckedChange={(v) => {
-                          if (v) setSelectedIds(new Set(products.map((p) => p.id)));
-                          else setSelectedIds(new Set());
-                        }}
-                      />
-                    </TableHead>
                     {visibleColList.map((c) => {
                       const baseCls = c.key === "image" ? "w-14" : "";
                       const numericKeys: ColumnKey[] = ["price", "regular_price", "sale_price", "stock", "wooId", "parent_id", "images_count"];
@@ -952,13 +784,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     products.map((p) => {
                       const thumb = getProductThumbnail(p.images);
                       const isExpanded = expandedRowId === p.id;
-                      const isSelected = selectedIds.has(p.id);
                       return (
                         <>
-                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
-                            <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
-                            </TableCell>
+                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                             {visibleColList.map((c) => {
                               if (c.key === "image") {
                                 return (
@@ -1035,8 +863,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "sales") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.synced_at ? new Date(p.synced_at).toLocaleString() : "—"}</TableCell>;
                               if (c.key === "created") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}</TableCell>;
                               if (c.key === "updated") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.updated_at ? new Date(p.updated_at).toLocaleString() : "—"}</TableCell>;
-                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-xs text-right">{p.regular_price || "—"}</TableCell>;
-                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-xs text-right">{p.sale_price || "—"}</TableCell>;
+                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.regular_price || "—"}</TableCell>;
+                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.sale_price || "—"}</TableCell>;
                               if (c.key === "stock_status") {
                                 const s = p.stock_status;
                                 return (
@@ -1090,6 +918,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
                           </TableRow>
+                          {isExpanded && (
+                            <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
+                              <TableCell colSpan={visibleColList.length} className="p-0">
+                                <ProductRowExpanded
+                                  product={p}
+                                  storeUrl={storeUrl}
+                                  onClose={() => setExpandedRowId(null)}
+                                  onSaved={(updated) => {
+                                    setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </>
                       );
                     })
@@ -1121,7 +963,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               This queues a background job. Processing {selectedIds.size} products may take {Math.ceil(selectedIds.size * 1.5 / 60)}–{Math.ceil(selectedIds.size * 3 / 60)} minutes.
             </DialogDescription>
           </DialogHeader>
-
           {bulkDialog === "price" && (
             <div className="space-y-3">
               <div className="space-y-1.5">
@@ -1144,7 +985,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               </div>
             </div>
           )}
-
           {bulkDialog === "stock" && (
             <div className="space-y-3">
               <div className="space-y-1.5">
@@ -1178,7 +1018,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               )}
             </div>
           )}
-
           {bulkDialog === "status" && (
             <div className="space-y-1.5">
               <Label>New status</Label>
@@ -1193,7 +1032,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               </Select>
             </div>
           )}
-
           {bulkDialog === "category" && (
             <div className="space-y-3">
               <div className="space-y-1.5">
@@ -1234,11 +1072,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               </div>
             </div>
           )}
-
           {bulkDialog === "delete" && (
             <div className="text-sm text-muted-foreground">Products will be moved to trash in WooCommerce. This can be undone from the Woo admin.</div>
           )}
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkDialog(null)} disabled={bulkSubmitting}>Cancel</Button>
             <Button onClick={submitBulk} disabled={bulkSubmitting} variant={bulkDialog === "delete" ? "destructive" : "default"}>
