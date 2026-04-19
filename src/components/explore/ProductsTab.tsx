@@ -14,10 +14,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -35,6 +41,8 @@ import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
+import { createBulkJob } from "@/services/bulkJobService";
+import { supabase } from "@/integrations/supabase/client";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -107,10 +115,107 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const [priceOp, setPriceOp] = useState<"set" | "increase_pct" | "decrease_pct" | "increase_fixed" | "decrease_fixed" | "set_sale">("set");
+  const [priceValue, setPriceValue] = useState("");
+  const [stockOp, setStockOp] = useState<"set" | "adjust" | "set_status">("set");
+  const [stockValue, setStockValue] = useState("");
+  const [stockStatus, setStockStatus] = useState<"instock" | "outofstock" | "onbackorder">("instock");
+  const [newProductStatus, setNewProductStatus] = useState<"publish" | "draft" | "pending" | "private">("publish");
+  const [categoryMode, setCategoryMode] = useState<"add" | "remove" | "replace">("add");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(new Set());
+  const [allCategories, setAllCategories] = useState<{ woo_id: number; name: string }[]>([]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const MAX_BULK = 500;
+  const overLimit = selectedIds.size > MAX_BULK;
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
-  }, [viewMode]);
+    if (bulkDialog === "category" && allCategories.length === 0 && storeId) {
+      supabase
+        .from("categories")
+        .select("woo_id,name")
+        .eq("store_id", storeId)
+        .order("name")
+        .then(({ data }) => {
+          if (data) setAllCategories(data.filter((c): c is { woo_id: number; name: string } => c.woo_id != null));
+        });
+    }
+  }, [bulkDialog, storeId, allCategories.length]);
+
+  const submitBulk = useCallback(async () => {
+    if (!bulkDialog || selectedIds.size === 0 || overLimit) return;
+    const wooIds = products.filter((p) => selectedIds.has(p.id)).map((p) => p.woo_id).filter((id): id is number => id != null);
+    if (wooIds.length === 0) {
+      toast({ title: "Nothing to process", variant: "destructive" });
+      return;
+    }
+    setBulkSubmitting(true);
+    try {
+      if (bulkDialog === "price") {
+        const num = Number(priceValue);
+        if (!priceValue || Number.isNaN(num)) { toast({ title: "Enter a valid number", variant: "destructive" }); setBulkSubmitting(false); return; }
+        await createBulkJob({
+          store_id: storeId,
+          job_type: "update_product_price",
+          total: wooIds.length,
+          payload: { type: "update_product_price", product_ids: wooIds, operation: priceOp, value: num },
+        });
+      } else if (bulkDialog === "stock") {
+        const payload = stockOp === "set_status"
+          ? { type: "update_product_stock" as const, product_ids: wooIds, operation: "set_status" as const, stock_status: stockStatus }
+          : { type: "update_product_stock" as const, product_ids: wooIds, operation: stockOp, value: Number(stockValue) };
+        if (stockOp !== "set_status" && (!stockValue || Number.isNaN(Number(stockValue)))) {
+          toast({ title: "Enter a valid number", variant: "destructive" }); setBulkSubmitting(false); return;
+        }
+        await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload });
+      } else if (bulkDialog === "status") {
+        await createBulkJob({
+          store_id: storeId,
+          job_type: "update_product_status",
+          total: wooIds.length,
+          payload: { type: "update_product_status", product_ids: wooIds, new_status: newProductStatus },
+        });
+      } else if (bulkDialog === "category") {
+        if (selectedCategoryIds.size === 0) { toast({ title: "Pick at least one category", variant: "destructive" }); setBulkSubmitting(false); return; }
+        await createBulkJob({
+          store_id: storeId,
+          job_type: "assign_product_categories",
+          total: wooIds.length,
+          payload: { type: "assign_product_categories", product_ids: wooIds, mode: categoryMode, category_ids: Array.from(selectedCategoryIds) },
+        });
+      } else if (bulkDialog === "delete") {
+        await createBulkJob({
+          store_id: storeId,
+          job_type: "delete_products",
+          total: wooIds.length,
+          payload: { type: "delete_products", product_ids: wooIds, force: false },
+        });
+      }
+      toast({ title: "Bulk job queued", description: `Processing ${wooIds.length} products in background.` });
+      setSelectedIds(new Set());
+      setBulkDialog(null);
+      setPriceValue(""); setStockValue(""); setSelectedCategoryIds(new Set());
+    } catch (err) {
+      toast({ title: "Failed to queue", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatus, newProductStatus, categoryMode, selectedCategoryIds, toast]);
+
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, debouncedSearch, statusFilter, categoryFilter, stockStatusFilter, priceMin, priceMax, page, pageSize]);
 
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     image: true, id: false, name: true, status: true, sku: true, price: true,
