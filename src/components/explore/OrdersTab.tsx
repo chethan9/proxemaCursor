@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2 } from "lucide-react";
+import { DateRangeFilter } from "./DateRangeFilter";
 import {
   getCustomerName,
   getCustomerEmail,
@@ -345,41 +346,16 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </PopoverContent>
               </Popover>
             )}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant={dateRange !== "all" ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5">
-                  <Filter className="h-3.5 w-3.5" />
-                  <span>{dateRange === "all" ? "Date" : dateRange === "today" ? "Today" : dateRange === "yesterday" ? "Yesterday" : dateRange === "7d" ? "Last 7 days" : dateRange === "30d" ? "Last 30 days" : dateRange === "90d" ? "Last 90 days" : "Custom"}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto p-0">
-                <div className="p-1">
-                  {[
-                    { v: "all", l: "All time" },
-                    { v: "today", l: "Today" },
-                    { v: "yesterday", l: "Yesterday" },
-                    { v: "7d", l: "Last 7 days" },
-                    { v: "30d", l: "Last 30 days" },
-                    { v: "90d", l: "Last 90 days" },
-                    { v: "custom", l: "Custom range…" },
-                  ].map((o) => (
-                    <button key={o.v} onClick={() => setDateRange(o.v)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${dateRange === o.v ? "bg-accent" : ""}`}>{o.l}</button>
-                  ))}
-                </div>
-                {dateRange === "custom" && (
-                  <div className="border-t p-3 flex gap-4">
-                    <div>
-                      <div className="text-[10px] font-semibold text-muted-foreground mb-1">From</div>
-                      <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold text-muted-foreground mb-1">To</div>
-                      <Calendar mode="single" selected={customTo} onSelect={setCustomTo} />
-                    </div>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
+            <DateRangeFilter
+              range={dateRange as "all" | "today" | "yesterday" | "7d" | "30d" | "90d" | "custom"}
+              from={customFrom}
+              to={customTo}
+              onChange={(r, f, t) => {
+                setDateRange(r);
+                setCustomFrom(f);
+                setCustomTo(t);
+              }}
+            />
           </div>
           <div className="flex-1 flex justify-center min-w-0">
             <div className="w-full max-w-[288px]">
@@ -514,41 +490,16 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               )}
 
               {!embedHeader && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant={dateRange !== "all" ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5">
-                      <Filter className="h-3.5 w-3.5" />
-                      <span>{dateRange === "all" ? "Date" : dateRange === "today" ? "Today" : dateRange === "yesterday" ? "Yesterday" : dateRange === "7d" ? "Last 7 days" : dateRange === "30d" ? "Last 30 days" : dateRange === "90d" ? "Last 90 days" : "Custom"}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <div className="p-1">
-                      {[
-                        { v: "all", l: "All time" },
-                        { v: "today", l: "Today" },
-                        { v: "yesterday", l: "Yesterday" },
-                        { v: "7d", l: "Last 7 days" },
-                        { v: "30d", l: "Last 30 days" },
-                        { v: "90d", l: "Last 90 days" },
-                        { v: "custom", l: "Custom range…" },
-                      ].map((o) => (
-                        <button key={o.v} onClick={() => setDateRange(o.v)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${dateRange === o.v ? "bg-accent" : ""}`}>{o.l}</button>
-                      ))}
-                    </div>
-                    {dateRange === "custom" && (
-                      <div className="border-t p-3 flex gap-4">
-                        <div>
-                          <div className="text-[10px] font-semibold text-muted-foreground mb-1">From</div>
-                          <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} />
-                        </div>
-                        <div>
-                          <div className="text-[10px] font-semibold text-muted-foreground mb-1">To</div>
-                          <Calendar mode="single" selected={customTo} onSelect={setCustomTo} />
-                        </div>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
+                <DateRangeFilter
+                  range={dateRange as "all" | "today" | "yesterday" | "7d" | "30d" | "90d" | "custom"}
+                  from={customFrom}
+                  to={customTo}
+                  onChange={(r, f, t) => {
+                    setDateRange(r);
+                    setCustomFrom(f);
+                    setCustomTo(t);
+                  }}
+                />
               )}
 
               {hasActiveFilters && (
