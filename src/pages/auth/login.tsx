@@ -15,26 +15,33 @@ import { Zap, Loader2 } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
-  const [loading: _ignore, setLoading] = useState(false) as any;
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      const redirect = typeof router.query.redirect === "string" ? router.query.redirect : "/";
+      router.replace(redirect);
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError(null);
     localStorage.setItem("sb-remember-me", remember ? "true" : "false");
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    setSubmitting(false);
     if (error) {
       setError(error.message);
       return;
     }
-    let dest = "/";
-    if (data.user) {
+    let dest = typeof router.query.redirect === "string" ? router.query.redirect : "/";
+    if (data.user && dest === "/") {
       const { data: prof } = await supabase
         .from("profiles")
         .select("default_landing_path")
@@ -44,12 +51,6 @@ export default function LoginPage() {
     }
     router.replace(dest);
   };
-
-  useEffect(() => {
-    if (user) {
-      router.replace("/");
-    }
-  }, [user, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -89,8 +90,8 @@ export default function LoginPage() {
               <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
               <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">Remember me on this device</Label>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Sign in
             </Button>
             <p className="text-center text-sm text-muted-foreground">
