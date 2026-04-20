@@ -1,6 +1,6 @@
 ---
 title: Simple product Basic editor redesign
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, basic, ux]
