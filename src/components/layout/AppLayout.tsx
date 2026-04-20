@@ -3,8 +3,6 @@ import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
-import { BulkJobsToast } from "@/components/BulkJobsToast";
-import { SyncCelebrationWatcher } from "@/components/SyncCelebrationWatcher";
 import type { Permission } from "@/lib/permissions";
 
 interface AppLayoutProps {
@@ -37,8 +35,6 @@ export function AppLayout({ children, title, requirePermission, requireSuperAdmi
             </main>
           </div>
         </div>
-        <BulkJobsToast />
-        <SyncCelebrationWatcher />
       </SidebarProvider>
     </AuthGuard>
   );

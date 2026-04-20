@@ -22,7 +22,7 @@ function formatElapsed(s: number): string {
   return `${m}m ${s % 60}s`;
 }
 
-let cachedConfetti: object | null = null;
+const cachedConfetti: object | null = null;
 
 type SnapshotSite = { store_id: string; store_name: string; store_url: string; store_logo_url: string | null };
 
@@ -45,31 +45,6 @@ export function SyncProgressBanner() {
   const prevRunningRef = useRef(false);
   const prevStoreIdRef = useRef<string | null>(null);
   const seenCompletionsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (cachedConfetti) return;
-    fetch("/confetti.json").then((r) => r.json()).then((d) => { cachedConfetti = d; setConfettiData(d); }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!storeId) { setStore(null); return; }
-    supabase.from("stores").select("id, name, url, logo_url").eq("id", storeId).maybeSingle()
-      .then(({ data }) => { if (data) setStore(data); });
-  }, [storeId]);
-
-  useEffect(() => {
-    if (prevStoreIdRef.current !== storeId) {
-      prevStoreIdRef.current = storeId;
-      prevRunningRef.current = false;
-      setDismissed(false);
-      if (typeof window !== "undefined" && storageKey) {
-        const v = window.localStorage.getItem(storageKey);
-        setDisplayProgress(v ? parseFloat(v) : 0);
-      } else {
-        setDisplayProgress(0);
-      }
-    }
-  }, [storeId, storageKey]);
 
   const invalidateAll = (sid?: string | null) => {
     qc.invalidateQueries({ queryKey: ["orders"] });

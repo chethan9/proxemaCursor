@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type SiteLike = { name?: string | null; url?: string | null; logo_url?: string | null };
+type SiteLike = { id?: string | null; name?: string | null; url?: string | null; logo_url?: string | null };
 type SizeToken = "sm" | "md" | "lg" | number;
 
 const PALETTE = [
