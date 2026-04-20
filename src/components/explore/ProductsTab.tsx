@@ -41,6 +41,7 @@ import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } f
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
+import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -112,6 +113,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  useScrollExpandedIntoView(expandedRowId);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -1018,7 +1020,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             })}
                           </TableRow>
                           {isExpanded && (
-                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableRow className="bg-muted/30 hover:bg-muted/30" data-expanded-row={p.id}>
                               <TableCell colSpan={visibleColList.length + 1} className="p-0 border-t border-border">
                                 <div onClick={(e) => e.stopPropagation()}>
                                   <ProductRowExpanded
