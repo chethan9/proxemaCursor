@@ -480,18 +480,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       last_sync_at: new Date().toISOString(),
     }).eq("id", storeId);
 
+    const failedAspects = Object.entries(results).filter(([, r]) => r.error).map(([a]) => a);
+    const coreFailed = ["products", "orders", "customers"].some((a) => failedAspects.includes(a));
+
     // Close the "all" placeholder row with aggregated totals
     if (allRunId) {
       const allStart = allRow?.id ? new Date((await supabase.from("sync_runs").select("started_at").eq("id", allRunId).single()).data?.started_at || Date.now()).getTime() : Date.now();
       const overallDuration = (Date.now() - allStart) / 1000;
 
       await supabase.from("sync_runs").update({
-        status: "completed",
+        status: failedAspects.length > 0 ? "failed" : "completed",
         completed_at: new Date().toISOString(),
         records_processed: totalProcessed,
         records_created: totalCreated,
         records_updated: totalUpdated,
+        error_message: failedAspects.length > 0 ? `Failed aspects: ${failedAspects.join(", ")}` : null,
       }).eq("id", allRunId);
+
+      // Determine audience once (reused for celebration + failure notifications)
+      const { data: storeFull } = await supabase
+        .from("stores")
+        .select("name, url, logo_url, client_id, initial_sync_completed_at")
+        .eq("id", storeId)
+        .maybeSingle();
+
+      let userIds: string[] = [];
+      if (storeFull?.client_id) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: members } = await (supabase as any)
+          .from("client_members")
+          .select("user_id")
+          .eq("client_id", storeFull.client_id);
+        userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
+      }
+      if (userIds.length === 0) {
+        const { data: allUsers } = await supabase
+          .from("profiles")
+          .select("id")
+          .limit(50);
+        userIds = (allUsers || []).map((u: { id: string }) => u.id);
+      }
 
       // Check if this was the initial sync — stamp stores.initial_sync_completed_at (only if not already set)
       const { data: allRunRow } = await supabase
@@ -499,48 +527,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select("is_initial")
         .eq("id", allRunId)
         .maybeSingle();
-      // Safety net: stamp if flagged initial OR if store has never completed before
-      const { data: storeRow } = await supabase
-        .from("stores")
-        .select("initial_sync_completed_at")
-        .eq("id", storeId)
-        .maybeSingle();
-      if (allRunRow?.is_initial || !storeRow?.initial_sync_completed_at) {
+
+      const shouldCelebrate = !coreFailed && (allRunRow?.is_initial || !storeFull?.initial_sync_completed_at);
+
+      if (shouldCelebrate) {
         await supabase
           .from("stores")
           .update({ initial_sync_completed_at: new Date().toISOString() })
           .eq("id", storeId)
           .is("initial_sync_completed_at", null);
 
-        // Create a celebration notification for every user who can see this store
-        const { data: storeFull } = await supabase
-          .from("stores")
-          .select("name, url, logo_url, client_id")
-          .eq("id", storeId)
-          .maybeSingle();
-        if (storeFull) {
-          let userIds: string[] = [];
-          if (storeFull.client_id) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: members } = await (supabase as any)
-              .from("client_members")
-              .select("user_id")
-              .eq("client_id", storeFull.client_id);
-            userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
-          }
-          if (userIds.length === 0) {
-            const { data: allUsers } = await supabase
-              .from("profiles")
-              .select("id")
-              .limit(50);
-            userIds = (allUsers || []).map((u: { id: string }) => u.id);
-          }
+        if (storeFull && userIds.length > 0) {
           const rows = userIds.map((uid) => ({
             user_id: uid,
             type: "celebration",
             title: `${storeFull.name} is ready!`,
-            body: "Welcome aboard. To infinity and beyond 🚀",
+            body: failedAspects.length > 0
+              ? `Welcome aboard. Note: ${failedAspects.join(", ")} had issues — you can retry from the sync engine.`
+              : "Welcome aboard. To infinity and beyond 🚀",
             cta_label: "Let's go",
+            cta_url: storeFull.client_id ? `/projects/${storeId}?tab=sync` : null,
             lottie_url: "/confetti.json",
             priority: 90,
             metadata: {
@@ -550,11 +556,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               logo_url: storeFull.logo_url,
             },
           }));
-          if (rows.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase as any).from("user_notifications").insert(rows);
-          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any).from("user_notifications").insert(rows);
         }
+      }
+
+      // Always emit a failure notification when any aspect failed
+      if (failedAspects.length > 0 && storeFull && userIds.length > 0) {
+        const rows = userIds.map((uid) => ({
+          user_id: uid,
+          type: "sync_failure",
+          title: `Sync issue on ${storeFull.name}`,
+          body: `${failedAspects.join(", ")} failed to sync. Open the sync engine to retry.`,
+          cta_label: "Open sync engine",
+          cta_url: `/projects/${storeId}?tab=sync`,
+          priority: 80,
+          metadata: {
+            store_id: storeId,
+            store_name: storeFull.name,
+            store_url: storeFull.url,
+            logo_url: storeFull.logo_url,
+            failed_aspects: failedAspects,
+          },
+        }));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("user_notifications").insert(rows);
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

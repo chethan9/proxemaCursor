@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { useToast } from "@/hooks/use-toast";
-import { X, Megaphone, Trophy, Sparkles } from "lucide-react";
+import { X, Megaphone, Trophy, Sparkles, AlertTriangle } from "lucide-react";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
@@ -47,6 +47,7 @@ export function NotificationRenderer() {
   if (current.type === "announcement") return <AnnouncementView n={current} onClose={dismiss} onClick={click} />;
   if (current.type === "ad") return <AdBanner n={current} onClose={dismiss} onClick={click} />;
   if (current.type === "milestone") return <MilestoneView n={current} onClose={dismiss} onClick={click} />;
+  if (current.type === "sync_failure") return <SyncFailureView n={current} onClose={dismiss} onClick={click} />;
   return null;
 }
 
@@ -185,6 +186,30 @@ function MilestoneView({ n, onClose, onClick }: { n: NotificationItem; onClose: 
             </Button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SyncFailureView({ n, onClose, onClick }: { n: NotificationItem; onClose: () => void; onClick: () => void }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border border-destructive/40 bg-destructive/5 shadow-xl p-4 animate-in slide-in-from-bottom-4 fade-in duration-300">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
+          <AlertTriangle className="h-5 w-5 text-destructive" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-destructive">{n.title}</p>
+          {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body}</p>}
+          {n.cta_label && (
+            <Button size="sm" variant="destructive" className="h-7 text-xs mt-2" onClick={onClick}>
+              {n.cta_label} →
+            </Button>
+          )}
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground shrink-0">
+          <X className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
