@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useNotifications, type AppNotification } from "@/contexts/NotificationProvider";
+import { useNotifications, type NotificationItem } from "@/contexts/NotificationProvider";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SiteIcon } from "@/components/site/SiteIcon";
@@ -50,7 +50,7 @@ export function NotificationRenderer() {
   return null;
 }
 
-function CelebrationView({ n, onClose, onClick }: { n: AppNotification; onClose: () => void; onClick: () => void }) {
+function CelebrationView({ n, onClose, onClick }: { n: NotificationItem; onClose: () => void; onClick: () => void }) {
   const lottie = useLottie(n.lottie_url || "/confetti.json");
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
@@ -105,7 +105,7 @@ function CelebrationView({ n, onClose, onClick }: { n: AppNotification; onClose:
   );
 }
 
-function AnnouncementView({ n, onClose, onClick }: { n: AppNotification; onClose: () => void; onClick: () => void }) {
+function AnnouncementView({ n, onClose, onClick }: { n: NotificationItem; onClose: () => void; onClick: () => void }) {
   const lottie = useLottie(n.lottie_url);
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -133,7 +133,7 @@ function AnnouncementView({ n, onClose, onClick }: { n: AppNotification; onClose
   );
 }
 
-function AdBanner({ n, onClose, onClick }: { n: AppNotification; onClose: () => void; onClick: () => void }) {
+function AdBanner({ n, onClose, onClick }: { n: NotificationItem; onClose: () => void; onClick: () => void }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border bg-card shadow-xl p-4 animate-in slide-in-from-bottom-4 fade-in duration-300">
       <div className="flex gap-3">
@@ -162,7 +162,7 @@ function AdBanner({ n, onClose, onClick }: { n: AppNotification; onClose: () => 
   );
 }
 
-function MilestoneView({ n, onClose, onClick }: { n: AppNotification; onClose: () => void; onClick: () => void }) {
+function MilestoneView({ n, onClose, onClick }: { n: NotificationItem; onClose: () => void; onClick: () => void }) {
   const lottie = useLottie(n.lottie_url);
   const [open, setOpen] = useState(true);
   useEffect(() => {
