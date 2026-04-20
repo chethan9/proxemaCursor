@@ -193,6 +193,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     setPage(0);
   }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
+  const { data: activeSyncsPoll = [] } = useAllActiveSyncs();
+
   const { data: productsResult, isLoading: loading } = useProducts({
     storeId,
     page,
@@ -206,6 +208,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     stockStatusFilter,
     priceMin: priceMin ? Number(priceMin) : undefined,
     priceMax: priceMax ? Number(priceMax) : undefined,
+    refetchInterval: activeSyncsPoll.find((s) => s.store_id === storeId)?.running ? 5000 : false,
   });
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
@@ -334,8 +337,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   }, [products, visibleColList, storeId]);
 
   const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
-  const { data: activeSyncs = [] } = useAllActiveSyncs();
-  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
+  const activeSync = activeSyncsPoll.find((s) => s.store_id === storeId);
+  const prevRunningRef = useRef<boolean>(false);
+  useEffect(() => {
+    const isRunning = !!activeSync?.running;
+    if (prevRunningRef.current && !isRunning) {
+      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["taxonomy", "categories", storeId] });
+    }
+    prevRunningRef.current = isRunning;
+  }, [activeSync?.running, queryClient, storeId]);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
