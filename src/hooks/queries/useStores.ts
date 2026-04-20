@@ -67,7 +67,12 @@ export function useDeleteStore() {
   const invalidate = useInvalidateStores();
   return useMutation({
     mutationFn: (id: string) => deleteStore(id),
-    onSuccess: (_data, id) => invalidate(id),
+    onSuccess: (_data, id) => {
+      if (typeof window !== "undefined") {
+        try { localStorage.removeItem("sidebar-sites-cache"); } catch { /* ignore */ }
+      }
+      invalidate(id);
+    },
   });
 }
 
