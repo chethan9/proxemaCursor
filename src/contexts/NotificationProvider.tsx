@@ -5,8 +5,9 @@ import { useAuth } from "@/contexts/AuthProvider";
 
 export type NotificationType = "celebration" | "announcement" | "ad" | "milestone" | "info" | "warning";
 
-export interface AppNotification {
+export interface NotificationItem {
   id: string;
+  user_id: string | null;
   type: NotificationType;
   title: string;
   body: string | null;
@@ -15,18 +16,32 @@ export interface AppNotification {
   image_url: string | null;
   lottie_url: string | null;
   priority: number;
-  metadata: Record<string, unknown>;
-  persisted: boolean;
+  metadata: Record<string, unknown> | null;
+  shown_at: string | null;
+  dismissed_at: string | null;
+  _transient?: boolean;
 }
 
-interface Ctx {
-  current: AppNotification | null;
-  dismiss: () => Promise<void>;
-  click: () => Promise<void>;
-  push: (n: Omit<AppNotification, "id" | "persisted">) => void;
+export interface PushNotificationInput {
+  type?: NotificationType;
+  title: string;
+  body?: string;
+  cta_label?: string;
+  cta_url?: string;
+  image_url?: string;
+  lottie_url?: string;
+  priority?: number;
+  metadata?: Record<string, unknown>;
 }
 
-const NotificationContext = createContext<Ctx | null>(null);
+interface NotificationContextValue {
+  current: NotificationItem | null;
+  dismiss: () => void;
+  click: () => void;
+  push: (n: PushNotificationInput) => void;
+}
+
+const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 const POLL_MS = 30000;
 
@@ -182,7 +197,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     await dismiss();
   }, [current, dismiss]);
 
-  const push = useCallback((n: Omit<AppNotification, "id" | "persisted">) => {
+  const push = useCallback((n: PushNotificationInput) => {
     const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     enqueue({ ...n, id, persisted: false });
   }, [enqueue]);
