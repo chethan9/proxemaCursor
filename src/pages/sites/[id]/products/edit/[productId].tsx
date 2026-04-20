@@ -38,6 +38,20 @@ function Inner() {
         const raw = (p.raw_data || {}) as Record<string, unknown>;
         const productType = ((p.type as ProductFormState["type"]) || "simple");
         if (productType === "variable") setMode("advanced");
+
+        let variations: ProductFormState["variations"] = [];
+        if (productType === "variable" && p.woo_id) {
+          try {
+            const res = await fetch(`/api/stores/${id}/products/${productId}/variations`);
+            if (res.ok) {
+              const json = await res.json();
+              variations = Array.isArray(json) ? json : [];
+            }
+          } catch (e) {
+            console.error("[fetch-variations]", e);
+          }
+        }
+
         setForm({
           name: p.name || "",
           description: p.description || "",
@@ -61,12 +75,12 @@ function Inner() {
           brands: Array.isArray(raw.brands) ? (raw.brands as { id: number; name?: string }[]) : [],
           images: Array.isArray(p.images) ? (p.images as { id?: number; src: string; alt?: string }[]) : [],
           attributes: Array.isArray(p.attributes) ? (p.attributes as ProductFormState["attributes"]) : [],
-          variations: [],
+          variations,
         });
       }
       setFetching(false);
     })();
-  }, [productId]);
+  }, [productId, id]);
 
   if (loading || fetching) return <SiteLoadingSkeleton />;
   if (!store) return <div className="p-6">Store not found</div>;
