@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, AlertTriangle, ExternalLink } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Eye, EyeOff, AlertTriangle, ExternalLink, HelpCircle, CheckCircle2 } from "lucide-react";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { useCreateStore } from "@/hooks/queries/useStores";
 import type { Client } from "@/services/clientService";
@@ -38,6 +39,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
   const [urlError, setUrlError] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<"oauth" | "manual">("oauth");
   const [showSecrets, setShowSecrets] = useState(false);
+  const [manualConfirmed, setManualConfirmed] = useState(false);
   const [newStore, setNewStore] = useState({
     name: "",
     url: "",
@@ -59,6 +61,19 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     setUrlError(null);
     setAuthMode("oauth");
     setShowSecrets(false);
+    setManualConfirmed(false);
+  };
+
+  const handleSelectManual = () => {
+    if (authMode === "manual") return;
+    if (!manualConfirmed) {
+      const ok = window.confirm(
+        "Manual Keys is an advanced option.\n\nOnly use this if:\n• You're experienced with WooCommerce REST API\n• OAuth keeps failing for your store\n\nYou'll need to manually create API keys with Read/Write permission in your store admin.\n\nContinue?"
+      );
+      if (!ok) return;
+      setManualConfirmed(true);
+    }
+    setAuthMode("manual");
   };
 
   const handleCreate = async () => {
@@ -100,6 +115,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
   };
 
   return (
+    <TooltipProvider delayDuration={200}>
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1">
@@ -145,13 +161,19 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
           <div className="space-y-2 pt-1">
             <Label className="text-xs">Authentication Method</Label>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setAuthMode("oauth")} className={`p-2.5 rounded-lg border text-left transition-colors ${authMode === "oauth" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50"}`}>
-                <p className="font-medium text-xs">OAuth <span className="text-muted-foreground font-normal">(Recommended)</span></p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Redirect to store for approval</p>
+              <button type="button" onClick={() => setAuthMode("oauth")} className={`relative p-2.5 rounded-lg border-2 text-left transition-colors ${authMode === "oauth" ? "border-success bg-success/5" : "border-border hover:border-muted-foreground/50"}`}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="font-medium text-xs">OAuth</p>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-success/15 text-success uppercase tracking-wide">Easy</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Redirect to store for approval</p>
               </button>
-              <button type="button" onClick={() => setAuthMode("manual")} className={`p-2.5 rounded-lg border text-left transition-colors ${authMode === "manual" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50"}`}>
-                <p className="font-medium text-xs">Manual Keys</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Enter API keys directly</p>
+              <button type="button" onClick={handleSelectManual} className={`relative p-2.5 rounded-lg border text-left transition-colors ${authMode === "manual" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50"}`}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="font-medium text-xs">Manual Keys</p>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wide">Advanced</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Enter API keys directly</p>
               </button>
             </div>
           </div>
@@ -159,10 +181,38 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
           {authMode === "manual" && (
             <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between">
-                <Label className="text-xs">WooCommerce API Keys</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs">WooCommerce API Keys</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground">
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <div className="space-y-1.5 text-xs">
+                        <p className="font-semibold">How to create API keys:</p>
+                        <ol className="list-decimal pl-4 space-y-0.5">
+                          <li>In WooCommerce: Settings → Advanced → REST API</li>
+                          <li>Click <span className="font-mono">Add key</span></li>
+                          <li>Description: <span className="font-mono">Proxima</span></li>
+                          <li>User: any admin user</li>
+                          <li><span className="font-semibold text-success">Permissions: Read/Write</span> (required)</li>
+                          <li>Click Generate API key</li>
+                          <li>Copy the <span className="font-mono">ck_</span> and <span className="font-mono">cs_</span> values here</li>
+                        </ol>
+                        <p className="text-[11px] text-muted-foreground pt-1">Read-only keys will cause sync and webhook registration to fail.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowSecrets(!showSecrets)} className="h-7 px-2">
                   {showSecrets ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </Button>
+              </div>
+              <div className="rounded-md bg-success/5 border border-success/30 px-2.5 py-1.5 flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                <p className="text-[11px] text-foreground">Key must have <span className="font-semibold">Read/Write</span> permission</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Consumer Key (ck_...)" type={showSecrets ? "text" : "password"} value={newStore.consumer_key} onChange={(e) => setNewStore({ ...newStore, consumer_key: e.target.value })} className="h-9 font-mono text-xs" />
@@ -180,8 +230,8 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
           )}
 
           {authMode === "oauth" && (
-            <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-              You&apos;ll be redirected to your WooCommerce store to approve access. API credentials will be generated automatically.
+            <div className="rounded-md bg-success/5 border border-success/20 px-3 py-2 text-xs text-foreground">
+              You&apos;ll be redirected to your WooCommerce store to approve access. API credentials will be generated automatically with the correct permissions.
             </div>
           )}
         </div>
@@ -194,5 +244,6 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </TooltipProvider>
   );
 }
