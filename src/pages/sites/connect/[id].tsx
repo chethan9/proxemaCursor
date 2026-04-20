@@ -1,42 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
+import Lottie from "lottie-react";
 import { ConnectLayout } from "@/components/layout/ConnectLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, Rocket, Package, ShoppingCart, Users, Tag as TagIcon, Sparkles, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { pickProgressMessage } from "@/lib/sync-messages";
 import { buildWooCommerceAuthUrl } from "@/lib/woocommerce-auth";
 import { updateStore } from "@/services/storeService";
 
 type StepStatus = "pending" | "active" | "done" | "error";
 interface Step { id: string; label: string; status: StepStatus; }
-type Stage = "loading" | "credentials" | "woo" | "wp" | "estimating" | "liftoff" | "done";
+type Stage = "loading" | "credentials" | "woo" | "wp" | "prefetching" | "done";
 
 const INITIAL_STEPS: Step[] = [
   { id: "auth", label: "Authorizing with WooCommerce", status: "pending" },
   { id: "creds", label: "Receiving API credentials", status: "pending" },
   { id: "wp", label: "Authorize WordPress media access", status: "pending" },
   { id: "webhooks", label: "Registering webhooks", status: "pending" },
-  { id: "estimate", label: "Scanning store inventory", status: "pending" },
-  { id: "liftoff", label: "Preparing for liftoff", status: "pending" },
 ];
-
-interface Estimate {
-  counts: { products: number; orders: number; customers: number; categories: number; tags: number; coupons: number };
-  total: number;
-  eta_seconds: number;
-}
-
-function formatEta(s: number): string {
-  if (s < 60) return `~${s} seconds`;
-  const m = Math.ceil(s / 60);
-  return `~${m} minute${m === 1 ? "" : "s"}`;
-}
 
 export default function ConnectSuccessPage() {
   const router = useRouter();
@@ -47,29 +33,27 @@ export default function ConnectSuccessPage() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [stage, setStage] = useState<Stage>("loading");
   const [storeUrl, setStoreUrl] = useState<string>("");
+  const [storeName, setStoreName] = useState<string>("");
   const [showManual, setShowManual] = useState(false);
   const [manualUser, setManualUser] = useState("");
   const [manualPass, setManualPass] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
-  const [estimate, setEstimate] = useState<Estimate | null>(null);
-  const estimateStartedRef = useRef(false);
-  const [progressTick, setProgressTick] = useState(0);
   const [webhookError, setWebhookError] = useState<string | null>(null);
-  const [webhookSummary, setWebhookSummary] = useState<string | null>(null);
+  const [confettiData, setConfettiData] = useState<object | null>(null);
   const webhookRegisteredRef = useRef(false);
   const initRef = useRef(false);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Manual credentials entry state
   const [showCredsManual, setShowCredsManual] = useState(false);
   const [credsKey, setCredsKey] = useState("");
   const [credsSecret, setCredsSecret] = useState("");
   const [credsBusy, setCredsBusy] = useState(false);
 
   useEffect(() => {
-    if (stage !== "estimating") return;
-    const id = setInterval(() => setProgressTick((t) => t + 1), 4000);
-    return () => clearInterval(id);
-  }, [stage]);
+    fetch("/confetti.json").then(r => r.json()).then(setConfettiData).catch(() => setConfettiData(null));
+  }, []);
+
+  useEffect(() => () => { if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current); }, []);
 
   const setStep = (id: string, status: StepStatus) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
@@ -98,17 +82,15 @@ export default function ConnectSuccessPage() {
     return `${clean}/wp-admin/authorize-application.php?app_name=Proxima&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
   }, [storeUrl, siteId, baseCallback]);
 
-  const startEstimate = async (sid: string) => {
-    if (estimateStartedRef.current) return;
-    estimateStartedRef.current = true;
-    try {
-      const estRes = await fetch(`/api/stores/${sid}/estimate`);
-      const estData: Estimate = await estRes.json();
-      setEstimate(estData);
-    } catch (e) {
-      console.error("estimate err", e);
-      setEstimate({ counts: { products: 0, orders: 0, customers: 0, categories: 0, tags: 0, coupons: 0 }, total: 0, eta_seconds: 60 });
-    }
+  const launchToProducts = (sid: string) => {
+    setStage("prefetching");
+    setStep("webhooks", "done");
+
+    fetch(`/api/stores/${sid}/prefetch`, { method: "POST" }).catch((e) => console.error("[prefetch]", e));
+
+    redirectTimerRef.current = setTimeout(() => {
+      router.push(`/sites/${sid}/products`);
+    }, 2200);
   };
 
   const registerWebhooks = async (sid: string): Promise<boolean> => {
@@ -129,7 +111,6 @@ export default function ConnectSuccessPage() {
         setStep("webhooks", "error");
         return false;
       }
-      setWebhookSummary(json.message || "Webhooks registered");
       setStep("webhooks", "done");
       webhookRegisteredRef.current = true;
       return true;
@@ -140,57 +121,28 @@ export default function ConnectSuccessPage() {
     }
   };
 
-  const runEstimateAndLiftoff = async () => {
+  const runWebhooksAndLaunch = async () => {
     if (!siteId) return;
     if (!webhookRegisteredRef.current && !webhookError) {
       const ok = await registerWebhooks(siteId);
       if (!ok) return;
     }
-    setStage("estimating");
-    setStep("estimate", "active");
-
-    if (!estimate) {
-      await startEstimate(siteId);
-      const deadline = Date.now() + 10000;
-      while (!estimate && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 200));
-      }
-    }
-    setStep("estimate", "done");
-    setStep("liftoff", "active");
-    setStage("liftoff");
+    launchToProducts(siteId);
   };
 
   const handleWebhookRetry = async () => {
     if (!siteId) return;
     const ok = await registerWebhooks(siteId);
-    if (ok) await runEstimateAndLiftoff();
+    if (ok) launchToProducts(siteId);
   };
 
-  const handleWebhookSkip = async () => {
+  const handleWebhookSkip = () => {
+    if (!siteId) return;
     webhookRegisteredRef.current = true;
     setStep("webhooks", "error");
-    await runEstimateAndLiftoff();
+    launchToProducts(siteId);
   };
 
-  const handleLiftoff = async () => {
-    if (!siteId || !estimate) return;
-    try {
-      await fetch(`/api/stores/${siteId}/sync-start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estimated_total: estimate.total, is_initial: true }),
-      });
-      setStep("liftoff", "done");
-      setStage("done");
-      toast({ title: "🚀 Liftoff!", description: "Syncing in background. Explore freely — progress is at the top." });
-      router.push(`/sites/${siteId}/products`);
-    } catch (e) {
-      toast({ title: "Couldn't start sync", description: e instanceof Error ? e.message : "Try again from site settings", variant: "destructive" });
-    }
-  };
-
-  // Poll for OAuth credentials arriving via callback
   const startOAuthPolling = (sid: string) => {
     setStep("auth", "active");
     setStage("woo");
@@ -202,17 +154,17 @@ export default function ConnectSuccessPage() {
         attempts += 1;
         const { data } = await supabase
           .from("stores")
-          .select("id, url, consumer_key, consumer_secret, wp_username")
+          .select("id, url, name, consumer_key, consumer_secret, wp_username")
           .eq("id", sid)
           .maybeSingle();
         if (data?.consumer_key && data?.consumer_secret) {
           setStoreUrl(data.url);
+          setStoreName(data.name || "your store");
           setStep("auth", "done");
           setStep("creds", "done");
-          startEstimate(sid);
           if (data.wp_username) {
             setStep("wp", "done");
-            runEstimateAndLiftoff();
+            runWebhooksAndLaunch();
           } else {
             setStage("wp");
             advanceFrom("wp");
@@ -224,19 +176,16 @@ export default function ConnectSuccessPage() {
       if (cancelled) return;
       setStep("auth", "error");
       setStage("credentials");
-      setErrorMessage("We didn't receive credentials from WooCommerce within 30 seconds. This is often caused by an ad blocker or firewall blocking the callback. You can restart the OAuth flow or enter your keys manually.");
+      setErrorMessage("We didn't receive credentials from WooCommerce within 30 seconds. You can restart the OAuth flow or enter your keys manually.");
     })();
     return () => { cancelled = true; };
   };
 
-  // Restart OAuth from credentials-resume step
   const handleRestartOAuth = () => {
     if (!siteId || !storeUrl) return;
-    const authUrl = buildWooCommerceAuthUrl({ storeUrl, storeId: siteId });
-    window.location.href = authUrl;
+    window.location.href = buildWooCommerceAuthUrl({ storeUrl, storeId: siteId });
   };
 
-  // Save manual credentials and advance
   const handleSaveManualCreds = async () => {
     if (!siteId || !credsKey.trim() || !credsSecret.trim()) return;
     setCredsBusy(true);
@@ -248,12 +197,11 @@ export default function ConnectSuccessPage() {
       });
       setStep("auth", "done");
       setStep("creds", "done");
-      startEstimate(siteId);
-      // Check if WP is already set (unlikely but possible on repeated attempts)
-      const { data } = await supabase.from("stores").select("wp_username").eq("id", siteId).maybeSingle();
+      const { data } = await supabase.from("stores").select("wp_username, name").eq("id", siteId).maybeSingle();
+      if (data?.name) setStoreName(data.name);
       if (data?.wp_username) {
         setStep("wp", "done");
-        runEstimateAndLiftoff();
+        runWebhooksAndLaunch();
       } else {
         setStage("wp");
         advanceFrom("wp");
@@ -270,18 +218,16 @@ export default function ConnectSuccessPage() {
     if (!siteId || initRef.current) return;
     initRef.current = true;
 
-    // Handle WP callback returns first (comes back with ?wp=ok/rejected/missing)
     if (wp) {
       if (wp === "ok") {
-        setSteps((prev) => prev.map((s) => {
-          if (["auth", "creds", "wp"].includes(s.id)) return { ...s, status: "done" };
-          return s;
-        }));
+        setSteps((prev) => prev.map((s) =>
+          ["auth", "creds", "wp"].includes(s.id) ? { ...s, status: "done" } : s
+        ));
         (async () => {
-          const { data } = await supabase.from("stores").select("url").eq("id", siteId).maybeSingle();
+          const { data } = await supabase.from("stores").select("url, name").eq("id", siteId).maybeSingle();
           if (data?.url) setStoreUrl(data.url);
-          startEstimate(siteId);
-          runEstimateAndLiftoff();
+          if (data?.name) setStoreName(data.name);
+          runWebhooksAndLaunch();
         })();
       } else {
         setStage("wp");
@@ -297,18 +243,18 @@ export default function ConnectSuccessPage() {
             : "WordPress did not return credentials. Try manual entry or skip for now."
         );
         (async () => {
-          const { data } = await supabase.from("stores").select("url").eq("id", siteId).maybeSingle();
+          const { data } = await supabase.from("stores").select("url, name").eq("id", siteId).maybeSingle();
           if (data?.url) setStoreUrl(data.url);
+          if (data?.name) setStoreName(data.name);
         })();
       }
       return;
     }
 
-    // Detect state and route to correct step
     (async () => {
       const { data: store } = await supabase
         .from("stores")
-        .select("id, url, consumer_key, consumer_secret, wp_username, onboarding_completed_at")
+        .select("id, url, name, consumer_key, consumer_secret, wp_username, onboarding_completed_at")
         .eq("id", siteId)
         .maybeSingle();
 
@@ -319,20 +265,18 @@ export default function ConnectSuccessPage() {
       }
 
       setStoreUrl(store.url);
+      setStoreName(store.name || "your store");
 
-      // Already onboarded → redirect to dashboard
       if (store.onboarding_completed_at) {
         router.replace(`/sites/${siteId}/products`);
         return;
       }
 
-      // Fresh OAuth return: poll for credentials
       if (success === "1" && !store.consumer_key) {
         startOAuthPolling(siteId);
         return;
       }
 
-      // No credentials yet → credentials resume step
       if (!store.consumer_key || !store.consumer_secret) {
         setStep("auth", "error");
         setStage("credentials");
@@ -342,12 +286,9 @@ export default function ConnectSuccessPage() {
         return;
       }
 
-      // Have credentials
       setStep("auth", "done");
       setStep("creds", "done");
-      startEstimate(siteId);
 
-      // No WP creds → WP step
       if (!store.wp_username) {
         setStage("wp");
         advanceFrom("wp");
@@ -357,9 +298,8 @@ export default function ConnectSuccessPage() {
         return;
       }
 
-      // All creds present → run webhooks + estimate + liftoff
       setStep("wp", "done");
-      runEstimateAndLiftoff();
+      runWebhooksAndLaunch();
     })();
   }, [siteId, success, wp, resume]);
 
@@ -376,7 +316,7 @@ export default function ConnectSuccessPage() {
       if (json.ok) {
         toast({ title: "WordPress credentials saved" });
         setStep("wp", "done");
-        runEstimateAndLiftoff();
+        runWebhooksAndLaunch();
       } else {
         toast({ title: "Credentials invalid", description: json.message, variant: "destructive" });
       }
@@ -389,7 +329,7 @@ export default function ConnectSuccessPage() {
 
   const handleSkipWp = () => {
     setStep("wp", "error");
-    runEstimateAndLiftoff();
+    runWebhooksAndLaunch();
   };
 
   const completedCount = steps.filter((s) => s.status === "done").length;
@@ -399,6 +339,26 @@ export default function ConnectSuccessPage() {
       <ConnectLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </ConnectLayout>
+    );
+  }
+
+  if (stage === "prefetching") {
+    return (
+      <ConnectLayout>
+        <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
+          {confettiData && (
+            <div className="absolute inset-0 pointer-events-none">
+              <Lottie animationData={confettiData} loop={false} autoplay />
+            </div>
+          )}
+          <div className="relative z-10 text-center space-y-3 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-5xl">🚀</div>
+            <h1 className="text-3xl font-bold">Welcome to {storeName}!</h1>
+            <p className="text-muted-foreground">Taking you to your products…</p>
+            <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto mt-4" />
+          </div>
         </div>
       </ConnectLayout>
     );
@@ -414,8 +374,6 @@ export default function ConnectSuccessPage() {
                 {failed ? "Connection Pending"
                   : stage === "credentials" ? "Resume Setup"
                   : stage === "wp" ? "Authorize WordPress"
-                  : stage === "liftoff" ? "Ready for Liftoff"
-                  : stage === "estimating" ? "Scanning your store"
                   : "Connecting Store"}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -503,55 +461,6 @@ export default function ConnectSuccessPage() {
               </div>
             )}
 
-            {stage === "liftoff" && estimate && (
-              <div className="space-y-4 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="relative">
-                    <Rocket className="h-6 w-6 text-primary" />
-                    <Sparkles className="h-3 w-3 text-primary/70 absolute -top-1 -right-1 animate-pulse" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold mb-0.5">Ready for liftoff to Proxima</p>
-                    <p className="text-xs text-muted-foreground">
-                      Your store is prepped. Estimated sync time: <span className="font-medium text-foreground">{formatEta(estimate.eta_seconds)}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
-                    <Package className="h-3.5 w-3.5 text-primary/70" />
-                    <span className="text-muted-foreground">Products:</span>
-                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.products.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
-                    <ShoppingCart className="h-3.5 w-3.5 text-primary/70" />
-                    <span className="text-muted-foreground">Orders:</span>
-                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.orders.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
-                    <Users className="h-3.5 w-3.5 text-primary/70" />
-                    <span className="text-muted-foreground">Customers:</span>
-                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.customers.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-md bg-background/60 px-2.5 py-1.5">
-                    <TagIcon className="h-3.5 w-3.5 text-primary/70" />
-                    <span className="text-muted-foreground">Categories:</span>
-                    <span className="font-medium ml-auto tabular-nums">{estimate.counts.categories.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted-foreground italic text-center">
-                  You can close this tab and come back — progress stays at the top of every page.
-                </p>
-
-                <Button onClick={handleLiftoff} className="w-full" size="lg">
-                  <Rocket className="h-4 w-4 mr-2" />
-                  Launch & Go to Dashboard
-                </Button>
-              </div>
-            )}
-
             {stage === "wp" && !failed && (
               <div className="space-y-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <div className="flex items-start gap-3">
@@ -611,20 +520,6 @@ export default function ConnectSuccessPage() {
               </div>
             )}
 
-            {stage === "estimating" && (
-              <div className="text-center py-3">
-                <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span
-                    key={progressTick}
-                    className="animate-in fade-in slide-in-from-bottom-1 duration-500"
-                  >
-                    {pickProgressMessage(progressTick)}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {webhookError && !failed && (
               <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
                 <div className="flex items-start gap-2">
@@ -640,10 +535,6 @@ export default function ConnectSuccessPage() {
                   <Button size="sm" onClick={handleWebhookRetry}>Retry</Button>
                 </div>
               </div>
-            )}
-
-            {webhookSummary && !webhookError && stage === "liftoff" && (
-              <p className="text-[11px] text-muted-foreground text-center mt-2">Webhooks: {webhookSummary}</p>
             )}
 
             {failed && (

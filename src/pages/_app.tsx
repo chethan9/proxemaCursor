@@ -12,6 +12,7 @@ import { NotificationRenderer } from "@/components/notifications/NotificationRen
 import { Toaster } from "@/components/ui/toaster";
 import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
+import { IncompleteOnboardingPrompt } from "@/components/IncompleteOnboardingPrompt";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 
@@ -46,6 +47,7 @@ function Providers({ children }: { children: React.ReactNode }) {
             <NotificationRenderer />
             <BulkJobsToast />
             <GlobalScrollButton />
+            <IncompleteOnboardingPrompt />
           </NotificationProvider>
         </BrandingProvider>
       </AuthProvider>

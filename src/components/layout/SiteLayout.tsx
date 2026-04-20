@@ -5,6 +5,7 @@ import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/hooks/queries/useStores";
 import { useToast } from "@/hooks/use-toast";
+import { InitialSyncBanner } from "@/components/site/InitialSyncBanner";
 
 type Props = { children: React.ReactNode };
 
@@ -39,6 +40,7 @@ export function SiteLayout({ children }: Props) {
         </aside>
       )}
       <main className="flex-1 overflow-y-auto">
+        <InitialSyncBanner />
         {children}
       </main>
     </div>

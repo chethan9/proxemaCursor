@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { storeId } = req.query;
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
-  const { estimated_total = 0, is_initial = false } = req.body || {};
+  const { is_initial = false } = req.body || {};
 
   const { data: run } = await supabaseAdmin
     .from("sync_runs")
@@ -17,13 +17,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: "running",
       started_at: new Date().toISOString(),
       is_initial,
-      estimated_total,
+      estimated_total: 0,
       processed_total: 0,
     } as never)
     .select()
     .single();
 
-  // Mark onboarding as complete (initial sync launched) so user won't be re-routed to connect wizard
   if (is_initial) {
     await supabaseAdmin
       .from("stores")
