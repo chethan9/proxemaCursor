@@ -1,6 +1,6 @@
 ---
 title: Enhanced product preview with gallery carousel
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [product-edit, preview, gallery]
