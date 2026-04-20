@@ -133,7 +133,26 @@ export async function updateStore(
 }
 
 export async function deleteStore(id: string): Promise<{ webhooks_removed: number; webhooks_failed: number }> {
-  const res = await fetch(`/api/stores/${id}/delete`, { method: "DELETE" });
+  let token: string | null = null;
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+    const key = `sb-${projectRef}-auth-token`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      token = parsed?.access_token ?? null;
+    }
+  } catch (e) {
+    console.error("[deleteStore] failed to read session:", e);
+  }
+
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`/api/stores/${id}/delete`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || err.message || "Failed to delete store");
