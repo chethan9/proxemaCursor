@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1023,6 +1023,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          celebration_shown_at: string | null
           client_id: string | null
           consumer_key: string | null
           consumer_secret: string | null
@@ -1031,6 +1032,7 @@ export type Database = {
           health_issues: Json | null
           health_score: number | null
           id: string
+          initial_sync_completed_at: string | null
           last_sync_at: string | null
           logo_url: string | null
           name: string
@@ -1045,6 +1047,7 @@ export type Database = {
           wp_username: string | null
         }
         Insert: {
+          celebration_shown_at?: string | null
           client_id?: string | null
           consumer_key?: string | null
           consumer_secret?: string | null
@@ -1053,6 +1056,7 @@ export type Database = {
           health_issues?: Json | null
           health_score?: number | null
           id?: string
+          initial_sync_completed_at?: string | null
           last_sync_at?: string | null
           logo_url?: string | null
           name: string
@@ -1067,6 +1071,7 @@ export type Database = {
           wp_username?: string | null
         }
         Update: {
+          celebration_shown_at?: string | null
           client_id?: string | null
           consumer_key?: string | null
           consumer_secret?: string | null
@@ -1075,6 +1080,7 @@ export type Database = {
           health_issues?: Json | null
           health_score?: number | null
           id?: string
+          initial_sync_completed_at?: string | null
           last_sync_at?: string | null
           logo_url?: string | null
           name?: string
