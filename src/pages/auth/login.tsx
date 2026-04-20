@@ -96,10 +96,7 @@ export default function LoginPage() {
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
             <div className="flex items-center space-x-2">
@@ -110,10 +107,15 @@ export default function LoginPage() {
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Sign in
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              New here?{" "}
-              <Link href="/auth/signup" className="text-primary hover:underline">Create an account</Link>
-            </p>
+            <div className="space-y-2 pt-1">
+              <p className="text-center text-sm text-muted-foreground">
+                New here?{" "}
+                <Link href="/auth/signup" className="text-primary hover:underline">Create an account</Link>
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
+                <Link href="/auth/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>
