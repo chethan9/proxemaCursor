@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -25,7 +25,7 @@ export function SyncCelebrationWatcher() {
     fetch("/confetti.json").then((r) => r.json()).then((d) => { cachedConfetti = d; setConfettiData(d); }).catch(() => {});
   }, []);
 
-  const invalidateStore = (storeId: string) => {
+  const invalidateStore = useCallback((storeId: string) => {
     qc.invalidateQueries({ queryKey: ["orders"] });
     qc.invalidateQueries({ queryKey: ["products"] });
     qc.invalidateQueries({ queryKey: ["taxonomy"] });
@@ -34,36 +34,72 @@ export function SyncCelebrationWatcher() {
     qc.invalidateQueries({ queryKey: ["stores"] });
     qc.invalidateQueries({ queryKey: ["active-sync", storeId] });
     qc.invalidateQueries({ queryKey: ["active-syncs-all"] });
-  };
+  }, [qc]);
 
-  const enqueue = (store: StoreSnap) => {
+  // Optimistic stamp at enqueue time — guarantees exactly-once across refreshes/devices
+  const enqueue = useCallback(async (store: StoreSnap) => {
     if (enqueuedRef.current.has(store.id)) return;
     enqueuedRef.current.add(store.id);
+    // Stamp immediately so no other tab/session re-shows this
+    const stampedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("stores")
+      .update({ celebration_shown_at: stampedAt })
+      .eq("id", store.id)
+      .is("celebration_shown_at", null);
+    // If stamp failed (row already stamped by another tab), skip silently
+    if (error) {
+      enqueuedRef.current.delete(store.id);
+      return;
+    }
     setQueue((q) => [...q, store]);
-  };
+    invalidateStore(store.id);
+  }, [invalidateStore]);
 
-  // Initial load + every auth change: pull any stores with completed-but-not-celebrated syncs
+  const checkPending = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("stores")
+      .select("id, name, url, logo_url, initial_sync_completed_at, celebration_shown_at")
+      .not("initial_sync_completed_at", "is", null)
+      .is("celebration_shown_at", null);
+    if (!data || data.length === 0) return;
+    setTimeout(() => {
+      for (const s of data) {
+        enqueue({ id: s.id, name: s.name, url: s.url, logo_url: s.logo_url });
+      }
+    }, 1500);
+  }, [user, enqueue]);
+
+  // Initial load + every auth change
   useEffect(() => {
     if (!user) return;
-    let cancelled = false;
-    const run = async () => {
-      const { data } = await supabase
-        .from("stores")
-        .select("id, name, url, logo_url, initial_sync_completed_at, celebration_shown_at")
-        .not("initial_sync_completed_at", "is", null)
-        .is("celebration_shown_at", null);
-      if (cancelled || !data) return;
-      // Small delay so the app settles before confetti
-      setTimeout(() => {
-        if (cancelled) return;
-        for (const s of data) {
-          enqueue({ id: s.id, name: s.name, url: s.url, logo_url: s.logo_url });
-        }
-      }, 2000);
+    checkPending();
+  }, [user?.id, checkPending]);
+
+  // Re-check when tab becomes visible (covers: sync finished while tab was hidden)
+  useEffect(() => {
+    if (!user) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        checkPending();
+        // Also invalidate to pull fresh data
+        qc.invalidateQueries({ queryKey: ["orders"] });
+        qc.invalidateQueries({ queryKey: ["products"] });
+        qc.invalidateQueries({ queryKey: ["taxonomy"] });
+        qc.invalidateQueries({ queryKey: ["stores"] });
+      }
     };
-    run();
-    return () => { cancelled = true; };
-  }, [user?.id]);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [user?.id, checkPending, qc]);
+
+  // Fallback polling every 30s (realtime insurance)
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(() => { checkPending(); }, 30000);
+    return () => clearInterval(id);
+  }, [user?.id, checkPending]);
 
   // Realtime: watch stores for initial_sync_completed_at transitions
   useEffect(() => {
@@ -73,9 +109,13 @@ export function SyncCelebrationWatcher() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "stores" }, (payload) => {
         const newRow = payload.new as { id: string; name: string; url: string; logo_url: string | null; initial_sync_completed_at: string | null; celebration_shown_at: string | null };
         const oldRow = payload.old as { initial_sync_completed_at: string | null };
-        if (newRow.initial_sync_completed_at && !oldRow.initial_sync_completed_at && !newRow.celebration_shown_at) {
-          enqueue({ id: newRow.id, name: newRow.name, url: newRow.url, logo_url: newRow.logo_url });
+        // Already-stamped rows filtered out (cross-tab race safety)
+        if (newRow.celebration_shown_at) {
           invalidateStore(newRow.id);
+          return;
+        }
+        if (newRow.initial_sync_completed_at && !oldRow.initial_sync_completed_at) {
+          enqueue({ id: newRow.id, name: newRow.name, url: newRow.url, logo_url: newRow.logo_url });
         }
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "sync_runs" }, (payload) => {
@@ -86,10 +126,10 @@ export function SyncCelebrationWatcher() {
           const wasRunning = prevRunningRef.current.has(newRow.store_id);
           if (wasRunning && newRow.aspect === "all") {
             prevRunningRef.current.delete(newRow.store_id);
-            // Non-initial completion → toast
-            supabase.from("stores").select("name, initial_sync_completed_at").eq("id", newRow.store_id).maybeSingle()
+            supabase.from("stores").select("name, initial_sync_completed_at, celebration_shown_at").eq("id", newRow.store_id).maybeSingle()
               .then(({ data }) => {
-                if (data && data.initial_sync_completed_at) {
+                // Only toast for subsequent syncs (celebration already handled for initial)
+                if (data && data.celebration_shown_at) {
                   toast({ title: `${data.name} sync complete ✨`, description: "Latest data is now available" });
                 }
               });
@@ -102,7 +142,6 @@ export function SyncCelebrationWatcher() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Drive the dialog from the queue
   useEffect(() => {
     if (queue.length === 0) return;
     if (overlayOpen || cardOpen) return;
@@ -115,10 +154,7 @@ export function SyncCelebrationWatcher() {
     const current = queue[0];
     setCardOpen(false);
     setOverlayOpen(false);
-    if (current) {
-      await supabase.from("stores").update({ celebration_shown_at: new Date().toISOString() }).eq("id", current.id);
-      invalidateStore(current.id);
-    }
+    if (current) invalidateStore(current.id);
     setTimeout(() => setQueue((q) => q.slice(1)), 400);
   };
 

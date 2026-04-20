@@ -12,6 +12,8 @@ import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { useTaxonomyRows, useAllCategories } from "@/hooks/queries/useTaxonomy";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { fetchCategories, fetchTags } from "@/services/taxonomyService";
+import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
+import { Loader2 } from "lucide-react";
 
 type Mode = "categories" | "tags";
 
@@ -67,6 +69,9 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   const Icon = mode === "categories" ? FolderTree : TagIcon;
   const colSpan = mode === "categories" ? 6 : 5;
+
+  const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
 
   useBackgroundPagination({
     enabled: !!storeId && count > 0,
@@ -197,8 +202,18 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={colSpan} className="text-center py-16">
-                    <Icon className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-sm text-muted-foreground">No {mode} found</p>
+                    {activeSync ? (
+                      <>
+                        <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
+                        <p className="text-sm font-medium">Syncing your {mode}…</p>
+                        <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new items will appear automatically</p>
+                      </>
+                    ) : (
+                      <>
+                        <Icon className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                        <p className="text-sm text-muted-foreground">No {mode} found</p>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (

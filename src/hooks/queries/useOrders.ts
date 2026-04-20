@@ -9,6 +9,7 @@ export function useOrders(opts: FetchOrdersOptions) {
     queryFn: () => fetchOrders(opts),
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId,
+    refetchOnWindowFocus: true,
   });
 }
 

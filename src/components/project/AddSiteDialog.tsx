@@ -21,6 +21,7 @@ import { Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { useCreateStore } from "@/hooks/queries/useStores";
 import type { Client } from "@/services/clientService";
+import { useRouter } from "next/router";
 
 interface Props {
   open: boolean;
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCreated }: Props) {
+  const router = useRouter();
   const createStoreMutation = useCreateStore();
   const [creating, setCreating] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -51,22 +53,6 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     setShowSecrets(false);
   };
 
-  const triggerInitialSync = async (storeId: string) => {
-    try {
-      fetch(`/api/stores/${storeId}/register-webhooks`, { method: "POST" }).catch(console.error);
-      const res = await fetch(`/api/stores/${storeId}/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Initial sync failed:", err.message);
-      }
-    } catch (error) {
-      console.error("Initial sync trigger error:", error);
-    }
-  };
-
   const handleCreate = async () => {
     if (!newStore.name.trim() || !newStore.url.trim()) return;
     const validation = validateStoreUrl(newStore.url);
@@ -78,13 +64,14 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     setUrlError(null);
     setCreating(true);
     try {
+      const hasKeys = authMode === "manual" && newStore.consumer_key.trim() && newStore.consumer_secret.trim();
       const store = await createStoreMutation.mutateAsync({
         name: newStore.name.trim(),
         url: cleanedUrl,
-        consumer_key: authMode === "manual" ? newStore.consumer_key.trim() || null : null,
-        consumer_secret: authMode === "manual" ? newStore.consumer_secret.trim() || null : null,
+        consumer_key: hasKeys ? newStore.consumer_key.trim() : null,
+        consumer_secret: hasKeys ? newStore.consumer_secret.trim() : null,
         client_id: newStore.client_id || null,
-        status: authMode === "manual" && newStore.consumer_key && newStore.consumer_secret ? "connected" : "pending",
+        status: hasKeys ? "connected" : "pending",
       });
 
       if (authMode === "oauth") {
@@ -94,9 +81,8 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
         reset();
         onOpenChange(false);
         onCreated?.();
-        if (newStore.consumer_key && newStore.consumer_secret) {
-          triggerInitialSync(store.id);
-        }
+        // Route manual flow through the unified connect wizard (WP auth → estimate → liftoff → celebration)
+        router.push(`/sites/connect/${store.id}?success=1&manual=1`);
       }
     } catch (error) {
       console.error("[AddSite] Error:", error);

@@ -13,6 +13,7 @@ export function useTaxonomyRows(
     queryFn: () => (mode === "categories" ? fetchCategories(storeId, search, page, pageSize) : fetchTags(storeId, search, page, pageSize)),
     placeholderData: keepPreviousData,
     enabled: !!storeId,
+    refetchOnWindowFocus: true,
   });
 }
 

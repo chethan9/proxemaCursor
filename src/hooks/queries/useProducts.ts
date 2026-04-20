@@ -9,6 +9,7 @@ export function useProducts(opts: FetchProductsOptions) {
     queryFn: () => fetchProducts(opts),
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId,
+    refetchOnWindowFocus: true,
   });
 }
 

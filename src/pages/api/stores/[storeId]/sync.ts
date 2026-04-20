@@ -414,7 +414,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select("is_initial")
         .eq("id", allRunId)
         .maybeSingle();
-      if (allRunRow?.is_initial) {
+      // Safety net: stamp if flagged initial OR if store has never completed before
+      const { data: storeRow } = await supabase
+        .from("stores")
+        .select("initial_sync_completed_at")
+        .eq("id", storeId)
+        .maybeSingle();
+      if (allRunRow?.is_initial || !storeRow?.initial_sync_completed_at) {
         await supabase
           .from("stores")
           .update({ initial_sync_completed_at: new Date().toISOString() })
