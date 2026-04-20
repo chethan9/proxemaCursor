@@ -169,3 +169,17 @@ export async function updateOrderStatus(id: string, status: string): Promise<Ord
   }
   return (await res.json()) as OrderRow;
 }
+
+export async function getOrFetchOrderByWooId(storeId: string, wooId: number): Promise<OrderRow | null> {
+  const { data: existing } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("store_id", storeId)
+    .eq("woo_id", wooId)
+    .maybeSingle();
+  if (existing) return existing as unknown as OrderRow;
+
+  const res = await fetch(`/api/stores/${storeId}/orders/by-woo/${wooId}`);
+  if (!res.ok) return null;
+  return (await res.json()) as OrderRow;
+}

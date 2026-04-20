@@ -1,6 +1,6 @@
 # WooSync Codebase Index
 
-Living map of the project. Update when structure changes meaningfully (new top-level folders, new API surface, new DB tables, new major features). Last updated: 2026-04-19.
+Living map of the project. Update when structure changes meaningfully (new top-level folders, new API surface, new DB tables, new major features). Last updated: 2026-04-20.
 
 ## Stack
 
@@ -70,10 +70,15 @@ Auth via `Authorization: Bearer <api_key>` → validated through `lib/api-auth.t
 ### Internal (session auth)
 - `POST /api/stores/create`
 - `DELETE /api/stores/[storeId]/delete`
-- `POST /api/stores/[storeId]/sync` — trigger sync (389 lines — candidate for split)
+- `POST /api/stores/[storeId]/sync` — trigger sync (aspect order: products → orders → categories → tags → customers → coupons → variations)
+- `POST /api/stores/[storeId]/sync-start` — trigger background sync, stamps `onboarding_completed_at`
+- `POST /api/stores/[storeId]/prefetch` — **instant onboarding**: parallel fetch of top 50 products, 50 orders, all categories; runs during post-webhook redirect window; stamps onboarding complete + kicks off background sync
 - `POST /api/stores/[storeId]/register-webhooks`
 - `GET/PATCH /api/stores/[storeId]/products/[productId]`
+- `GET /api/stores/[storeId]/products/[productId]/variations` — DB-first, Woo fallback + upsert
+- `GET /api/stores/[storeId]/products/by-woo/[wooId]` — cache-on-read: missing product fetched live from Woo + upserted
 - `GET/PATCH /api/stores/[storeId]/orders/[orderId]`
+- `GET /api/stores/[storeId]/orders/by-woo/[wooId]` — cache-on-read: missing order fetched live + upserted
 - `GET/PATCH /api/stores/[storeId]/categories/[categoryId]`
 - `GET/PATCH /api/stores/[storeId]/tags/[tagId]`
 - `POST /api/stores/[storeId]/retry-change/[changeId]`
@@ -104,8 +109,8 @@ All under `src/services/`. Components must go through these, never Supabase dire
 | `webhookService.ts` | Webhook CRUD + event history (222 lines) |
 | `apiKeyService.ts` | API key generation, listing, revoke |
 | `userService.ts` | User management inside a client org |
-| `productService.ts` | Paginated product reads + mutations |
-| `orderService.ts` | Paginated order reads + mutations |
+| `productService.ts` | Paginated product reads + mutations + `getOrFetchProductByWooId` cache-on-read |
+| `orderService.ts` | Paginated order reads + mutations + `getOrFetchOrderByWooId` cache-on-read |
 | `taxonomyService.ts` | Categories + tags reads |
 | `paymentMethodService.ts` | Payment method lookup (for orders) |
 | `viewPreferencesService.ts` | Per-user table view prefs |
@@ -166,6 +171,22 @@ Inferred from migrations + services. Full schema in `database.types.ts`.
 - `view_preferences`, `menu_config`, `payment_methods`, `branding`
 
 RLS is enabled on every table. Policies match the tenant model: user's `profile.client_id` scopes access.
+
+## Onboarding flow (instant)
+
+1. User adds site (OAuth or manual consumer key/secret)
+2. `/sites/connect/[id]` shows 4-step card: Authorizing → Receiving credentials → WordPress media auth → Registering webhooks
+3. After webhooks register: `POST /api/stores/[id]/prefetch` fires in background → confetti modal shown → auto-redirect to `/sites/[id]/products` after 2.2s
+4. Prefetch endpoint fetches top 50 products + 50 orders + all categories in parallel, stamps `onboarding_completed_at`, triggers full background sync
+5. Background sync runs aspects sequentially: products → orders → categories → tags → customers → coupons → variations (last = Phase 3)
+6. `InitialSyncBanner` visible on site pages until `initial_sync_completed_at` stamped
+7. Any missing product/order gets fetched on-demand via `by-woo/[wooId]` endpoints + cached
+8. Variations lazy-load on product edit (not fetched upfront)
+
+**Resume entry points** (task 99):
+- Sites table: "Resume" button when `onboarding_completed_at IS NULL`
+- AddSite dialog: duplicate URL detection surfaces resume prompt
+- Global modal (`IncompleteOnboardingPrompt` in `_app.tsx`): prompts on any page if user has incomplete sites
 
 ## Design system
 

@@ -135,3 +135,17 @@ export async function updateProduct(id: string, updates: Record<string, unknown>
   }
   return (await res.json()) as ProductRow;
 }
+
+export async function getOrFetchProductByWooId(storeId: string, wooId: number): Promise<ProductRow | null> {
+  const { data: existing } = await supabase
+    .from("products")
+    .select("*")
+    .eq("store_id", storeId)
+    .eq("woo_id", wooId)
+    .maybeSingle();
+  if (existing) return existing as unknown as ProductRow;
+
+  const res = await fetch(`/api/stores/${storeId}/products/by-woo/${wooId}`);
+  if (!res.ok) return null;
+  return (await res.json()) as ProductRow;
+}

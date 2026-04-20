@@ -17,6 +17,28 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 
 ---
 
+## 2026-04-20 — Instant onboarding + progressive background sync
+
+**Scope:** feature
+**Commit:** uncommitted
+**Files:** `src/pages/sites/connect/[id].tsx`, `src/pages/api/stores/[storeId]/prefetch.ts` (new), `src/pages/api/stores/[storeId]/sync-start.ts`, `src/pages/api/stores/[storeId]/estimate.ts` (deleted), `src/pages/api/stores/[storeId]/products/by-woo/[wooId].ts` (new), `src/pages/api/stores/[storeId]/orders/by-woo/[wooId].ts` (new), `src/components/site/InitialSyncBanner.tsx` (new), `src/components/IncompleteOnboardingPrompt.tsx` (new), `src/components/product-edit/tabs/VariantsTab.tsx`, `src/components/layout/SiteLayout.tsx`, `src/pages/_app.tsx`, `src/services/productService.ts`, `src/services/orderService.ts`, `src/lib/sync-messages.ts`, `src/pages/api/stores/[storeId]/sync.ts` (ref `task-100`)
+**Why:** Old onboarding made users wait through a "scanning inventory" + "preparing for liftoff" estimate stage before landing in the app. New flow gets them to a usable products page in ~3 seconds by prefetching the top 50 products/orders + all categories in parallel during the post-webhook redirect, then syncing the rest in the background sequentially.
+**What:**
+- **Connect page**: trimmed from 6 steps to 4 (auth → creds → WP → webhooks). After webhooks, shows full-screen confetti modal "Welcome to {store}!" and auto-redirects to `/sites/[id]/products` after 2.2s.
+- **Prefetch endpoint** (`POST /api/stores/[storeId]/prefetch`): fires during the confetti window. Parallel fetch + upsert of latest 50 products (orderby=modified), latest 50 orders (orderby=date), and all categories. Stamps `onboarding_completed_at`. Kicks off Phase 2 background sync via `sync-start`.
+- **Sync engine aspect order**: reordered to products → orders → categories → tags → customers → coupons → variations. Variations runs last (Phase 3) so the user sees meaningful data first and variations are only needed when editing.
+- **Cache-on-read**: new `productService.getOrFetchProductByWooId()` and `orderService.getOrFetchOrderByWooId()` — if a record isn't in local DB yet, hit the new `/api/stores/[id]/products/by-woo/[wooId]` or `/orders/by-woo/[wooId]` endpoint which fetches from Woo, upserts, returns. Gaps fill transparently as users navigate.
+- **Variations lazy-load**: product edit page no longer fetches variations upfront. `VariantsTab` auto-loads when the user opens a variable product; indicator shows "Loading from WooCommerce…" while on-demand, or "Live from WooCommerce" pill once loaded. Reuses existing `/api/stores/[id]/products/[productId]/variations` (DB-first with Woo fallback + upsert).
+- **InitialSyncBanner**: thin dismissible banner mounted in `SiteLayout`, visible while `onboarding_completed_at` is set but `initial_sync_completed_at` is null. Shows "Initial sync in progress — performance will be fully optimized once complete".
+- **IncompleteOnboardingPrompt**: global modal mounted in `_app.tsx`. On app load, queries for stores with `onboarding_completed_at IS NULL`. If any found (and user is not already on `/sites/connect/*`, `/auth/*`, or inside a site), shows a dialog prompting resume. Dismissible per-session via `sessionStorage`.
+- **Cleanup**: deleted `estimate.ts` API, removed estimate/liftoff stages from connect page, removed `pickProgressMessage` helper from `sync-messages.ts`, dropped `estimated_total` from `sync-start` request contract.
+- Both OAuth and manual-credential paths funnel through the same post-credentials flow (WP authorize → webhooks → confetti).
+- Resume flow from task 99 works with new card: `?resume=1` lands at the correct step, ends in the same confetti + redirect.
+
+**Follow-ups:**
+- Variations are still synced fleet-wide in Phase 3. For stores with 1000s of products this could be long — consider per-product on-demand only + skip Phase 3 entirely in a future iteration.
+- Cache-on-read helpers (`getOrFetchProductByWooId` / `getOrFetchOrderByWooId`) are available but not yet wired into product/order list components — wire in when a user reports a "product not found" glitch during initial sync.
+
 ## 2026-04-19 — Codebase index + change journal introduced
 **Scope:** docs
 **Commit:** uncommitted
