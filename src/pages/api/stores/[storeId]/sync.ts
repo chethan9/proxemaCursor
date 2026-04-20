@@ -436,11 +436,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (storeFull) {
           let userIds: string[] = [];
           if (storeFull.client_id) {
-            const { data: members } = await supabase
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: members } = await (supabase as any)
               .from("client_members")
               .select("user_id")
               .eq("client_id", storeFull.client_id);
-            userIds = (members || []).map((m: { user_id: string }) => m.user_id);
+            userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
           }
           if (userIds.length === 0) {
             const { data: allUsers } = await supabase

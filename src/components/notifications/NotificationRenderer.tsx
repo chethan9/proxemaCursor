@@ -65,7 +65,9 @@ function CelebrationView({ n, onClose, onClick }: { n: AppNotification; onClose:
   const handleClose = () => {
     setCardOpen(false);
     setOverlayOpen(false);
-    setTimeout(() => { n.cta_url ? onClick() : onClose(); }, 400);
+    setTimeout(() => {
+      if (n.cta_url) { onClick(); } else { onClose(); }
+    }, 400);
   };
 
   return (
