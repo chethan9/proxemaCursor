@@ -1040,6 +1040,7 @@ export type Database = {
           sync_interval: number | null
           updated_at: string | null
           url: string
+          woo_key_id: number | null
           wp_app_password: string | null
           wp_username: string | null
         }
@@ -1061,6 +1062,7 @@ export type Database = {
           sync_interval?: number | null
           updated_at?: string | null
           url: string
+          woo_key_id?: number | null
           wp_app_password?: string | null
           wp_username?: string | null
         }
@@ -1082,6 +1084,7 @@ export type Database = {
           sync_interval?: number | null
           updated_at?: string | null
           url?: string
+          woo_key_id?: number | null
           wp_app_password?: string | null
           wp_username?: string | null
         }

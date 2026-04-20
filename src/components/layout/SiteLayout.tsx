@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SyncProgressBanner } from "@/components/SyncProgressBanner";
 import { useStore } from "@/hooks/queries/useStores";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,7 +39,6 @@ export function SiteLayout({ children }: Props) {
         </aside>
       )}
       <main className="flex-1 overflow-y-auto">
-        <SyncProgressBanner />
         {children}
       </main>
     </div>

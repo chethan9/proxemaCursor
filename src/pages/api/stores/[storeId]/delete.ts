@@ -83,6 +83,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     webhookResults.push(...results);
   }
 
+  // Attempt WooCommerce API key revocation. Requires woo_key_id (stored from OAuth callback).
+  // Not all stores will have it; WooCommerce does not expose a way to look up keys by consumer_key.
+  let apiKeyRemoved = false;
+  let apiKeyError: string | null = null;
+  const wooKeyId = (store as { woo_key_id?: number | null }).woo_key_id ?? null;
+  if (wooKeyId && store.consumer_key && store.consumer_secret && store.url) {
+    try {
+      const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
+      const baseUrl = store.url.replace(/\/$/, "");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const resp = await fetch(
+        `${baseUrl}/wp-json/wc/v3/keys/${wooKeyId}?force=true`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Basic ${auth}` },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeout);
+      apiKeyRemoved = resp.ok;
+      if (!resp.ok) apiKeyError = `HTTP ${resp.status}`;
+    } catch (e) {
+      apiKeyError = e instanceof Error ? e.message : "Unknown error";
+    }
+  } else if (!wooKeyId) {
+    apiKeyError = "No key id tracked (key must be revoked manually in WooCommerce → Advanced → REST API)";
+  }
+
   // Cancel any running sync runs for this store so workers exit early
   await supabaseAdmin
     .from("sync_runs")
@@ -108,6 +137,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     success: true,
     webhooks_removed: webhookResults.filter((r) => r.ok).length,
     webhooks_failed: webhookResults.filter((r) => !r.ok).length,
+    api_key_removed: apiKeyRemoved,
+    api_key_error: apiKeyError,
     details: webhookResults,
   });
 }
