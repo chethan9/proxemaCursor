@@ -126,10 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
     setRole(null);
+    supabase.auth.signOut().catch(() => {});
     if (typeof window !== "undefined") {
       window.location.replace("/auth/login");
     } else {
