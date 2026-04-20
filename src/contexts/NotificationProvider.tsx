@@ -48,8 +48,11 @@ const POLL_MS = 30000;
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [queue, setQueue] = useState<AppNotification[]>([]);
+  const [queue, setQueue] = useState<NotificationItem[]>([]);
+  const queueRef = useRef<NotificationItem[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => { queueRef.current = queue; }, [queue]);
 
   const invalidateDataQueries = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["orders"] });
@@ -61,7 +64,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     qc.invalidateQueries({ queryKey: ["active-syncs-all"] });
   }, [qc]);
 
-  const enqueue = useCallback((n: AppNotification) => {
+  const enqueue = useCallback((n: NotificationItem) => {
     if (seenIdsRef.current.has(n.id)) return;
     seenIdsRef.current.add(n.id);
     setQueue((q) => {
@@ -73,7 +76,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [invalidateDataQueries]);
 
   const stampShown = useCallback(async (id: string) => {
-    // Skip DB stamping for transient notifications
     if (id.startsWith("transient-")) return;
     await supabase
       .from("user_notifications")
@@ -86,7 +88,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user) return;
     const { data } = await supabase
       .from("user_notifications")
-      .select("id, type, title, body, cta_label, cta_url, image_url, lottie_url, priority, metadata, shown_at, dismissed_at, expires_at")
+      .select("id, user_id, type, title, body, cta_label, cta_url, image_url, lottie_url, priority, metadata, shown_at, dismissed_at, expires_at")
       .or(`user_id.eq.${user.id},user_id.is.null`)
       .is("dismissed_at", null)
       .order("priority", { ascending: false })
@@ -98,6 +100,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (row.expires_at && new Date(row.expires_at).getTime() < now) continue;
       enqueue({
         id: row.id,
+        user_id: row.user_id,
         type: row.type as NotificationType,
         title: row.title,
         body: row.body,
@@ -107,7 +110,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         lottie_url: row.lottie_url,
         priority: row.priority ?? 50,
         metadata: (row.metadata as Record<string, unknown>) || {},
-        persisted: true,
+        shown_at: row.shown_at,
+        dismissed_at: row.dismissed_at,
       });
     }
   }, [user, enqueue]);
@@ -140,12 +144,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const channel = supabase
       .channel(`user-notifications-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_notifications" }, (payload) => {
-        const row = payload.new as { id: string; user_id: string | null; type: string; title: string; body: string | null; cta_label: string | null; cta_url: string | null; image_url: string | null; lottie_url: string | null; priority: number; metadata: unknown; dismissed_at: string | null; expires_at: string | null };
+        const row = payload.new as { id: string; user_id: string | null; type: string; title: string; body: string | null; cta_label: string | null; cta_url: string | null; image_url: string | null; lottie_url: string | null; priority: number; metadata: unknown; shown_at: string | null; dismissed_at: string | null; expires_at: string | null };
         if (row.user_id && row.user_id !== user.id) return;
         if (row.dismissed_at) return;
         if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return;
         enqueue({
           id: row.id,
+          user_id: row.user_id,
           type: row.type as NotificationType,
           title: row.title,
           body: row.body,
@@ -155,7 +160,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           lottie_url: row.lottie_url,
           priority: row.priority ?? 50,
           metadata: (row.metadata as Record<string, unknown>) || {},
-          persisted: true,
+          shown_at: row.shown_at,
+          dismissed_at: row.dismissed_at,
         });
       })
       .subscribe();
@@ -165,14 +171,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const current = queue[0] || null;
 
   useEffect(() => {
-    if (current && current.persisted) stampShown(current.id);
+    if (current && !current._transient) stampShown(current.id);
   }, [current?.id, current, stampShown]);
 
   const dismiss = useCallback(async () => {
     const curr = queueRef.current[0];
     if (!curr) return;
     setQueue((q) => q.slice(1));
-    if (!curr.id.startsWith("transient-")) {
+    if (!curr._transient) {
       await supabase
         .from("user_notifications")
         .update({ dismissed_at: new Date().toISOString() })
@@ -183,10 +189,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const click = useCallback(async () => {
     const curr = queueRef.current[0];
     if (!curr) return;
-    if (!curr.id.startsWith("transient-")) {
+    if (!curr._transient) {
       await supabase
         .from("user_notifications")
-        .update({ clicked_at: new Date().toISOString(), dismissed_at: new Date().toISOString() })
+        .update({ dismissed_at: new Date().toISOString() })
         .eq("id", curr.id);
     }
     if (curr.cta_url) {
@@ -220,7 +226,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ current: queue[0] || null, dismiss, click, push }}>
+    <NotificationContext.Provider value={{ current, dismiss, click, push }}>
       {children}
     </NotificationContext.Provider>
   );
