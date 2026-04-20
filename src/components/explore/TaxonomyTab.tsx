@@ -239,7 +239,7 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
                         <TableCell className="text-right font-mono text-xs text-muted-foreground">{r.woo_id}</TableCell>
                       </TableRow>
                       {isExpanded && (
-                        <TableRow key={`${r.id}-exp`} className="hover:bg-transparent">
+                        <TableRow key={`${r.id}-exp`} className="bg-muted/30 hover:bg-muted/30">
                           <TableCell colSpan={colSpan} className="p-0">
                             {mode === "categories" ? (
                               <TaxonomyRowExpanded
