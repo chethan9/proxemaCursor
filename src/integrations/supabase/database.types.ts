@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1142,6 +1142,7 @@ export type Database = {
           logo_url: string | null
           name: string
           next_sync_at: string | null
+          onboarding_completed_at: string | null
           short_id: string | null
           status: string | null
           sync_interval: number | null
@@ -1166,6 +1167,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           next_sync_at?: string | null
+          onboarding_completed_at?: string | null
           short_id?: string | null
           status?: string | null
           sync_interval?: number | null
@@ -1190,6 +1192,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           next_sync_at?: string | null
+          onboarding_completed_at?: string | null
           short_id?: string | null
           status?: string | null
           sync_interval?: number | null

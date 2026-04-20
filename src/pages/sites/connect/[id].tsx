@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { ConnectLayout } from "@/components/layout/ConnectLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, Rocket, Package, ShoppingCart, Users, Tag as TagIcon, Percent, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, Rocket, Package, ShoppingCart, Users, Tag as TagIcon, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +10,15 @@ import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { pickProgressMessage } from "@/lib/sync-messages";
+import { buildWooCommerceAuthUrl } from "@/lib/woocommerce-auth";
+import { updateStore } from "@/services/storeService";
 
 type StepStatus = "pending" | "active" | "done" | "error";
 interface Step { id: string; label: string; status: StepStatus; }
+type Stage = "loading" | "credentials" | "woo" | "wp" | "estimating" | "liftoff" | "done";
 
 const INITIAL_STEPS: Step[] = [
-  { id: "auth", label: "Authorizing with WooCommerce", status: "active" },
+  { id: "auth", label: "Authorizing with WooCommerce", status: "pending" },
   { id: "creds", label: "Receiving API credentials", status: "pending" },
   { id: "wp", label: "Authorize WordPress media access", status: "pending" },
   { id: "webhooks", label: "Registering webhooks", status: "pending" },
@@ -38,11 +41,11 @@ function formatEta(s: number): string {
 export default function ConnectSuccessPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { id, success, wp } = router.query;
+  const { id, success, wp, resume } = router.query;
   const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
   const [failed, setFailed] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [stage, setStage] = useState<"woo" | "wp" | "estimating" | "liftoff" | "done">("woo");
+  const [stage, setStage] = useState<Stage>("loading");
   const [storeUrl, setStoreUrl] = useState<string>("");
   const [showManual, setShowManual] = useState(false);
   const [manualUser, setManualUser] = useState("");
@@ -54,6 +57,13 @@ export default function ConnectSuccessPage() {
   const [webhookError, setWebhookError] = useState<string | null>(null);
   const [webhookSummary, setWebhookSummary] = useState<string | null>(null);
   const webhookRegisteredRef = useRef(false);
+  const initRef = useRef(false);
+
+  // Manual credentials entry state
+  const [showCredsManual, setShowCredsManual] = useState(false);
+  const [credsKey, setCredsKey] = useState("");
+  const [credsSecret, setCredsSecret] = useState("");
+  const [credsBusy, setCredsBusy] = useState(false);
 
   useEffect(() => {
     if (stage !== "estimating") return;
@@ -134,7 +144,7 @@ export default function ConnectSuccessPage() {
     if (!siteId) return;
     if (!webhookRegisteredRef.current && !webhookError) {
       const ok = await registerWebhooks(siteId);
-      if (!ok) return; // Stop here — user must retry or skip
+      if (!ok) return;
     }
     setStage("estimating");
     setStep("estimate", "active");
@@ -180,16 +190,99 @@ export default function ConnectSuccessPage() {
     }
   };
 
-  useEffect(() => {
-    if (!siteId || success !== "1") return;
+  // Poll for OAuth credentials arriving via callback
+  const startOAuthPolling = (sid: string) => {
+    setStep("auth", "active");
+    setStage("woo");
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 20;
+    (async () => {
+      while (attempts < maxAttempts && !cancelled) {
+        attempts += 1;
+        const { data } = await supabase
+          .from("stores")
+          .select("id, url, consumer_key, consumer_secret, wp_username")
+          .eq("id", sid)
+          .maybeSingle();
+        if (data?.consumer_key && data?.consumer_secret) {
+          setStoreUrl(data.url);
+          setStep("auth", "done");
+          setStep("creds", "done");
+          startEstimate(sid);
+          if (data.wp_username) {
+            setStep("wp", "done");
+            runEstimateAndLiftoff();
+          } else {
+            setStage("wp");
+            advanceFrom("wp");
+          }
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      if (cancelled) return;
+      setStep("auth", "error");
+      setStage("credentials");
+      setErrorMessage("We didn't receive credentials from WooCommerce within 30 seconds. This is often caused by an ad blocker or firewall blocking the callback. You can restart the OAuth flow or enter your keys manually.");
+    })();
+    return () => { cancelled = true; };
+  };
 
+  // Restart OAuth from credentials-resume step
+  const handleRestartOAuth = () => {
+    if (!siteId || !storeUrl) return;
+    const authUrl = buildWooCommerceAuthUrl({ storeUrl, storeId: siteId });
+    window.location.href = authUrl;
+  };
+
+  // Save manual credentials and advance
+  const handleSaveManualCreds = async () => {
+    if (!siteId || !credsKey.trim() || !credsSecret.trim()) return;
+    setCredsBusy(true);
+    try {
+      await updateStore(siteId, {
+        consumer_key: credsKey.trim(),
+        consumer_secret: credsSecret.trim(),
+        status: "connected",
+      });
+      setStep("auth", "done");
+      setStep("creds", "done");
+      startEstimate(siteId);
+      // Check if WP is already set (unlikely but possible on repeated attempts)
+      const { data } = await supabase.from("stores").select("wp_username").eq("id", siteId).maybeSingle();
+      if (data?.wp_username) {
+        setStep("wp", "done");
+        runEstimateAndLiftoff();
+      } else {
+        setStage("wp");
+        advanceFrom("wp");
+      }
+      toast({ title: "Credentials saved" });
+    } catch (e) {
+      toast({ title: "Failed to save", description: e instanceof Error ? e.message : "Try again", variant: "destructive" });
+    } finally {
+      setCredsBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!siteId || initRef.current) return;
+    initRef.current = true;
+
+    // Handle WP callback returns first (comes back with ?wp=ok/rejected/missing)
     if (wp) {
       if (wp === "ok") {
         setSteps((prev) => prev.map((s) => {
           if (["auth", "creds", "wp"].includes(s.id)) return { ...s, status: "done" };
           return s;
         }));
-        runEstimateAndLiftoff();
+        (async () => {
+          const { data } = await supabase.from("stores").select("url").eq("id", siteId).maybeSingle();
+          if (data?.url) setStoreUrl(data.url);
+          startEstimate(siteId);
+          runEstimateAndLiftoff();
+        })();
       } else {
         setStage("wp");
         setSteps((prev) => prev.map((s) => {
@@ -203,50 +296,72 @@ export default function ConnectSuccessPage() {
             ? "You rejected the WordPress authorization. You can enter credentials manually or skip for now."
             : "WordPress did not return credentials. Try manual entry or skip for now."
         );
+        (async () => {
+          const { data } = await supabase.from("stores").select("url").eq("id", siteId).maybeSingle();
+          if (data?.url) setStoreUrl(data.url);
+        })();
       }
       return;
     }
 
-    let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 20;
-
+    // Detect state and route to correct step
     (async () => {
-      advanceFrom("auth");
-      while (attempts < maxAttempts && !cancelled) {
-        attempts += 1;
-        const { data } = await supabase
-          .from("stores")
-          .select("id, url, consumer_key, consumer_secret, wp_username")
-          .eq("id", siteId)
-          .maybeSingle();
-        if (data?.consumer_key && data?.consumer_secret) {
-          setStoreUrl(data.url);
-          if (!cancelled) {
-            setStep("auth", "done");
-            setStep("creds", "done");
-            // Fire estimate in parallel - user is about to spend time on WP auth
-            startEstimate(siteId);
-            if (data.wp_username) {
-              setStep("wp", "done");
-              runEstimateAndLiftoff();
-            } else {
-              setStage("wp");
-              advanceFrom("wp");
-            }
-          }
-          return;
-        }
-        await new Promise((r) => setTimeout(r, 1500));
-      }
-      if (cancelled) return;
-      setStep("auth", "error");
-      setFailed(true);
-      setErrorMessage("We did not receive credentials from WooCommerce within 30 seconds. This is often caused by an ad blocker or firewall blocking the callback.");
-    })();
+      const { data: store } = await supabase
+        .from("stores")
+        .select("id, url, consumer_key, consumer_secret, wp_username, onboarding_completed_at")
+        .eq("id", siteId)
+        .maybeSingle();
 
-    return () => { cancelled = true; };
-  }, [siteId, success, wp]);
+      if (!store) {
+        setFailed(true);
+        setErrorMessage("Site not found.");
+        return;
+      }
+
+      setStoreUrl(store.url);
+
+      // Already onboarded → redirect to dashboard
+      if (store.onboarding_completed_at) {
+        router.replace(`/sites/${siteId}/products`);
+        return;
+      }
+
+      // Fresh OAuth return: poll for credentials
+      if (success === "1" && !store.consumer_key) {
+        startOAuthPolling(siteId);
+        return;
+      }
+
+      // No credentials yet → credentials resume step
+      if (!store.consumer_key || !store.consumer_secret) {
+        setStep("auth", "error");
+        setStage("credentials");
+        if (resume === "1") {
+          setErrorMessage("Looks like the connection didn't complete. Restart OAuth or enter your keys manually to continue.");
+        }
+        return;
+      }
+
+      // Have credentials
+      setStep("auth", "done");
+      setStep("creds", "done");
+      startEstimate(siteId);
+
+      // No WP creds → WP step
+      if (!store.wp_username) {
+        setStage("wp");
+        advanceFrom("wp");
+        if (resume === "1") {
+          setErrorMessage("Continuing setup — authorize WordPress to enable media uploads, or skip for now.");
+        }
+        return;
+      }
+
+      // All creds present → run webhooks + estimate + liftoff
+      setStep("wp", "done");
+      runEstimateAndLiftoff();
+    })();
+  }, [siteId, success, wp, resume]);
 
   const handleManualSave = async () => {
     if (!siteId || !manualUser || !manualPass) return;
@@ -279,7 +394,7 @@ export default function ConnectSuccessPage() {
 
   const completedCount = steps.filter((s) => s.status === "done").length;
 
-  if (!siteId) {
+  if (!siteId || stage === "loading") {
     return (
       <ConnectLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -297,6 +412,7 @@ export default function ConnectSuccessPage() {
             <div className="text-center mb-6">
               <h1 className="text-xl font-semibold mb-1">
                 {failed ? "Connection Pending"
+                  : stage === "credentials" ? "Resume Setup"
                   : stage === "wp" ? "Authorize WordPress"
                   : stage === "liftoff" ? "Ready for Liftoff"
                   : stage === "estimating" ? "Scanning your store"
@@ -324,6 +440,68 @@ export default function ConnectSuccessPage() {
                 </div>
               ))}
             </div>
+
+            {stage === "credentials" && (
+              <div className="space-y-4 rounded-lg border border-warning/40 bg-warning/5 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">Credentials not received</p>
+                    <p className="text-xs text-muted-foreground">
+                      {errorMessage || "We don't have API credentials for this store yet. You can restart the OAuth flow or paste keys manually."}
+                    </p>
+                  </div>
+                </div>
+
+                <Button onClick={handleRestartOAuth} className="w-full" size="lg" disabled={!storeUrl}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Restart OAuth
+                </Button>
+
+                <div className="text-center">
+                  <button type="button" onClick={() => setShowCredsManual((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground underline">
+                    {showCredsManual ? "Hide manual entry" : "Enter API keys manually instead"}
+                  </button>
+                </div>
+
+                {showCredsManual && (
+                  <div className="space-y-3 pt-2 border-t border-border/60">
+                    <p className="text-xs text-muted-foreground">
+                      Create keys in WooCommerce → Settings → Advanced → REST API (Read/Write).
+                      {storeUrl && (
+                        <> {" "}
+                          <a
+                            href={`${storeUrl.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-settings&tab=advanced&section=keys`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline inline-flex items-center gap-0.5"
+                          >
+                            Open in store <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </>
+                      )}
+                    </p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ck-key" className="text-xs">Consumer Key</Label>
+                      <Input id="ck-key" value={credsKey} onChange={(e) => setCredsKey(e.target.value)} placeholder="ck_..." className="h-9 font-mono text-xs" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cs-key" className="text-xs">Consumer Secret</Label>
+                      <Input id="cs-key" type="password" value={credsSecret} onChange={(e) => setCredsSecret(e.target.value)} placeholder="cs_..." className="h-9 font-mono text-xs" />
+                    </div>
+                    <Button onClick={handleSaveManualCreds} disabled={!credsKey || !credsSecret || credsBusy} className="w-full" size="sm">
+                      {credsBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & Continue"}
+                    </Button>
+                  </div>
+                )}
+
+                <div className="text-center pt-1">
+                  <Link href="/projects" className="text-xs text-muted-foreground hover:text-foreground underline">
+                    Cancel — I&apos;ll finish later from the sites list
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {stage === "liftoff" && estimate && (
               <div className="space-y-4 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-4">

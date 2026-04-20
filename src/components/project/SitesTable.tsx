@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { Store, ExternalLink, Heart, Pencil, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, Rocket } from "lucide-react";
+import { Store, ExternalLink, Heart, Pencil, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, Rocket, PlayCircle, AlertTriangle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import { getStore, type StoreWithClient } from "@/services/storeService";
@@ -101,12 +101,13 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
             const aspectLabel = sync?.currentAspect
               ? sync.currentAspect.charAt(0).toUpperCase() + sync.currentAspect.slice(1)
               : "Preparing";
+            const isIncomplete = !store.onboarding_completed_at;
             return (
               <>
                 <TableRow
                   key={store.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/projects/${store.id}`)}
+                  onClick={() => isIncomplete ? router.push(`/sites/connect/${store.id}?resume=1`) : router.push(`/projects/${store.id}`)}
                   onMouseEnter={() => prefetchStore(store.id)}
                 >
                   <TableCell>
@@ -122,10 +123,19 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                   </TableCell>
                   <TableCell className="text-muted-foreground">{getClientName(store.client_id)}</TableCell>
                   <TableCell>
-                    <StatusBadge variant={getStatusVariant(store.status)}>{store.status}</StatusBadge>
+                    {isIncomplete ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/10 text-warning border border-warning/30">
+                        <AlertTriangle className="h-3 w-3" />
+                        Setup incomplete
+                      </span>
+                    ) : (
+                      <StatusBadge variant={getStatusVariant(store.status)}>{store.status}</StatusBadge>
+                    )}
                   </TableCell>
                   <TableCell>
-                    {store.health_score != null ? (
+                    {isIncomplete ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : store.health_score != null ? (
                       <div className="flex items-center gap-2">
                         <Heart className={`h-3.5 w-3.5 ${
                           store.health_score >= 80 ? "text-emerald-500 fill-emerald-500" :
@@ -142,18 +152,32 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(store.last_sync_at)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{isIncomplete ? "—" : formatDate(store.last_sync_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-8 px-2 gap-1.5"
-                        onClick={(e) => { e.stopPropagation(); onEdit(store); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span className="text-xs">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8"
-                        onClick={(e) => { e.stopPropagation(); window.open(store.url, "_blank"); }}>
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
+                      {isIncomplete ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-8 px-2.5 gap-1.5"
+                          onClick={(e) => { e.stopPropagation(); router.push(`/sites/connect/${store.id}?resume=1`); }}
+                        >
+                          <PlayCircle className="h-3.5 w-3.5" />
+                          <span className="text-xs">Resume</span>
+                        </Button>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1.5"
+                            onClick={(e) => { e.stopPropagation(); onEdit(store); }}>
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="text-xs">Edit</span>
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"
+                            onClick={(e) => { e.stopPropagation(); window.open(store.url, "_blank"); }}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,11 +18,12 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, EyeOff, AlertTriangle, ExternalLink, HelpCircle, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, ExternalLink, HelpCircle, CheckCircle2, PlayCircle } from "lucide-react";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { useCreateStore } from "@/hooks/queries/useStores";
 import type { Client } from "@/services/clientService";
 import { useRouter } from "next/router";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
@@ -40,6 +41,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
   const [authMode, setAuthMode] = useState<"oauth" | "manual">("oauth");
   const [showSecrets, setShowSecrets] = useState(false);
   const [manualConfirmed, setManualConfirmed] = useState(false);
+  const [existingIncomplete, setExistingIncomplete] = useState<{ id: string; name: string } | null>(null);
   const [newStore, setNewStore] = useState({
     name: "",
     url: "",
@@ -56,12 +58,35 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     return `${base}/wp-admin/admin.php?page=wc-settings&tab=advanced&section=keys`;
   }, [newStore.url]);
 
+  // Debounced check for existing incomplete site with matching URL
+  useEffect(() => {
+    const v = validateStoreUrl(newStore.url);
+    if (!v.valid || !v.cleanedUrl) {
+      setExistingIncomplete(null);
+      return;
+    }
+    const cleaned = v.cleanedUrl;
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("id, name, url, onboarding_completed_at")
+        .ilike("url", cleaned)
+        .is("onboarding_completed_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (data) setExistingIncomplete({ id: data.id, name: data.name });
+      else setExistingIncomplete(null);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [newStore.url]);
+
   const reset = () => {
     setNewStore({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
     setUrlError(null);
     setAuthMode("oauth");
     setShowSecrets(false);
     setManualConfirmed(false);
+    setExistingIncomplete(null);
   };
 
   const handleSelectManual = () => {
@@ -153,8 +178,32 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
             <Label htmlFor="store-url" className="text-xs">Store URL</Label>
             <Input id="store-url" placeholder="https://mystore.com" value={newStore.url} onChange={(e) => { setNewStore({ ...newStore, url: e.target.value }); setUrlError(null); }} className={`h-9 ${urlError ? "border-destructive" : ""}`} />
             {urlError && <p className="text-xs text-destructive">{urlError}</p>}
-            {newStore.url.trim() && !urlError && (
+            {newStore.url.trim() && !urlError && !existingIncomplete && (
               <p className="text-[11px] text-muted-foreground">Connecting to: <span className="font-mono text-foreground">{cleanStoreUrl(newStore.url)}</span></p>
+            )}
+            {existingIncomplete && (
+              <div className="rounded-md border border-warning/40 bg-warning/5 px-3 py-2 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium">Setup already in progress</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    You started adding <span className="font-semibold">{existingIncomplete.name}</span> but haven&apos;t finished. Resume instead of creating a duplicate.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-7 px-2 gap-1 shrink-0"
+                  onClick={() => {
+                    const sid = existingIncomplete.id;
+                    onOpenChange(false);
+                    reset();
+                    router.push(`/sites/connect/${sid}?resume=1`);
+                  }}
+                >
+                  <PlayCircle className="h-3.5 w-3.5" />
+                  <span className="text-xs">Resume</span>
+                </Button>
+              </div>
             )}
           </div>
 
@@ -238,7 +287,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Cancel</Button>
-          <Button onClick={handleCreate} disabled={creating || !newStore.name.trim() || !newStore.url.trim()} size="sm">
+          <Button onClick={handleCreate} disabled={creating || !newStore.name.trim() || !newStore.url.trim() || !!existingIncomplete} size="sm">
             {creating ? "Creating..." : authMode === "oauth" ? "Connect Store" : "Add Site"}
           </Button>
         </DialogFooter>

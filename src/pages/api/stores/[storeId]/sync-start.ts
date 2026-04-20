@@ -9,7 +9,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { estimated_total = 0, is_initial = false } = req.body || {};
 
-  // Create placeholder sync_run so UI can poll immediately
   const { data: run } = await supabaseAdmin
     .from("sync_runs")
     .insert({
@@ -24,7 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select()
     .single();
 
-  // Fire-and-forget: trigger actual sync without awaiting
+  // Mark onboarding as complete (initial sync launched) so user won't be re-routed to connect wizard
+  if (is_initial) {
+    await supabaseAdmin
+      .from("stores")
+      .update({ onboarding_completed_at: new Date().toISOString() } as never)
+      .eq("id", storeId)
+      .is("onboarding_completed_at", null);
+  }
+
   const base = getAppUrl(req);
   fetch(`${base}/api/stores/${storeId}/sync`, {
     method: "POST",
