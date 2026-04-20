@@ -126,7 +126,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
         <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
           <p className="text-xs text-foreground leading-snug">
-            <span className="font-medium">Disable ad blockers</span> for this page — they can block the callback and leave your site stuck in &ldquo;pending&rdquo;.
+            <span className="font-medium">Disable ad blockers</span> — they can block the callback.
           </p>
         </div>
 
