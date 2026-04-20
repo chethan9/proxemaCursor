@@ -21,6 +21,11 @@ export type Variation = {
   dimensions: { length: string; width: string; height: string };
   description: string;
   image: { id?: number; src: string; alt?: string } | null;
+  gallery?: { id?: number; src: string; alt?: string }[];
+  enabled?: boolean;
+  virtual?: boolean;
+  downloadable?: boolean;
+  tax_class?: string;
 };
 
 export type ProductFormState = {
@@ -47,6 +52,7 @@ export type ProductFormState = {
   images: { id?: number; src: string; alt?: string }[];
   attributes: ProductAttribute[];
   variations: Variation[];
+  deletedVariationIds?: number[];
   meta_data?: { key: string; value: unknown }[];
 };
 
@@ -74,7 +80,12 @@ export function emptyProductForm(): ProductFormState {
     images: [],
     attributes: [],
     variations: [],
+    deletedVariationIds: [],
   };
+}
+
+export function compositeVariationKey(attrs: { name: string; option: string }[]): string {
+  return attrs.map((a) => `${a.name}=${a.option}`).join("|");
 }
 
 export function formToWooPayload(form: ProductFormState): Record<string, unknown> {
@@ -123,10 +134,24 @@ export function formToWooPayload(form: ProductFormState): Record<string, unknown
       dimensions: v.dimensions,
       description: v.description,
       image: v.image,
+      gallery: v.gallery || [],
+      enabled: v.enabled !== false,
+      virtual: !!v.virtual,
+      downloadable: !!v.downloadable,
+      tax_class: v.tax_class || "",
       attributes: v.attributes,
     }));
   }
+  if (form.deletedVariationIds && form.deletedVariationIds.length) {
+    payload.deleted_variation_ids = form.deletedVariationIds;
+  }
   return payload;
+}
+
+export async function fetchProductVariations(storeId: string, productId: string): Promise<Variation[]> {
+  const res = await fetch(`/api/stores/${storeId}/products/${productId}/variations`);
+  if (!res.ok) throw new Error(`Failed to load variations (${res.status})`);
+  return res.json();
 }
 
 export async function createProduct(storeId: string, form: ProductFormState) {
