@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,9 +14,14 @@ export function SiteLayout({ children }: Props) {
   const siteId = typeof router.query.id === "string" ? router.query.id : undefined;
   const { data: store, isLoading, isFetched } = useStore(siteId);
   const { toast } = useToast();
+  const redirectedRef = useRef(false);
 
   useEffect(() => {
-    if (siteId && isFetched && !isLoading && !store) {
+    if (!siteId) return;
+    if (!router.pathname.startsWith("/sites/")) return;
+    if (redirectedRef.current) return;
+    if (isFetched && !isLoading && store === null) {
+      redirectedRef.current = true;
       toast({ title: "Site no longer exists", description: "Redirecting to your projects", variant: "destructive" });
       router.replace("/projects");
     }

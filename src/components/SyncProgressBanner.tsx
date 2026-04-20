@@ -25,6 +25,8 @@ function formatElapsed(s: number): string {
 
 let cachedConfetti: object | null = null;
 
+type SnapshotSite = { store_id: string; store_name: string; store_url: string; store_logo_url: string | null };
+
 export function SyncProgressBanner() {
   const router = useRouter();
   const { toast } = useToast();
@@ -60,7 +62,6 @@ export function SyncProgressBanner() {
       .then(({ data }) => { if (data) setStore(data); });
   }, [storeId]);
 
-  // Reset display progress + refs when storeId changes (prevents freeze)
   useEffect(() => {
     if (prevStoreIdRef.current !== storeId) {
       prevStoreIdRef.current = storeId;
@@ -85,7 +86,7 @@ export function SyncProgressBanner() {
     if (sid) qc.invalidateQueries({ queryKey: ["active-sync", sid] });
   };
 
-  // Current-site completion detection — only fires when same storeId transitions running→idle
+  // Current-site completion detection
   useEffect(() => {
     if (!data || !storeId) return;
     if (prevStoreIdRef.current !== storeId) return;
@@ -114,27 +115,58 @@ export function SyncProgressBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, storeId]);
 
-  // Background-sync completion toasts (sites the user is NOT currently viewing)
-  const prevAllRunningRef = useRef<Set<string>>(new Set());
+  // Background completion toasts — debounced: site must be absent for 2 consecutive polls
+  // Also skip the first run after storeId change to avoid firing during navigation
+  const prevSnapshotRef = useRef<Map<string, SnapshotSite>>(new Map());
+  const pendingRemovalRef = useRef<Map<string, SnapshotSite>>(new Map());
+  const skipNextBgCheckRef = useRef(true);
+
   useEffect(() => {
-    const currentRunning = new Set(allSyncs.map((s) => s.store_id));
-    for (const prevId of prevAllRunningRef.current) {
-      if (!currentRunning.has(prevId) && prevId !== storeId) {
-        const seenKey = `bg-toast:${prevId}`;
-        if (!seenCompletionsRef.current.has(seenKey)) {
+    skipNextBgCheckRef.current = true;
+  }, [storeId]);
+
+  useEffect(() => {
+    const currentMap = new Map<string, SnapshotSite>();
+    for (const s of allSyncs) {
+      currentMap.set(s.store_id, {
+        store_id: s.store_id,
+        store_name: s.store_name,
+        store_url: s.store_url,
+        store_logo_url: s.store_logo_url,
+      });
+    }
+
+    if (skipNextBgCheckRef.current) {
+      skipNextBgCheckRef.current = false;
+      prevSnapshotRef.current = currentMap;
+      pendingRemovalRef.current.clear();
+      return;
+    }
+
+    // Confirm pending removals — if still absent this poll, fire toast
+    for (const [id, snap] of pendingRemovalRef.current) {
+      if (!currentMap.has(id)) {
+        const seenKey = `bg-toast:${id}:${snap.store_name}`;
+        if (!seenCompletionsRef.current.has(seenKey) && id !== storeId) {
           seenCompletionsRef.current.add(seenKey);
-          supabase.from("stores").select("name").eq("id", prevId).maybeSingle().then(({ data: s }) => {
-            if (s) toast({ title: `${s.name} sync complete ✨`, description: "Click to view details" });
-          });
+          toast({ title: `${snap.store_name} sync complete ✨`, description: "Click to view details" });
           invalidateAll();
         }
       }
     }
-    prevAllRunningRef.current = currentRunning;
+    pendingRemovalRef.current.clear();
+
+    // Stage new removals for next-poll confirmation
+    for (const [id, snap] of prevSnapshotRef.current) {
+      if (!currentMap.has(id)) {
+        pendingRemovalRef.current.set(id, snap);
+      }
+    }
+
+    prevSnapshotRef.current = currentMap;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSyncs, storeId]);
 
-  // Smooth RAF animation
   useEffect(() => {
     const target = data?.progress ?? 0;
     let raf = 0;
@@ -172,10 +204,8 @@ export function SyncProgressBanner() {
     setCardOpen(false); setOverlayOpen(false); invalidateAll(storeId);
   };
 
-  // Background syncs (other sites)
   const bgSyncs = allSyncs.filter((s) => s.store_id !== storeId);
 
-  // If current site isn't syncing but others are, show compact fleet banner
   if (!data || !data.running || dismissed) {
     if (bgSyncs.length > 0 && !dismissed) {
       return (
