@@ -73,6 +73,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [invalidateDataQueries]);
 
   const stampShown = useCallback(async (id: string) => {
+    // Skip DB stamping for transient notifications
+    if (id.startsWith("transient-")) return;
     await supabase
       .from("user_notifications")
       .update({ shown_at: new Date().toISOString() })
@@ -167,43 +169,58 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [current?.id, current, stampShown]);
 
   const dismiss = useCallback(async () => {
-    if (!current) return;
-    const toRemove = current;
+    const curr = queueRef.current[0];
+    if (!curr) return;
     setQueue((q) => q.slice(1));
-    if (toRemove.persisted) {
+    if (!curr.id.startsWith("transient-")) {
       await supabase
         .from("user_notifications")
         .update({ dismissed_at: new Date().toISOString() })
-        .eq("id", toRemove.id);
+        .eq("id", curr.id);
     }
-    if (toRemove.type === "celebration") invalidateDataQueries();
-  }, [current, invalidateDataQueries]);
+  }, []);
 
   const click = useCallback(async () => {
-    if (!current) return;
-    if (current.persisted) {
+    const curr = queueRef.current[0];
+    if (!curr) return;
+    if (!curr.id.startsWith("transient-")) {
       await supabase
         .from("user_notifications")
-        .update({ clicked_at: new Date().toISOString() })
-        .eq("id", current.id);
+        .update({ clicked_at: new Date().toISOString(), dismissed_at: new Date().toISOString() })
+        .eq("id", curr.id);
     }
-    if (current.cta_url) {
-      if (/^https?:\/\//.test(current.cta_url)) {
-        window.open(current.cta_url, "_blank", "noopener,noreferrer");
-      } else {
-        window.location.assign(current.cta_url);
-      }
+    if (curr.cta_url) {
+      window.open(curr.cta_url, "_blank");
     }
-    await dismiss();
-  }, [current, dismiss]);
+    setQueue((q) => q.slice(1));
+  }, []);
 
   const push = useCallback((n: PushNotificationInput) => {
-    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    enqueue({ ...n, id, persisted: false });
-  }, [enqueue]);
+    const item: NotificationItem = {
+      id: `transient-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      user_id: null,
+      type: n.type || "info",
+      title: n.title,
+      body: n.body || null,
+      cta_label: n.cta_label || null,
+      cta_url: n.cta_url || null,
+      image_url: n.image_url || null,
+      lottie_url: n.lottie_url || null,
+      priority: n.priority ?? 50,
+      metadata: n.metadata || null,
+      shown_at: null,
+      dismissed_at: null,
+      _transient: true,
+    };
+    setQueue((q) => {
+      const next = [...q, item];
+      next.sort((a, b) => b.priority - a.priority);
+      return next;
+    });
+  }, []);
 
   return (
-    <NotificationContext.Provider value={{ current, dismiss, click, push }}>
+    <NotificationContext.Provider value={{ current: queue[0] || null, dismiss, click, push }}>
       {children}
     </NotificationContext.Provider>
   );
