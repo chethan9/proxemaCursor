@@ -1,25 +1,63 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ProductFormState, Variation } from "@/services/productEditService";
+import { ProductFormState, Variation, fetchProductVariations } from "@/services/productEditService";
 import { AttributeEditor } from "@/components/product-edit/variants/AttributeEditor";
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
 import { generateMatrix, mergeVariations } from "@/components/product-edit/variants/utils";
+import { Loader2, RefreshCw, Info } from "lucide-react";
 
 type Props = {
   storeId: string;
+  productId?: string;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
 };
 
-export function VariantsTab({ storeId, form, setForm }: Props) {
+export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   const [productMode, setProductMode] = useState<"simple" | "variable">(form.type === "variable" ? "variable" : "simple");
   const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadedFromWoo, setLoadedFromWoo] = useState(false);
+  const fetchedRef = useRef(false);
+
+  const loadVariations = async (refresh = false) => {
+    if (!productId || productMode !== "variable") return;
+    setLoading(true);
+    try {
+      const url = `/api/stores/${storeId}/products/${productId}/variations${refresh ? "?refresh=1" : ""}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const vs = (await res.json()) as Variation[];
+        setForm((p) => ({ ...p, variations: vs }));
+        setLoadedFromWoo(true);
+      }
+    } catch (e) {
+      console.error("[variants-tab] load error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-load on mount for variable products with no variations yet
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    if (productMode !== "variable") return;
+    if (!productId) return;
+    if (form.variations.length > 0) { fetchedRef.current = true; return; }
+    fetchedRef.current = true;
+    void loadVariations(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, productMode]);
 
   const setMode = (m: "simple" | "variable") => {
     setProductMode(m);
     setForm((p) => ({ ...p, type: m === "variable" ? "variable" : "simple" }));
+    if (m === "variable" && productId && !fetchedRef.current) {
+      fetchedRef.current = true;
+      void loadVariations(false);
+    }
   };
 
   const regenerate = () => {
@@ -84,14 +122,40 @@ export function VariantsTab({ storeId, form, setForm }: Props) {
 
       {productMode === "variable" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-primary">Variations</div>
-            <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={!hasVariableAttrs}>Regenerate from attributes</Button>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-medium text-primary">Variations</div>
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+              {loadedFromWoo && !loading && form.variations.length > 0 && (
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded-full px-2 py-0.5">Live from WooCommerce</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {productId && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => loadVariations(true)} disabled={loading} className="gap-1.5">
+                  <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+                  Refresh
+                </Button>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={!hasVariableAttrs}>Regenerate from attributes</Button>
+            </div>
           </div>
-          {!hasVariableAttrs ? (
-            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4">Tick "Use for variations" on at least one attribute with values, then regenerate.</div>
+
+          {loading && form.variations.length === 0 ? (
+            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-6 flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <div>
+                <div className="font-medium text-foreground">Loading variations from WooCommerce…</div>
+                <div className="text-xs mt-0.5">Fetching on-demand since background sync hasn&apos;t reached this product yet.</div>
+              </div>
+            </div>
+          ) : !hasVariableAttrs ? (
+            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4">Tick &quot;Use for variations&quot; on at least one attribute with values, then regenerate.</div>
           ) : form.variations.length === 0 ? (
-            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4">Click "Regenerate from attributes" to create variations based on the options above.</div>
+            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4 flex items-start gap-2">
+              <Info className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>Click &quot;Regenerate from attributes&quot; to create variations based on the options above.</div>
+            </div>
           ) : (
             <VariationsTable variations={form.variations} onEdit={setEditIdx} onUpdate={updateVariation} onBulk={applyBulk} />
           )}
