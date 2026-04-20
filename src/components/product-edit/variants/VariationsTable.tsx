@@ -81,7 +81,7 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden bg-background">
-        <div className="grid grid-cols-[40px_1.2fr_1.2fr_1fr_1fr_1fr_44px] gap-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-4 py-3 border-b bg-muted/30 items-center">
+        <div className="grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
           <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} />
           <div>Options</div>
           <div>SKU</div>
@@ -93,17 +93,17 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
         {variations.map((v, i) => {
           const isDisabled = v.enabled === false;
           return (
-            <div key={v.key} className={`grid grid-cols-[40px_1.2fr_1.2fr_1fr_1fr_1fr_44px] gap-3 items-center px-4 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""}`}>
+            <div key={v.key} className={`grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""}`}>
               <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} />
               <div className="truncate flex items-center gap-2 font-medium">
-                <span>{variationLabel(v)}</span>
-                {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal">off</span>}
+                <span className="truncate">{variationLabel(v)}</span>
+                {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal shrink-0">off</span>}
               </div>
               <Input className={cellInput} value={v.sku} onChange={(e) => onUpdate(i, { sku: e.target.value })} placeholder="—" />
               <Input className={cellInput} value={v.regular_price} onChange={(e) => onUpdate(i, { regular_price: e.target.value })} placeholder="—" />
               <Input className={cellInput} value={v.sale_price} onChange={(e) => onUpdate(i, { sale_price: e.target.value })} placeholder="—" />
               <Input className={cellInput} type="number" value={v.stock_quantity ?? ""} onChange={(e) => onUpdate(i, { stock_quantity: e.target.value ? Number(e.target.value) : null, manage_stock: true })} placeholder="—" />
-              <button type="button" onClick={() => onEdit(i)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
+              <button type="button" onClick={() => onEdit(i)} className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
                 <Edit2 className="h-3.5 w-3.5" />
               </button>
             </div>
