@@ -39,22 +39,8 @@ export default async function handler(
 
     console.log("Store connected successfully:", storeId);
 
-    // Auto-trigger webhook registration + initial sync
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
-    // Register webhooks (fire-and-forget)
-    fetch(`${baseUrl}/api/stores/${storeId}/register-webhooks`, { method: "POST" }).catch((err) =>
-      console.error("Auto webhook registration failed:", err)
-    );
-
-    // Trigger full initial sync (fire-and-forget)
-    fetch(`${baseUrl}/api/stores/${storeId}/sync`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    }).catch((err) =>
-      console.error("Auto initial sync failed:", err)
-    );
+    // Webhook registration and initial sync are owned by the connect wizard (both OAuth and manual paths).
+    // This prevents double-registration and gives the user real-time feedback + retry capability.
 
     // Return success - WooCommerce expects a 200 response
     return res.status(200).json({ success: true });

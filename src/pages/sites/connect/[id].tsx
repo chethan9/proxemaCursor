@@ -51,6 +51,9 @@ export default function ConnectSuccessPage() {
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const estimateStartedRef = useRef(false);
   const [progressTick, setProgressTick] = useState(0);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [webhookSummary, setWebhookSummary] = useState<string | null>(null);
+  const webhookRegisteredRef = useRef(false);
 
   useEffect(() => {
     if (stage !== "estimating") return;
@@ -98,14 +101,37 @@ export default function ConnectSuccessPage() {
     }
   };
 
+  const registerWebhooks = async (sid: string): Promise<boolean> => {
+    setWebhookError(null);
+    setStep("webhooks", "active");
+    try {
+      const res = await fetch(`/api/stores/${sid}/register-webhooks`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setWebhookError(json.error || json.message || "Webhook registration failed");
+        setStep("webhooks", "error");
+        return false;
+      }
+      setWebhookSummary(json.message || "Webhooks registered");
+      setStep("webhooks", "done");
+      webhookRegisteredRef.current = true;
+      return true;
+    } catch (e) {
+      setWebhookError(e instanceof Error ? e.message : "Network error registering webhooks");
+      setStep("webhooks", "error");
+      return false;
+    }
+  };
+
   const runEstimateAndLiftoff = async () => {
     if (!siteId) return;
+    if (!webhookRegisteredRef.current && !webhookError) {
+      const ok = await registerWebhooks(siteId);
+      if (!ok) return; // Stop here — user must retry or skip
+    }
     setStage("estimating");
-    advanceFrom("webhooks");
-    setStep("webhooks", "done");
     setStep("estimate", "active");
 
-    // Wait up to 10s for the parallel-fired estimate; otherwise fire one now
     if (!estimate) {
       await startEstimate(siteId);
       const deadline = Date.now() + 10000;
@@ -116,6 +142,18 @@ export default function ConnectSuccessPage() {
     setStep("estimate", "done");
     setStep("liftoff", "active");
     setStage("liftoff");
+  };
+
+  const handleWebhookRetry = async () => {
+    if (!siteId) return;
+    const ok = await registerWebhooks(siteId);
+    if (ok) await runEstimateAndLiftoff();
+  };
+
+  const handleWebhookSkip = async () => {
+    webhookRegisteredRef.current = true;
+    setStep("webhooks", "error");
+    await runEstimateAndLiftoff();
   };
 
   const handleLiftoff = async () => {
@@ -400,6 +438,27 @@ export default function ConnectSuccessPage() {
                   </span>
                 </div>
               </div>
+            )}
+
+            {webhookError && !failed && (
+              <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                  <div className="text-xs flex-1">
+                    <p className="font-medium">Webhook registration failed</p>
+                    <p className="text-muted-foreground mt-0.5">{webhookError}</p>
+                    <p className="text-muted-foreground mt-1.5">Real-time sync won&apos;t work, but scheduled sync will still run. You can retry later from site settings.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end pt-1">
+                  <Button variant="outline" size="sm" onClick={handleWebhookSkip}>Skip & continue</Button>
+                  <Button size="sm" onClick={handleWebhookRetry}>Retry</Button>
+                </div>
+              </div>
+            )}
+
+            {webhookSummary && !webhookError && stage === "liftoff" && (
+              <p className="text-[11px] text-muted-foreground text-center mt-2">Webhooks: {webhookSummary}</p>
             )}
 
             {failed && (
