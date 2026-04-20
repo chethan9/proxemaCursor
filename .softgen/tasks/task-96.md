@@ -1,6 +1,6 @@
 ---
 title: Mirror WooCommerce variations in Postgres (sync + fast edit)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [variations, performance, sync, database]
