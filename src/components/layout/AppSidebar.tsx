@@ -28,6 +28,7 @@ import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal,
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -98,6 +99,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const { data: storesData } = useStores();
   const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const unreadCount = useUnreadNotifications();
   const activeSyncMap = useMemo(() => {
     const m = new Map<string, number>();
     for (const s of activeSyncs) m.set(s.store_id, s.progress);
@@ -452,9 +454,17 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             <DropdownMenuTrigger asChild>
               <button className={cn("w-full flex items-center gap-2 rounded-md p-1.5 hover:bg-sidebar-accent/60 transition-colors", collapsed && "justify-center")}
                 aria-label="User menu">
-                <Avatar className="h-7 w-7 flex-shrink-0">
-                  <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-xs">{initials}</AvatarFallback>
-                </Avatar>
+                <div className="relative flex-shrink-0">
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-xs">{initials}</AvatarFallback>
+                  </Avatar>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-destructive opacity-60 animate-ping" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive ring-1 ring-sidebar" />
+                    </span>
+                  )}
+                </div>
                 {!collapsed && (
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-xs font-medium truncate">{profile?.full_name || profile?.email}</p>

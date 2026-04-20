@@ -90,12 +90,14 @@ export function NotificationBell({ collapsed }: { collapsed: boolean }) {
         <span
           className={cn(
             "rounded-full bg-destructive text-white text-[9px] font-bold tabular-nums flex items-center justify-center ring-1 ring-sidebar",
+            "animate-in zoom-in-50 fade-in duration-300",
             collapsed
               ? "absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1"
               : "ml-auto min-w-[18px] h-[16px] px-1"
           )}
         >
-          {unread > 99 ? "99+" : unread}
+          <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-40" aria-hidden="true" />
+          <span className="relative">{unread > 99 ? "99+" : unread}</span>
         </span>
       )}
     </button>
