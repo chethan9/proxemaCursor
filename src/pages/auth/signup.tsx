@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Loader2, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 
 export default function SignupPage() {
   const { brandName, logoUrl } = useBranding();
@@ -69,14 +69,10 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-2 min-h-[3rem] items-center">
             {logoUrl ? (
               <img src={logoUrl} alt={brandName} className="h-12 w-auto object-contain" />
-            ) : (
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Zap className="h-5 w-5 text-primary" />
-              </div>
-            )}
+            ) : null}
           </div>
           <CardTitle className="text-2xl">Create account</CardTitle>
           <CardDescription>Sign up to manage your {brandName} workspace</CardDescription>

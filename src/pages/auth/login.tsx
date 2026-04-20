@@ -34,11 +34,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
         {logoUrl ? (
           <img src={logoUrl} alt={brandName} className="h-10 w-auto object-contain opacity-90" />
-        ) : (
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Zap className="h-5 w-5 text-primary" />
-          </div>
-        )}
+        ) : null}
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         <p className="text-xs text-muted-foreground">Signing you in…</p>
       </div>
@@ -72,14 +68,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-2 min-h-[3rem] items-center">
             {logoUrl ? (
               <img src={logoUrl} alt={brandName} className="h-12 w-auto object-contain" />
-            ) : (
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Zap className="h-5 w-5 text-primary" />
-              </div>
-            )}
+            ) : null}
           </div>
           <CardTitle className="text-2xl">Sign in</CardTitle>
           <CardDescription>Enter your credentials to access {brandName}</CardDescription>
