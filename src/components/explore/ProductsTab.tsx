@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -647,14 +647,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   return (
                     <div className={gridCls}>
                       {Array.from({ length: isCompact ? 14 : 8 }).map((_, i) => (
-                        <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden bg-card">
-                          <Skeleton className="aspect-square w-full rounded-none" />
-                          {!isCompact && (
-                            <div className="p-3 space-y-2">
-                              <Skeleton className="h-4 w-3/4" />
-                              <Skeleton className="h-3 w-1/2" />
-                            </div>
-                          )}
+                        <div key={`skg-${i}`} className="border border-border rounded-lg overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
+                          <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                            <Skeleton className="aspect-square w-full rounded-none" />
+                            {!isCompact && (
+                              <div className="p-3 space-y-2">
+                                <Skeleton className="h-4 w-3/4" />
+                                <Skeleton className="h-3 w-1/2" />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -878,8 +880,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const isExpanded = expandedRowId === p.id;
                       const isSelected = selectedIds.has(p.id);
                       return (
-                        <>
-                          <TableRow key={p.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                        <React.Fragment key={p.id}>
+                          <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
                             </TableCell>
@@ -1014,22 +1016,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
                           </TableCell>
-                        </TableRow>
-                        {isExpanded && (
-                          <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
-                            <TableCell colSpan={visibleColList.length + 1} className="p-0">
-                              <ProductRowExpanded
-                                product={p}
-                                storeUrl={storeUrl}
-                                onClose={() => setExpandedRowId(null)}
-                                onSaved={(updated) => {
-                                  setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
-                                }}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
+                        </React.Fragment>
+                      );
                     })
                   )}
                 </TableBody>
