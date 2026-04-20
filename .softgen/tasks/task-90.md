@@ -1,6 +1,6 @@
 ---
 title: Seamless row expansion polish (orders + taxonomy)
-status: todo
+status: done
 priority: high
 type: bug
 tags: [explore, orders, taxonomy, ui]
