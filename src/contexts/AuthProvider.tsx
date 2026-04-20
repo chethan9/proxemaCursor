@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
   const loadProfileAndRole = async (userId: string) => {
     const { data: prof } = await supabase
@@ -84,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadProfileAndRole(session.user.id);
       }
       setLoading(false);
+      initializedRef.current = true;
     })();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -94,11 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_IN") {
         setUser(session?.user ?? null);
         if (session?.user) {
-          setLoading(true);
-          setTimeout(async () => {
-            await loadProfileAndRole(session.user.id);
-            setLoading(false);
-          }, 0);
+          if (!initializedRef.current) {
+            setLoading(true);
+            setTimeout(async () => {
+              await loadProfileAndRole(session.user.id);
+              setLoading(false);
+              initializedRef.current = true;
+            }, 0);
+          } else {
+            // Silent background refresh — no loading flip
+            setTimeout(() => { loadProfileAndRole(session.user.id); }, 0);
+          }
         }
         return;
       }
