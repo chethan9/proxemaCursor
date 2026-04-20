@@ -1,6 +1,6 @@
 ---
 title: Unified onboarding + bulletproof sync celebration
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [sync, onboarding, realtime, celebration]

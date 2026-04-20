@@ -1,6 +1,6 @@
 ---
 title: Manual connection webhook registration fix
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [sync, webhooks, onboarding]
