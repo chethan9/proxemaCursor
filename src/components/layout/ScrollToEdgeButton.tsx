@@ -1,18 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function findScroller(): HTMLElement | Window {
-  const main = document.getElementById("main-content");
-  if (main && main.scrollHeight > main.clientHeight + 20) return main;
-  const doc = document.documentElement;
-  if (doc.scrollHeight > doc.clientHeight + 20) return window;
-  if (main) return main;
-  return window;
+function isScrollable(el: Element): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  const style = getComputedStyle(el);
+  const overflowY = style.overflowY;
+  const canScroll = overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay";
+  return canScroll && el.scrollHeight > el.clientHeight + 10;
+}
+
+function findBestScroller(): HTMLElement | Window {
+  const candidates: HTMLElement[] = [];
+  document.querySelectorAll("*").forEach((el) => {
+    if (isScrollable(el)) candidates.push(el as HTMLElement);
+  });
+  if (candidates.length === 0) {
+    const doc = document.documentElement;
+    if (doc.scrollHeight > doc.clientHeight + 10) return window;
+    return window;
+  }
+  // Pick the one with largest scrollHeight (main content usually)
+  candidates.sort((a, b) => b.scrollHeight - a.scrollHeight);
+  return candidates[0];
 }
 
 function getMetrics(target: HTMLElement | Window) {
-  if (target instanceof Window) {
+  if (target === window) {
     const doc = document.documentElement;
     return {
       scrollTop: window.scrollY || doc.scrollTop,
@@ -20,56 +34,68 @@ function getMetrics(target: HTMLElement | Window) {
       clientHeight: doc.clientHeight,
     };
   }
-  return {
-    scrollTop: target.scrollTop,
-    scrollHeight: target.scrollHeight,
-    clientHeight: target.clientHeight,
-  };
+  const el = target as HTMLElement;
+  return { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
 }
 
 export function ScrollToEdgeButton() {
   const [mode, setMode] = useState<"hidden" | "up" | "down">("hidden");
+  const targetRef = useRef<HTMLElement | Window | null>(null);
 
   useEffect(() => {
-    let target: HTMLElement | Window = findScroller();
+    const attachedTargets = new Set<HTMLElement | Window>();
 
     const update = () => {
-      target = findScroller();
+      const target = findBestScroller();
+      targetRef.current = target;
       const { scrollTop, scrollHeight, clientHeight } = getMetrics(target);
       const overflow = scrollHeight - clientHeight;
       if (overflow < 20) {
         setMode("hidden");
         return;
       }
-      setMode(scrollTop > 120 ? "up" : "down");
+      setMode(scrollTop > 100 ? "up" : "down");
+
+      // Attach listener to newly-discovered scroller
+      if (!attachedTargets.has(target)) {
+        attachedTargets.add(target);
+        target.addEventListener("scroll", update, { passive: true } as AddEventListenerOptions);
+      }
     };
 
-    update();
+    // Also listen to window scroll
+    window.addEventListener("scroll", update, { passive: true });
+    attachedTargets.add(window);
 
-    const scrollTargets: (HTMLElement | Window)[] = [window];
-    const main = document.getElementById("main-content");
-    if (main) scrollTargets.push(main);
-    scrollTargets.forEach((t) => t.addEventListener("scroll", update, { passive: true } as AddEventListenerOptions));
+    update();
+    const initialDelay = setTimeout(update, 200);
+    const secondDelay = setTimeout(update, 800);
 
     const ro = new ResizeObserver(update);
     ro.observe(document.body);
-    if (main) ro.observe(main);
 
-    const mo = new MutationObserver(update);
+    const mo = new MutationObserver(() => {
+      update();
+    });
     mo.observe(document.body, { childList: true, subtree: true });
 
+    const interval = setInterval(update, 1500);
+
     return () => {
-      scrollTargets.forEach((t) => t.removeEventListener("scroll", update));
+      attachedTargets.forEach((t) => t.removeEventListener("scroll", update));
       ro.disconnect();
       mo.disconnect();
+      clearTimeout(initialDelay);
+      clearTimeout(secondDelay);
+      clearInterval(interval);
     };
   }, []);
 
   const handleClick = () => {
-    const target = findScroller();
+    const target = targetRef.current || findBestScroller();
     const top = mode === "up" ? 0 : getMetrics(target).scrollHeight;
-    if (target instanceof Window) window.scrollTo({ top, behavior: "smooth" });
-    else target.scrollTo({ top, behavior: "smooth" });
+    if (target === window) window.scrollTo({ top, behavior: "smooth" });
+    else (target as HTMLElement).scrollTo({ top, behavior: "smooth" });
   };
 
   const visible = mode !== "hidden";
@@ -80,11 +106,12 @@ export function ScrollToEdgeButton() {
       onClick={handleClick}
       aria-label={mode === "up" ? "Scroll to top" : "Scroll to bottom"}
       className={cn(
-        "fixed bottom-6 right-6 z-40 h-10 w-10 rounded-full border bg-background/90 backdrop-blur shadow-lg",
-        "flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-background",
+        "fixed bottom-6 right-6 h-10 w-10 rounded-full border bg-background shadow-lg",
+        "flex items-center justify-center text-foreground/80 hover:text-foreground hover:shadow-xl",
         "transition-all duration-200",
         visible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
       )}
+      style={{ zIndex: 9999 }}
     >
       {mode === "up" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
     </button>
