@@ -1017,6 +1017,22 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
                           </TableRow>
+                          {isExpanded && (
+                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                              <TableCell colSpan={visibleColList.length + 1} className="p-0 border-t border-border">
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <ProductRowExpanded
+                                    product={p}
+                                    storeUrl={storeUrl}
+                                    onClose={() => setExpandedRowId(null)}
+                                    onSaved={() => {
+                                      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+                                    }}
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </React.Fragment>
                       );
                     })
