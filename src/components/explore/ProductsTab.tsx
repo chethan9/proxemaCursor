@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX, Palette } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -193,8 +193,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     setPage(0);
   }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
-  const { data: activeSyncsPoll = [] } = useAllActiveSyncs();
-
   const { data: productsResult, isLoading: loading } = useProducts({
     storeId,
     page,
@@ -208,7 +206,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     stockStatusFilter,
     priceMin: priceMin ? Number(priceMin) : undefined,
     priceMax: priceMax ? Number(priceMax) : undefined,
-    refetchInterval: activeSyncsPoll.find((s) => s.store_id === storeId)?.running ? 5000 : false,
   });
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
@@ -337,16 +334,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   }, [products, visibleColList, storeId]);
 
   const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
-  const activeSync = activeSyncsPoll.find((s) => s.store_id === storeId);
-  const prevRunningRef = useRef<boolean>(false);
-  useEffect(() => {
-    const isRunning = !!activeSync?.running;
-    if (prevRunningRef.current && !isRunning) {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["taxonomy", "categories", storeId] });
-    }
-    prevRunningRef.current = isRunning;
-  }, [activeSync?.running, queryClient, storeId]);
+  const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -729,7 +718,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 </div>
                               )}
                               {!stockOut && stockLow && (
-                                <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-warning ring-2 ring-background" title="Low stock" />
+                                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-warning ring-2 ring-background" title="Low stock" />
                               )}
                             </div>
                             <div className="px-2 py-1.5 border-t border-border/60">
@@ -763,20 +752,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             {!stockOut && stockLow && (
                               <div className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-warning/95 backdrop-blur px-2.5 py-1 text-[10px] font-semibold text-warning-foreground shadow-sm uppercase tracking-wide">
                                 Low · {p.stock_quantity}
-                              </div>
-                            )}
-                            {p.type === "variable" && (
-                              <div
-                                title="Variable product"
-                                className="absolute bottom-2.5 left-2.5 inline-flex items-center justify-center h-8 w-8 rounded-lg bg-card border border-border shadow-sm"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="/variation.png"
-                                  alt=""
-                                  className="h-5 w-5 object-contain"
-                                  draggable={false}
-                                />
                               </div>
                             )}
                             <button

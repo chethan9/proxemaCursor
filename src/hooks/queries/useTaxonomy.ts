@@ -6,8 +6,7 @@ export function useTaxonomyRows(
   mode: "categories" | "tags",
   search: string,
   page: number,
-  pageSize: number,
-  opts?: { refetchInterval?: number | false }
+  pageSize: number
 ) {
   return useQuery({
     queryKey: ["taxonomy", mode, storeId, search, page, pageSize] as const,
@@ -15,7 +14,6 @@ export function useTaxonomyRows(
     placeholderData: keepPreviousData,
     enabled: !!storeId,
     refetchOnWindowFocus: true,
-    refetchInterval: opts?.refetchInterval ?? false,
   });
 }
 

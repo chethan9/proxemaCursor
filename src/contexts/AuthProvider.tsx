@@ -129,9 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setRole(null);
-    try {
-      await supabase.auth.signOut({ scope: "local" });
-    } catch {}
+    supabase.auth.signOut().catch(() => {});
     if (typeof window !== "undefined") {
       window.location.replace("/auth/login");
     } else {

@@ -14,13 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   const rawState = typeof state === "string" ? state : null;
-
-  const hostHeader = req.headers["x-forwarded-host"] || req.headers.host;
-  const proto = (req.headers["x-forwarded-proto"] as string) || "https";
-  const reqBaseUrl = hostHeader ? `${proto}://${hostHeader}` : null;
-
-  const baseUrl = reqBaseUrl
-    || process.env.NEXT_PUBLIC_SITE_URL
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   if (!rawState) {

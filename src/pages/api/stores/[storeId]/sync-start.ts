@@ -7,14 +7,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { storeId } = req.query;
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
-  const { estimated_total = 0, is_initial = false, phase = "core" } = req.body || {};
-  const phaseAspect = phase === "secondary" ? "secondary" : phase === "all" ? "all" : "core";
+  const { estimated_total = 0, is_initial = false } = req.body || {};
 
+  // Create placeholder sync_run so UI can poll immediately
   const { data: run } = await supabaseAdmin
     .from("sync_runs")
     .insert({
       store_id: storeId,
-      aspect: phaseAspect,
+      aspect: "all",
       status: "running",
       started_at: new Date().toISOString(),
       is_initial,
@@ -24,12 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select()
     .single();
 
+  // Fire-and-forget: trigger actual sync without awaiting
   const base = getAppUrl(req);
   fetch(`${base}/api/stores/${storeId}/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phase: phaseAspect }),
+    body: JSON.stringify({}),
   }).catch((e) => console.error("[sync-start] bg trigger:", e));
 
-  return res.status(200).json({ sync_run_id: run?.id, queued: true, phase: phaseAspect });
+  return res.status(200).json({ sync_run_id: run?.id, queued: true });
 }

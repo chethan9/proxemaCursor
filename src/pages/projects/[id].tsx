@@ -88,14 +88,6 @@ export default function SiteWorkspacePage() {
   const [deleting, setDeleting] = useState(false);
   const [triggeringCron, setTriggeringCron] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("sync");
-
-  useEffect(() => {
-    const t = router.query.tab;
-    if (typeof t === "string" && ["sync", "data", "webhooks", "logs", "history", "archive", "settings"].includes(t)) {
-      setActiveTab(t);
-    }
-  }, [router.query.tab]);
 
   const getExtendedDataCounts = async (storeId: string) => {
     const [p, o, c, cat, tg, cp] = await Promise.all([
@@ -350,7 +342,7 @@ export default function SiteWorkspacePage() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="sync" className="space-y-6">
           <TabsList>
             <TabsTrigger value="sync"><RefreshCw className="h-4 w-4 mr-2" />Sync Engine</TabsTrigger>
             <TabsTrigger value="data">

@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
-import { getAppUrl } from "@/lib/app-url";
 import type { Json } from "@/integrations/supabase/database.types";
 
 interface StoreToSync {
@@ -10,9 +9,6 @@ interface StoreToSync {
   consumer_key: string;
   consumer_secret: string;
 }
-
-const CORE_ASPECTS = ["products", "orders", "customers", "categories"];
-const SECONDARY_ASPECTS = ["variations", "tags", "coupons"];
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -71,30 +67,38 @@ async function fetchAllFromWooCommerce<T>(
 
 async function batchUpsert(tableName: string, rows: Record<string, unknown>[], conflictColumns: string) {
   if (rows.length === 0) return { created: 0, updated: 0 };
+
   const BATCH_SIZE = 200;
   let totalCreated = 0;
   let totalUpdated = 0;
+
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await (supabase as any)
       .from(tableName)
       .select("store_id, woo_id")
       .in("woo_id", batch.map(r => r.woo_id as number))
       .eq("store_id", batch[0].store_id as string);
+
     const existingSet = new Set((existing || []).map((e: { store_id: string; woo_id: number }) => `${e.store_id}_${e.woo_id}`));
     const newCount = batch.filter(r => !existingSet.has(`${r.store_id}_${r.woo_id}`)).length;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from(tableName)
       .upsert(batch, { onConflict: conflictColumns, ignoreDuplicates: false });
+
     if (error) {
       console.error(`[Sync] Batch upsert error on ${tableName}:`, error.message);
       throw error;
     }
+
     totalCreated += newCount;
     totalUpdated += batch.length - newCount;
   }
+
   return { created: totalCreated, updated: totalUpdated };
 }
 
@@ -104,14 +108,34 @@ interface WooCustomer { id: number; email: string; first_name: string; last_name
 interface WooCategory { id: number; name: string; slug: string; parent: number; description: string; display: string; image: unknown; menu_order: number; count: number; }
 interface WooCoupon { id: number; code: string; amount: string; discount_type: string; description: string; date_expires: string | null; usage_count: number; individual_use: boolean; product_ids: number[]; excluded_product_ids: number[]; usage_limit: number | null; usage_limit_per_user: number | null; free_shipping: boolean; minimum_amount: string; maximum_amount: string; date_created: string; date_modified: string; }
 interface WooTag { id: number; name: string; slug: string; description: string; count: number; }
-interface WooVariation { id: number; sku: string; regular_price: string; sale_price: string; price: string; stock_quantity: number | null; stock_status: string; manage_stock: boolean; status: string; virtual: boolean; downloadable: boolean; tax_class: string; weight: string; dimensions: { length: string; width: string; height: string }; description: string; attributes: { name: string; option: string }[]; image: { id: number; src: string; alt: string } | null; menu_order: number; meta_data?: { key: string; value: unknown }[]; }
+
+interface WooVariation {
+  id: number;
+  sku: string;
+  regular_price: string;
+  sale_price: string;
+  price: string;
+  stock_quantity: number | null;
+  stock_status: string;
+  manage_stock: boolean;
+  status: string;
+  virtual: boolean;
+  downloadable: boolean;
+  tax_class: string;
+  weight: string;
+  dimensions: { length: string; width: string; height: string };
+  description: string;
+  attributes: { name: string; option: string }[];
+  image: { id: number; src: string; alt: string } | null;
+  menu_order: number;
+  meta_data?: { key: string; value: unknown }[];
+}
 
 async function updateSyncRunProgress(syncRunId: string, recordsProcessed: number) {
-  if (!syncRunId) return;
   await supabase.from("sync_runs").update({ records_processed: recordsProcessed }).eq("id", syncRunId);
 }
 
-async function syncProducts(store: StoreToSync, syncRunId: string) {
+async function syncProducts(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const items = await fetchAllFromWooCommerce<WooProduct>(store.url, store.consumer_key, store.consumer_secret, "products");
   await updateSyncRunProgress(syncRunId, items.length);
   const now = new Date().toISOString();
@@ -127,7 +151,7 @@ async function syncProducts(store: StoreToSync, syncRunId: string) {
   return { processed: items.length, ...result };
 }
 
-async function syncOrders(store: StoreToSync, syncRunId: string) {
+async function syncOrders(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const items = await fetchAllFromWooCommerce<WooOrder>(store.url, store.consumer_key, store.consumer_secret, "orders");
   await updateSyncRunProgress(syncRunId, items.length);
   const now = new Date().toISOString();
@@ -145,7 +169,7 @@ async function syncOrders(store: StoreToSync, syncRunId: string) {
   return { processed: items.length, ...result };
 }
 
-async function syncCustomers(store: StoreToSync, syncRunId: string) {
+async function syncCustomers(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const items = await fetchAllFromWooCommerce<WooCustomer>(store.url, store.consumer_key, store.consumer_secret, "customers");
   await updateSyncRunProgress(syncRunId, items.length);
   const now = new Date().toISOString();
@@ -160,7 +184,7 @@ async function syncCustomers(store: StoreToSync, syncRunId: string) {
   return { processed: items.length, ...result };
 }
 
-async function syncCategories(store: StoreToSync, syncRunId: string) {
+async function syncCategories(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const items = await fetchAllFromWooCommerce<WooCategory>(store.url, store.consumer_key, store.consumer_secret, "products/categories");
   await updateSyncRunProgress(syncRunId, items.length);
   const now = new Date().toISOString();
@@ -173,7 +197,7 @@ async function syncCategories(store: StoreToSync, syncRunId: string) {
   return { processed: items.length, ...result };
 }
 
-async function syncCoupons(store: StoreToSync, syncRunId: string) {
+async function syncCoupons(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const items = await fetchAllFromWooCommerce<WooCoupon>(store.url, store.consumer_key, store.consumer_secret, "coupons");
   await updateSyncRunProgress(syncRunId, items.length);
   const now = new Date().toISOString();
@@ -192,7 +216,7 @@ async function syncCoupons(store: StoreToSync, syncRunId: string) {
   return { processed: items.length, ...result };
 }
 
-async function syncTags(store: StoreToSync, syncRunId: string) {
+async function syncTags(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const items = await fetchAllFromWooCommerce<WooTag>(store.url, store.consumer_key, store.consumer_secret, "products/tags");
   await updateSyncRunProgress(syncRunId, items.length);
   const now = new Date().toISOString();
@@ -204,7 +228,7 @@ async function syncTags(store: StoreToSync, syncRunId: string) {
   return { processed: items.length, ...result };
 }
 
-async function syncVariations(store: StoreToSync, syncRunId: string) {
+async function syncVariations(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
   const { data: variableProducts } = await supabase
     .from("products")
     .select("id, woo_id")
@@ -266,295 +290,307 @@ async function syncVariations(store: StoreToSync, syncRunId: string) {
   return { processed: totalProcessed, created: totalCreated, updated: totalUpdated };
 }
 
-const SYNC_FUNCTIONS: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
-  products: syncProducts,
-  orders: syncOrders,
-  customers: syncCustomers,
-  categories: syncCategories,
-  tags: syncTags,
-  coupons: syncCoupons,
-  variations: syncVariations,
-};
-
-async function notifyUsers(storeId: string, params: {
-  type: string; title: string; body: string; cta_label?: string; cta_url?: string | null; lottie_url?: string | null; priority?: number; metadata?: Record<string, unknown>;
-}) {
-  const { data: storeFull } = await supabase.from("stores").select("name, url, logo_url, client_id").eq("id", storeId).maybeSingle();
-  if (!storeFull) return;
-  let userIds: string[] = [];
-  if (storeFull.client_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: members } = await (supabase as any).from("client_members").select("user_id").eq("client_id", storeFull.client_id);
-    userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
-  }
-  if (userIds.length === 0) {
-    const { data: allUsers } = await supabase.from("profiles").select("id").limit(50);
-    userIds = (allUsers || []).map((u: { id: string }) => u.id);
-  }
-  if (userIds.length === 0) return;
-  const rows = userIds.map((uid) => ({
-    user_id: uid,
-    type: params.type,
-    title: params.title,
-    body: params.body,
-    cta_label: params.cta_label || null,
-    cta_url: params.cta_url || null,
-    lottie_url: params.lottie_url || null,
-    priority: params.priority ?? 50,
-    metadata: { store_id: storeId, store_name: storeFull.name, store_url: storeFull.url, logo_url: storeFull.logo_url, ...(params.metadata || {}) },
-  }));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from("user_notifications").insert(rows);
-}
-
-async function runPhase(
-  store: StoreToSync,
-  phase: "core" | "secondary",
-  aspects: string[],
-  placeholderId: string | null
-): Promise<{ results: Record<string, { processed: number; created: number; updated: number; error?: string }>; totals: { processed: number; created: number; updated: number }; failedAspects: string[] }> {
-  const results: Record<string, { processed: number; created: number; updated: number; error?: string }> = {};
-  let totalProcessed = 0, totalCreated = 0, totalUpdated = 0;
-
-  for (const asp of aspects) {
-    const { data: syncRun } = await supabase
-      .from("sync_runs")
-      .insert({ store_id: store.id, aspect: asp, status: "running", started_at: new Date().toISOString() })
-      .select().single();
-
-    try {
-      const result = await SYNC_FUNCTIONS[asp](store, syncRun?.id || "");
-      results[asp] = result;
-      totalProcessed += result.processed;
-      totalCreated += result.created;
-      totalUpdated += result.updated;
-      if (syncRun) {
-        await supabase.from("sync_runs").update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          records_processed: result.processed,
-          records_created: result.created,
-          records_updated: result.updated,
-        }).eq("id", syncRun.id);
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      results[asp] = { processed: 0, created: 0, updated: 0, error: errorMsg };
-      if (syncRun) {
-        await supabase.from("sync_runs").update({
-          status: "failed",
-          completed_at: new Date().toISOString(),
-          error_message: errorMsg,
-        }).eq("id", syncRun.id);
-      }
-    }
-  }
-
-  const failedAspects = Object.entries(results).filter(([, r]) => r.error).map(([a]) => a);
-
-  if (placeholderId) {
-    await supabase.from("sync_runs").update({
-      status: failedAspects.length > 0 && failedAspects.length === aspects.length ? "failed" : "completed",
-      completed_at: new Date().toISOString(),
-      records_processed: totalProcessed,
-      records_created: totalCreated,
-      records_updated: totalUpdated,
-      error_message: failedAspects.length > 0 ? `Failed: ${failedAspects.join(", ")}` : null,
-    }).eq("id", placeholderId);
-  }
-
-  return { results, totals: { processed: totalProcessed, created: totalCreated, updated: totalUpdated }, failedAspects };
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "PATCH") {
     const { storeId } = req.query;
-    if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
-    const { data: allRunning } = await supabase.from("sync_runs").select("id").eq("store_id", storeId).eq("status", "running");
-    const cancelIds = (allRunning || []).map(r => r.id);
-    if (cancelIds.length > 0) {
-      await supabase.from("sync_runs").update({
-        status: "failed", error_message: "Manually cancelled", completed_at: new Date().toISOString(),
-      }).in("id", cancelIds);
+    if (!storeId || typeof storeId !== "string") {
+      return res.status(400).json({ error: "Store ID required" });
     }
+
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: staleRuns } = await supabase
+      .from("sync_runs")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("status", "running")
+      .lt("started_at", tenMinAgo);
+
+    const runningIds = (staleRuns || []).map(r => r.id);
+
+    const { data: allRunning } = await supabase
+      .from("sync_runs")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("status", "running");
+
+    const cancelIds = (allRunning || []).map(r => r.id);
+
+    if (cancelIds.length > 0) {
+      await supabase
+        .from("sync_runs")
+        .update({
+          status: "failed",
+          error_message: "Manually cancelled",
+          completed_at: new Date().toISOString(),
+        })
+        .in("id", cancelIds);
+    }
+
     await supabase.from("stores").update({ status: "connected" }).eq("id", storeId);
+
     return res.status(200).json({ cancelled: cancelIds.length });
   }
 
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   const { storeId } = req.query;
-  const { phase, aspect } = req.body || {};
-  if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
+  const { aspect } = req.body || {};
+
+  if (!storeId || typeof storeId !== "string") {
+    return res.status(400).json({ error: "Store ID required" });
+  }
 
   try {
-    // Auto-timeout stuck runs
+    // Auto-timeout: mark stuck running syncs (>10 min) as failed
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    await supabase.from("sync_runs").update({
-      status: "failed",
-      error_message: "Auto-timeout: sync exceeded 10 minute limit",
-      completed_at: new Date().toISOString(),
-    }).eq("store_id", storeId).eq("status", "running").lt("started_at", tenMinAgo);
+    await supabase
+      .from("sync_runs")
+      .update({
+        status: "failed",
+        error_message: "Auto-timeout: sync exceeded 10 minute limit",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("store_id", storeId)
+      .eq("status", "running")
+      .lt("started_at", tenMinAgo);
+
+    // Also reset store status if it was stuck in "syncing"
+    const { data: stuckStore } = await supabase
+      .from("stores")
+      .select("status, last_sync_at")
+      .eq("id", storeId)
+      .single();
+
+    if (stuckStore?.status === "syncing") {
+      const noRunning = await supabase
+        .from("sync_runs")
+        .select("id")
+        .eq("store_id", storeId)
+        .eq("status", "running")
+        .limit(1);
+      if (!noRunning.data?.length) {
+        await supabase.from("stores").update({ status: "connected" }).eq("id", storeId);
+      }
+    }
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
-      .select("id, name, url, consumer_key, consumer_secret, initial_sync_completed_at")
-      .eq("id", storeId).single();
-    if (storeError || !store) return res.status(404).json({ error: "Store not found" });
-    if (!store.consumer_key || !store.consumer_secret) return res.status(400).json({ error: "Store not connected - missing API credentials" });
+      .select("id, name, url, consumer_key, consumer_secret")
+      .eq("id", storeId)
+      .single();
+
+    if (storeError || !store) {
+      return res.status(404).json({ error: "Store not found" });
+    }
+
+    if (!store.consumer_key || !store.consumer_secret) {
+      return res.status(400).json({ error: "Store not connected - missing API credentials" });
+    }
 
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
-    // Determine mode
-    const isSingleAspect = aspect && SYNC_FUNCTIONS[aspect];
-    const isPhase = phase === "core" || phase === "secondary" || phase === "all";
+    // Track the "all" placeholder row (created by sync-start) so we can close it
+    const { data: allRow } = await supabase
+      .from("sync_runs")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("aspect", "all")
+      .eq("status", "running")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const allRunId = allRow?.id || null;
 
-    // Single-aspect manual sync
-    if (isSingleAspect && !isPhase) {
-      const storeToSync = store as StoreToSync;
-      const phaseResult = await runPhase(storeToSync, "core", [aspect as string], null);
-      await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
-      return res.status(200).json({ success: true, results: phaseResult.results });
+    const syncFunctions: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
+      products: syncProducts,
+      orders: syncOrders,
+      customers: syncCustomers,
+      categories: syncCategories,
+      tags: syncTags,
+      coupons: syncCoupons,
+      variations: syncVariations,
+    };
+
+    const aspectsToSync = aspect && syncFunctions[aspect]
+      ? [aspect]
+      : Object.keys(syncFunctions);
+
+    const results: Record<string, { processed: number; created: number; updated: number; error?: string }> = {};
+    let totalProcessed = 0;
+    let totalCreated = 0;
+    let totalUpdated = 0;
+
+    for (const asp of aspectsToSync) {
+      const { data: syncRun } = await supabase
+        .from("sync_runs")
+        .insert({
+          store_id: storeId,
+          aspect: asp,
+          status: "running",
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      const aspectStart = Date.now();
+      try {
+        const result = await syncFunctions[asp](store as StoreToSync, syncRun?.id || "");
+        const durationSec = (Date.now() - aspectStart) / 1000;
+        results[asp] = result;
+        totalProcessed += result.processed;
+        totalCreated += result.created;
+        totalUpdated += result.updated;
+
+        if (syncRun) {
+          await supabase.from("sync_runs").update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            records_processed: result.processed,
+            records_created: result.created,
+            records_updated: result.updated,
+          }).eq("id", syncRun.id);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("sync_benchmarks").insert({
+          store_id: storeId,
+          aspect: asp,
+          record_count: result.processed,
+          duration_seconds: durationSec,
+          is_initial: !!allRunId,
+        });
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        results[asp] = { processed: 0, created: 0, updated: 0, error: errorMsg };
+
+        if (syncRun) {
+          await supabase.from("sync_runs").update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            error_message: errorMsg,
+          }).eq("id", syncRun.id);
+        }
+      }
     }
 
-    const targetPhase: "core" | "secondary" | "all" = isPhase ? phase : "core";
-    const storeToSync = store as StoreToSync;
+    await supabase.from("stores").update({
+      status: "connected",
+      last_sync_at: new Date().toISOString(),
+    }).eq("id", storeId);
 
-    // Find or create placeholder for this phase
-    const phaseAspects = targetPhase === "secondary" ? SECONDARY_ASPECTS : CORE_ASPECTS;
+    // Close the "all" placeholder row with aggregated totals
+    if (allRunId) {
+      const allStart = allRow?.id ? new Date((await supabase.from("sync_runs").select("started_at").eq("id", allRunId).single()).data?.started_at || Date.now()).getTime() : Date.now();
+      const overallDuration = (Date.now() - allStart) / 1000;
 
-    // CORE phase (or ALL: run core, then secondary)
-    if (targetPhase === "core" || targetPhase === "all") {
-      const { data: existingPlaceholder } = await supabase
-        .from("sync_runs").select("id")
-        .eq("store_id", storeId)
-        .in("aspect", ["core", "all"])
-        .eq("status", "running")
-        .order("started_at", { ascending: false })
-        .limit(1).maybeSingle();
+      await supabase.from("sync_runs").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        records_processed: totalProcessed,
+        records_created: totalCreated,
+        records_updated: totalUpdated,
+      }).eq("id", allRunId);
 
-      let corePlaceholderId = existingPlaceholder?.id || null;
-      if (!corePlaceholderId) {
-        const { data: newPh } = await supabase.from("sync_runs").insert({
-          store_id: storeId, aspect: "core", status: "running", started_at: new Date().toISOString(),
-          is_initial: !store.initial_sync_completed_at,
-        }).select().single();
-        corePlaceholderId = newPh?.id || null;
-      }
+      // Check if this was the initial sync — stamp stores.initial_sync_completed_at (only if not already set)
+      const { data: allRunRow } = await supabase
+        .from("sync_runs")
+        .select("is_initial")
+        .eq("id", allRunId)
+        .maybeSingle();
+      // Safety net: stamp if flagged initial OR if store has never completed before
+      const { data: storeRow } = await supabase
+        .from("stores")
+        .select("initial_sync_completed_at")
+        .eq("id", storeId)
+        .maybeSingle();
+      if (allRunRow?.is_initial || !storeRow?.initial_sync_completed_at) {
+        await supabase
+          .from("stores")
+          .update({ initial_sync_completed_at: new Date().toISOString() })
+          .eq("id", storeId)
+          .is("initial_sync_completed_at", null);
 
-      const coreResult = await runPhase(storeToSync, "core", CORE_ASPECTS, corePlaceholderId);
-      const coreFailed = coreResult.failedAspects.length > 0;
-
-      // Stamp initial_sync_completed_at only if core succeeded and not already stamped
-      if (!coreFailed && !store.initial_sync_completed_at) {
-        await supabase.from("stores").update({ initial_sync_completed_at: new Date().toISOString() }).eq("id", storeId).is("initial_sync_completed_at", null);
-      }
-
-      // Celebration on core success
-      if (!coreFailed) {
-        await notifyUsers(storeId, {
-          type: "celebration",
-          title: `${store.name} is ready!`,
-          body: "Core sync complete. Explore products, orders, customers — we're polishing the rest in the background 🚀",
-          cta_label: "Let's go",
-          cta_url: `/sites/${storeId}/products`,
-          lottie_url: "/confetti.json",
-          priority: 90,
-        });
-      } else {
-        await notifyUsers(storeId, {
-          type: "sync_failure",
-          title: `Sync issue on ${store.name}`,
-          body: `${coreResult.failedAspects.join(", ")} failed to sync. Open the sync engine to retry.`,
-          cta_label: "Open sync engine",
-          cta_url: `/projects/${storeId}?tab=sync`,
-          priority: 80,
-          metadata: { failed_aspects: coreResult.failedAspects },
-        });
-      }
-
-      // Auto-kick secondary phase (fire-and-forget) if core succeeded or partial
-      if (targetPhase === "core" || targetPhase === "all") {
-        // Guard: skip if secondary already running
-        const { data: secRunning } = await supabase.from("sync_runs").select("id").eq("store_id", storeId).eq("aspect", "secondary").eq("status", "running").limit(1);
-        if (!secRunning || secRunning.length === 0) {
-          const base = getAppUrl(req);
-          fetch(`${base}/api/stores/${storeId}/sync`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phase: "secondary" }),
-          }).catch((e) => console.error("[sync] bg secondary trigger:", e));
+        // Create a celebration notification for every user who can see this store
+        const { data: storeFull } = await supabase
+          .from("stores")
+          .select("name, url, logo_url, client_id")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (storeFull) {
+          let userIds: string[] = [];
+          if (storeFull.client_id) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: members } = await (supabase as any)
+              .from("client_members")
+              .select("user_id")
+              .eq("client_id", storeFull.client_id);
+            userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
+          }
+          if (userIds.length === 0) {
+            const { data: allUsers } = await supabase
+              .from("profiles")
+              .select("id")
+              .limit(50);
+            userIds = (allUsers || []).map((u: { id: string }) => u.id);
+          }
+          const rows = userIds.map((uid) => ({
+            user_id: uid,
+            type: "celebration",
+            title: `${storeFull.name} is ready!`,
+            body: "Welcome aboard. To infinity and beyond 🚀",
+            cta_label: "Let's go",
+            lottie_url: "/confetti.json",
+            priority: 90,
+            metadata: {
+              store_id: storeId,
+              store_name: storeFull.name,
+              store_url: storeFull.url,
+              logo_url: storeFull.logo_url,
+            },
+          }));
+          if (rows.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any).from("user_notifications").insert(rows);
+          }
         }
       }
 
-      await supabase.from("stores").update({
-        status: coreFailed ? "error" : "connected",
-        last_sync_at: new Date().toISOString(),
-      }).eq("id", storeId);
-
-      return res.status(200).json({
-        success: true, phase: "core",
-        results: coreResult.results,
-        totals: coreResult.totals,
-        secondary_triggered: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("sync_benchmarks").insert({
+        store_id: storeId,
+        aspect: "all",
+        record_count: totalProcessed,
+        duration_seconds: overallDuration,
+        is_initial: true,
       });
     }
 
-    // SECONDARY phase
-    if (targetPhase === "secondary") {
-      const { data: existingPlaceholder } = await supabase
-        .from("sync_runs").select("id")
-        .eq("store_id", storeId).eq("aspect", "secondary").eq("status", "running")
-        .order("started_at", { ascending: false }).limit(1).maybeSingle();
+    return res.status(200).json({
+      success: true,
+      store_id: storeId,
+      results,
+      totals: { processed: totalProcessed, created: totalCreated, updated: totalUpdated },
+    });
 
-      let secondaryPlaceholderId = existingPlaceholder?.id || null;
-      if (!secondaryPlaceholderId) {
-        const { data: newPh } = await supabase.from("sync_runs").insert({
-          store_id: storeId, aspect: "secondary", status: "running", started_at: new Date().toISOString(),
-        }).select().single();
-        secondaryPlaceholderId = newPh?.id || null;
-      }
-
-      const secondaryResult = await runPhase(storeToSync, "secondary", phaseAspects, secondaryPlaceholderId);
-
-      if (secondaryResult.failedAspects.length > 0) {
-        await notifyUsers(storeId, {
-          type: "sync_failure",
-          title: `Background sync issue on ${store.name}`,
-          body: `${secondaryResult.failedAspects.join(", ")} couldn't be backfilled. You can retry from the sync engine.`,
-          cta_label: "Open sync engine",
-          cta_url: `/projects/${storeId}?tab=sync`,
-          priority: 40,
-          metadata: { failed_aspects: secondaryResult.failedAspects, phase: "secondary" },
-        });
-      } else {
-        await notifyUsers(storeId, {
-          type: "secondary_complete",
-          title: `${store.name} fully synced ✨`,
-          body: "Variations, tags and coupons are all backfilled.",
-          cta_label: "View data",
-          cta_url: `/sites/${storeId}/products`,
-          priority: 30,
-        });
-      }
-
-      // Only update store status if it's not already in a core-failed state
-      const { data: currentStore } = await supabase.from("stores").select("status").eq("id", storeId).maybeSingle();
-      if (currentStore?.status !== "error") {
-        await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
-      }
-
-      return res.status(200).json({ success: true, phase: "secondary", results: secondaryResult.results, totals: secondaryResult.totals });
-    }
-
-    return res.status(400).json({ error: "Invalid phase/aspect combination" });
   } catch (error) {
     console.error("[Sync API] Error:", error);
     await supabase.from("stores").update({ status: "error" }).eq("id", storeId);
-    await supabase.from("sync_runs").update({
-      status: "failed", completed_at: new Date().toISOString(),
-      error_message: error instanceof Error ? error.message : "Unknown error",
-    }).eq("store_id", storeId).in("aspect", ["core", "secondary", "all"]).eq("status", "running");
-    return res.status(500).json({ error: "Sync failed", message: error instanceof Error ? error.message : "Unknown error" });
+    // Fail the "all" row too so banner unmounts
+    await supabase
+      .from("sync_runs")
+      .update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      })
+      .eq("store_id", storeId)
+      .eq("aspect", "all")
+      .eq("status", "running");
+    return res.status(500).json({
+      error: "Sync failed",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }

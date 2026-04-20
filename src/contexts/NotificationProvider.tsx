@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 
-export type NotificationType = "celebration" | "announcement" | "ad" | "milestone" | "info" | "warning" | "sync_failure";
+export type NotificationType = "celebration" | "announcement" | "ad" | "milestone" | "info" | "warning";
 
 export interface NotificationItem {
   id: string;

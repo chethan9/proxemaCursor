@@ -15,21 +15,22 @@ export interface AuthError {
 
 // Dynamic URL Helper
 const getURL = () => {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin.endsWith("/")
-      ? window.location.origin
-      : `${window.location.origin}/`;
+  let url = process?.env?.NEXT_PUBLIC_VERCEL_URL ?? 
+           process?.env?.NEXT_PUBLIC_SITE_URL ?? 
+           'http://localhost:3000'
+  
+  // Handle undefined or null url
+  if (!url) {
+    url = 'http://localhost:3000';
   }
-
-  let url =
-    process?.env?.NEXT_PUBLIC_SITE_URL ??
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ??
-    "http://localhost:3000";
-
-  if (!url) url = "http://localhost:3000";
-  url = url.startsWith("http") ? url : `https://${url}`;
-  url = url.endsWith("/") ? url : `${url}/`;
-  return url;
+  
+  // Ensure url has protocol
+  url = url.startsWith('http') ? url : `https://${url}`
+  
+  // Ensure url ends with slash
+  url = url.endsWith('/') ? url : `${url}/`
+  
+  return url
 }
 
 export const authService = {

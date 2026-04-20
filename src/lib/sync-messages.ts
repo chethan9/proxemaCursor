@@ -35,18 +35,6 @@ export const SYNC_MESSAGES: Record<string, string[]> = {
     "Making sure every deal is accounted for 💸",
     "Your promotions are syncing up ✨",
   ],
-  variations: [
-    "Polishing up your product variations 🎨",
-    "Matching every size, color, and option 🧩",
-    "Backfilling variations in the background 🔄",
-    "Fine-tuning variant details ⚙️",
-  ],
-  secondary: [
-    "Backfilling variations quietly 🎨",
-    "Tagging things up in the background 🏷️",
-    "Adding coupon codes without slowing you down 🎟️",
-    "Wrapping up the finishing touches ✨",
-  ],
   general: [
     "Feeding the hamsters powering Proxima 🐹",
     "Brewing coffee for your data ☕",
@@ -97,10 +85,5 @@ export function pickMessage(aspect: string | null, tick: number): string {
 
 export function pickProgressMessage(tick: number): string {
   const pool = SYNC_MESSAGES.progress;
-  return pool[tick % pool.length];
-}
-
-export function pickSecondaryMessage(tick: number): string {
-  const pool = SYNC_MESSAGES.secondary;
   return pool[tick % pool.length];
 }

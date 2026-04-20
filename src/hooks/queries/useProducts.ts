@@ -3,15 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchProducts, type FetchProductsOptions } from "@/services/productService";
 import { queryKeys } from "@/lib/query-client";
 
-export function useProducts(opts: FetchProductsOptions & { refetchInterval?: number | false }) {
-  const { refetchInterval, ...rest } = opts;
+export function useProducts(opts: FetchProductsOptions) {
   return useQuery({
-    queryKey: queryKeys.products(rest.storeId, rest as unknown as Record<string, unknown>),
-    queryFn: () => fetchProducts(rest),
+    queryKey: queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>),
+    queryFn: () => fetchProducts(opts),
     placeholderData: keepPreviousData,
-    enabled: !!rest.storeId,
+    enabled: !!opts.storeId,
     refetchOnWindowFocus: true,
-    refetchInterval: refetchInterval ?? false,
   });
 }
 
