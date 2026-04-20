@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1244,6 +1244,74 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notifications: {
+        Row: {
+          body: string | null
+          clicked_at: string | null
+          client_id: string | null
+          created_at: string
+          cta_label: string | null
+          cta_url: string | null
+          dismissed_at: string | null
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          lottie_url: string | null
+          metadata: Json
+          priority: number
+          shown_at: string | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          clicked_at?: string | null
+          client_id?: string | null
+          created_at?: string
+          cta_label?: string | null
+          cta_url?: string | null
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          lottie_url?: string | null
+          metadata?: Json
+          priority?: number
+          shown_at?: string | null
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          clicked_at?: string | null
+          client_id?: string | null
+          created_at?: string
+          cta_label?: string | null
+          cta_url?: string | null
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          lottie_url?: string | null
+          metadata?: Json
+          priority?: number
+          shown_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
