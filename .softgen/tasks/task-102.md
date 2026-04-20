@@ -1,9 +1,9 @@
 ---
 title: Split sync into core + secondary, weighted progress, partial celebration
-status: todo
-priority: urgent
-type: bug
-tags: [sync, onboarding, ux]
+status: done
+priority: high
+type: feature
+tags: [sync, ux, onboarding]
 created_by: agent
 created_at: 2026-04-20T10:50:00Z
 position: 102
