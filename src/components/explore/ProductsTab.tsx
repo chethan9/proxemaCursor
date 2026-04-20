@@ -718,7 +718,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 </div>
                               )}
                               {!stockOut && stockLow && (
-                                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-warning ring-2 ring-background" title="Low stock" />
+                                <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-warning ring-2 ring-background" title="Low stock" />
                               )}
                             </div>
                             <div className="px-2 py-1.5 border-t border-border/60">
@@ -753,6 +753,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               <div className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-warning/95 backdrop-blur px-2.5 py-1 text-[10px] font-semibold text-warning-foreground shadow-sm uppercase tracking-wide">
                                 Low · {p.stock_quantity}
                               </div>
+                            )}
+                            {p.type === "variable" && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src="/pantone.png"
+                                alt="Has variations"
+                                title="Variable product"
+                                className="absolute bottom-2.5 left-2.5 h-8 w-8 object-contain drop-shadow-md pointer-events-none select-none"
+                                draggable={false}
+                              />
                             )}
                             <button
                               onClick={(e) => { e.stopPropagation(); router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
