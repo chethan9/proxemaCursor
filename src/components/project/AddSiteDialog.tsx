@@ -180,13 +180,8 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
           )}
 
           {authMode === "oauth" && (
-            <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
-              <span>You&apos;ll be redirected to your WooCommerce store to approve access. API credentials will be generated automatically.</span>
-              {wcRestApiUrl && (
-                <a href={cleanStoreUrl(newStore.url) + "/wp-admin/"} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 shrink-0 whitespace-nowrap">
-                  Open store <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+              You&apos;ll be redirected to your WooCommerce store to approve access. API credentials will be generated automatically.
             </div>
           )}
         </div>
