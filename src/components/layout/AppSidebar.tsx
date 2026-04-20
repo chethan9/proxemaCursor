@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal, Check } from "lucide-react";
+import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal, Check, Bell } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
@@ -438,6 +438,45 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               </div>
             );
           })}
+
+          {isSuperAdmin && (
+            <div className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
+              <ul className="space-y-0.5">
+                <li>
+                  {collapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link href="/admin/notifications" aria-current={router.pathname === "/admin/notifications" ? "page" : undefined}
+                          className={cn(
+                            "group relative flex items-center rounded-md text-[13px] font-medium transition-colors h-9 w-9 justify-center mx-auto",
+                            router.pathname === "/admin/notifications"
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                          )}>
+                          <Bell className="h-4 w-4 shrink-0" />
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">Notifications</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Link href="/admin/notifications" aria-current={router.pathname === "/admin/notifications" ? "page" : undefined}
+                      className={cn(
+                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                        router.pathname === "/admin/notifications"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                      )}>
+                      {router.pathname === "/admin/notifications" && (
+                        <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
+                      )}
+                      <Bell className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Notifications</span>
+                    </Link>
+                  )}
+                </li>
+              </ul>
+            </div>
+          )}
         </nav>
 
         <div className={cn("border-t border-sidebar-border p-2")}>
