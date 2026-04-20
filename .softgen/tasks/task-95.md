@@ -1,6 +1,6 @@
 ---
 title: Polish variation dialog and quick-edit table UI
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, variations, ui-polish]
