@@ -10,6 +10,7 @@ export interface ActiveSyncSummary {
   currentAspect: string | null;
   started_at: string;
   is_initial: boolean;
+  running: boolean;
 }
 
 const ASPECT_WEIGHTS: Record<string, number> = {
@@ -79,6 +80,7 @@ export function useAllActiveSyncs() {
           currentAspect,
           started_at: all.started_at,
           is_initial: !!all.is_initial,
+          running: true,
         });
       }
       return results;
