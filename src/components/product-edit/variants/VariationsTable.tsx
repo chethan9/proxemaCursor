@@ -25,7 +25,12 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
     else setSelected(new Set(variations.map((v) => v.key)));
   };
   const toggle = (k: string) => {
-    setSelected((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
   };
 
   const applyBulk = () => {
