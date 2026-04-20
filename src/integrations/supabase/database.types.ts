@@ -861,6 +861,111 @@ export type Database = {
         }
         Relationships: []
       }
+      product_variations: {
+        Row: {
+          attributes: Json | null
+          created_at: string | null
+          description: string | null
+          dimensions: Json | null
+          downloadable: boolean | null
+          gallery: Json | null
+          id: string
+          image: Json | null
+          manage_stock: boolean | null
+          menu_order: number | null
+          price: number | null
+          product_id: string | null
+          raw_data: Json | null
+          regular_price: number | null
+          sale_price: number | null
+          sku: string | null
+          status: string | null
+          stock_quantity: number | null
+          stock_status: string | null
+          store_id: string
+          synced_at: string | null
+          tax_class: string | null
+          updated_at: string | null
+          virtual: boolean | null
+          weight: string | null
+          woo_id: number
+          woo_parent_id: number
+        }
+        Insert: {
+          attributes?: Json | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          downloadable?: boolean | null
+          gallery?: Json | null
+          id?: string
+          image?: Json | null
+          manage_stock?: boolean | null
+          menu_order?: number | null
+          price?: number | null
+          product_id?: string | null
+          raw_data?: Json | null
+          regular_price?: number | null
+          sale_price?: number | null
+          sku?: string | null
+          status?: string | null
+          stock_quantity?: number | null
+          stock_status?: string | null
+          store_id: string
+          synced_at?: string | null
+          tax_class?: string | null
+          updated_at?: string | null
+          virtual?: boolean | null
+          weight?: string | null
+          woo_id: number
+          woo_parent_id: number
+        }
+        Update: {
+          attributes?: Json | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          downloadable?: boolean | null
+          gallery?: Json | null
+          id?: string
+          image?: Json | null
+          manage_stock?: boolean | null
+          menu_order?: number | null
+          price?: number | null
+          product_id?: string | null
+          raw_data?: Json | null
+          regular_price?: number | null
+          sale_price?: number | null
+          sku?: string | null
+          status?: string | null
+          stock_quantity?: number | null
+          stock_status?: string | null
+          store_id?: string
+          synced_at?: string | null
+          tax_class?: string | null
+          updated_at?: string | null
+          virtual?: boolean | null
+          weight?: string | null
+          woo_id?: number
+          woo_parent_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           attributes: Json | null

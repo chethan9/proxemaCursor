@@ -39,6 +39,25 @@ function diffFields(before: Record<string, unknown>, after: Record<string, unkno
   return changes;
 }
 
+function variationChanged(
+  incoming: Record<string, unknown>,
+  row: Record<string, unknown>
+): boolean {
+  const pairs: [unknown, unknown][] = [
+    [incoming.regular_price || "", row.regular_price != null ? String(row.regular_price) : ""],
+    [incoming.sale_price || "", row.sale_price != null ? String(row.sale_price) : ""],
+    [incoming.sku || "", row.sku || ""],
+    [!!incoming.manage_stock, !!row.manage_stock],
+    [incoming.manage_stock ? incoming.stock_quantity : null, row.manage_stock ? row.stock_quantity : null],
+    [incoming.stock_status || "instock", row.stock_status || "instock"],
+    [incoming.weight || "", row.weight || ""],
+    [JSON.stringify(incoming.dimensions || {}), JSON.stringify(row.dimensions || {})],
+    [incoming.description || "", row.description || ""],
+    [(incoming.image && (incoming.image as Record<string, unknown>).id) || null, (row.image && (row.image as Record<string, unknown>).id) || null],
+  ];
+  return pairs.some(([a, b]) => JSON.stringify(a) !== JSON.stringify(b));
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "PUT") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -78,11 +97,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     if (Array.isArray(variations) && updated.type === "variable") {
-      const toCreate = variations.filter((v) => !v.id).map((v) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingRows } = await (supabaseAdmin as any)
+        .from("product_variations")
+        .select("*")
+        .eq("store_id", storeId)
+        .eq("product_id", productId);
+      const byWooId = new Map<number, Record<string, unknown>>();
+      (existingRows || []).forEach((r: Record<string, unknown>) => byWooId.set(r.woo_id as number, r));
+
+      const toCreate: Record<string, unknown>[] = [];
+      const toUpdate: Record<string, unknown>[] = [];
+
+      for (const v of variations) {
         const img = v.image && ((v.image as Record<string, unknown>).id || (v.image as Record<string, unknown>).src)
           ? { image: (v.image as Record<string, unknown>).id ? { id: (v.image as Record<string, unknown>).id } : { src: (v.image as Record<string, unknown>).src, alt: (v.image as Record<string, unknown>).alt || "" } }
           : {};
-        return {
+
+        if (!v.id) {
+          toCreate.push({
+            regular_price: (v.regular_price as string) || "",
+            sale_price: (v.sale_price as string) || "",
+            sku: (v.sku as string) || "",
+            manage_stock: !!v.manage_stock,
+            stock_quantity: v.manage_stock ? v.stock_quantity : undefined,
+            stock_status: (v.stock_status as string) || "instock",
+            weight: (v.weight as string) || "",
+            dimensions: v.dimensions || { length: "", width: "", height: "" },
+            description: (v.description as string) || "",
+            attributes: v.attributes || [],
+            ...img,
+          });
+          continue;
+        }
+        const existing = byWooId.get(v.id as number);
+        if (existing && !variationChanged(v, existing)) continue;
+        toUpdate.push({
+          id: v.id,
           regular_price: (v.regular_price as string) || "",
           sale_price: (v.sale_price as string) || "",
           sku: (v.sku as string) || "",
@@ -92,28 +143,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           weight: (v.weight as string) || "",
           dimensions: v.dimensions || { length: "", width: "", height: "" },
           description: (v.description as string) || "",
-          attributes: v.attributes || [],
           ...img,
-        };
-      });
-      const toUpdate = variations.filter((v) => !!v.id).map((v) => ({
-        id: v.id,
-        regular_price: (v.regular_price as string) || "",
-        sale_price: (v.sale_price as string) || "",
-        sku: (v.sku as string) || "",
-        manage_stock: !!v.manage_stock,
-        stock_quantity: v.manage_stock ? v.stock_quantity : undefined,
-        stock_status: (v.stock_status as string) || "instock",
-        weight: (v.weight as string) || "",
-        dimensions: v.dimensions || { length: "", width: "", height: "" },
-        description: (v.description as string) || "",
-      }));
+        });
+      }
+
       const batch: Record<string, unknown> = {};
       if (toCreate.length) batch.create = toCreate;
       if (toUpdate.length) batch.update = toUpdate;
+
       if (toCreate.length || toUpdate.length) {
         try {
-          await wooRequest(store, "POST", `products/${localProduct.woo_id}/variations/batch`, batch);
+          type BatchResp = { create?: Array<Record<string, unknown>>; update?: Array<Record<string, unknown>> };
+          const resp = await wooRequest<BatchResp>(store, "POST", `products/${localProduct.woo_id}/variations/batch`, batch);
+          const now = new Date().toISOString();
+          const toUpsert: Record<string, unknown>[] = [];
+          const process = (arr: Array<Record<string, unknown>> | undefined) => {
+            (arr || []).forEach((v) => {
+              const galleryMeta = Array.isArray(v.meta_data)
+                ? (v.meta_data as { key: string; value: unknown }[]).find((m) => m.key === "_wc_additional_variation_images")
+                : undefined;
+              const galleryIds = Array.isArray(galleryMeta?.value) ? (galleryMeta!.value as number[]) : [];
+              toUpsert.push({
+                store_id: storeId,
+                product_id: productId,
+                woo_parent_id: localProduct.woo_id,
+                woo_id: v.id as number,
+                sku: (v.sku as string) || null,
+                regular_price: v.regular_price ? parseFloat(v.regular_price as string) : null,
+                sale_price: v.sale_price ? parseFloat(v.sale_price as string) : null,
+                price: v.price ? parseFloat(v.price as string) : null,
+                stock_quantity: (v.stock_quantity as number) ?? null,
+                stock_status: (v.stock_status as string) || null,
+                manage_stock: !!v.manage_stock,
+                status: (v.status as string) || "publish",
+                virtual: !!v.virtual,
+                downloadable: !!v.downloadable,
+                tax_class: (v.tax_class as string) || null,
+                weight: (v.weight as string) || null,
+                dimensions: toJson(v.dimensions || {}),
+                description: (v.description as string) || null,
+                attributes: toJson(v.attributes || []),
+                image: v.image ? toJson(v.image) : null,
+                gallery: toJson(galleryIds.map((id) => ({ id, src: "" }))),
+                menu_order: (v.menu_order as number) || 0,
+                raw_data: toJson(v),
+                synced_at: now,
+              });
+            });
+          };
+          process(resp.create);
+          process(resp.update);
+          if (toUpsert.length) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabaseAdmin as any)
+              .from("product_variations")
+              .upsert(toUpsert, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
+          }
         } catch (ve) {
           console.error("[variations-batch-update]", ve);
         }
@@ -155,8 +240,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       saved as Record<string, unknown>
     );
 
+    // Fire-and-forget entity_changes log (don't block response)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabaseAdmin as any).from("entity_changes").insert({
+    void (supabaseAdmin as any).from("entity_changes").insert({
       store_id: storeId,
       entity_type: "product",
       entity_id: productId,

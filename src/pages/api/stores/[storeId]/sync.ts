@@ -109,6 +109,28 @@ interface WooCategory { id: number; name: string; slug: string; parent: number; 
 interface WooCoupon { id: number; code: string; amount: string; discount_type: string; description: string; date_expires: string | null; usage_count: number; individual_use: boolean; product_ids: number[]; excluded_product_ids: number[]; usage_limit: number | null; usage_limit_per_user: number | null; free_shipping: boolean; minimum_amount: string; maximum_amount: string; date_created: string; date_modified: string; }
 interface WooTag { id: number; name: string; slug: string; description: string; count: number; }
 
+interface WooVariation {
+  id: number;
+  sku: string;
+  regular_price: string;
+  sale_price: string;
+  price: string;
+  stock_quantity: number | null;
+  stock_status: string;
+  manage_stock: boolean;
+  status: string;
+  virtual: boolean;
+  downloadable: boolean;
+  tax_class: string;
+  weight: string;
+  dimensions: { length: string; width: string; height: string };
+  description: string;
+  attributes: { name: string; option: string }[];
+  image: { id: number; src: string; alt: string } | null;
+  menu_order: number;
+  meta_data?: { key: string; value: unknown }[];
+}
+
 async function updateSyncRunProgress(syncRunId: string, recordsProcessed: number) {
   await supabase.from("sync_runs").update({ records_processed: recordsProcessed }).eq("id", syncRunId);
 }
@@ -204,6 +226,68 @@ async function syncTags(store: StoreToSync, syncRunId: string): Promise<{ proces
   }));
   const result = await batchUpsert("tags", rows, "store_id,woo_id");
   return { processed: items.length, ...result };
+}
+
+async function syncVariations(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
+  const { data: variableProducts } = await supabase
+    .from("products")
+    .select("id, woo_id")
+    .eq("store_id", store.id)
+    .eq("type", "variable");
+
+  const parents = (variableProducts || []) as { id: string; woo_id: number }[];
+  let totalProcessed = 0;
+  let totalCreated = 0;
+  let totalUpdated = 0;
+  const now = new Date().toISOString();
+
+  for (const parent of parents) {
+    try {
+      const items = await fetchAllFromWooCommerce<WooVariation>(
+        store.url, store.consumer_key, store.consumer_secret,
+        `products/${parent.woo_id}/variations`
+      );
+      if (items.length === 0) continue;
+      const rows = items.map(v => {
+        const galleryMeta = (v.meta_data || []).find(m => m.key === "_wc_additional_variation_images");
+        const galleryIds = Array.isArray(galleryMeta?.value) ? (galleryMeta!.value as number[]) : [];
+        return {
+          store_id: store.id,
+          product_id: parent.id,
+          woo_parent_id: parent.woo_id,
+          woo_id: v.id,
+          sku: v.sku || null,
+          regular_price: v.regular_price ? parseFloat(v.regular_price) : null,
+          sale_price: v.sale_price ? parseFloat(v.sale_price) : null,
+          price: v.price ? parseFloat(v.price) : null,
+          stock_quantity: v.stock_quantity,
+          stock_status: v.stock_status || null,
+          manage_stock: !!v.manage_stock,
+          status: v.status || "publish",
+          virtual: !!v.virtual,
+          downloadable: !!v.downloadable,
+          tax_class: v.tax_class || null,
+          weight: v.weight || null,
+          dimensions: toJson(v.dimensions || {}),
+          description: v.description || null,
+          attributes: toJson(v.attributes || []),
+          image: v.image ? toJson(v.image) : null,
+          gallery: toJson(galleryIds.map(id => ({ id, src: "" }))),
+          menu_order: v.menu_order || 0,
+          raw_data: toJson(v),
+          synced_at: now,
+        };
+      });
+      const result = await batchUpsert("product_variations", rows, "store_id,woo_id");
+      totalProcessed += items.length;
+      totalCreated += result.created;
+      totalUpdated += result.updated;
+      await updateSyncRunProgress(syncRunId, totalProcessed);
+    } catch (e) {
+      console.error(`[syncVariations] parent ${parent.woo_id}:`, e);
+    }
+  }
+  return { processed: totalProcessed, created: totalCreated, updated: totalUpdated };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -321,6 +405,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const syncFunctions: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
       products: syncProducts,
+      variations: syncVariations,
       orders: syncOrders,
       customers: syncCustomers,
       categories: syncCategories,
