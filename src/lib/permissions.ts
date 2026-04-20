@@ -25,6 +25,8 @@ export const PERMISSIONS = {
   // Settings
   SETTINGS_VIEW: "settings.view",
   SETTINGS_MANAGE: "settings.manage",
+  // Notifications (super admin)
+  NOTIFICATIONS_MANAGE: "notifications.manage",
   // Super admin only
   SUPER_ADMIN: "super.admin",
 } as const;
