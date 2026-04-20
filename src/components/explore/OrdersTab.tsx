@@ -440,200 +440,198 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           </div>
         </div>
       )}
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur border-b border-border">
-        <Card>
-          <CardContent className="p-3 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
-                <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>All</Button>
-                {ORDER_STATUSES.map((s) => (
-                  <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>{s}</Button>
-                ))}
-              </div>
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
+              <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>All</Button>
+              {ORDER_STATUSES.map((s) => (
+                <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>{s}</Button>
+              ))}
+            </div>
 
-              {!embedHeader && paymentOptions.length > 0 && (
+            {!embedHeader && paymentOptions.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={paymentFilter !== "all" ? "secondary" : "outline"}
+                    size="sm"
+                    className="h-9 text-xs gap-1.5 px-2.5"
+                  >
+                    <Filter className="h-3.5 w-3.5" />
+                    <span className="max-w-[120px] truncate">
+                      {paymentFilter === "all" ? "Payment" : paymentFilter}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-64 p-0">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                    <span className="text-xs font-semibold">Filter by payment</span>
+                    {paymentFilter !== "all" && (
+                      <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setPaymentFilter("all")}>
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  <div className="max-h-[280px] overflow-y-auto p-1">
+                    <button
+                      onClick={() => setPaymentFilter("all")}
+                      className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${paymentFilter === "all" ? "bg-accent" : ""}`}
+                    >
+                      All payment methods
+                    </button>
+                    {paymentOptions.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPaymentFilter(p)}
+                        className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${paymentFilter === p ? "bg-accent" : ""}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {!embedHeader && (
+              <DateRangeFilter
+                range={dateRange as "all" | "today" | "yesterday" | "7d" | "30d" | "90d" | "custom"}
+                from={customFrom}
+                to={customTo}
+                onChange={(r, f, t) => {
+                  setDateRange(r);
+                  setCustomFrom(f);
+                  setCustomTo(t);
+                }}
+              />
+            )}
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-xs ml-auto gap-1.5"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setPaymentFilter("all");
+                  setTotalMin("");
+                  setTotalMax("");
+                  setDateRange("all");
+                  setCustomFrom(undefined);
+                  setCustomTo(undefined);
+                }}
+              >
+                <FilterX className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+            )}
+
+            <div className="flex-1" />
+
+            {!embedHeader && (
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}>
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {SORT_OPTIONS.map((opt, i) => (
+                      <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant={paymentFilter !== "all" ? "secondary" : "outline"}
-                      size="sm"
-                      className="h-9 text-xs gap-1.5 px-2.5"
-                    >
-                      <Filter className="h-3.5 w-3.5" />
-                      <span className="max-w-[120px] truncate">
-                        {paymentFilter === "all" ? "Payment" : paymentFilter}
-                      </span>
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
+                      <Columns3 className="h-3.5 w-3.5" />
+                      <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="start" className="w-64 p-0">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                      <span className="text-xs font-semibold">Filter by payment</span>
-                      {paymentFilter !== "all" && (
-                        <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setPaymentFilter("all")}>
-                          Clear
-                        </Button>
-                      )}
+                  <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6}>
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                      <div className="text-sm font-medium">Customize columns</div>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
+                        const none: Record<string, boolean> = {};
+                        COLUMNS.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
+                        setVisibleCols(none as Record<ColumnKey, boolean>);
+                      }}>
+                        Reset
+                      </Button>
                     </div>
-                    <div className="max-h-[280px] overflow-y-auto p-1">
-                      <button
-                        onClick={() => setPaymentFilter("all")}
-                        className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${paymentFilter === "all" ? "bg-accent" : ""}`}
-                      >
-                        All payment methods
-                      </button>
-                      {paymentOptions.map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => setPaymentFilter(p)}
-                          className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${paymentFilter === p ? "bg-accent" : ""}`}
-                        >
-                          {p}
-                        </button>
-                      ))}
+                    <div className="max-h-[380px] overflow-y-auto p-4">
+                      <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                        {(() => {
+                          const grouped: Record<string, typeof COLUMNS> = {};
+                          COLUMNS.forEach((c) => {
+                            if (!grouped[c.group]) grouped[c.group] = [];
+                            grouped[c.group].push(c);
+                          });
+                          return Object.entries(grouped).map(([group, cols]) => (
+                            <div key={group}>
+                              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                              <div className="flex flex-col gap-0.5">
+                                {cols.map((c) => {
+                                  const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
+                                  const alignCls = isNumeric ? "text-right" : "text-left";
+                                  return (
+                                    <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                      <Checkbox
+                                        checked={visibleCols[c.key]}
+                                        onCheckedChange={(v) =>
+                                          setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                        }
+                                      />
+                                      <span className="truncate">{c.label}</span>
+                                      <GripVertical className={`h-3 w-3 text-muted-foreground/30 ${isNumeric ? "ml-0.5" : ""}`} />
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
-              )}
-
-              {!embedHeader && (
-                <DateRangeFilter
-                  range={dateRange as "all" | "today" | "yesterday" | "7d" | "30d" | "90d" | "custom"}
-                  from={customFrom}
-                  to={customTo}
-                  onChange={(r, f, t) => {
-                    setDateRange(r);
-                    setCustomFrom(f);
-                    setCustomTo(t);
-                  }}
-                />
-              )}
-
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 text-xs ml-auto gap-1.5"
-                  onClick={() => {
-                    setStatusFilter("all");
-                    setPaymentFilter("all");
-                    setTotalMin("");
-                    setTotalMax("");
-                    setDateRange("all");
-                    setCustomFrom(undefined);
-                    setCustomTo(undefined);
-                  }}
-                >
-                  <FilterX className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
-
-              <div className="flex-1" />
-
-              {!embedHeader && (
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}>
-                        <ArrowUpDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {SORT_OPTIONS.map((opt, i) => (
-                        <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
-                        <Columns3 className="h-3.5 w-3.5" />
-                        <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6}>
-                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                        <div className="text-sm font-medium">Customize columns</div>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
-                          const none: Record<string, boolean> = {};
-                          COLUMNS.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
-                          setVisibleCols(none as Record<ColumnKey, boolean>);
-                        }}>
-                          Reset
-                        </Button>
-                      </div>
-                      <div className="max-h-[380px] overflow-y-auto p-4">
-                        <div className="grid grid-cols-3 gap-x-6 gap-y-4">
-                          {(() => {
-                            const grouped: Record<string, typeof COLUMNS> = {};
-                            COLUMNS.forEach((c) => {
-                              if (!grouped[c.group]) grouped[c.group] = [];
-                              grouped[c.group].push(c);
-                            });
-                            return Object.entries(grouped).map(([group, cols]) => (
-                              <div key={group}>
-                                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
-                                <div className="flex flex-col gap-0.5">
-                                  {cols.map((c) => {
-                                    const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
-                                    const alignCls = isNumeric ? "text-right" : "text-left";
-                                    return (
-                                      <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
-                                        <Checkbox
-                                          checked={visibleCols[c.key]}
-                                          onCheckedChange={(v) =>
-                                            setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
-                                          }
-                                        />
-                                        <span className="truncate">{c.label}</span>
-                                        <GripVertical className={`h-3 w-3 text-muted-foreground/30 ${isNumeric ? "ml-0.5" : ""}`} />
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
-                <ShoppingCart className="h-3.5 w-3.5" />
-                <span className="font-medium">{orderCount.toLocaleString()}</span>
               </div>
+            )}
 
-              {orderCount > 0 && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
-                  <span>Rows:</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">{pageSize}</Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {PAGE_SIZE_OPTIONS.map((n) => (
-                        <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <span className="whitespace-nowrap">
-                    {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {orderCount.toLocaleString()}
-                  </span>
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount}><ChevronRight className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span className="font-medium">{orderCount.toLocaleString()}</span>
             </div>
-          </CardContent>
-        </Card>
+
+            {orderCount > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
+                <span>Rows:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">{pageSize}</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="whitespace-nowrap">
+                  {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {orderCount.toLocaleString()}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount}><ChevronRight className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <Card>

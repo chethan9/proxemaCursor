@@ -89,13 +89,13 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
           </div>
 
           {count > 1 && (
-            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pt-2 pb-1">
               {images.map((img, i) => (
                 <button
                   key={img.id ?? `${img.src}-${i}`}
                   type="button"
                   onClick={() => setActiveIdx(i)}
-                  className={`h-14 w-14 rounded-md overflow-hidden shrink-0 border transition-all ${i === activeIdx ? "ring-2 ring-primary ring-offset-1 border-transparent" : "border-border hover:border-primary/40"}`}
+                  className={`h-14 w-14 rounded-md overflow-hidden shrink-0 border transition-all ${i === activeIdx ? "ring-2 ring-primary ring-offset-2 border-transparent" : "border-border hover:border-primary/40"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img.src} alt="" className="h-full w-full object-cover" />
