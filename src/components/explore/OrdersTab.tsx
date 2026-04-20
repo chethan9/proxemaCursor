@@ -910,13 +910,15 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                           })}
                         </TableRow>
                         {isExpanded && (
-                          <TableRow key={`${o.id}-exp`} className="hover:bg-transparent">
-                            <TableCell colSpan={visibleColList.length + 1} className="p-0">
-                              <OrderRowExpanded
-                                order={o}
-                                storeUrl={storeUrl}
-                                onSaved={() => { /* react-query will refetch */ }}
-                              />
+                          <TableRow key={`${o.id}-exp`} className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={visibleColList.length + 1} className="p-0 border-t border-border">
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <OrderRowExpanded
+                                  order={o}
+                                  storeUrl={storeUrl}
+                                  onSaved={() => { /* react-query will refetch */ }}
+                                />
+                              </div>
                             </TableCell>
                           </TableRow>
                         )}
