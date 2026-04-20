@@ -1,6 +1,6 @@
 ---
 title: Resume incomplete site onboarding
-status: todo
+status: done
 priority: high
 type: feature
 tags: [onboarding, sites, resume, ux]
@@ -48,19 +48,19 @@ Telemetry (nice-to-have, not required): log an `onboarding_step_entered` row whe
 
 ## Checklist
 
-- [ ] Schema: add `stores.onboarding_completed_at` column, backfill for already-synced stores, regenerate types
-- [ ] `/api/stores/[storeId]/sync-start` sets `onboarding_completed_at = now()` when kicking off the initial sync
-- [ ] Connect wizard detects current step from store row on mount (no `?success=1` required); supports `?resume=1` variant that skips credential polling
-- [ ] Credentials step (no keys yet): shows "Restart OAuth" button + "Switch to Manual Keys" inline form (consumer key / secret → saves via store update, advances to WP step)
-- [ ] WP step reached via resume shows manual-entry panel expanded with "We lost the connection — authorize again or enter manually" copy, plus Skip option
-- [ ] Webhook + estimate + liftoff step reached via resume auto-runs webhook registration and estimate, lands on liftoff card
-- [ ] Liftoff step reached via resume re-fetches estimate if missing and shows launch button directly
-- [ ] Fully completed sites (`onboarding_completed_at` set) redirect from connect page to `/sites/[id]/products`
-- [ ] `AddSiteDialog` checks for existing incomplete store matching entered URL; shows "Resume setup" inline notice with link and disables create button
-- [ ] `SitesTable` row: amber "Setup incomplete" pill + "Resume" button for rows where `onboarding_completed_at` is null
-- [ ] Dashboard pages (index, projects/[id], clients/[id]): banner listing incomplete sites with per-site resume links (up to 3 + overflow count)
-- [ ] Empty state when no incomplete sites — banner hidden entirely
-- [ ] Manual "Switch to manual" path from credentials step stores the keys and advances without needing a fresh OAuth round-trip
+- [x] Schema: add `stores.onboarding_completed_at` column, backfill for already-synced stores, regenerate types
+- [x] `/api/stores/[storeId]/sync-start` sets `onboarding_completed_at = now()` when kicking off the initial sync
+- [x] Connect wizard detects current step from store row on mount (no `?success=1` required); supports `?resume=1` variant that skips credential polling
+- [x] Credentials step (no keys yet): shows "Restart OAuth" button + "Switch to Manual Keys" inline form (consumer key / secret → saves via store update, advances to WP step)
+- [x] WP step reached via resume shows manual-entry panel expanded with "We lost the connection — authorize again or enter manually" copy, plus Skip option
+- [x] Webhook + estimate + liftoff step reached via resume auto-runs webhook registration and estimate, lands on liftoff card (replaced by confetti + prefetch in task 100)
+- [x] Liftoff step reached via resume re-fetches estimate if missing and shows launch button directly (replaced by confetti auto-redirect in task 100)
+- [x] Fully completed sites (`onboarding_completed_at` set) redirect from connect page to `/sites/[id]/products`
+- [x] `AddSiteDialog` checks for existing incomplete store matching entered URL; shows "Resume setup" inline notice with link and disables create button
+- [x] `SitesTable` row: amber "Setup incomplete" pill + "Resume" button for rows where `onboarding_completed_at` is null
+- [x] Dashboard pages (index, projects/[id], clients/[id]): banner listing incomplete sites with per-site resume links — superseded by global `IncompleteOnboardingPrompt` modal (task 100), which covers all pages more broadly
+- [x] Empty state when no incomplete sites — banner hidden entirely (global modal auto-hides when zero incomplete sites)
+- [x] Manual "Switch to manual" path from credentials step stores the keys and advances without needing a fresh OAuth round-trip
 
 ## Acceptance
 
