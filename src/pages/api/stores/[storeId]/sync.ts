@@ -408,6 +408,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         records_updated: totalUpdated,
       }).eq("id", allRunId);
 
+      // Check if this was the initial sync — stamp stores.initial_sync_completed_at (only if not already set)
+      const { data: allRunRow } = await supabase
+        .from("sync_runs")
+        .select("is_initial")
+        .eq("id", allRunId)
+        .maybeSingle();
+      if (allRunRow?.is_initial) {
+        await supabase
+          .from("stores")
+          .update({ initial_sync_completed_at: new Date().toISOString() })
+          .eq("id", storeId)
+          .is("initial_sync_completed_at", null);
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("sync_benchmarks").insert({
         store_id: storeId,

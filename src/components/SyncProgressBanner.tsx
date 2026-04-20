@@ -94,19 +94,6 @@ export function SyncProgressBanner() {
       const key = `${storeId}-${data.started_at ?? ""}`;
       if (!seenCompletionsRef.current.has(key)) {
         seenCompletionsRef.current.add(key);
-        if (data.is_initial) {
-          const celKey = `celebrated:${storeId}`;
-          if (!localStorage.getItem(celKey)) {
-            localStorage.setItem(celKey, "1");
-            setOverlayOpen(true);
-            setTimeout(() => setCardOpen(true), 900);
-          }
-        } else {
-          toast({
-            title: "Sync complete ✨",
-            description: `${data.processed.toLocaleString()} records synced in ${formatElapsed(data.elapsed_seconds)}`,
-          });
-        }
         invalidateAll(storeId);
         if (storageKey) localStorage.removeItem(storageKey);
       }

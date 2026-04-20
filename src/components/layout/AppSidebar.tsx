@@ -26,6 +26,7 @@ import {
 import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal, Check } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
+import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -95,6 +96,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const collapsed = locked ? collapsedPref : (forceCollapsed || collapsedPref);
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const { data: storesData } = useStores();
+  const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const activeSyncMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of activeSyncs) m.set(s.store_id, s.progress);
+    return m;
+  }, [activeSyncs]);
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
