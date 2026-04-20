@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchOrders, type FetchOrdersOptions } from "@/services/orderService";
 import { queryKeys } from "@/lib/query-client";
 
-export function useOrders(opts: FetchOrdersOptions) {
+export function useOrders(opts: FetchOrdersOptions & { refetchInterval?: number | false }) {
+  const { refetchInterval, ...rest } = opts;
   return useQuery({
-    queryKey: queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>),
-    queryFn: () => fetchOrders(opts),
+    queryKey: queryKeys.orders(rest.storeId, rest as unknown as Record<string, unknown>),
+    queryFn: () => fetchOrders(rest),
     placeholderData: keepPreviousData,
-    enabled: !!opts.storeId,
+    enabled: !!rest.storeId,
     refetchOnWindowFocus: true,
+    refetchInterval: refetchInterval ?? false,
   });
 }
 
