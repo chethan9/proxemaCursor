@@ -406,9 +406,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const syncFunctions: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
       products: syncProducts,
       orders: syncOrders,
-      customers: syncCustomers,
       categories: syncCategories,
       tags: syncTags,
+      customers: syncCustomers,
       coupons: syncCoupons,
       variations: syncVariations,
     };
