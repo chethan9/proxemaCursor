@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX, Palette } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -37,7 +37,7 @@ import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
 import { createBulkJob } from "@/services/bulkJobService";
-import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } from "lucide-react";
+import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Palette } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
@@ -755,14 +755,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             {p.type === "variable" && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src="/pantone.png"
-                                alt="Has variations"
+                              <div
                                 title="Variable product"
-                                className="absolute bottom-2.5 left-2.5 h-8 w-8 object-contain drop-shadow-md pointer-events-none select-none"
-                                draggable={false}
-                              />
+                                className="absolute bottom-2.5 left-2.5 inline-flex items-center justify-center h-8 w-8 rounded-lg bg-card border border-border shadow-sm"
+                              >
+                                <Palette className="h-4 w-4 text-success" />
+                              </div>
                             )}
                             <button
                               onClick={(e) => { e.stopPropagation(); router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
