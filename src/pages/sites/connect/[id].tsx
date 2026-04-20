@@ -106,9 +106,16 @@ export default function ConnectSuccessPage() {
     setStep("webhooks", "active");
     try {
       const res = await fetch(`/api/stores/${sid}/register-webhooks`, { method: "POST" });
-      const json = await res.json();
+      const text = await res.text();
+      let json: { success?: boolean; message?: string; error?: string } = {};
+      try { json = JSON.parse(text); } catch {
+        const preview = text.slice(0, 120).replace(/\s+/g, " ");
+        setWebhookError(`Server returned non-JSON (HTTP ${res.status}). ${preview}`);
+        setStep("webhooks", "error");
+        return false;
+      }
       if (!res.ok || !json.success) {
-        setWebhookError(json.error || json.message || "Webhook registration failed");
+        setWebhookError(json.error || json.message || `HTTP ${res.status}`);
         setStep("webhooks", "error");
         return false;
       }

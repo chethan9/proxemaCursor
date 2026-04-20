@@ -3,6 +3,18 @@ import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { WEBHOOK_TOPICS, generateWebhookSecret } from "@/services/webhookService";
 import { getWebhookDeliveryUrl } from "@/lib/app-url";
 
+export const config = { maxDuration: 60 };
+
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 8000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -25,17 +37,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const deliveryUrl = getWebhookDeliveryUrl(storeId, req);
     const authHeader = `Basic ${Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64")}`;
-    const results: Array<{ topic: string; success: boolean; action?: string; error?: string; woo_id?: number }> = [];
 
-    // Fetch all existing WooCommerce webhooks once
     let wooWebhooks: Array<{ id: number; topic: string; delivery_url: string; status: string }> = [];
     try {
-      const listResp = await fetch(`${store.url}/wp-json/wc/v3/webhooks?per_page=100`, {
+      const listResp = await fetchWithTimeout(`${store.url}/wp-json/wc/v3/webhooks?per_page=100`, {
         headers: { Authorization: authHeader },
-      });
-      if (listResp.ok) {
-        wooWebhooks = await listResp.json();
-      }
+      }, 10000);
+      if (listResp.ok) wooWebhooks = await listResp.json();
     } catch (e) {
       console.warn("Failed to list existing webhooks:", e);
     }
@@ -44,94 +52,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from("webhooks")
       .select("*")
       .eq("store_id", storeId);
-
     const localByTopic = new Map((existingLocal || []).map((w) => [w.topic, w]));
 
-    for (const { topic, name } of WEBHOOK_TOPICS) {
+    const registerOne = async ({ topic, name }: { topic: string; name: string }) => {
       const localRow = localByTopic.get(topic);
-
-      // Find matching WooCommerce webhook: same topic + same delivery URL
-      const matchingWoo = wooWebhooks.find(
-        (w) => w.topic === topic && w.delivery_url === deliveryUrl
-      );
-
+      const matchingWoo = wooWebhooks.find((w) => w.topic === topic && w.delivery_url === deliveryUrl);
       try {
-        // Path 1: local row exists and points to a valid WC webhook
         if (localRow?.woo_webhook_id && matchingWoo && matchingWoo.id === localRow.woo_webhook_id) {
           if (matchingWoo.status !== "active") {
-            const putResp = await fetch(
+            const putResp = await fetchWithTimeout(
               `${store.url}/wp-json/wc/v3/webhooks/${matchingWoo.id}`,
-              {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", Authorization: authHeader },
-                body: JSON.stringify({ status: "active" }),
-              }
+              { method: "PUT", headers: { "Content-Type": "application/json", Authorization: authHeader }, body: JSON.stringify({ status: "active" }) },
+              8000
             );
             if (putResp.ok) {
-              await supabase
-                .from("webhooks")
-                .update({ status: "active", updated_at: new Date().toISOString() })
-                .eq("id", localRow.id);
+              await supabase.from("webhooks").update({ status: "active", updated_at: new Date().toISOString() }).eq("id", localRow.id);
             }
           }
-          results.push({ topic, success: true, action: "kept", woo_id: matchingWoo.id });
-          continue;
+          return { topic, success: true, action: "kept", woo_id: matchingWoo.id };
         }
-
-        // Path 2: WC has a matching webhook but local row is missing/mismatched -> adopt
         if (matchingWoo) {
           await supabase.from("webhooks").upsert(
-            {
-              store_id: storeId,
-              topic,
-              woo_webhook_id: matchingWoo.id,
-              delivery_url: deliveryUrl,
-              status: "active",
-              secret: localRow?.secret || generateWebhookSecret(),
-            },
+            { store_id: storeId, topic, woo_webhook_id: matchingWoo.id, delivery_url: deliveryUrl, status: "active", secret: localRow?.secret || generateWebhookSecret() },
             { onConflict: "store_id,topic" }
           );
-          results.push({ topic, success: true, action: "adopted", woo_id: matchingWoo.id });
-          continue;
+          return { topic, success: true, action: "adopted", woo_id: matchingWoo.id };
         }
-
-        // Path 3: no existing webhook anywhere -> create
         const secret = generateWebhookSecret();
-        const postResp = await fetch(`${store.url}/wp-json/wc/v3/webhooks`, {
+        const postResp = await fetchWithTimeout(`${store.url}/wp-json/wc/v3/webhooks`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({
-            name: `Proxima - ${name}`,
-            topic,
-            delivery_url: deliveryUrl,
-            status: "active",
-            secret,
-          }),
-        });
-
+          body: JSON.stringify({ name: `Proxima - ${name}`, topic, delivery_url: deliveryUrl, status: "active", secret }),
+        }, 8000);
         if (!postResp.ok) {
           const errorText = await postResp.text();
-          results.push({ topic, success: false, action: "create-failed", error: errorText.slice(0, 200) });
-          continue;
+          return { topic, success: false, action: "create-failed", error: errorText.slice(0, 200) };
         }
-
         const wooWh = await postResp.json();
         await supabase.from("webhooks").upsert(
-          {
-            store_id: storeId,
-            topic,
-            woo_webhook_id: wooWh.id,
-            delivery_url: deliveryUrl,
-            status: "active",
-            secret: wooWh.secret || secret,
-          },
+          { store_id: storeId, topic, woo_webhook_id: wooWh.id, delivery_url: deliveryUrl, status: "active", secret: wooWh.secret || secret },
           { onConflict: "store_id,topic" }
         );
-        results.push({ topic, success: true, action: "created", woo_id: wooWh.id });
+        return { topic, success: true, action: "created", woo_id: wooWh.id };
       } catch (error) {
-        results.push({ topic, success: false, error: String(error).slice(0, 200) });
+        const msg = error instanceof Error ? error.message : String(error);
+        return { topic, success: false, error: msg.slice(0, 200) };
       }
-    }
+    };
+
+    const results = await Promise.all(WEBHOOK_TOPICS.map(registerOne));
 
     const successCount = results.filter((r) => r.success).length;
     const createdCount = results.filter((r) => r.action === "created").length;
@@ -146,6 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error) {
     console.error("Register webhooks error:", error);
-    return res.status(500).json({ error: String(error) });
+    const msg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ success: false, error: msg });
   }
 }
