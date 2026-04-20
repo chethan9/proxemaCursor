@@ -133,6 +133,15 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
   const { data: activeSyncs = [] } = useAllActiveSyncs();
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
+  const queryClient = useQueryClient();
+  const prevRunningRef = useRef<boolean>(false);
+  useEffect(() => {
+    const isRunning = !!activeSync?.running;
+    if (prevRunningRef.current && !isRunning) {
+      queryClient.invalidateQueries({ queryKey: ["orders", storeId] });
+    }
+    prevRunningRef.current = isRunning;
+  }, [activeSync?.running, queryClient, storeId]);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();

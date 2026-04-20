@@ -1,6 +1,6 @@
 ---
 title: Auto-refresh data views when sync completes
-status: todo
+status: done
 priority: high
 type: bug
 tags: [sync, ux]
@@ -21,11 +21,11 @@ Files involved:
 Approach: in each tab component, track previous `running` state with a ref; when it flips from true → false, call `queryClient.invalidateQueries` for that tab's data key + related lookups (e.g., category options for products).
 
 ## Checklist
-- [ ] Products tab auto-refreshes rows + category filter options when its site's sync completes
-- [ ] Orders tab auto-refreshes rows when its site's sync completes
-- [ ] Taxonomy tab (categories + tags) auto-refreshes when sync completes
-- [ ] No duplicate refetch storms — only invalidate on the running→idle transition, not on every poll
-- [ ] Loader state clears within 1-2 seconds of sync completion without requiring a manual page refresh
+- [x] Products tab auto-refreshes rows + category filter options when its site's sync completes
+- [x] Orders tab auto-refreshes rows when its site's sync completes
+- [x] Taxonomy tab (categories + tags) auto-refreshes when sync completes
+- [x] No duplicate refetch storms — only invalidate on the running→idle transition, not on every poll
+- [x] Loader state clears within 1-2 seconds of sync completion without requiring a manual page refresh
 
 ## Acceptance
 - Start a fresh sync on a site with empty data; when progress reaches 100% the products grid populates automatically within ~2s

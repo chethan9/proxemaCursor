@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { fetchCategories, fetchTags } from "@/services/taxonomyService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { Loader2 } from "lucide-react";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Mode = "categories" | "tags";
 
@@ -74,6 +75,15 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   const { data: activeSyncs = [] } = useAllActiveSyncs();
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
+  const queryClient = useQueryClient();
+  const prevRunningRef = useRef<boolean>(false);
+  useEffect(() => {
+    const isRunning = !!activeSync?.running;
+    if (prevRunningRef.current && !isRunning) {
+      queryClient.invalidateQueries({ queryKey: ["taxonomy", mode, storeId] });
+    }
+    prevRunningRef.current = isRunning;
+  }, [activeSync?.running, queryClient, storeId, mode]);
 
   useBackgroundPagination({
     enabled: !!storeId && count > 0,
