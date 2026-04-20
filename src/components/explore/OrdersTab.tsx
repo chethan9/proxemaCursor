@@ -53,6 +53,7 @@ import { queryKeys } from "@/lib/query-client";
 import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
+import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -109,6 +110,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  useScrollExpandedIntoView(expandedRowId);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -911,7 +913,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                           })}
                         </TableRow>
                         {isExpanded && (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableRow className="bg-muted/30 hover:bg-muted/30" data-expanded-row={o.id}>
                             <TableCell colSpan={visibleColList.length + 1} className="p-0">
                               <div onClick={(e) => e.stopPropagation()}>
                                 <OrderRowExpanded

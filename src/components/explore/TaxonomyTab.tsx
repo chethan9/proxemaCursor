@@ -14,6 +14,7 @@ import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { fetchCategories, fetchTags } from "@/services/taxonomyService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { Loader2 } from "lucide-react";
+import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 
 type Mode = "categories" | "tags";
 
@@ -25,6 +26,7 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
   const search = searchProp ?? "";
   const [debounced, setDebounced] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  useScrollExpandedIntoView(expandedId);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 400);
@@ -239,7 +241,7 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
                         <TableCell className="text-right font-mono text-xs text-muted-foreground">{r.woo_id}</TableCell>
                       </TableRow>
                       {isExpanded && (
-                        <TableRow key={`${r.id}-exp`} className="bg-muted/30 hover:bg-muted/30">
+                        <TableRow key={`${r.id}-exp`} className="bg-muted/30 hover:bg-muted/30" data-expanded-row={r.id}>
                           <TableCell colSpan={colSpan} className="p-0">
                             {mode === "categories" ? (
                               <TaxonomyRowExpanded
