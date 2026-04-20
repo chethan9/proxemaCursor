@@ -51,6 +51,7 @@ import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
 import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
+import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -127,6 +128,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
   const { data: paymentOptions = [] } = useOrderPaymentOptions(storeId);
   const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
+  const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
@@ -770,8 +773,18 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 ) : orders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={visibleColList.length + 1} className="text-center py-16">
-                      <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                      <p className="text-sm text-muted-foreground">No orders found</p>
+                      {activeSync ? (
+                        <>
+                          <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
+                          <p className="text-sm font-medium">Syncing your orders…</p>
+                          <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new orders will appear automatically</p>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                          <p className="text-sm text-muted-foreground">No orders found</p>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (

@@ -30,7 +30,7 @@ import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useProducts, useProductCategoryOptions } from "@/hooks/queries/useProducts";
+import { useProducts, useProductCategoryOptions, useAllActiveSyncs } from "@/hooks/queries/useProducts";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
@@ -331,6 +331,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   }, [products, visibleColList, storeId]);
 
   const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
+  const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -661,8 +663,18 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 if (products.length === 0) {
                   return (
                     <div className="py-16 text-center">
-                      <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                      <p className="text-sm text-muted-foreground">No products found</p>
+                      {activeSync ? (
+                        <>
+                          <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
+                          <p className="text-sm font-medium">Syncing your products…</p>
+                          <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new products will appear automatically</p>
+                        </>
+                      ) : (
+                        <>
+                          <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                          <p className="text-sm text-muted-foreground">No products found</p>
+                        </>
+                      )}
                     </div>
                   );
                 }
@@ -768,7 +780,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   {p.sale_price && p.sale_price !== p.regular_price ? (
                                     <>
                                       <span className="text-base font-semibold font-mono text-foreground">{fmtPrice(p.sale_price)}</span>
-                                      <span className="text-[11px] font-mono line-through text-muted-foreground">{fmtPrice(p.regular_price)}</span>
+                                      <span className="ml-1.5 line-through text-muted-foreground text-xs">{fmtPrice(p.regular_price)}</span>
                                     </>
                                   ) : (
                                     <span className="text-base font-semibold font-mono text-foreground">{fmtPrice(p.price)}</span>
@@ -846,8 +858,18 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   ) : products.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={visibleColList.length + 1} className="text-center text-xs text-muted-foreground py-8">
-                        <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                        <p className="text-sm text-muted-foreground">No products found</p>
+                        {activeSync ? (
+                          <>
+                            <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
+                            <p className="text-sm font-medium">Syncing your products…</p>
+                            <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new products will appear automatically</p>
+                          </>
+                        ) : (
+                          <>
+                            <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                            <p className="text-sm text-muted-foreground">No products found</p>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -991,23 +1013,23 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               }
                               return <TableCell key={c.key}>—</TableCell>;
                             })}
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
+                            <TableCell colSpan={visibleColList.length + 1} className="p-0">
+                              <ProductRowExpanded
+                                product={p}
+                                storeUrl={storeUrl}
+                                onClose={() => setExpandedRowId(null)}
+                                onSaved={(updated) => {
+                                  setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                                }}
+                              />
+                            </TableCell>
                           </TableRow>
-                          {isExpanded && (
-                            <TableRow key={`${p.id}-exp`} className="hover:bg-muted/30 bg-muted/30 !border-t-0">
-                              <TableCell colSpan={visibleColList.length + 1} className="p-0">
-                                <ProductRowExpanded
-                                  product={p}
-                                  storeUrl={storeUrl}
-                                  onClose={() => setExpandedRowId(null)}
-                                  onSaved={(updated) => {
-                                    setProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
-                                  }}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </>
-                      );
+                        )}
+                      </>
                     })
                   )}
                 </TableBody>
