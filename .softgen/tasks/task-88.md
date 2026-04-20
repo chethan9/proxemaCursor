@@ -1,6 +1,6 @@
 ---
 title: Super Admin notifications console
-status: todo
+status: done
 priority: high
 type: feature
 tags: [admin, notifications, ui]

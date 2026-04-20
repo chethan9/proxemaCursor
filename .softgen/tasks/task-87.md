@@ -1,6 +1,6 @@
 ---
 title: Unified notification center (celebrations, announcements, ads)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [architecture, notifications, infrastructure]
