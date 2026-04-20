@@ -1,6 +1,6 @@
 ---
 title: Advanced variation management (two-level editing)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, variations, woocommerce]
