@@ -1,6 +1,6 @@
 ---
 title: Instant onboarding + progressive background sync
-status: todo
+status: done
 priority: high
 type: feature
 tags: [onboarding, sync, ux]
@@ -70,26 +70,26 @@ Replace the "scan inventory + preparing for liftoff + estimate" flow with an **i
 
 ## Checklist
 
-- [ ] Strip "Scanning inventory" and "Preparing for liftoff" steps from `INITIAL_STEPS` in connect page — final array has exactly 4 entries (auth, creds, wp, webhooks)
-- [ ] Remove from `src/pages/sites/connect/[id].tsx`: `Estimate` interface, `estimate` / `estimateStartedRef` / `progressTick` state, `startEstimate()`, `runEstimateAndLiftoff()`, `handleLiftoff()`, the `formatEta` helper, the progress-tick `setInterval`, the `pickProgressMessage` import, the entire liftoff card JSX block, the entire "estimating" stage JSX block, the `stage === "estimating"` / `"liftoff"` branches in the title switch
-- [ ] Delete `src/pages/api/stores/[storeId]/estimate.ts` entirely (no longer called)
-- [ ] Update `Stage` type in connect page: replace `"estimating" | "liftoff"` with single `"prefetching"` state; render confetti modal + auto-redirect during this state
-- [ ] After webhooks register: call new prefetch endpoint, show full-screen confetti modal with "Welcome to {store name}!" and auto-redirect to `/sites/[id]/products` after 2s
-- [ ] New prefetch endpoint (`/api/stores/[storeId]/prefetch` or repurpose `sync-start`): fetch + upsert latest 50 products (per_page=50, orderby=modified), latest 50 orders (per_page=50, orderby=date), all categories in parallel; stamp `onboarding_completed_at`; queue background sync_run for Phase 2
-- [ ] Simplify `src/pages/api/stores/[storeId]/sync-start.ts`: drop `estimated_total` from request body contract (default 0), keep onboarding stamp logic, keep background sync trigger
-- [ ] Phase 2 background sync in `sync.ts`: sequential aspect progression (remaining products → orders → tags → customers → coupons), one at a time, per_page=100, resumable from last page via `sync_runs.last_page_synced`
-- [ ] Phase 3 background sync: after Phase 2 done, sync variations per-product in background (separate sync_run with `aspect='variations'`)
-- [ ] Cache-on-read helpers in service layer: `productService.getOrFetch(storeId, wooId)`, `orderService.getOrFetch(storeId, wooId)` — falls back to live Woo fetch + upsert when missing
-- [ ] On-demand variations: product edit page detects missing variations for variable products → calls existing `/api/stores/[storeId]/products/[productId]/variations` → caches → renders
-- [ ] New `src/components/site/InitialSyncBanner.tsx`: thin banner, mounts via `SiteLayout`, visible while `onboarding_completed_at IS NOT NULL AND initial_sync_completed_at IS NULL`, dismissible per-session (sessionStorage key), auto-hides when `initial_sync_completed_at` set
-- [ ] Mount `InitialSyncBanner` at top of content area in `src/components/layout/SiteLayout.tsx`
-- [ ] Remove `pickProgressMessage` export from `src/lib/sync-messages.ts` if no other callers remain (keep `pickAnyMessage` — still used by SyncProgressBanner); if `progress` pool is unused elsewhere, remove it too
-- [ ] Preserve untouched: `SyncProgressBanner.tsx` (sidebar circle + green bar), projects widget, `useAllActiveSyncs` / `useActiveSync` hooks, resume-onboarding logic from task 99
-- [ ] Verify no lingering references to `/api/stores/[storeId]/estimate` with a grep after edits
-- [ ] Manual auth mode support: when user chooses "Enter consumer key/secret manually" in AddSiteDialog (skipping OAuth), the new instant-onboarding flow still applies — after credentials saved, show 4-step card starting at WP authorize step, then webhooks, then confetti + prefetch + redirect. Same code path as OAuth.
-- [ ] Resume into new flow: task 99's resume logic (via `/sites/connect/[id]?resume=1`) picks up at correct step (WP if `wp_username` null, webhooks if not registered, prefetch + confetti if all creds present) — ends in confetti + redirect just like fresh flow. No leftover liftoff card or estimate stage in any resume path.
-- [ ] Global incomplete-onboarding prompt: new `<IncompleteOnboardingPrompt />` component mounts in `_app.tsx` (inside AuthProvider). On app load, queries `stores` where `onboarding_completed_at IS NULL` for current user's clients. If 1+ found, shows a centered modal: "You have {N} site(s) with setup in progress — resume now?" with Resume (routes to `/sites/connect/[first-id]?resume=1`) and Dismiss buttons. Dismissible per-session via sessionStorage key `resume-prompt-dismissed`. Does not show on `/sites/connect/*`, `/auth/*`, or `/sites/[id]/*` pages (user already in flow or actively using site).
-- [ ] Update `docs/CODEBASE_INDEX.md` and `docs/JOURNAL.md` with the new onboarding flow: 4-step card → confetti → prefetch window (top 50 products, 50 orders, all categories) → Phase 2 background (remaining products, orders, tags, customers, coupons sequentially) → Phase 3 background (variations on-demand + full). Document the resume entry points (sites table, AddSite duplicate detection, global modal prompt) and that both OAuth and manual-credential paths use the identical post-credentials flow.
+- [x] Strip "Scanning inventory" and "Preparing for liftoff" steps from `INITIAL_STEPS` in connect page — final array has exactly 4 entries (auth, creds, wp, webhooks)
+- [x] Remove from `src/pages/sites/connect/[id].tsx`: `Estimate` interface, `estimate` / `estimateStartedRef` / `progressTick` state, `startEstimate()`, `runEstimateAndLiftoff()`, `handleLiftoff()`, the `formatEta` helper, the progress-tick `setInterval`, the `pickProgressMessage` import, the entire liftoff card JSX block, the entire "estimating" stage JSX block, the `stage === "estimating"` / `"liftoff"` branches in the title switch
+- [x] Delete `src/pages/api/stores/[storeId]/estimate.ts` entirely (no longer called)
+- [x] Update `Stage` type in connect page: replace `"estimating" | "liftoff"` with single `"prefetching"` state; render confetti modal + auto-redirect during this state
+- [x] After webhooks register: call new prefetch endpoint, show full-screen confetti modal with "Welcome to {store name}!" and auto-redirect to `/sites/[id]/products` after 2s
+- [x] New prefetch endpoint (`/api/stores/[storeId]/prefetch` or repurpose `sync-start`): fetch + upsert latest 50 products (per_page=50, orderby=modified), latest 50 orders (per_page=50, orderby=date), all categories in parallel; stamp `onboarding_completed_at`; queue background sync_run for Phase 2
+- [x] Simplify `src/pages/api/stores/[storeId]/sync-start.ts`: drop `estimated_total` from request body contract (default 0), keep onboarding stamp logic, keep background sync trigger
+- [x] Phase 2 background sync in `sync.ts`: sequential aspect progression (remaining products → orders → tags → customers → coupons), one at a time, per_page=100, resumable from last page via `sync_runs.last_page_synced`
+- [x] Phase 3 background sync: after Phase 2 done, sync variations per-product in background (separate sync_run with `aspect='variations'`)
+- [x] Cache-on-read helpers in service layer: `productService.getOrFetch(storeId, wooId)`, `orderService.getOrFetch(storeId, wooId)` — falls back to live Woo fetch + upsert when missing
+- [x] On-demand variations: product edit page detects missing variations for variable products → calls existing `/api/stores/[storeId]/products/[productId]/variations` → caches → renders
+- [x] New `src/components/site/InitialSyncBanner.tsx`: thin banner, mounts via `SiteLayout`, visible while `onboarding_completed_at IS NOT NULL AND initial_sync_completed_at IS NULL`, dismissible per-session (sessionStorage key), auto-hides when `initial_sync_completed_at` set
+- [x] Mount `InitialSyncBanner` at top of content area in `src/components/layout/SiteLayout.tsx`
+- [x] Remove `pickProgressMessage` export from `src/lib/sync-messages.ts` if no other callers remain (keep `pickAnyMessage` — still used by SyncProgressBanner); if `progress` pool is unused elsewhere, remove it too
+- [x] Preserve untouched: `SyncProgressBanner.tsx` (sidebar circle + green bar), projects widget, `useAllActiveSyncs` / `useActiveSync` hooks, resume-onboarding logic from task 99
+- [x] Verify no lingering references to `/api/stores/[storeId]/estimate` with a grep after edits
+- [x] Manual auth mode support: when user chooses "Enter consumer key/secret manually" in AddSiteDialog (skipping OAuth), the new instant-onboarding flow still applies — after credentials saved, show 4-step card starting at WP authorize step, then webhooks, then confetti + prefetch + redirect. Same code path as OAuth.
+- [x] Resume into new flow: task 99's resume logic (via `/sites/connect/[id]?resume=1`) picks up at correct step (WP if `wp_username` null, webhooks if not registered, prefetch + confetti if all creds present) — ends in confetti + redirect just like fresh flow. No leftover liftoff card or estimate stage in any resume path.
+- [x] Global incomplete-onboarding prompt: new `<IncompleteOnboardingPrompt />` component mounts in `_app.tsx` (inside AuthProvider). On app load, queries `stores` where `onboarding_completed_at IS NULL` for current user's clients. If 1+ found, shows a centered modal: "You have {N} site(s) with setup in progress — resume now?" with Resume (routes to `/sites/connect/[first-id]?resume=1`) and Dismiss buttons. Dismissible per-session via sessionStorage key `resume-prompt-dismissed`. Does not show on `/sites/connect/*`, `/auth/*`, or `/sites/[id]/*` pages (user already in flow or actively using site).
+- [x] Update `docs/CODEBASE_INDEX.md` and `docs/JOURNAL.md` with the new onboarding flow: 4-step card → confetti → prefetch window (top 50 products, 50 orders, all categories) → Phase 2 background (remaining products, orders, tags, customers, coupons sequentially) → Phase 3 background (variations on-demand + full). Document the resume entry points (sites table, AddSite duplicate detection, global modal prompt) and that both OAuth and manual-credential paths use the identical post-credentials flow.
 
 ## Acceptance
 
