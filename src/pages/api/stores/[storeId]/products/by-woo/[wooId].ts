@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
     const { data: upserted, error } = await supabaseAdmin
       .from("products")
-      .upsert(row, { onConflict: "store_id,woo_id" })
+      .upsert(row as never, { onConflict: "store_id,woo_id" })
       .select("*")
       .single();
     if (error) return res.status(500).json({ error: error.message });
