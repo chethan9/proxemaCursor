@@ -426,6 +426,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .update({ initial_sync_completed_at: new Date().toISOString() })
           .eq("id", storeId)
           .is("initial_sync_completed_at", null);
+
+        // Create a celebration notification for every user who can see this store
+        const { data: storeFull } = await supabase
+          .from("stores")
+          .select("name, url, logo_url, client_id")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (storeFull) {
+          let userIds: string[] = [];
+          if (storeFull.client_id) {
+            const { data: members } = await supabase
+              .from("client_members")
+              .select("user_id")
+              .eq("client_id", storeFull.client_id);
+            userIds = (members || []).map((m: { user_id: string }) => m.user_id);
+          }
+          if (userIds.length === 0) {
+            const { data: allUsers } = await supabase
+              .from("profiles")
+              .select("id")
+              .limit(50);
+            userIds = (allUsers || []).map((u: { id: string }) => u.id);
+          }
+          const rows = userIds.map((uid) => ({
+            user_id: uid,
+            type: "celebration",
+            title: `${storeFull.name} is ready!`,
+            body: "Welcome aboard. To infinity and beyond 🚀",
+            cta_label: "Let's go",
+            lottie_url: "/confetti.json",
+            priority: 90,
+            metadata: {
+              store_id: storeId,
+              store_name: storeFull.name,
+              store_url: storeFull.url,
+              logo_url: storeFull.logo_url,
+            },
+          }));
+          if (rows.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any).from("user_notifications").insert(rows);
+          }
+        }
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

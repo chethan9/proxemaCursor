@@ -6,7 +6,10 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { BrandingProvider } from "@/contexts/BrandingProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
+import { NotificationProvider } from "@/contexts/NotificationProvider";
+import { NotificationRenderer } from "@/components/notifications/NotificationRenderer";
 import { Toaster } from "@/components/ui/toaster";
+import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 
@@ -28,7 +31,13 @@ function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <AuthProvider>
         <CacheBuster />
-        <BrandingProvider>{children}</BrandingProvider>
+        <BrandingProvider>
+          <NotificationProvider>
+            {children}
+            <NotificationRenderer />
+            <BulkJobsToast />
+          </NotificationProvider>
+        </BrandingProvider>
       </AuthProvider>
     </ThemeProvider>
   );
