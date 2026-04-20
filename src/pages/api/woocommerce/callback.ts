@@ -27,6 +27,7 @@ export default async function handler(
       .update({
         consumer_key,
         consumer_secret,
+        woo_key_id: key_id ?? null,
         status: "connected",
       })
       .eq("id", storeId);
