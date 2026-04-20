@@ -340,6 +340,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     {can(PERMISSIONS.SITES_VIEW) && visibleSites.map((site) => {
                       const href = `/sites/${site.id}/products`;
                       const isActive = site.id === activeSiteId;
+                      const syncPct = activeSyncMap.get(site.id);
+                      const isSyncing = typeof syncPct === "number";
                       if (collapsed) {
                         return (
                           <li key={site.id}>
@@ -348,11 +350,19 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                                 <Link href={href} onMouseEnter={() => prefetchStore(site.id)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                                   isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
-                                  <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
-                                    site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
+                                  {isSyncing ? (
+                                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[14px] px-1 rounded-full bg-success text-[8px] font-bold text-white flex items-center justify-center ring-1 ring-sidebar">
+                                      {syncPct}
+                                    </span>
+                                  ) : (
+                                    <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
+                                      site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
+                                  )}
                                 </Link>
                               </TooltipTrigger>
-                              <TooltipContent side="right" sideOffset={8} className="z-[100]">{site.name}</TooltipContent>
+                              <TooltipContent side="right" sideOffset={8} className="z-[100]">
+                                {site.name}{isSyncing ? ` — syncing ${syncPct}%` : ""}
+                              </TooltipContent>
                             </Tooltip>
                           </li>
                         );
@@ -370,7 +380,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                             )}
                             <SiteIcon site={site} size="sm" />
                             <span className="truncate">{site.name}</span>
-                            <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                            {isSyncing ? (
+                              <span className="ml-auto text-[10px] font-bold text-success tabular-nums">{syncPct}%</span>
+                            ) : (
+                              <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                            )}
                           </Link>
                         </li>
                       );
