@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { X, Rocket, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, ChevronRight } from "lucide-react";
 import { pickAnyMessage } from "@/lib/sync-messages";
-import { SyncCelebrationDialog } from "@/components/SyncCelebrationDialog";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,10 +35,6 @@ export function SyncProgressBanner() {
   const { data: allSyncs = [] } = useAllActiveSyncs();
   const [dismissed, setDismissed] = useState(false);
   const [tick, setTick] = useState(0);
-  const [overlayOpen, setOverlayOpen] = useState(false);
-  const [cardOpen, setCardOpen] = useState(false);
-  const [store, setStore] = useState<{ id: string; name: string; url: string; logo_url?: string | null } | null>(null);
-  const [confettiData, setConfettiData] = useState<object | null>(cachedConfetti);
   const storageKey = storeId ? `sync-display-progress:${storeId}` : null;
   const [displayProgress, setDisplayProgress] = useState<number>(() => {
     if (typeof window === "undefined" || !storageKey) return 0;
@@ -187,50 +182,41 @@ export function SyncProgressBanner() {
     return () => clearInterval(id);
   }, [data?.running]);
 
-  const handleCelebrationClose = () => {
-    setCardOpen(false); setOverlayOpen(false); invalidateAll(storeId);
-  };
-
   const bgSyncs = allSyncs.filter((s) => s.store_id !== storeId);
 
   if (!data || !data.running || dismissed) {
     if (bgSyncs.length > 0 && !dismissed) {
       return (
-        <>
-          <div className="sticky top-0 z-40 bg-card border-b border-border/60 px-4 py-2 shadow-sm">
-            <div className="flex items-center gap-3 max-w-7xl mx-auto">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
-                {bgSyncs.length} site{bgSyncs.length > 1 ? "s" : ""} syncing
-              </span>
-              <div className="flex items-center gap-2 flex-1 overflow-x-auto">
-                {bgSyncs.slice(0, 3).map((s) => (
-                  <Link key={s.store_id} href={`/sites/${s.store_id}/home`}
-                    className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-muted/60 hover:bg-muted transition-colors shrink-0">
-                    <SiteIcon site={{ name: s.store_name, url: s.store_url, logo_url: s.store_logo_url }} size={18} />
-                    <span className="text-xs font-medium truncate max-w-[120px]">{s.store_name}</span>
-                    <div className="w-16 h-1.5 bg-emerald-500/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${s.progress}%` }} />
-                    </div>
-                    <span className="text-[11px] tabular-nums text-emerald-600 font-semibold">{s.progress}%</span>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                  </Link>
-                ))}
-                {bgSyncs.length > 3 && (
-                  <span className="text-xs text-muted-foreground shrink-0">+{bgSyncs.length - 3} more</span>
-                )}
-              </div>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => setDismissed(true)}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
+        <div className="sticky top-0 z-40 bg-card border-b border-border/60 px-4 py-2 shadow-sm">
+          <div className="flex items-center gap-3 max-w-7xl mx-auto">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
+              {bgSyncs.length} site{bgSyncs.length > 1 ? "s" : ""} syncing
+            </span>
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto">
+              {bgSyncs.slice(0, 3).map((s) => (
+                <Link key={s.store_id} href={`/sites/${s.store_id}/home`}
+                  className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-muted/60 hover:bg-muted transition-colors shrink-0">
+                  <SiteIcon site={{ name: s.store_name, url: s.store_url, logo_url: s.store_logo_url }} size={18} />
+                  <span className="text-xs font-medium truncate max-w-[120px]">{s.store_name}</span>
+                  <div className="w-16 h-1.5 bg-emerald-500/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${s.progress}%` }} />
+                  </div>
+                  <span className="text-[11px] tabular-nums text-emerald-600 font-semibold">{s.progress}%</span>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                </Link>
+              ))}
+              {bgSyncs.length > 3 && (
+                <span className="text-xs text-muted-foreground shrink-0">+{bgSyncs.length - 3} more</span>
+              )}
             </div>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => setDismissed(true)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
           </div>
-          <SyncCelebrationDialog overlayOpen={overlayOpen} cardOpen={cardOpen} onClose={handleCelebrationClose} store={store} animationData={confettiData} />
-        </>
+        </div>
       );
     }
-    return (
-      <SyncCelebrationDialog overlayOpen={overlayOpen} cardOpen={cardOpen} onClose={handleCelebrationClose} store={store} animationData={confettiData} />
-    );
+    return null;
   }
 
   const meta = data.currentAspect ? ASPECT_META[data.currentAspect] : null;
@@ -292,7 +278,6 @@ export function SyncProgressBanner() {
           @keyframes trail-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
         `}</style>
       </div>
-      <SyncCelebrationDialog overlayOpen={overlayOpen} cardOpen={cardOpen} onClose={handleCelebrationClose} store={store} animationData={confettiData} />
     </>
   );
 }
