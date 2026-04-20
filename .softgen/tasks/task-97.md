@@ -1,6 +1,6 @@
 ---
 title: Defer variations sync + ring progress + sync indicator line
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sync, ui, sidebar, progress]
