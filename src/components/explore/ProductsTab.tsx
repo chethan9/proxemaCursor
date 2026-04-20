@@ -759,7 +759,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 title="Variable product"
                                 className="absolute bottom-2.5 left-2.5 inline-flex items-center justify-center h-8 w-8 rounded-lg bg-card border border-border shadow-sm"
                               >
-                                <Palette className="h-4 w-4 text-success" />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/variation.png"
+                                  alt=""
+                                  className="h-5 w-5 object-contain"
+                                  draggable={false}
+                                />
                               </div>
                             )}
                             <button
