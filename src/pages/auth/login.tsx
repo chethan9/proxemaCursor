@@ -29,6 +29,22 @@ export default function LoginPage() {
     }
   }, [user, authLoading, router]);
 
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
+        {logoUrl ? (
+          <img src={logoUrl} alt={brandName} className="h-10 w-auto object-contain opacity-90" />
+        ) : (
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Zap className="h-5 w-5 text-primary" />
+          </div>
+        )}
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">Signing you in…</p>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
