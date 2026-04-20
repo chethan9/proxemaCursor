@@ -1,15 +1,17 @@
 ---
 title: Scoped sync progress to Projects page
 status: todo
-priority: high
+priority: low
 type: feature
-tags: [sync, ui, stability, cleanup]
+tags: [sync, ui, stability, cleanup, deferred]
 created_by: agent
 created_at: 2026-04-20T00:35:00Z
 position: 84
 ---
 
 ## Notes
+
+**DEFERRED** (2026-04-20) — current global `SyncProgressBanner` is stable after recent fixes. Revisit only if freezes return or if UX feedback asks for a cleaner progress surface.
 
 Sync progress UI is currently mounted site-wide via `SiteLayout` (`SyncProgressBanner.tsx`). Despite debouncing and navigation guards, the polling + multi-query invalidation under navigation transitions keeps causing freezes. Simpler, safer approach: remove global banner + all cross-page toasts; show progress only on the Projects list page as an inline row-level indicator.
 
