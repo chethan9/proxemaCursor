@@ -37,7 +37,7 @@ import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
 import { createBulkJob } from "@/services/bulkJobService";
-import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Palette } from "lucide-react";
+import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
