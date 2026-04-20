@@ -1,11 +1,11 @@
 ---
 title: Live data refresh during active sync
-status: todo
+status: done
 priority: high
 type: bug
-tags: [products, orders, taxonomy, sync, realtime]
+tags: [sync, ui, realtime]
 created_by: agent
-created_at: 2026-04-20
+created_at: 2026-04-20T10:20:00Z
 position: 101
 ---
 
