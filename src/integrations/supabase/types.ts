@@ -8,8 +8,10 @@ export type Database = DB;
 
 // Re-export commonly used types for convenience
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
+export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
+export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
 export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
 export type Functions<T extends keyof Database['public']['Functions']> = Database['public']['Functions'][T];
 
 // Project reference: zhsmlfdmtlzyxvioppex
-// Last updated: 2026-04-19T23:56:38.508599
+// Last updated: 2026-04-20T00:01:32.091481
