@@ -3,6 +3,7 @@ import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
+import { ScrollToEdgeButton } from "./ScrollToEdgeButton";
 import type { Permission } from "@/lib/permissions";
 
 interface AppLayoutProps {
@@ -35,6 +36,7 @@ export function AppLayout({ children, title, requirePermission, requireSuperAdmi
             </main>
           </div>
         </div>
+        <ScrollToEdgeButton />
       </SidebarProvider>
     </AuthGuard>
   );
