@@ -30,6 +30,34 @@ import { useStores } from "@/hooks/queries/useStores";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 
+function ProgressRing({ value, size = 22, stroke = 2.5 }: { value: number; size?: number; stroke?: number }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (Math.max(0, Math.min(100, value)) / 100) * c;
+  return (
+    <span className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="hsl(var(--sidebar-border))" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="hsl(var(--success))"
+          strokeWidth={stroke}
+          fill="none"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums text-success">
+        {value}
+      </span>
+    </span>
+  );
+}
+
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
 
@@ -363,6 +391,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                                     <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
                                       site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
                                   )}
+                                  {isSyncing && (
+                                    <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full overflow-hidden">
+                                      <span className="block h-full w-full sync-shimmer" />
+                                    </span>
+                                  )}
                                 </Link>
                               </TooltipTrigger>
                               <TooltipContent side="right" sideOffset={8} className="z-[100]">
@@ -386,9 +419,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                             <SiteIcon site={site} size="sm" />
                             <span className="truncate">{site.name}</span>
                             {isSyncing ? (
-                              <span className="ml-auto text-[10px] font-bold text-success tabular-nums">{syncPct}%</span>
+                              <ProgressRing value={syncPct!} />
                             ) : (
                               <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                            )}
+                            {isSyncing && (
+                              <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full overflow-hidden">
+                                <span className="block h-full w-full sync-shimmer" />
+                              </span>
                             )}
                           </Link>
                         </li>

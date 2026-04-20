@@ -405,12 +405,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const syncFunctions: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
       products: syncProducts,
-      variations: syncVariations,
       orders: syncOrders,
       customers: syncCustomers,
       categories: syncCategories,
       tags: syncTags,
       coupons: syncCoupons,
+      variations: syncVariations,
     };
 
     const aspectsToSync = aspect && syncFunctions[aspect]
