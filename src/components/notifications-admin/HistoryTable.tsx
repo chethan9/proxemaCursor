@@ -66,11 +66,18 @@ export function HistoryTable({ onDuplicate }: { onDuplicate: (prefill: Partial<C
   };
 
   const handleExport = () => {
-    exportCsv("notifications-history.csv", filtered.map((h) => ({
-      created_at: h.created_at, type: h.type, title: h.title, target: h.target_description,
-      recipients: h.recipients, shown: h.shown_count, clicked: h.clicked_count,
-      ctr_pct: h.ctr.toFixed(1), dismiss_pct: h.dismiss_rate.toFixed(1),
-    })));
+    const columns = [
+      { key: "created_at", label: "Sent", accessor: (h: SentNotificationGroup) => h.created_at },
+      { key: "type", label: "Type", accessor: (h: SentNotificationGroup) => h.type },
+      { key: "title", label: "Title", accessor: (h: SentNotificationGroup) => h.title },
+      { key: "target", label: "Target", accessor: (h: SentNotificationGroup) => h.target_description },
+      { key: "recipients", label: "Recipients", accessor: (h: SentNotificationGroup) => h.recipients },
+      { key: "shown", label: "Shown", accessor: (h: SentNotificationGroup) => h.shown_count },
+      { key: "clicked", label: "Clicked", accessor: (h: SentNotificationGroup) => h.clicked_count },
+      { key: "ctr_pct", label: "CTR %", accessor: (h: SentNotificationGroup) => h.ctr.toFixed(1) },
+      { key: "dismiss_pct", label: "Dismiss %", accessor: (h: SentNotificationGroup) => h.dismiss_rate.toFixed(1) },
+    ];
+    exportCsv(filtered, columns, "notifications-history.csv");
   };
 
   const handleDuplicate = (g: SentNotificationGroup) => {
