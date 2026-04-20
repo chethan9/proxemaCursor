@@ -36,7 +36,10 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
 
   useEffect(() => { setPage(0); setExpandedId(null); }, [debounced, storeId, mode, pageSize]);
 
-  const { data: result, isLoading: loading } = useTaxonomyRows(storeId, mode, debounced, page, pageSize);
+  const { data: activeSyncs = [] } = useAllActiveSyncs();
+  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
+
+  const { data: result, isLoading: loading } = useTaxonomyRows(storeId, mode, debounced, page, pageSize, activeSync?.running ? 5000 : false);
   const rows = result?.data ?? [];
   const count = result?.count ?? 0;
   const { data: allCategories = [] } = useAllCategories(storeId, mode === "categories");
@@ -73,8 +76,6 @@ export function TaxonomyTab({ storeId, mode, search: searchProp, onSearchChange,
   const Icon = mode === "categories" ? FolderTree : TagIcon;
   const colSpan = mode === "categories" ? 6 : 5;
 
-  const { data: activeSyncs = [] } = useAllActiveSyncs();
-  const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const queryClient = useQueryClient();
   const prevRunningRef = useRef<boolean>(false);
   useEffect(() => {
