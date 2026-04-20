@@ -138,7 +138,7 @@ export default function SitesPage() {
                     }
                   }}
                   onDOMLoaded={() => lottieRef.current?.setSpeed(0.5)}
-                  style={{ width: "min(67vw, 675px)", height: "min(52vh, 525px)" }}
+                  style={{ width: "min(90vw, 900px)", height: "min(70vh, 700px)" }}
                 />
               </div>
             )}
