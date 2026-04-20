@@ -15,6 +15,7 @@ import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -509,17 +510,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {collapsed && !forceCollapsed && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={toggle} aria-label="Expand sidebar"
-                  className="mt-1 w-full flex items-center justify-center h-7 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60">
-                  <ChevronsRight className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Expand sidebar</TooltipContent>
-            </Tooltip>
-          )}
         </div>
       </aside>
     </TooltipProvider>
