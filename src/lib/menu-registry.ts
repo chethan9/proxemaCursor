@@ -53,7 +53,7 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "api", defaultLabel: "API", defaultIcon: "Key", href: "/api-management", defaultGroup: "Developer", defaultOrder: 0, permission: PERMISSIONS.API_VIEW },
   { id: "users", defaultLabel: "Users", defaultIcon: "UserCog", href: "/settings/users", defaultGroup: "Administration", defaultOrder: 0, permission: PERMISSIONS.USERS_VIEW },
   { id: "roles", defaultLabel: "Roles", defaultIcon: "Shield", href: "/settings/roles", defaultGroup: "Administration", defaultOrder: 1, permission: PERMISSIONS.ROLES_VIEW },
-  { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings", defaultGroup: "System", defaultOrder: 0 },
+  { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings/profile", defaultGroup: "System", defaultOrder: 0 },
 ];
 
 export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Operations", "Developer", "Administration", "System"];
