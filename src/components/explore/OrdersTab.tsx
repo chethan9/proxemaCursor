@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -792,8 +793,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     const isExpanded = expandedRowId === o.id;
                     const isSelected = selectedIds.has(o.id);
                     return (
-                      <>
-                        <TableRow key={o.id} className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
+                      <React.Fragment key={o.id}>
+                        <TableRow className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
                           <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
                             <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(o.id)} />
                           </TableCell>
@@ -910,8 +911,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                           })}
                         </TableRow>
                         {isExpanded && (
-                          <TableRow key={`${o.id}-exp`} className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={visibleColList.length + 1} className="p-0 border-t border-border">
+                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={visibleColList.length + 1} className="p-0">
                               <div onClick={(e) => e.stopPropagation()}>
                                 <OrderRowExpanded
                                   order={o}
@@ -922,7 +923,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                             </TableCell>
                           </TableRow>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })
                 )}

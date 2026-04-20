@@ -65,7 +65,7 @@ export function TaxonomyRowExpanded(props: Props) {
   };
 
   return (
-    <div className="bg-muted/20 border-y border-border px-6 py-5">
+    <div className="px-6 py-5">
       <div className="flex items-start gap-6 mb-5 pb-4 border-b border-border/60">
         <div>
           <div className="text-xs text-muted-foreground mb-0.5">ID</div>

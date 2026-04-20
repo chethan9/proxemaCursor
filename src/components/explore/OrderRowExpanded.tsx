@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon } from "lucide-react";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
@@ -11,14 +10,14 @@ interface Props {
   onSaved: (o: OrderRow) => void;
 }
 
-const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; border: string }> = {
-  processing: { dot: "bg-primary", bg: "bg-primary/5", text: "text-primary", border: "border-primary/20" },
-  "on-hold": { dot: "bg-warning", bg: "bg-warning/5", text: "text-warning", border: "border-warning/20" },
-  completed: { dot: "bg-success", bg: "bg-success/5", text: "text-success", border: "border-success/20" },
-  cancelled: { dot: "bg-destructive", bg: "bg-destructive/5", text: "text-destructive", border: "border-destructive/20" },
-  refunded: { dot: "bg-muted-foreground", bg: "bg-muted/50", text: "text-muted-foreground", border: "border-border" },
-  failed: { dot: "bg-destructive/70", bg: "bg-destructive/5", text: "text-destructive", border: "border-destructive/20" },
-  pending: { dot: "bg-warning", bg: "bg-warning/5", text: "text-warning", border: "border-warning/20" },
+const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; ring: string }> = {
+  processing: { dot: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", ring: "ring-blue-200 dark:ring-blue-900" },
+  "on-hold": { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900" },
+  completed: { dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-300", ring: "ring-emerald-200 dark:ring-emerald-900" },
+  cancelled: { dot: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300", ring: "ring-rose-200 dark:ring-rose-900" },
+  refunded: { dot: "bg-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-700 dark:text-violet-300", ring: "ring-violet-200 dark:ring-violet-900" },
+  failed: { dot: "bg-slate-500", bg: "bg-slate-100 dark:bg-slate-800/50", text: "text-slate-700 dark:text-slate-300", ring: "ring-slate-200 dark:ring-slate-700" },
+  pending: { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900" },
 };
 
 const STATUS_CHANGE_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
@@ -28,25 +27,12 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   const [saving, setSaving] = useState<string | null>(null);
 
   const billing = (order.billing || {}) as {
-    first_name?: string;
-    last_name?: string;
-    email?: string;
-    phone?: string;
-    address_1?: string;
-    address_2?: string;
-    city?: string;
-    state?: string;
-    postcode?: string;
-    country?: string;
+    first_name?: string; last_name?: string; email?: string; phone?: string;
+    address_1?: string; address_2?: string; city?: string; state?: string; postcode?: string; country?: string;
   };
   const shipping = (order.shipping || {}) as typeof billing;
   const lineItems = Array.isArray(order.line_items) ? (order.line_items as Array<{
-    name?: string;
-    sku?: string;
-    quantity?: number;
-    price?: number | string;
-    total?: string;
-    image?: { src?: string };
+    name?: string; sku?: string; quantity?: number; price?: number | string; total?: string; image?: { src?: string };
   }>) : [];
   const coupons = Array.isArray(order.coupon_lines) ? (order.coupon_lines as Array<{ code?: string; discount?: string }>) : [];
   const shippingLines = Array.isArray(order.shipping_lines) ? (order.shipping_lines as Array<{ method_title?: string; total?: string }>) : [];
@@ -58,10 +44,8 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === order.status) return;
     setSaving(newStatus);
-
     const previousStatus = order.status;
     onSaved({ ...order, status: newStatus });
-
     try {
       const updated = await updateOrderStatus(order.id, newStatus);
       onSaved(updated);
@@ -84,7 +68,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   };
 
   return (
-    <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr_180px] gap-5">
+    <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_1.3fr_150px] gap-5">
       {/* Col 1: Line items + shipping + coupons */}
       <div className="space-y-4">
         <div>
@@ -177,7 +161,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
         </div>
       </div>
 
-      {/* Col 2: Customer + addresses */}
+      {/* Col 2: Customer + addresses (wider now) */}
       <div className="space-y-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -186,8 +170,8 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
           <div className="space-y-1.5">
             <div className="text-sm font-medium">{custName}</div>
             {custEmail && (
-              <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary">
-                <Mail className="h-3 w-3" />{custEmail}
+              <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary break-all">
+                <Mail className="h-3 w-3 shrink-0" />{custEmail}
               </a>
             )}
             {billing.phone && (
@@ -206,7 +190,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" />Billing
             </div>
-            <div className="text-sm space-y-0.5">
+            <div className="text-sm space-y-0.5 leading-relaxed">
               {formatAddress(billing).map((l, i) => <div key={i}>{l}</div>)}
             </div>
           </div>
@@ -215,17 +199,17 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" />Shipping
             </div>
-            <div className="text-sm space-y-0.5">
+            <div className="text-sm space-y-0.5 leading-relaxed">
               {formatAddress(shipping).map((l, i) => <div key={i}>{l}</div>)}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Col 3: Status change + actions */}
-      <div className="space-y-4">
+      {/* Col 3: Status change + actions (narrower) */}
+      <div className="space-y-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Change status</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Change status</div>
           <div className="space-y-1">
             {STATUS_CHANGE_OPTIONS.filter((s) => s !== order.status).map((s) => {
               const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
@@ -235,14 +219,14 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
                   key={s}
                   disabled={!!saving}
                   onClick={() => handleStatusChange(s)}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs capitalize transition-colors border ${style.bg} ${style.text} ${style.border} hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] capitalize font-medium transition-all ring-1 ${style.bg} ${style.text} ${style.ring} hover:ring-2 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:ring-1`}
                 >
                   {isSaving ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
                   ) : (
-                    <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${style.dot} shrink-0`} />
                   )}
-                  <span className="font-medium">{s}</span>
+                  <span className="truncate">{s}</span>
                 </button>
               );
             })}
@@ -250,34 +234,33 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
         </div>
 
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Actions</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Actions</div>
           <div className="space-y-1">
             {custEmail && (
-              <a href={`mailto:${custEmail}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs border border-border hover:bg-muted transition-colors">
-                <Mail className="h-3 w-3" />
+              <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
+                <Mail className="h-2.5 w-2.5" />
                 <span>Email</span>
                 <span className="ml-auto text-muted-foreground">→</span>
               </a>
             )}
             {storeUrl && (
-              <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/post.php?post=${order.woo_id}&action=edit`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs border border-border hover:bg-muted transition-colors">
-                <ExternalLink className="h-3 w-3" />
+              <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/post.php?post=${order.woo_id}&action=edit`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
+                <ExternalLink className="h-2.5 w-2.5" />
                 <span>WP admin</span>
                 <span className="ml-auto text-muted-foreground">→</span>
               </a>
             )}
-            <button disabled className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-              <User className="h-3 w-3" />
+            <button disabled className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border text-muted-foreground opacity-60 cursor-not-allowed">
+              <User className="h-2.5 w-2.5" />
               <span>Customer</span>
               <span className="ml-auto">→</span>
             </button>
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground pt-2 border-t border-border space-y-0.5">
+        <div className="text-[10px] text-muted-foreground pt-2 border-t border-border space-y-0.5">
           <div>Woo ID: <span className="font-mono text-foreground">{order.woo_id}</span></div>
-          {order.date_created && <div>Created: {new Date(order.date_created).toLocaleDateString()}</div>}
-          {order.synced_at && <div>Synced: {new Date(order.synced_at).toLocaleDateString()}</div>}
+          {order.date_created && <div>{new Date(order.date_created).toLocaleDateString()}</div>}
         </div>
       </div>
     </div>
