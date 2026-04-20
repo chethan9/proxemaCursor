@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal, Check } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
+import { useStores } from "@/hooks/queries/useStores";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -93,6 +94,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   });
   const collapsed = locked ? collapsedPref : (forceCollapsed || collapsedPref);
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
+  const { data: storesData } = useStores();
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
@@ -107,13 +109,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
-    getStores().then((list) => {
-      cachedSites = list;
-      try { localStorage.setItem("sidebar-sites-cache", JSON.stringify(list)); } catch { /* ignore */ }
-      setSites(list);
-    }).catch(() => { /* keep cached */ });
+    if (!storesData) return;
+    cachedSites = storesData;
+    try { localStorage.setItem("sidebar-sites-cache", JSON.stringify(storesData)); } catch { /* ignore */ }
+    setSites(storesData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [storesData]);
 
   useEffect(() => {
     if (authLoading) return;
