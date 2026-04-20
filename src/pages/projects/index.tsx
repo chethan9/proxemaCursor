@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Globe2 } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { type StoreWithClient } from "@/services/storeService";
 import { useStores } from "@/hooks/queries/useStores";
 import { useClients } from "@/hooks/queries/useClients";
@@ -131,7 +131,6 @@ export default function SitesPage() {
                     const next = Math.floor(Math.random() * 360) - 180;
                     setCatRotation(next);
                     if (lottieRef.current) {
-                      // restart: lottie-react exposes goToAndPlay via ref
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const r = lottieRef.current as any;
                       r.goToAndPlay?.(0, true);
@@ -139,17 +138,20 @@ export default function SitesPage() {
                     }
                   }}
                   onDOMLoaded={() => lottieRef.current?.setSpeed(0.5)}
-                  style={{ width: "min(90vw, 900px)", height: "min(70vh, 700px)" }}
+                  style={{ width: "min(67vw, 675px)", height: "min(52vh, 525px)" }}
                 />
               </div>
             )}
             <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-              <div className="h-20 w-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-5 shadow-sm">
-                <Globe2 className="h-10 w-10 text-primary" strokeWidth={1.5} />
-              </div>
+              <img
+                src="/web-page.png"
+                alt=""
+                className="h-24 w-24 object-contain mb-2 drop-shadow-sm"
+                draggable={false}
+              />
               <h2 className="text-2xl font-semibold text-foreground">You forgot something.</h2>
-              <p className="text-base text-muted-foreground mt-2">(Hint: a site)</p>
-              <Button size="lg" className="mt-6" onClick={() => setAddOpen(true)}>
+              <p className="text-base text-muted-foreground mt-1">(Hint: a site)</p>
+              <Button size="lg" className="mt-5" onClick={() => setAddOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Site
               </Button>
