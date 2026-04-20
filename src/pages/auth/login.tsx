@@ -59,7 +59,15 @@ export default function LoginPage() {
         .select("default_landing_path")
         .eq("id", data.user.id)
         .maybeSingle();
-      if (prof?.default_landing_path) dest = prof.default_landing_path;
+      // Check if user has any sites yet — first-timers go to /projects
+      const { count: siteCount } = await supabase
+        .from("stores")
+        .select("id", { count: "exact", head: true });
+      if (!siteCount || siteCount === 0) {
+        dest = "/projects";
+      } else if (prof?.default_landing_path) {
+        dest = prof.default_landing_path;
+      }
     }
     router.replace(dest);
   };
