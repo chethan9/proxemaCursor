@@ -201,7 +201,7 @@ function CustomersInner() {
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>(() => {
     const defaults: Record<ColumnKey, boolean> = {
       name: true, username: true, email: true, phone: true, orders: true,
-      spent: true, aov: true, city: true, country: true, registered: true, last_active: false,
+      spent: true, aov: true, city: true, country: true, registered: false, last_active: false,
     };
     if (typeof window !== "undefined") {
       try {
@@ -382,7 +382,7 @@ function CustomersInner() {
                   <div className="text-sm font-medium">Customize columns</div>
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                     const def: Record<string, boolean> = {};
-                    COLUMNS.forEach((c) => { def[c.key] = c.key !== "last_active"; });
+                    COLUMNS.forEach((c) => { def[c.key] = c.key !== "registered" && c.key !== "last_active"; });
                     setVisibleCols(def as Record<ColumnKey, boolean>);
                   }}>Reset</Button>
                 </div>
