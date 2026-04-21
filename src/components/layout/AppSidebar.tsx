@@ -156,15 +156,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, [activePanelId]);
 
   useEffect(() => {
+    let matched: string | null = null;
     for (const n of menuTree) {
       if (n.type === "group" && n.displayMode === "panel") {
         const hasActive = n.children?.some((c) => c.href === router.pathname);
-        if (hasActive && activePanelId !== n.id) {
-          setActivePanelId(n.id);
-          return;
-        }
+        if (hasActive) { matched = n.id; break; }
       }
     }
+    if (matched !== activePanelId) setActivePanelId(matched);
   }, [router.pathname, menuTree, activePanelId]);
 
   const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
