@@ -138,6 +138,20 @@ function MenuEditorInner() {
     setDirty(true);
   };
 
+  const moveGroup = (gid: string, dir: -1 | 1) => {
+    setGroups((gs) => {
+      const idx = gs.findIndex((g) => g.id === gid);
+      if (idx < 0) return gs;
+      const target = idx + dir;
+      if (target < 0 || target >= gs.length) return gs;
+      const copy = [...gs];
+      const [moved] = copy.splice(idx, 1);
+      copy.splice(target, 0, moved);
+      return copy;
+    });
+    setDirty(true);
+  };
+
   const addGroup = () => {
     const id = `group-custom-${Date.now()}`;
     setGroups((g) => [...g, { id, type: "group", label: "New Group", icon: "Folder", children: [] }]);
@@ -231,11 +245,23 @@ function MenuEditorInner() {
             <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : (
             <div className="divide-y divide-border">
-              {orderedGroups.map((g) => {
+              {orderedGroups.map((g, gIdx) => {
                 const groupRows = rowsByGroup.get(g.id) || [];
+                const isRoot = g.id === "__root__";
+                const groupIdxInGroups = isRoot ? -1 : groups.findIndex((x) => x.id === g.id);
                 return (
                   <div key={g.id} className="p-3">
                     <div className="flex items-center gap-2 mb-2">
+                      {!isRoot && (
+                        <div className="flex flex-col">
+                          <button onClick={() => moveGroup(g.id, -1)} disabled={groupIdxInGroups <= 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 h-3">
+                            <ArrowUp className="h-3 w-3" />
+                          </button>
+                          <button onClick={() => moveGroup(g.id, 1)} disabled={groupIdxInGroups === groups.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 h-3">
+                            <ArrowDown className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                       {g.editable ? (
                         <Input
                           value={g.label}
