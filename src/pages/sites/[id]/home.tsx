@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw, Sparkles } from "lucide-react";
-import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
+import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { useSiteHomeStats } from "@/hooks/queries/useSiteStats";
 import { StatStrip } from "@/components/site/home/StatStrip";
 import { SalesTrendCard } from "@/components/site/home/SalesTrendCard";
@@ -31,8 +31,7 @@ function HomeInner() {
   const ordersSpark = useMemo(() => (data?.daily || []).map((d) => ({ v: d.orders })), [data]);
 
   const hasAnyData = s && s.orders_total > 0;
-
-  if (storeLoading) return <SiteLoadingSkeleton />;
+  const showEmpty = !storeLoading && !isLoading && !hasAnyData;
 
   return (
     <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
@@ -48,7 +47,7 @@ function HomeInner() {
         <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
       </Button>
 
-      {!isLoading && !hasAnyData ? (
+      {showEmpty ? (
         <Card>
           <CardContent className="py-16 text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-4">
