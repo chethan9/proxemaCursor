@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, LogOut, Lock, Unlock, MoreHorizontal, Check } from "lucide-react";
+import { Zap, LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
 
@@ -34,6 +34,10 @@ const SIDEBAR_SITE_CAP = 5;
 
 function menuStorageKey(role: RoleKey) {
   return `sidebar-menu-cache:${role}`;
+}
+
+function groupExpandKey(id: string) {
+  return `sidebar-group-expanded:${id}`;
 }
 
 function loadCachedMenu(role: RoleKey): ResolvedMenuNode[] {
@@ -102,6 +106,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const { data: storesData } = useStores();
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
+  const [groupExpanded, setGroupExpanded] = useState<Record<string, boolean>>({});
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     const exactCache = loadCachedMenu(currentRoleKey);
@@ -142,6 +147,31 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
 
+  // Initialize group-expanded state: auto-expand group containing active route, otherwise use localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const next: Record<string, boolean> = {};
+    for (const node of menuTree) {
+      if (node.type !== "group") continue;
+      const containsActive = node.children?.some((c) => c.href === router.pathname);
+      if (containsActive) {
+        next[node.id] = true;
+        continue;
+      }
+      const stored = localStorage.getItem(groupExpandKey(node.id));
+      next[node.id] = stored === null ? true : stored === "1";
+    }
+    setGroupExpanded((prev) => ({ ...next, ...Object.fromEntries(Object.entries(prev).filter(([k]) => !(k in next))) }));
+  }, [menuTree, router.pathname]);
+
+  const toggleGroup = (id: string) => {
+    setGroupExpanded((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      if (typeof window !== "undefined") localStorage.setItem(groupExpandKey(id), next[id] ? "1" : "0");
+      return next;
+    });
+  };
+
   const sortedSites = useMemo(() => {
     return [...sites].sort((a, b) => {
       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -180,7 +210,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   const isItemActive = (href: string) => router.pathname === href;
 
-  const renderItem = (node: ResolvedMenuNode) => {
+  const renderItem = (node: ResolvedMenuNode, indent = false) => {
     if (node.type !== "item" || !node.href) return null;
     const active = isItemActive(node.href);
     const Icon = resolveIcon(node.icon);
@@ -191,7 +221,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         className={cn(
           "group relative flex items-center rounded-md text-[13px] font-medium transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
-          collapsed ? "h-9 w-9 justify-center mx-auto" : "gap-2.5 px-2.5 py-1.5",
+          collapsed ? "h-9 w-9 justify-center mx-auto" : cn("gap-2.5 py-1.5", indent ? "pl-7 pr-2.5" : "px-2.5"),
           active
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
@@ -252,6 +282,88 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   );
 
   const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
+
+  const renderCollapsibleGroup = (node: ResolvedMenuNode) => {
+    const children = node.children || [];
+    if (children.length === 0) return null;
+    const GroupIcon = resolveIcon(node.icon);
+    const hasActiveChild = children.some((c) => c.href === router.pathname);
+    const isExpanded = !!groupExpanded[node.id];
+
+    if (collapsed) {
+      return (
+        <div key={node.id} className="mb-2 px-1.5">
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={node.label}
+                    className={cn(
+                      "relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
+                      hasActiveChild ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
+                    )}
+                  >
+                    <GroupIcon className="h-4 w-4" style={node.iconColor ? { color: node.iconColor } : undefined} />
+                  </button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="z-[100]">{node.label}</TooltipContent>
+            </Tooltip>
+            <PopoverContent side="right" align="start" sideOffset={8} className="w-56 p-1 z-[100]">
+              <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{node.label}</div>
+              <ul className="space-y-0.5">
+                {children.map((child) => {
+                  if (child.type !== "item" || !child.href) return null;
+                  const Icon = resolveIcon(child.icon);
+                  const active = isItemActive(child.href);
+                  return (
+                    <li key={child.id}>
+                      <Link
+                        href={child.href}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                          active ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" style={child.iconColor ? { color: child.iconColor } : undefined} />
+                        <span className="truncate">{child.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </PopoverContent>
+          </Popover>
+        </div>
+      );
+    }
+
+    return (
+      <div key={node.id} className="mb-2 px-2">
+        <button
+          type="button"
+          onClick={() => toggleGroup(node.id)}
+          className={cn(
+            "w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+            "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+            hasActiveChild && !isExpanded && "text-sidebar-accent-foreground"
+          )}
+          aria-expanded={isExpanded}
+        >
+          <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
+          <span className="truncate flex-1 text-left">{node.label}</span>
+          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !isExpanded && "-rotate-90")} />
+        </button>
+        {isExpanded && (
+          <ul className="mt-0.5 space-y-0.5">
+            {children.map((child) => renderItem(child, true))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -327,7 +439,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               return (
                 <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
                   <ul className="space-y-0.5">
-                    {node.children?.map(renderItem)}
+                    {node.children?.map((c) => renderItem(c))}
                     {can(PERMISSIONS.SITES_VIEW) && visibleSites.map((site) => {
                       const href = `/sites/${site.id}/products`;
                       const isActive = site.id === activeSiteId;
@@ -409,13 +521,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 </div>
               );
             }
-            return (
-              <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
-                <ul className="space-y-0.5">
-                  {node.children?.map(renderItem)}
-                </ul>
-              </div>
-            );
+            return renderCollapsibleGroup(node);
           })}
         </nav>
 
