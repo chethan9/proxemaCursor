@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, X, ImageIcon, Loader2, Info, Search, Check } from "lucide-react";
+import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
@@ -31,6 +31,8 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
   const [catSearch, setCatSearch] = useState("");
   const [catOpen, setCatOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const { data: categories = [] } = useWooTaxonomy(storeId, "categories");
   const createCategory = useCreateWooTaxonomy(storeId, "categories");
 
@@ -45,6 +47,16 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
 
   const mainImage = form.images[0];
   const galleryImages = form.images.slice(1);
+
+  const reorderGallery = (from: number, to: number) => {
+    if (from === to) return;
+    setForm((p) => {
+      const gallery = p.images.slice(1);
+      const [moved] = gallery.splice(from, 1);
+      gallery.splice(to, 0, moved);
+      return { ...p, images: [p.images[0], ...gallery] };
+    });
+  };
 
   const regularNum = parseFloat(form.regular_price) || 0;
   const saleNum = parseFloat(form.sale_price) || 0;
@@ -156,9 +168,30 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
                   <Label className="text-xs">Gallery</Label>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {galleryImages.map((img, i) => (
-                      <div key={i} className="h-[104px] w-[104px] shrink-0 rounded-md border border-border overflow-hidden relative group">
+                      <div
+                        key={img.id ?? i}
+                        draggable
+                        onDragStart={() => setDragIdx(i)}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+                        onDragLeave={() => setDragOverIdx((v) => (v === i ? null : v))}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragIdx !== null) reorderGallery(dragIdx, i);
+                          setDragIdx(null);
+                          setDragOverIdx(null);
+                        }}
+                        onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                        className={cn(
+                          "h-[104px] w-[104px] shrink-0 rounded-md border overflow-hidden relative group cursor-move transition-all",
+                          dragOverIdx === i ? "border-primary ring-2 ring-primary/30" : "border-border",
+                          dragIdx === i && "opacity-40"
+                        )}
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.src} alt="" className="h-full w-full object-cover" />
+                        <img src={img.src} alt="" className="h-full w-full object-cover pointer-events-none" />
+                        <div className="absolute top-1 left-1 h-5 w-5 rounded-full bg-background/90 opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm">
+                          <GripVertical className="h-3 w-3 text-muted-foreground" />
+                        </div>
                         <button type="button" onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i + 1) }))} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive/90 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center">
                           <X className="h-3 w-3" />
                         </button>
