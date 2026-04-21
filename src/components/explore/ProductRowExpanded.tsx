@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, ExternalLink, BarChart3 } from "lucide-react";
+import { Pencil, ExternalLink, BarChart3, Loader2 } from "lucide-react";
 import { updateProduct, type ProductRow } from "@/services/productService";
 import { useToast } from "@/hooks/use-toast";
 
