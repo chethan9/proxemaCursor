@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       avatar_url: wooData.avatar_url || null,
       is_paying_customer: wooData.is_paying_customer ?? false,
       orders_count: 0,
-      total_spent: "0.00",
+      total_spent: 0,
       raw_data: toJson(wooData),
       date_created: wooData.date_created || new Date().toISOString(),
       synced_at: new Date().toISOString(),
