@@ -45,6 +45,8 @@ import {
   Loader2,
   Trash2,
   FilterX,
+  Copy,
+  PlayCircle,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -73,6 +75,14 @@ interface SyncRunRow {
   started_at: string | null;
   completed_at: string | null;
   store_name?: string;
+  attempt?: number | null;
+  next_retry_at?: string | null;
+  request_url?: string | null;
+  request_method?: string | null;
+  request_params?: Record<string, unknown> | null;
+  response_status?: number | null;
+  response_body?: string | null;
+  response_headers?: Record<string, unknown> | null;
 }
 
 interface StoreOption {
@@ -642,6 +652,10 @@ export default function SyncRunsPage() {
                   <p className="text-sm font-mono font-medium text-blue-600">{selectedRun.records_updated ?? 0}</p>
                 </div>
                 <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Attempt</p>
+                  <p className="text-sm font-mono font-medium">{selectedRun.attempt ?? 1} / 5</p>
+                </div>
+                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Started At</p>
                   <p className="text-sm">{formatDate(selectedRun.started_at)}</p>
                 </div>
@@ -656,13 +670,73 @@ export default function SyncRunsPage() {
               </div>
               {selectedRun.error_message && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <XCircle className="h-4 w-4 text-red-500" />
-                    <p className="text-sm font-medium text-red-700">Error Details</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      <p className="text-sm font-medium text-red-700">Error Details</p>
+                    </div>
+                    {selectedRun.status === "failed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          await supabase
+                            .from("sync_runs")
+                            .update({ status: "retrying", next_retry_at: new Date().toISOString(), error_message: null })
+                            .eq("id", selectedRun.id);
+                          setSelectedRun(null);
+                          resetAndLoad();
+                          loadStats();
+                        }}
+                      >
+                        <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Retry now
+                      </Button>
+                    )}
                   </div>
                   <pre className="text-xs text-red-600 whitespace-pre-wrap font-mono bg-white/60 rounded p-3">
                     {selectedRun.error_message}
                   </pre>
+                </div>
+              )}
+              {selectedRun.request_url && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">API Request</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const curl = `curl -X ${selectedRun.request_method || "GET"} "${selectedRun.request_url}" -u "$WC_KEY:$WC_SECRET" -H "Accept: application/json"`;
+                        navigator.clipboard.writeText(curl);
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />
+                      Copy as curl
+                    </Button>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Method: </span>
+                      <code className="bg-white px-1.5 py-0.5 rounded">{selectedRun.request_method || "GET"}</code>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">URL: </span>
+                      <code className="bg-white px-1.5 py-0.5 rounded break-all">{selectedRun.request_url}</code>
+                    </div>
+                    {selectedRun.response_status != null && (
+                      <div>
+                        <span className="text-muted-foreground">Response: </span>
+                        <code className="bg-white px-1.5 py-0.5 rounded">HTTP {selectedRun.response_status}</code>
+                      </div>
+                    )}
+                    {selectedRun.response_body && (
+                      <div>
+                        <p className="text-muted-foreground mb-1">Response body:</p>
+                        <pre className="text-xs bg-white rounded p-2 max-h-40 overflow-auto font-mono">{selectedRun.response_body}</pre>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

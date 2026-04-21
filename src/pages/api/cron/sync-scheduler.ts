@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
+import { isRetryableError, nextRetryDelaySeconds, MAX_SYNC_ATTEMPTS } from "@/lib/sync-error";
 
 interface StoreToSync {
   id: string;
@@ -417,7 +418,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             totalUpdated += result.updated;
             if (syncRun) await supabase.from("sync_runs").update({ status: "completed", completed_at: new Date().toISOString(), records_processed: result.processed, records_created: result.created, records_updated: result.updated }).eq("id", syncRun.id);
           } catch (aspectError) {
-            if (syncRun) await supabase.from("sync_runs").update({ status: "failed", completed_at: new Date().toISOString(), error_message: aspectError instanceof Error ? aspectError.message : "Unknown error" }).eq("id", syncRun.id);
+            if (syncRun) {
+              const errMsg = aspectError instanceof Error ? aspectError.message : "Unknown error";
+              const statusMatch = /(\d{3})/.exec(errMsg);
+              const httpStatus = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
+              const errName = aspectError instanceof Error ? aspectError.name : undefined;
+              const attempt = syncRun.attempt || 1;
+              const canRetry = isRetryableError(httpStatus, errName) && attempt < MAX_SYNC_ATTEMPTS;
+              const delay = canRetry ? nextRetryDelaySeconds(attempt) : null;
+              const requestUrl = `${store.url.replace(/\/$/, "")}/wp-json/wc/v3/${aspect === "categories" ? "products/categories" : aspect === "tags" ? "products/tags" : aspect}`;
+
+              await supabase.from("sync_runs").update({
+                status: canRetry ? "retrying" : "failed",
+                completed_at: canRetry ? null : new Date().toISOString(),
+                error_message: errMsg,
+                request_url: requestUrl,
+                request_method: "GET",
+                response_status: httpStatus || null,
+                next_retry_at: canRetry && delay ? new Date(Date.now() + delay * 1000).toISOString() : null,
+              }).eq("id", syncRun.id);
+            }
           }
         }
 
