@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -22,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         const authHeader = `Basic ${Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64")}`;
         const listResp = await fetch(`${store.url}/wp-json/wc/v3/webhooks?per_page=100`, {
-          headers: { Authorization: authHeader },
+          headers: { Authorization: authHeader, "User-Agent": WOO_USER_AGENT },
         });
 
         if (!listResp.ok) {
@@ -51,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             try {
               await fetch(`${store.url}/wp-json/wc/v3/webhooks/${wh.id}?force=true`, {
                 method: "DELETE",
-                headers: { Authorization: authHeader },
+                headers: { Authorization: authHeader, "User-Agent": WOO_USER_AGENT },
               });
               await supabase.from("webhooks").delete().eq("woo_webhook_id", wh.id).eq("store_id", store.id);
               storeDeleted++;

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds } from "@/lib/woo-client";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
@@ -25,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
     const url = `${store.url.replace(/\/$/, "")}/wp-json/wc/v3/orders/${wooIdNum}`;
-    const r = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+    const r = await fetch(url, { headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT } });
     if (!r.ok) return res.status(r.status).json({ error: "Woo fetch failed" });
     const o = await r.json() as Record<string, unknown>;
 

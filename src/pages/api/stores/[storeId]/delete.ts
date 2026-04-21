@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "DELETE" && req.method !== "POST") {
@@ -64,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             `${baseUrl}/wp-json/wc/v3/webhooks/${wh.woo_webhook_id}?force=true`,
             {
               method: "DELETE",
-              headers: { Authorization: `Basic ${auth}` },
+              headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT },
               signal: controller.signal,
             }
           );
@@ -98,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `${baseUrl}/wp-json/wc/v3/keys/${wooKeyId}?force=true`,
         {
           method: "DELETE",
-          headers: { Authorization: `Basic ${auth}` },
+          headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT },
           signal: controller.signal,
         }
       );

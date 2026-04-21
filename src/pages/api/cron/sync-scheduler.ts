@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
-import { isRetryableError, nextRetryDelaySeconds, MAX_SYNC_ATTEMPTS } from "@/lib/sync-error";
+import { WOO_USER_AGENT, isRetryableError, nextRetryDelaySeconds, MAX_SYNC_ATTEMPTS } from "@/lib/sync-error";
 
 interface StoreToSync {
   id: string;
@@ -136,7 +136,7 @@ async function fetchAllFromWooCommerce<T>(
     let response: Response;
     try {
       response = await fetch(url.toString(), {
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": WOO_USER_AGENT },
         signal: controller.signal,
       });
     } catch (err) {
@@ -328,7 +328,7 @@ async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
     try {
       const response = await fetch(`${store.url}/wp-json/wc/v3/webhooks`, {
         method: "POST",
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": WOO_USER_AGENT },
         body: JSON.stringify({ name: `Proxima - ${topic}`, topic, delivery_url: deliveryUrl, status: "active", secret: `woosync_${store.id}_${Date.now()}` }),
       });
       if (response.ok) {
