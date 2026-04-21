@@ -10,6 +10,7 @@ export interface MenuNode {
   icon: string;
   iconColor?: string | null;
   hidden?: boolean;
+  displayMode?: "inline" | "panel";
   children?: MenuNode[];
 }
 
