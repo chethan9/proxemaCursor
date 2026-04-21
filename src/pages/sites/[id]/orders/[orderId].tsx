@@ -210,7 +210,7 @@ export default function OrderDetailsPage() {
               <Skeleton className="h-64 w-full" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-5">
               {/* Main column */}
               <div className="space-y-4 min-w-0">
                 <Stepper order={order} datePaid={raw.date_paid} dateCompleted={raw.date_completed} />
