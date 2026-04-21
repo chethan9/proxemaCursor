@@ -269,6 +269,22 @@ function MenuEditorInner() {
                       )}
                       <span className="text-[10px] text-muted-foreground">({sectionRows.length})</span>
                       <div className="flex-1" />
+                      {sec.id !== ROOT_ID && (() => {
+                        const grp = groups.find((x) => x.id === sec.id);
+                        const isPanel = grp?.displayMode === "panel";
+                        return (
+                          <Button
+                            size="sm"
+                            variant={isPanel ? "default" : "outline"}
+                            onClick={() => toggleGroupMode(sec.id)}
+                            title="Inline: expands below. Panel: opens as persistent second sidebar column."
+                            className="h-6 px-2 text-[10px] gap-1"
+                          >
+                            <PanelRight className="h-3 w-3" />
+                            {isPanel ? "Panel" : "Inline"}
+                          </Button>
+                        );
+                      })()}
                       {sec.deletable && (
                         <Button size="icon" variant="ghost" onClick={() => deleteGroup(sec.id)} title="Delete group" className="h-6 w-6">
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
