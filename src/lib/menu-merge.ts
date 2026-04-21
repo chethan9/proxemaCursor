@@ -166,3 +166,19 @@ export function resolveForSiteSidebar(
   };
   return resolve(tree, 0);
 }
+
+export function buildInitialTree(
+  can: (p: Permission) => boolean,
+  isSuperAdmin: boolean
+): ResolvedMenuNode[] {
+  const { tree } = mergeMenu([]);
+  return resolveForSidebar(tree, can, isSuperAdmin);
+}
+
+export function buildInitialSiteTree(
+  siteId: string,
+  can: (p: Permission) => boolean
+): ResolvedMenuNode[] {
+  const { tree } = mergeSiteMenu([]);
+  return resolveForSiteSidebar(tree, siteId, can);
+}
