@@ -47,6 +47,7 @@ import {
   FilterX,
   Copy,
   PlayCircle,
+  Shield,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -62,6 +63,7 @@ import {
 import { useAuth } from "@/contexts/AuthProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSyncRunsPaged, useStoreOptions, useSyncRunsStats } from "@/hooks/queries/useSyncRuns";
+import { ConnectionDiagnostic } from "@/components/project/ConnectionDiagnostic";
 
 interface SyncRunRow {
   id: string;
@@ -108,12 +110,24 @@ const ASPECT_COLORS: Record<string, string> = {
   tags: "text-cyan-500",
 };
 
+const BLOCKING_SERVICES = ["cloudflare", "sucuri", "wordfence", "aws-waf", "modsecurity", "unknown"] as const;
+type BlockingServiceName = typeof BLOCKING_SERVICES[number];
+
+function parseBlockingService(errorMessage: string | null | undefined): BlockingServiceName | null {
+  if (!errorMessage) return null;
+  const match = errorMessage.match(/\[blocked by ([a-z-]+):/i);
+  if (!match) return null;
+  const svc = match[1].toLowerCase();
+  return (BLOCKING_SERVICES as readonly string[]).includes(svc) ? (svc as BlockingServiceName) : null;
+}
+
 const PAGE_SIZE = 50;
 
 export default function SyncRunsPage() {
   const { isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const [selectedRun, setSelectedRun] = useState<SyncRunRow | null>(null);
+  const [diagnoseStoreId, setDiagnoseStoreId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [accumulated, setAccumulated] = useState<SyncRunRow[]>([]);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -589,7 +603,24 @@ export default function SyncRunsPage() {
                         <TableCell className="text-muted-foreground text-sm">{formatDate(run.started_at)}</TableCell>
                         <TableCell className="max-w-[200px]">
                           {run.error_message ? (
-                            <span className="text-xs text-red-600 truncate block">{run.error_message}</span>
+                            (() => {
+                              const blocking = parseBlockingService(run.error_message);
+                              return (
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {blocking && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setDiagnoseStoreId(run.store_id); }}
+                                      className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-medium hover:bg-amber-200"
+                                      title="Diagnose"
+                                    >
+                                      <Shield className="h-3 w-3" />
+                                      {blocking === "aws-waf" ? "AWS WAF" : blocking.charAt(0).toUpperCase() + blocking.slice(1)}
+                                    </button>
+                                  )}
+                                  <span className="text-xs text-red-600 truncate">{run.error_message}</span>
+                                </div>
+                              );
+                            })()
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
@@ -740,6 +771,18 @@ export default function SyncRunsPage() {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!diagnoseStoreId} onOpenChange={(open) => !open && setDiagnoseStoreId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Connection Diagnostic</DialogTitle>
+            <DialogDescription>Run live probes to identify what is blocking sync.</DialogDescription>
+          </DialogHeader>
+          {diagnoseStoreId && (
+            <ConnectionDiagnostic storeId={diagnoseStoreId} autoRun />
           )}
         </DialogContent>
       </Dialog>
