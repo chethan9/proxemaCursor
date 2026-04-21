@@ -259,11 +259,17 @@ function MenuEditorInner() {
                         </button>
                       </div>
                       {sec.editable ? (
-                        <Input
-                          value={sec.label}
-                          onChange={(e) => renameGroup(sec.id, e.target.value)}
-                          className="h-7 text-[11px] uppercase tracking-wider font-semibold max-w-[200px]"
-                        />
+                        <>
+                          <IconPicker
+                            value={groups.find((x) => x.id === sec.id)?.icon || "Folder"}
+                            onChange={(icon) => { setGroups((gs) => gs.map((x) => x.id === sec.id ? { ...x, icon } : x)); setDirty(true); }}
+                          />
+                          <Input
+                            value={sec.label}
+                            onChange={(e) => renameGroup(sec.id, e.target.value)}
+                            className="h-7 text-[11px] uppercase tracking-wider font-semibold max-w-[200px]"
+                          />
+                        </>
                       ) : (
                         <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{sec.label}</span>
                       )}

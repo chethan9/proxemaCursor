@@ -107,7 +107,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const { data: storesData } = useStores();
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const [groupExpanded, setGroupExpanded] = useState<Record<string, boolean>>({});
-  const [activePanelId, setActivePanelId] = useState<string | null>(null);
+  const [activePanelId, setActivePanelId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("sidebar-active-panel");
+  });
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     const exactCache = loadCachedMenu(currentRoleKey);
@@ -145,6 +148,24 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     }).catch(() => { /* keep current tree */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (activePanelId) localStorage.setItem("sidebar-active-panel", activePanelId);
+    else localStorage.removeItem("sidebar-active-panel");
+  }, [activePanelId]);
+
+  useEffect(() => {
+    for (const n of menuTree) {
+      if (n.type === "group" && n.displayMode === "panel") {
+        const hasActive = n.children?.some((c) => c.href === router.pathname);
+        if (hasActive && activePanelId !== n.id) {
+          setActivePanelId(n.id);
+          return;
+        }
+      }
+    }
+  }, [router.pathname, menuTree, activePanelId]);
 
   const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
 
