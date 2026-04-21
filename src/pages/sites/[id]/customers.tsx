@@ -20,17 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import {
   Search,
   Columns3,
   ArrowUpDown,
@@ -41,14 +30,9 @@ import {
   ChevronRight,
   GripVertical,
   FilterX,
-  Plus,
   UserPlus,
   Eye,
-  Mail,
-  Trash2,
   Pencil,
-  ExternalLink,
-  Loader2,
 } from "lucide-react";
 import {
   useCustomers,
@@ -59,7 +43,6 @@ import {
   getCustomerInitials,
   getCustomerBilling,
   getAOV,
-  deleteCustomer,
   type CustomerRow,
   type CustomerSortField,
   type SortDirection,
@@ -111,29 +94,10 @@ function formatMoney(v: number | string | null | undefined, currency = "KWD") {
   return `${currency} ${n.toFixed(2)}`;
 }
 
-function CustomerRowExpanded({ customer, storeId, onDeleted }: { customer: CustomerRow; storeId: string; onDeleted: () => void }) {
-  const router = useRouter();
+function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; storeId: string }) {
   const { data: lastOrders = [] } = useCustomerLastOrders(storeId, customer.woo_id, 3);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const { toast } = useToast();
-
   const billing = getCustomerBilling(customer);
   const addr = [billing.address_1, billing.city, billing.state, billing.country].filter(Boolean).join(", ");
-
-  const handleDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      await deleteCustomer(storeId, customer.id);
-      toast({ title: "Customer deleted" });
-      onDeleted();
-    } catch (err) {
-      toast({ title: "Delete failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-    } finally {
-      setDeleting(false);
-      setConfirmOpen(false);
-    }
-  }, [storeId, customer.id, toast, onDeleted]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-6 p-5 border-t border-border">
@@ -183,66 +147,23 @@ function CustomerRowExpanded({ customer, storeId, onDeleted }: { customer: Custo
       </div>
       <div className="space-y-2">
         <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Actions</div>
-        <Button
-          size="sm"
-          className="w-full h-8 text-xs gap-1.5 justify-start"
-          onClick={() => router.push(`/sites/${storeId}/customers/${customer.id}?edit=1`)}
+        <Link
+          href={`/sites/${storeId}/customers/${customer.id}`}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit customer
-          <ExternalLink className="h-3 w-3 ml-auto opacity-70" />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full h-8 text-xs gap-1.5 justify-start"
-          onClick={() => router.push(`/sites/${storeId}/customers/${customer.id}`)}
+          <Eye className="h-2.5 w-2.5" />
+          <span className="font-medium">View details</span>
+          <span className="ml-auto">→</span>
+        </Link>
+        <Link
+          href={`/sites/${storeId}/customers/${customer.id}?edit=1`}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
         >
-          <Eye className="h-3.5 w-3.5" />
-          View details
-          <ExternalLink className="h-3 w-3 ml-auto opacity-70" />
-        </Button>
-        {customer.email && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full h-8 text-xs gap-1.5 justify-start"
-            asChild
-          >
-            <a href={`mailto:${customer.email}`}>
-              <Mail className="h-3.5 w-3.5" />
-              Send email
-              <ExternalLink className="h-3 w-3 ml-auto opacity-70" />
-            </a>
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full h-8 text-xs gap-1.5 justify-start text-destructive hover:text-destructive hover:bg-destructive/5"
-          onClick={() => setConfirmOpen(true)}
-          disabled={deleting}
-        >
-          {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-          Delete
-        </Button>
+          <Pencil className="h-2.5 w-2.5" />
+          <span>Edit customer</span>
+          <span className="ml-auto text-muted-foreground">→</span>
+        </Link>
       </div>
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this customer?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the customer from WooCommerce and this database. Existing orders are preserved but will become guest orders on Woo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
@@ -564,7 +485,7 @@ function CustomersInner() {
                     return (
                       <Fragment key={c.id}>
                         <TableRow
-                          className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30 border-b-0" : ""}`}
+                          className={`bg-white hover:bg-slate-50 cursor-pointer ${isExpanded ? "bg-slate-50 border-b-0 hover:bg-slate-50" : ""}`}
                           onClick={() => setExpandedId((cur) => cur === c.id ? null : c.id)}
                         >
                           {visibleColList.map((col) => {
@@ -597,13 +518,12 @@ function CustomersInner() {
                           })}
                         </TableRow>
                         {isExpanded && (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30" data-expanded-row={c.id}>
+                          <TableRow className="bg-slate-50 hover:bg-slate-50" data-expanded-row={c.id}>
                             <TableCell colSpan={visibleColList.length} className="p-0">
                               <div onClick={(e) => e.stopPropagation()}>
                                 <CustomerRowExpanded
                                   customer={c}
                                   storeId={storeId}
-                                  onDeleted={() => setExpandedId(null)}
                                 />
                               </div>
                             </TableCell>
