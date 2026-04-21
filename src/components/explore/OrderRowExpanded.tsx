@@ -1,6 +1,7 @@
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon } from "lucide-react";
+import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText } from "lucide-react";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -236,6 +237,11 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Actions</div>
           <div className="space-y-1">
+            <Link href={`/sites/${order.store_id}/orders/${order.id}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+              <FileText className="h-2.5 w-2.5" />
+              <span className="font-medium">Open order details</span>
+              <span className="ml-auto">→</span>
+            </Link>
             {custEmail && (
               <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <Mail className="h-2.5 w-2.5" />
