@@ -355,8 +355,8 @@ export default function ConnectSuccessPage() {
           )}
           <div className="relative z-10 text-center space-y-3 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-5xl">🚀</div>
-            <h1 className="text-3xl font-bold">Welcome to {storeName}!</h1>
-            <p className="text-muted-foreground">Taking you to your products…</p>
+            <h1 className="text-3xl font-bold">Welcome to Proxima</h1>
+            <p className="text-muted-foreground">Your site is ready</p>
             <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto mt-4" />
           </div>
         </div>
