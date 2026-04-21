@@ -29,14 +29,24 @@ export async function getMenuConfig(role: string): Promise<MenuNode[]> {
 
 export async function saveMenuConfig(role: string, config: MenuNode[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase.from("menu_configs").upsert({
+  const { data: existing } = await supabase
+    .from("menu_configs")
+    .select("id")
+    .eq("role", role)
+    .eq("scope", "global")
+    .is("site_id", null)
+    .maybeSingle();
+  const payload = {
     role,
     scope: "global",
     site_id: null,
     config: config as unknown as Json,
     updated_at: new Date().toISOString(),
     updated_by: user?.id ?? null,
-  }, { onConflict: "role,scope,site_id" });
+  };
+  const { error } = existing
+    ? await supabase.from("menu_configs").update(payload).eq("id", existing.id)
+    : await supabase.from("menu_configs").insert(payload);
   if (error) throw error;
 }
 
@@ -56,14 +66,20 @@ export async function getSiteMenuConfig(role: string, siteId: string | null): Pr
 
 export async function saveSiteMenuConfig(role: string, siteId: string | null, config: MenuNode[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase.from("menu_configs").upsert({
+  let findQ = supabase.from("menu_configs").select("id").eq("role", role).eq("scope", "site");
+  findQ = siteId ? findQ.eq("site_id", siteId) : findQ.is("site_id", null);
+  const { data: existing } = await findQ.maybeSingle();
+  const payload = {
     role,
     scope: "site",
     site_id: siteId,
     config: config as unknown as Json,
     updated_at: new Date().toISOString(),
     updated_by: user?.id ?? null,
-  }, { onConflict: "role,scope,site_id" });
+  };
+  const { error } = existing
+    ? await supabase.from("menu_configs").update(payload).eq("id", existing.id)
+    : await supabase.from("menu_configs").insert(payload);
   if (error) throw error;
 }
 
