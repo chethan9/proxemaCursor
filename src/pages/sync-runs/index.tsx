@@ -79,10 +79,10 @@ interface SyncRunRow {
   next_retry_at?: string | null;
   request_url?: string | null;
   request_method?: string | null;
-  request_params?: Record<string, unknown> | null;
+  request_params?: unknown;
   response_status?: number | null;
   response_body?: string | null;
-  response_headers?: Record<string, unknown> | null;
+  response_headers?: unknown;
 }
 
 interface StoreOption {
