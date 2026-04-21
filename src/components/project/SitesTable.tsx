@@ -264,7 +264,12 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                   </TableRow>
                   {sync && (
                     <TableRow key={`${store.id}-sync`} className="hover:bg-transparent border-t-0">
-                      <TableCell colSpan={6} className="py-2 pl-[60px] pr-6">
+                      <TableCell
+                        colSpan={6}
+                        className="py-2 pl-[60px] pr-6 cursor-pointer hover:bg-emerald-500/5 transition-colors group"
+                        onClick={(e) => { e.stopPropagation(); router.push(`/projects/${store.id}`); }}
+                        title="View sync engine details"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="relative flex h-1.5 w-1.5">
@@ -272,7 +277,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                             </span>
                             <AspectIcon className="h-3.5 w-3.5 text-emerald-600" />
-                            <span className="text-xs font-medium text-foreground">Syncing {aspectLabel.toLowerCase()}…</span>
+                            <span className="text-xs font-medium text-foreground group-hover:underline">Syncing {aspectLabel.toLowerCase()}…</span>
                           </div>
                           <div className="flex-1 h-1.5 rounded-full bg-emerald-500/10 overflow-hidden relative max-w-md">
                             <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500 relative overflow-hidden"
