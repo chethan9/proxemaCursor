@@ -46,7 +46,7 @@ export function IncompleteSiteDialog({ open, onOpenChange, store, clients, isSup
     try {
       await updateMutation.mutateAsync({
         id: store.id,
-        updates: {
+        patch: {
           name: name.trim(),
           url: v.cleanedUrl || cleanStoreUrl(url),
           client_id: clientId || null,
