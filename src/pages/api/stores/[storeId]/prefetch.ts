@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 import type { Json } from "@/integrations/supabase/database.types";
 
 function toJson<T>(obj: T): Json {
@@ -13,7 +14,10 @@ async function fetchWoo<T>(storeUrl: string, auth: string, endpoint: string, par
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 20000);
   try {
-    const res = await fetch(url.toString(), { headers: { Authorization: `Basic ${auth}` }, signal: controller.signal });
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT },
+      signal: controller.signal,
+    });
     clearTimeout(t);
     if (!res.ok) return [];
     return (await res.json()) as T[];

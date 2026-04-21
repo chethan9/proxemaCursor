@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
+import { WOO_USER_AGENT, detectBlockingService } from "@/lib/sync-error";
 
 interface StoreToSync {
   id: string;
@@ -38,7 +39,11 @@ async function fetchAllFromWooCommerce<T>(
     let response: Response;
     try {
       response = await fetch(url.toString(), {
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" },
+        headers: {
+          "Authorization": `Basic ${auth}`,
+          "Content-Type": "application/json",
+          "User-Agent": WOO_USER_AGENT,
+        },
         signal: controller.signal,
       });
     } catch (err) {
@@ -52,7 +57,10 @@ async function fetchAllFromWooCommerce<T>(
 
     if (!response.ok) {
       if (response.status === 400 || response.status === 404) break;
-      throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}`);
+      const errText = await response.text().catch(() => "");
+      const detection = detectBlockingService(response.status, errText, response.headers);
+      const suffix = detection ? ` [${detection.service}] ${detection.hint}` : "";
+      throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}${suffix}`);
     }
 
     const items: T[] = await response.json();

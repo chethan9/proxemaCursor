@@ -1,4 +1,5 @@
-import { getStoreCreds, type WooStoreCreds } from "./woo-client";
+import { getStoreCreds, wooHttpRequest, type WooStoreCreds } from "./woo-client";
+import { WooApiError, detectBlockingService } from "./sync-error";
 
 export interface LiveFetchParams {
   page?: number;
@@ -48,25 +49,30 @@ export async function wooLiveFetchWithCreds<T>(
   const auth = Buffer.from(`${creds.consumer_key}:${creds.consumer_secret}`).toString("base64");
   const url = `${creds.url.replace(/\/$/, "")}/wp-json/wc/v3/${resource}?${qs.toString()}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { Authorization: `Basic ${auth}` },
-      signal: controller.signal,
+  const res = await wooHttpRequest(url, {
+    method: "GET",
+    headers: { Authorization: `Basic ${auth}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    const detection = detectBlockingService(res.status, text, res.headers);
+    const headersObj: Record<string, string> = {};
+    res.headers.forEach((v, k) => {
+      headersObj[k] = v;
     });
-    clearTimeout(timeout);
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`WooCommerce ${resource} failed: ${res.status} ${text.slice(0, 300)}`);
-    }
-    const total = parseInt(res.headers.get("x-wp-total") || "0", 10);
-    const totalPages = parseInt(res.headers.get("x-wp-totalpages") || "1", 10);
-    const data = (await res.json()) as T[];
-    return { data, total, totalPages };
-  } catch (err) {
-    clearTimeout(timeout);
-    throw err;
+    throw new WooApiError(`WooCommerce ${resource} failed: ${res.status} ${text.slice(0, 300)}`, {
+      url,
+      method: "GET",
+      status: res.status,
+      body: text.slice(0, 2000),
+      headers: headersObj,
+      blocking_service: detection?.service,
+      blocking_hint: detection?.hint,
+    });
   }
+  const total = parseInt(res.headers.get("x-wp-total") || "0", 10);
+  const totalPages = parseInt(res.headers.get("x-wp-totalpages") || "1", 10);
+  const data = (await res.json()) as T[];
+  return { data, total, totalPages };
 }

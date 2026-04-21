@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { WEBHOOK_TOPICS, generateWebhookSecret } from "@/services/webhookService";
 import { getWebhookDeliveryUrl } from "@/lib/app-url";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 export const config = { maxDuration: 60 };
 
@@ -9,7 +10,9 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms = 8000): Prom
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    const headers = new Headers(init.headers || {});
+    headers.set("User-Agent", WOO_USER_AGENT);
+    return await fetch(url, { ...init, headers, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
