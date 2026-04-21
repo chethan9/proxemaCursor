@@ -19,6 +19,7 @@ import { useTaxonomyRows, useAllCategories } from "@/hooks/queries/useTaxonomy";
 import type { TaxonomySortField, TaxonomySortDirection } from "@/services/taxonomyService";
 import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
+import { TaxonomyDialog } from "./TaxonomyDialog";
 
 type Props = {
   storeId: string;
@@ -41,12 +42,13 @@ const SORT_OPTIONS: { field: TaxonomySortField; direction: TaxonomySortDirection
   { field: "created_at", direction: "desc", label: "Recently added" },
 ];
 
-export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader, storeName, storeUrl, onNewClick }: Props) {
+export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader, storeName, storeUrl }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: pageRes, isLoading } = useTaxonomyRows(storeId, mode, search, page, pageSize, sort.field, sort.direction);
   const { data: allCats } = useAllCategories(storeId, mode === "categories");
@@ -174,19 +176,10 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                 </div>
               </div>
             )}
-            {onNewClick ? (
-              <Button size="sm" className="h-9 px-3 gap-1.5" onClick={onNewClick}>
-                <Plus className="h-3.5 w-3.5" />
-                <span className="text-xs">New {singular}</span>
-              </Button>
-            ) : (
-              <Button size="sm" className="h-9 px-3 gap-1.5" asChild>
-                <Link href={`/sites/${storeId}/${mode}?new=1`}>
-                  <Plus className="h-3.5 w-3.5" />
-                  <span className="text-xs">New {singular}</span>
-                </Link>
-              </Button>
-            )}
+            <Button size="sm" className="h-9 px-3 gap-1.5" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              <span className="text-xs">New {singular}</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -260,6 +253,13 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
           </div>
         </CardContent>
       </Card>
+      <TaxonomyDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        storeId={storeId}
+        mode={mode}
+        parentOptions={mode === "categories" ? (allCats || []) : []}
+      />
     </div>
   );
 }
