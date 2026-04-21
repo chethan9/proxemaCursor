@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -30,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const r = await fetch(`${baseUrl}/wp-json/wp/v2/media?per_page=1`, {
-      headers: { Authorization: authHeader },
+      headers: { Authorization: authHeader, "User-Agent": WOO_USER_AGENT },
     });
     if (!r.ok) {
       const text = await r.text().catch(() => "");

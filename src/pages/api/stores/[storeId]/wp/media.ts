@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import formidable from "formidable";
 import fs from "fs";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 export const config = { api: { bodyParser: false } };
 
@@ -74,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const qs = new URLSearchParams({ page, per_page, media_type: "image", _fields: "id,date,slug,title,source_url,alt_text,mime_type,media_details" });
       if (search) qs.set("search", search);
       const r = await fetch(`${creds.url}/wp-json/wp/v2/media?${qs.toString()}`, {
-        headers: { Authorization: authHeader },
+        headers: { Authorization: authHeader, "User-Agent": WOO_USER_AGENT },
       });
       const totalPages = Number(r.headers.get("x-wp-totalpages") || "0");
       const total = Number(r.headers.get("x-wp-total") || "0");
@@ -108,6 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           Authorization: authHeader,
           "Content-Type": mime,
           "Content-Disposition": `attachment; filename="${filename}"`,
+          "User-Agent": WOO_USER_AGENT,
         },
         body: buffer,
       });
