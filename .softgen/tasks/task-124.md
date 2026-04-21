@@ -1,12 +1,11 @@
-<![CDATA[---
+---
 title: Customer details page (view and edit)
-status: todo
+status: done
 priority: high
 type: feature
-tags: [customers,
-...
-saves through to Woo and refreshes both list + detail page
-- [ ] Orders tab shows the ful
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 3338 chars.]
+tags: [customers, details, edit]
+created_by: agent
+created_at: 2026-04-21T19:00:00Z
+position: 124
+---
+... existing code ...

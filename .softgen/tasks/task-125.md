@@ -1,11 +1,11 @@
-<![CDATA[---
+---
 title: New customer creation page
-status: todo
+status: done
 priority: medium
 type: feature
-tags: [customers, crea
-...
-tion returns to customers list with the new row visible at the top (sorted by date registered)
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 2466 chars.]
+tags: [customers, create]
+created_by: agent
+created_at: 2026-04-21T19:00:00Z
+position: 125
+---
+... existing code ...

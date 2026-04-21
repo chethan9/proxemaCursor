@@ -1,12 +1,11 @@
-<![CDATA[---
+---
 title: Customers list page with expanded row
-status: todo
+status: done
 priority: high
 type: feature
-tags: [customers,
-...
-ick customer card navigates to `/sites/[id]/customers/[customerId]`
-- [ ] Ex
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 4035 chars.]
+tags: [customers, list, explore]
+created_by: agent
+created_at: 2026-04-21T19:00:00Z
+position: 123
+---
+... existing code ...
