@@ -137,32 +137,21 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
-  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
-    id: false,
-    order_number: true,
-    woo_id: false,
-    status: true,
-    customer: true,
-    first_name: false,
-    last_name: false,
-    email: false,
-    phone: true,
-    customer_id: false,
-    items: true,
-    line_items_summary: false,
-    total: true,
-    subtotal: false,
-    tax: false,
-    shipping: false,
-    discount: false,
-    currency: false,
-    payment: true,
-    payment_method: false,
-    date_created: true,
-    date_modified: false,
-    synced_at: false,
-    source: false,
-    created_via: false,
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>(() => {
+    const defaults: Record<ColumnKey, boolean> = {
+      id: false, order_number: true, woo_id: false, status: true, customer: true,
+      first_name: false, last_name: false, email: false, phone: true, customer_id: false,
+      items: true, line_items_summary: false, total: true, subtotal: false, tax: false,
+      shipping: false, discount: false, currency: false, payment: true, payment_method: false,
+      date_created: true, date_modified: false, synced_at: false, source: false, created_via: false,
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("orders-visible-cols");
+        if (saved) return { ...defaults, ...JSON.parse(saved) };
+      } catch { /* ignore */ }
+    }
+    return defaults;
   });
 
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
@@ -307,6 +296,33 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
   }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, paymentFilter, totalMin, totalMax, dateBounds.from, dateBounds.to]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("orders-col-order", JSON.stringify(columnOrder));
+  }, [columnOrder]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("orders-visible-cols", JSON.stringify(visibleCols));
+  }, [visibleCols]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("orders-page-size", String(pageSize));
+  }, [pageSize]);
+
+  useEffect(() => {
+    if (prefsLoaded.current) return;
+    fetchPreferences("orders").then((remote) => {
+      if (remote) {
+        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
+        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
+        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
+        if (typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
+        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+      }
+      prefsLoaded.current = true;
+    }).catch(() => { prefsLoaded.current = true; });
+  }, []);
 
   useBackgroundPagination({
     enabled: !!storeId && orderCount > 0,

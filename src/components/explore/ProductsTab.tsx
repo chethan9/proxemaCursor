@@ -141,14 +141,23 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (typeof window !== "undefined") localStorage.setItem("explore-view-mode", viewMode);
   }, [viewMode]);
 
-  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
-    image: true, id: false, name: true, status: true, sku: true, price: true,
-    regular_price: false, sale_price: false, stock: true, stock_status: false,
-    manage_stock: false, category: true, type: false, slug: false, wooId: false,
-    parent_id: false, permalink: false, tax_status: false, tax_class: false,
-    shipping_required: false, images_count: false, short_desc: false, description: false,
-    attributes: false, sales: false, date_created: false, date_modified: false,
-    created: false, updated: false,
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>(() => {
+    const defaults: Record<ColumnKey, boolean> = {
+      image: true, id: false, name: true, status: true, sku: true, price: true,
+      regular_price: false, sale_price: false, stock: true, stock_status: false,
+      manage_stock: false, category: true, type: false, slug: false, wooId: false,
+      parent_id: false, permalink: false, tax_status: false, tax_class: false,
+      shipping_required: false, images_count: false, short_desc: false, description: false,
+      attributes: false, sales: false, date_created: false, date_modified: false,
+      created: false, updated: false,
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("explore-visible-cols");
+        if (saved) return { ...defaults, ...JSON.parse(saved) };
+      } catch { /* ignore */ }
+    }
+    return defaults;
   });
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (typeof window !== "undefined") {
@@ -179,6 +188,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
   }, [columnOrder]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("explore-visible-cols", JSON.stringify(visibleCols));
+  }, [visibleCols]);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-page-size", String(pageSize));
@@ -341,8 +354,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   useEffect(() => {
     if (prefsLoaded.current) return;
-    const hasLocal = typeof window !== "undefined" && (localStorage.getItem("explore-col-order") || localStorage.getItem("explore-page-size") || localStorage.getItem("explore-view-mode"));
-    if (hasLocal) { prefsLoaded.current = true; return; }
     fetchPreferences("products").then((remote) => {
       if (remote) {
         if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);

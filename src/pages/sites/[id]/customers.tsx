@@ -47,6 +47,7 @@ import {
   type CustomerSortField,
   type SortDirection,
 } from "@/services/customerService";
+import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { useToast } from "@/hooks/use-toast";
 
 type ColumnKey =
@@ -185,6 +186,8 @@ function CustomersInner() {
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [roleFilter, setRoleFilter] = useState<"all" | "customer" | "subscriber" | "guest">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const prefsLoaded = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 300);
@@ -195,19 +198,23 @@ function CustomersInner() {
     if (typeof window !== "undefined") localStorage.setItem("customers-page-size", String(pageSize));
   }, [pageSize]);
 
-  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
-    name: true,
-    username: true,
-    email: true,
-    phone: true,
-    orders: true,
-    spent: true,
-    aov: true,
-    city: true,
-    country: true,
-    registered: true,
-    last_active: false,
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>(() => {
+    const defaults: Record<ColumnKey, boolean> = {
+      name: true, username: true, email: true, phone: true, orders: true,
+      spent: true, aov: true, city: true, country: true, registered: true, last_active: false,
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("customers-visible-cols");
+        if (saved) return { ...defaults, ...JSON.parse(saved) };
+      } catch { /* ignore */ }
+    }
+    return defaults;
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("customers-visible-cols", JSON.stringify(visibleCols));
+  }, [visibleCols]);
 
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (typeof window !== "undefined") {
@@ -228,6 +235,29 @@ function CustomersInner() {
     if (typeof window !== "undefined") localStorage.setItem("customers-col-order", JSON.stringify(columnOrder));
   }, [columnOrder]);
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+
+  useEffect(() => {
+    if (prefsLoaded.current) return;
+    fetchPreferences("customers").then((remote) => {
+      if (remote) {
+        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
+        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
+        if (typeof remote.roleFilter === "string") setRoleFilter(remote.roleFilter as typeof roleFilter);
+        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+      }
+      prefsLoaded.current = true;
+    }).catch(() => { prefsLoaded.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      savePreferences("customers", { columnOrder, visibleCols, pageSize, roleFilter, sort }).catch(() => {});
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [columnOrder, visibleCols, pageSize, roleFilter, sort]);
 
   const visibleColList = useMemo(
     () => columnOrder
