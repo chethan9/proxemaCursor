@@ -1,11 +1,11 @@
 ---
 title: Invalidate data queries when initial sync completes
-status: todo
+status: done
 priority: high
 type: bug
 tags: [react-query, sync, cache]
 created_by: agent
-created_at: 2026-04-21T04:00:00Z
+created_at: 2026-04-21T03:45:00Z
 position: 106
 ---
 

@@ -1,11 +1,11 @@
 ---
 title: Confetti celebration on welcome screen
-status: todo
+status: done
 priority: medium
 type: feature
-tags: [ux, onboarding, animation]
+tags: [ui, onboarding, delight]
 created_by: agent
-created_at: 2026-04-21T04:15:00Z
+created_at: 2026-04-21T03:55:00Z
 position: 109
 ---
 
