@@ -120,7 +120,7 @@ function CustomerDetailsInner() {
     if (!confirm(`Delete ${getCustomerName(customer)}? This will remove them from WooCommerce.`)) return;
     setDeleting(true);
     try {
-      await deleteCustomer(customer.id);
+      await deleteCustomer(siteId, customer.id);
       toast({ title: "Customer deleted" });
       await qc.invalidateQueries({ queryKey: ["customers", siteId] });
       router.push(`/sites/${siteId}/customers`);
