@@ -107,6 +107,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const { data: storesData } = useStores();
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const [groupExpanded, setGroupExpanded] = useState<Record<string, boolean>>({});
+  const [activePanelId, setActivePanelId] = useState<string | null>(null);
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
     const exactCache = loadCachedMenu(currentRoleKey);
@@ -291,9 +292,32 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const isExpanded = !!groupExpanded[node.id];
     const isPanelMode = node.displayMode === "panel";
 
-    if (collapsed || isPanelMode) {
+    if (isPanelMode && !collapsed) {
+      const isOpen = activePanelId === node.id;
       return (
-        <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
+        <div key={node.id} className="mb-2 px-2">
+          <button
+            type="button"
+            onClick={() => setActivePanelId(isOpen ? null : node.id)}
+            aria-expanded={isOpen}
+            className={cn(
+              "relative w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+              (isOpen || hasActiveChild)
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
+            <span className="truncate flex-1 text-left">{node.label}</span>
+            <PanelRight className={cn("h-3 w-3 shrink-0 transition-opacity", isOpen ? "opacity-100" : "opacity-50")} />
+          </button>
+        </div>
+      );
+    }
+
+    if (collapsed) {
+      return (
+        <div key={node.id} className="mb-2 px-1.5">
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -302,24 +326,15 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     type="button"
                     aria-label={node.label}
                     className={cn(
-                      "relative flex items-center rounded-md transition-colors",
-                      collapsed
-                        ? "justify-center h-9 w-9 mx-auto"
-                        : "w-full gap-2.5 px-2.5 py-1.5 text-[13px] font-medium",
+                      "relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                       hasActiveChild ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
-                    {!collapsed && (
-                      <>
-                        <span className="truncate flex-1 text-left">{node.label}</span>
-                        <PanelRight className="h-3 w-3 shrink-0 opacity-60" />
-                      </>
-                    )}
                   </button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              {collapsed && <TooltipContent side="right" sideOffset={8} className="z-[100]">{node.label}</TooltipContent>}
+              <TooltipContent side="right" sideOffset={8} className="z-[100]">{node.label}</TooltipContent>
             </Tooltip>
             <PopoverContent side="right" align="start" sideOffset={8} className="w-56 p-1 z-[100]">
               <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{node.label}</div>
@@ -375,8 +390,17 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     );
   };
 
+  const activePanelNode = useMemo(() => {
+    if (!activePanelId) return null;
+    for (const n of menuTree) {
+      if (n.id === activePanelId && n.type === "group" && n.displayMode === "panel") return n;
+    }
+    return null;
+  }, [activePanelId, menuTree]);
+
   return (
     <TooltipProvider delayDuration={0}>
+      <>
       <aside
         aria-label="Primary navigation"
         className={cn(
@@ -573,6 +597,54 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           </DropdownMenu>
         </div>
       </aside>
+      {activePanelNode && !collapsed && (
+        <aside
+          aria-label={`${activePanelNode.label} menu`}
+          className="flex shrink-0 flex-col w-52 bg-background border-r border-border"
+        >
+          <div className="h-12 flex items-center px-3 border-b border-border">
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex-1">
+              {activePanelNode.label}
+            </span>
+            <button
+              type="button"
+              onClick={() => setActivePanelId(null)}
+              aria-label="Close panel"
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+            >
+              <ChevronDown className="h-3.5 w-3.5 rotate-90" />
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto py-2 px-2">
+            <ul className="space-y-0.5">
+              {activePanelNode.children?.map((child) => {
+                if (child.type !== "item" || !child.href) return null;
+                const Icon = resolveIcon(child.icon);
+                const active = isItemActive(child.href);
+                return (
+                  <li key={child.id}>
+                    <Link
+                      href={child.href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                        active
+                          ? "bg-foreground/[0.08] text-foreground"
+                          : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+                      )}
+                    >
+                      {active && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />}
+                      <Icon className="h-4 w-4 shrink-0" style={child.iconColor ? { color: child.iconColor } : undefined} />
+                      <span className="truncate">{child.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </aside>
+      )}
+      </>
     </TooltipProvider>
   );
 }
