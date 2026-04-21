@@ -28,11 +28,11 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   const { data: pageRes, isLoading } = useTaxonomyRows(storeId, mode, search, page, pageSize);
   const { data: allCats } = useAllCategories(storeId, mode === "categories");
 
-  const items = pageRes?.data || [];
+  const items = (pageRes?.data || []).map((t) => ({ ...t, parent_woo_id: (t as { parent_id?: number }).parent_id ?? null }));
   const total = pageRes?.count || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const parentPool = mode === "categories" ? (allCats || []) : [];
+  const parentPool = mode === "categories" ? (allCats || []).map((t) => ({ ...t, parent_woo_id: (t as { parent_id?: number }).parent_id ?? null })) : [];
 
   function handleExport() {
     const rows = items;

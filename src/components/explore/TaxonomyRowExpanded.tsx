@@ -17,7 +17,7 @@ type Taxon = {
   name: string;
   slug: string;
   description: string | null;
-  parent_woo_id: number | null;
+  parent_woo_id?: number | null;
   count: number | null;
   store_id: string;
 };
