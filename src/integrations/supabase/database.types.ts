@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1638,6 +1638,10 @@ export type Database = {
       }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      recalc_customer_aggregates: {
+        Args: { p_customer_woo_id: number; p_store_id: string }
+        Returns: undefined
+      }
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {

@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS trg_orders_customer_agg ON public.orders; CREATE TRIGGER trg_orders_customer_agg AFTER INSERT OR UPDATE OR DELETE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.orders_aggregate_customer_trigger();

@@ -626,7 +626,9 @@ export default function CustomersPage() {
   return (
     <AuthGuard>
       <SitePageShell>
-        <CustomersInner />
+        <div className="p-6 space-y-4 max-w-[1600px] mx-auto">
+          <CustomersInner />
+        </div>
       </SitePageShell>
     </AuthGuard>
   );
