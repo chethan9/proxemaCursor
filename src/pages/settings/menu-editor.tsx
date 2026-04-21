@@ -10,7 +10,8 @@ import { toast } from "@/hooks/use-toast";
 import { getMenuConfig, saveMenuConfig, resetMenuConfig, type MenuNode } from "@/services/menuConfigService";
 import { listRoles, type RoleRow } from "@/services/userService";
 import { mergeMenu } from "@/lib/menu-merge";
-import { resolveIcon, MENU_REGISTRY } from "@/lib/menu-registry";
+import { MENU_REGISTRY } from "@/lib/menu-registry";
+import { IconPicker } from "@/components/menu-editor/IconPicker";
 import { Eye, EyeOff, Trash2, FolderPlus, RotateCcw, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -251,7 +252,6 @@ function MenuEditorInner() {
                     </div>
                     <div className="space-y-1">
                       {groupRows.map((r, idx) => {
-                        const Icon = resolveIcon(r.icon);
                         return (
                           <div key={r.itemId} className={cn("flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50", r.hidden && "opacity-50")}>
                             <div className="flex flex-col">
@@ -262,7 +262,7 @@ function MenuEditorInner() {
                                 <ArrowDown className="h-3 w-3" />
                               </button>
                             </div>
-                            <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <IconPicker value={r.icon} onChange={(icon) => updateRow(r.itemId, { icon })} />
                             <Input
                               value={r.label}
                               onChange={(e) => updateRow(r.itemId, { label: e.target.value })}

@@ -1,11 +1,11 @@
 ---
 title: Menu editor — icon picker and compact UX polish
-status: todo
+status: done
 priority: high
 type: feature
-tags: [menu-editor, admin, ux]
+tags: [menu-editor, ux]
 created_by: agent
-created_at: 2026-04-21T07:35:00Z
+created_at: 2026-04-21T07:36:00Z
 position: 114
 ---
 
