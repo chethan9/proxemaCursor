@@ -2,6 +2,43 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooLiveFetch } from "@/lib/woo-live-fetch";
 
+async function warmWriteOrders(storeId: string, items: Record<string, unknown>[]) {
+  if (!items.length) return;
+  try {
+    const rows = items.map((o) => ({
+      store_id: storeId,
+      woo_id: o.id as number,
+      order_number: (o.number as string) ?? null,
+      status: (o.status as string) ?? null,
+      currency: (o.currency as string) ?? null,
+      total: (o.total as string) ?? null,
+      total_tax: (o.total_tax as string) ?? null,
+      shipping_total: (o.shipping_total as string) ?? null,
+      discount_total: (o.discount_total as string) ?? null,
+      payment_method: (o.payment_method as string) ?? null,
+      payment_method_title: (o.payment_method_title as string) ?? null,
+      transaction_id: (o.transaction_id as string) ?? null,
+      customer_id: (o.customer_id as number) ?? null,
+      billing: o.billing ?? null,
+      shipping: o.shipping ?? null,
+      line_items: o.line_items ?? null,
+      shipping_lines: o.shipping_lines ?? null,
+      fee_lines: o.fee_lines ?? null,
+      coupon_lines: o.coupon_lines ?? null,
+      customer_note: (o.customer_note as string) ?? null,
+      date_created: (o.date_created as string) ?? null,
+      date_modified: (o.date_modified as string) ?? null,
+      date_paid: (o.date_paid as string) ?? null,
+      date_completed: (o.date_completed as string) ?? null,
+      raw_data: o,
+      synced_at: new Date().toISOString(),
+    }));
+    await supabaseAdmin.from("orders").upsert(rows, { onConflict: "store_id,woo_id" });
+  } catch (e) {
+    console.error("[live/orders] warm-write failed:", e);
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const { storeId } = req.query;
@@ -28,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       after: req.query.after as string | undefined,
       before: req.query.before as string | undefined,
     });
+    warmWriteOrders(storeId, result.data).catch(() => { /* already logged */ });
     return res.status(200).json({ data: result.data, count: result.total });
   } catch (err) {
     return res.status(502).json({ error: err instanceof Error ? err.message : "Fetch failed" });
