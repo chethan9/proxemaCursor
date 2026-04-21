@@ -205,7 +205,7 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                 {permalink && (
                   <Button variant="outline" size="sm" className="justify-between h-9" asChild>
                     <a href={permalink} target="_blank" rel="noreferrer">
-                      <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> View Product</span>
+                      <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> Open on Store</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </Button>
