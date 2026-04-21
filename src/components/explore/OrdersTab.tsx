@@ -449,7 +449,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         </div>
       )}
       <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
-        <div className="space-y-2">
+        <Card>
+          <CardContent className="p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
               <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>All</Button>
@@ -643,7 +644,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               )}
             </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>

@@ -128,36 +128,37 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
             </Button>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
-              <Icon className="h-3.5 w-3.5" />
-              <span className="font-medium">{total.toLocaleString()}</span>
-            </div>
-            {total > 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
-                <span>Rows:</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">{pageSize}</Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {PAGE_SIZES.map((n) => (
-                      <DropdownMenuItem key={n} onClick={() => { setPageSize(n); setPage(0); }} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <span className="whitespace-nowrap">
-                  {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
-                </span>
-                <div className="flex items-center gap-0.5">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
-                    <ChevronRight className="h-3.5 w-3.5 rotate-180" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+            <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Icon className="h-3.5 w-3.5" />
+                <span className="font-medium">{total.toLocaleString()}</span>
               </div>
-            )}
+              {total > 0 && (
+                <>
+                  <div className="h-4 w-px bg-border" />
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Rows:</span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1">{pageSize}</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {PAGE_SIZES.map((n) => (
+                          <DropdownMenuItem key={n} onClick={() => { setPageSize(n); setPage(0); }} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="whitespace-nowrap">
+                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronRight className="h-3.5 w-3.5 rotate-180" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}><ChevronRight className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
             <Button size="sm" className="h-9 px-3 gap-1.5" onClick={() => setDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
               <span className="text-xs">New {singular}</span>
