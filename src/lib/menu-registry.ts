@@ -3,7 +3,7 @@ import {
   Settings as SettingsIcon, Shield, UserCog, Package, ShoppingCart, Tag,
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
-  Layers,
+  Layers, Code2, Terminal, Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
@@ -34,7 +34,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Settings: SettingsIcon, Shield, UserCog, Package, ShoppingCart, Tag,
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
-  Layers,
+  Layers, Code2, Terminal, Wrench,
 };
 
 export function resolveIcon(name: string): LucideIcon {
@@ -43,20 +43,29 @@ export function resolveIcon(name: string): LucideIcon {
 
 export const ICON_NAMES = Object.keys(ICON_MAP);
 
+export const GROUP_ICONS: Record<string, string> = {
+  "Overview": "LayoutDashboard",
+  "Management": "Users",
+  "Stores": "Store",
+  "Developer": "Code2",
+  "Administration": "Shield",
+  "System": "Settings",
+};
+
 export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "dashboard", defaultLabel: "Health", defaultIcon: "Activity", href: "/", defaultGroup: "Overview", defaultOrder: 0 },
   { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW, superAdminOnly: true },
   { id: "sites", defaultLabel: "Projects", defaultIcon: "Store", href: "/projects", defaultGroup: "Stores", defaultOrder: 0, permission: PERMISSIONS.SITES_VIEW },
-  { id: "sync-runs", defaultLabel: "Sync Runs", defaultIcon: "RefreshCw", href: "/sync-runs", defaultGroup: "Operations", defaultOrder: 0, permission: PERMISSIONS.SYNC_VIEW },
-  { id: "webhooks", defaultLabel: "Webhooks", defaultIcon: "Webhook", href: "/webhooks", defaultGroup: "Operations", defaultOrder: 1, permission: PERMISSIONS.WEBHOOKS_VIEW },
-  { id: "webhooks-activity", defaultLabel: "Activity", defaultIcon: "Activity", href: "/webhooks/activity", defaultGroup: "Operations", defaultOrder: 2, permission: PERMISSIONS.WEBHOOKS_VIEW },
-  { id: "api", defaultLabel: "API", defaultIcon: "Key", href: "/api-management", defaultGroup: "Developer", defaultOrder: 0, permission: PERMISSIONS.API_VIEW },
+  { id: "sync-runs", defaultLabel: "Sync Runs", defaultIcon: "RefreshCw", href: "/sync-runs", defaultGroup: "Developer", defaultOrder: 0, permission: PERMISSIONS.SYNC_VIEW },
+  { id: "webhooks", defaultLabel: "Webhooks", defaultIcon: "Webhook", href: "/webhooks", defaultGroup: "Developer", defaultOrder: 1, permission: PERMISSIONS.WEBHOOKS_VIEW },
+  { id: "webhooks-activity", defaultLabel: "Activity", defaultIcon: "Activity", href: "/webhooks/activity", defaultGroup: "Developer", defaultOrder: 2, permission: PERMISSIONS.WEBHOOKS_VIEW },
+  { id: "api", defaultLabel: "API", defaultIcon: "Key", href: "/api-management", defaultGroup: "Developer", defaultOrder: 3, permission: PERMISSIONS.API_VIEW },
   { id: "users", defaultLabel: "Users", defaultIcon: "UserCog", href: "/settings/users", defaultGroup: "Administration", defaultOrder: 0, permission: PERMISSIONS.USERS_VIEW },
   { id: "roles", defaultLabel: "Roles", defaultIcon: "Shield", href: "/settings/roles", defaultGroup: "Administration", defaultOrder: 1, permission: PERMISSIONS.ROLES_VIEW },
   { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings/profile", defaultGroup: "System", defaultOrder: 0 },
 ];
 
-export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Operations", "Developer", "Administration", "System"];
+export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Developer", "Administration", "System"];
 
 export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "", defaultGroup: "Main", defaultOrder: 0 },
