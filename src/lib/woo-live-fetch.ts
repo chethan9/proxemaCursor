@@ -56,21 +56,21 @@ export async function wooLiveFetchWithCreds<T>(
 
   if (!res.ok) {
     const text = await res.text();
-    const detection = detectBlockingService(res.status, text, res.headers);
-    const headersObj: Record<string, string> = {};
-    res.headers.forEach((v, k) => {
-      headersObj[k] = v;
-    });
-    throw new WooApiError(`WooCommerce ${resource} failed: ${res.status} ${text.slice(0, 300)}`, {
-      url,
-      method: "GET",
-      status: res.status,
-      body: text.slice(0, 2000),
-      headers: headersObj,
-      blocking_service: detection?.service,
-      blocking_hint: detection?.hint,
-    });
+    const bodySnippet = text.slice(0, 2000);
+    const detection = detectBlockingService(res.status, bodySnippet, res.headers);
+    throw new WooApiError(
+      `WooCommerce ${resource} failed: ${res.status}${detection ? ` [${detection.service}]` : ""}`,
+      {
+        url,
+        method: "GET",
+        status: res.status,
+        body: bodySnippet.slice(0, 300),
+        blocking_service: detection?.service,
+        blocking_hint: detection?.hint,
+      }
+    );
   }
+
   const total = parseInt(res.headers.get("x-wp-total") || "0", 10);
   const totalPages = parseInt(res.headers.get("x-wp-totalpages") || "1", 10);
   const data = (await res.json()) as T[];

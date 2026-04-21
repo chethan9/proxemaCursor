@@ -1,5 +1,9 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { WOO_USER_AGENT, WooApiError, detectBlockingService } from "./sync-error";
+import {
+  WOO_USER_AGENT,
+  WooApiError,
+  detectBlockingService,
+} from "./sync-error";
 
 export interface WooStoreCreds {
   id: string;
@@ -19,13 +23,6 @@ export async function getStoreCreds(storeId: string): Promise<WooStoreCreds | nu
   return data as WooStoreCreds;
 }
 
-/**
- * Shared low-level HTTP request for outbound WooCommerce / WordPress calls.
- * Every outbound request to a customer's site should route through this helper
- * (or at minimum include WOO_USER_AGENT) so that:
- *   1. We carry a branded, allowlistable User-Agent
- *   2. Response bodies on non-OK statuses can be classified by detectBlockingService
- */
 export async function wooHttpRequest(
   url: string,
   init: RequestInit = {},
@@ -45,7 +42,7 @@ export async function wooHttpRequest(
   } catch (err) {
     clearTimeout(timeout);
     if (err instanceof Error && err.name === "AbortError") {
-      throw new WooApiError(`WooCommerce request timeout (${timeoutMs}ms): ${url}`, {
+      throw new WooApiError(`Request timeout (${timeoutMs}ms)`, {
         url,
         method: (init.method as string) || "GET",
       });
@@ -74,19 +71,15 @@ export async function wooRequest<T>(
 
   if (!res.ok) {
     const text = await res.text();
-    const detection = detectBlockingService(res.status, text, res.headers);
-    const headersObj: Record<string, string> = {};
-    res.headers.forEach((v, k) => {
-      headersObj[k] = v;
-    });
+    const bodySnippet = text.slice(0, 2000);
+    const detection = detectBlockingService(res.status, bodySnippet, res.headers);
     throw new WooApiError(
-      `WooCommerce ${method} ${endpoint} failed: ${res.status} ${text.slice(0, 300)}`,
+      `WooCommerce ${method} ${endpoint} failed: ${res.status}${detection ? ` [${detection.service}]` : ""}`,
       {
         url,
         method,
         status: res.status,
-        body: text.slice(0, 2000),
-        headers: headersObj,
+        body: bodySnippet.slice(0, 300),
         blocking_service: detection?.service,
         blocking_hint: detection?.hint,
       }

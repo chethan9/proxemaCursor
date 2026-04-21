@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
-import { WOO_USER_AGENT } from "@/lib/sync-error";
 import type { Json } from "@/integrations/supabase/database.types";
+import { WOO_USER_AGENT } from "@/lib/sync-error";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;

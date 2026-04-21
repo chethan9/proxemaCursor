@@ -39,11 +39,7 @@ async function fetchAllFromWooCommerce<T>(
     let response: Response;
     try {
       response = await fetch(url.toString(), {
-        headers: {
-          "Authorization": `Basic ${auth}`,
-          "Content-Type": "application/json",
-          "User-Agent": WOO_USER_AGENT,
-        },
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": WOO_USER_AGENT },
         signal: controller.signal,
       });
     } catch (err) {
@@ -57,9 +53,9 @@ async function fetchAllFromWooCommerce<T>(
 
     if (!response.ok) {
       if (response.status === 400 || response.status === 404) break;
-      const errText = await response.text().catch(() => "");
-      const detection = detectBlockingService(response.status, errText, response.headers);
-      const suffix = detection ? ` [${detection.service}] ${detection.hint}` : "";
+      const text = await response.text().catch(() => "");
+      const detection = detectBlockingService(response.status, text.slice(0, 2000), response.headers);
+      const suffix = detection ? ` [blocked by ${detection.service}: ${detection.hint}]` : "";
       throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}${suffix}`);
     }
 

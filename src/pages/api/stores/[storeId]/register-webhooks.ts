@@ -9,9 +9,9 @@ export const config = { maxDuration: 60 };
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 8000): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
+  const headers = new Headers(init.headers || {});
+  headers.set("User-Agent", WOO_USER_AGENT);
   try {
-    const headers = new Headers(init.headers || {});
-    headers.set("User-Agent", WOO_USER_AGENT);
     return await fetch(url, { ...init, headers, signal: controller.signal });
   } finally {
     clearTimeout(timer);

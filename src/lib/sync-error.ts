@@ -57,22 +57,13 @@ export function buildCurlCommand(ctx: WooErrorContext, consumerKey?: string, con
   return `curl -X ${method} "${url}" -u "${key}:${secret}" -H "Accept: application/json"`;
 }
 
-/**
- * Branded User-Agent sent on every outbound WooCommerce / WordPress request.
- * Lets site admins identify and allowlist us, and distinguishes legitimate
- * integration traffic from scraper bots in access logs + WAF telemetry.
- */
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_VERCEL_URL ||
   "https://woosync.app";
-export const WOO_USER_AGENT = `Proxima-WooSync/1.0 (+${APP_URL.startsWith("http") ? APP_URL : `https://${APP_URL}`})`;
+const APP_URL_NORMALIZED = APP_URL.startsWith("http") ? APP_URL : `https://${APP_URL}`;
+export const WOO_USER_AGENT = `Proxima-WooSync/1.0 (+${APP_URL_NORMALIZED})`;
 
-/**
- * Classifies a failed HTTP response as coming from a known WAF/firewall.
- * Inspects status code, body snippet (first ~2KB is enough), and response headers.
- * Returns null if no known signature matches.
- */
 export function detectBlockingService(
   status: number,
   body: string,
@@ -84,7 +75,6 @@ export function detectBlockingService(
       ? headers
       : new Headers(Object.entries(headers || {}).map(([k, v]) => [k, String(v)] as [string, string]));
 
-  // Cloudflare — highest confidence, most common
   if (
     h.get("cf-ray") ||
     h.get("cf-mitigated") ||
@@ -96,12 +86,11 @@ export function detectBlockingService(
     return {
       service: "cloudflare",
       hint:
-        "Cloudflare is serving a Managed Challenge or Bot Fight Mode interstitial for WooCommerce API requests. The site admin must add a WAF Custom Rule that skips managed rules for /wp-json/* paths.",
+        "Cloudflare is serving a Managed Challenge or Bot Fight Mode interstitial. The site admin must add a WAF Custom Rule that skips managed rules for /wp-json/* paths.",
       fixUrl: "https://developers.cloudflare.com/waf/custom-rules/skip/",
     };
   }
 
-  // Sucuri Firewall
   if (
     h.get("x-sucuri-id") ||
     h.get("x-sucuri-cache") ||
@@ -111,12 +100,11 @@ export function detectBlockingService(
     return {
       service: "sucuri",
       hint:
-        "Sucuri Website Firewall is blocking API requests. Site admin must allowlist our outbound IPs (or User-Agent) in the Sucuri Firewall dashboard under Security → Access Control.",
+        "Sucuri Website Firewall is blocking API requests. Site admin must allowlist our outbound IPs or User-Agent in the Sucuri Firewall dashboard.",
       fixUrl: "https://docs.sucuri.net/website-firewall/settings/access-control/",
     };
   }
 
-  // WordFence
   if (
     lowerBody.includes("your access to this site has been limited") ||
     lowerBody.includes("wordfence") ||
@@ -126,12 +114,10 @@ export function detectBlockingService(
       service: "wordfence",
       hint:
         "WordFence firewall is blocking API requests. Site admin must allowlist our User-Agent or IP in WordFence → Tools → Diagnostics → Allowlisted URLs / IPs.",
-      fixUrl:
-        "https://www.wordfence.com/help/firewall/options/#whitelisted-urls",
+      fixUrl: "https://www.wordfence.com/help/firewall/options/#whitelisted-urls",
     };
   }
 
-  // AWS WAF
   if (
     h.get("x-amzn-requestid") ||
     h.get("x-amz-apigw-id") ||
@@ -140,13 +126,11 @@ export function detectBlockingService(
     return {
       service: "aws-waf",
       hint:
-        "AWS WAF is blocking API requests. Site admin must add a WebACL exception rule for /wp-json/* paths or allowlist our User-Agent.",
-      fixUrl:
-        "https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-exceptions.html",
+        "AWS WAF is blocking API requests. Site admin must add a WebACL exception for /wp-json/* paths or allowlist our User-Agent.",
+      fixUrl: "https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-exceptions.html",
     };
   }
 
-  // ModSecurity / generic cPanel
   if (
     lowerBody.includes("not acceptable!") ||
     lowerBody.includes("mod_security") ||
@@ -156,16 +140,15 @@ export function detectBlockingService(
     return {
       service: "modsecurity",
       hint:
-        "ModSecurity (typically cPanel or Apache-based hosting) is blocking API requests. Site admin must disable the offending rule ID or allowlist our User-Agent via their hosting control panel.",
+        "ModSecurity (typical on cPanel / Apache hosting) is blocking API requests. Site admin must disable the offending rule ID or allowlist our User-Agent.",
     };
   }
 
-  // Unknown 403 with no matching signature — still useful to surface
   if (status === 403) {
     return {
       service: "unknown",
       hint:
-        "The site returned 403 Forbidden with no recognized WAF signature. Check the site's security plugins, hosting firewall, and server access logs for blocked requests from our User-Agent.",
+        "Site returned 403 Forbidden with no recognized WAF signature. Check active security plugins, hosting firewall, and server access logs.",
     };
   }
 
