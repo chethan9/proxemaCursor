@@ -11,6 +11,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
 import { IncompleteOnboardingPrompt } from "@/components/IncompleteOnboardingPrompt";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 
@@ -34,13 +36,45 @@ function GlobalScrollButton() {
   return <ScrollToEdgeButton />;
 }
 
+function Shell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const noShellRoute =
+    router.pathname.startsWith("/auth") ||
+    router.pathname.startsWith("/sites/connect") ||
+    router.pathname === "/404";
+
+  if (noShellRoute || loading || !user) {
+    return <>{children}</>;
+  }
+
+  return (
+    <SidebarProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
+      >
+        Skip to main content
+      </a>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        <AppSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <main id="main-content" className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <AuthProvider>
         <CacheBuster />
         <BrandingProvider>
-          {children}
+          <Shell>{children}</Shell>
           <BulkJobsToast />
           <GlobalScrollButton />
           <IncompleteOnboardingPrompt />
