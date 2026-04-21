@@ -1,11 +1,11 @@
 ---
 title: Customer Orders tab upgrade with line items and summary
-status: todo
+status: done
 priority: high
 type: feature
 tags: [customers, orders, details]
 created_by: agent
-created_at: 2026-04-21T20:00:00Z
+created_at: 2026-04-21T19:30:00Z
 position: 128
 ---
 
