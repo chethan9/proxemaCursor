@@ -93,7 +93,7 @@ export function TaxonomyDialog({ open, onOpenChange, storeId, mode, parentOption
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-white">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>New {singular}</DialogTitle>
