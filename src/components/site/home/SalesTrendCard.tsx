@@ -23,11 +23,11 @@ export function SalesTrendCard({ data, currency, loading }: Props) {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <Skeleton className="h-[280px] w-full" />
+          <Skeleton className="h-[220px] w-full" />
         ) : (
-          <div className="h-[280px]">
+          <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+              <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -36,10 +36,18 @@ export function SalesTrendCard({ data, currency, loading }: Props) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" interval="preserveStartEnd" />
-                <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={50} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={30} />
+                <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={40} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={28} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{
+                    background: "hsl(var(--popover))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    boxShadow: "0 4px 12px rgb(0 0 0 / 0.08)",
+                    padding: "8px 10px",
+                  }}
+                  labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                   formatter={(value: number, name: string) => {
                     if (name === "Revenue") return [`${value.toFixed(2)} ${currency}`, name];
                     return [value, name];

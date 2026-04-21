@@ -73,34 +73,35 @@ function HomeInner() {
             ]}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-6">
               <SalesTrendCard data={data?.daily || []} currency={currency} loading={isLoading} />
             </div>
-            <div>
+            <div className="lg:col-span-4">
               <OrderStatusDonut data={data?.status_breakdown || []} loading={isLoading} />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <SparklineTile
-              label="Sales"
-              value={String(s?.orders_month_count ?? 0)}
-              subtext={`orders in last 30 days`}
-              data={ordersSpark}
-              color="hsl(var(--primary))"
-              loading={isLoading}
-            />
-            <SparklineTile
-              label="Revenue"
-              value={fmtMoney(s?.sales_month ?? 0)}
-              suffix={currency}
-              subtext={deltaPct != null ? `vs previous 30 days` : `last 30 days`}
-              data={salesSpark}
-              color="hsl(var(--success))"
-              delta={deltaPct}
-              loading={isLoading}
-            />
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              <SparklineTile
+                label="Sales"
+                value={String(s?.orders_month_count ?? 0)}
+                subtext="orders last 30d"
+                data={ordersSpark}
+                color="hsl(var(--primary))"
+                loading={isLoading}
+                compact
+              />
+              <SparklineTile
+                label="Revenue"
+                value={fmtMoney(s?.sales_month ?? 0)}
+                suffix={currency}
+                subtext={deltaPct != null ? "vs prev 30d" : "last 30d"}
+                data={salesSpark}
+                color="hsl(var(--success))"
+                delta={deltaPct}
+                loading={isLoading}
+                compact
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
