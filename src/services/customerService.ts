@@ -3,7 +3,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 
-export type CustomerSortField = "first_name" | "date_created" | "orders_count" | "total_spent" | "email" | "synced_at";
+export type CustomerSortField = "name" | "first_name" | "date_created" | "orders_count" | "total_spent" | "email" | "synced_at";
 export type SortDirection = "asc" | "desc";
 
 export interface FetchCustomersOptions {
@@ -18,21 +18,27 @@ export interface FetchCustomersOptions {
   state?: string;
   minOrders?: number;
   minSpent?: number;
+  roleFilter?: "all" | "customer" | "subscriber" | "guest";
 }
 
 export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ data: CustomerRow[]; count: number }> {
-  const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent } = opts;
+  const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter } = opts;
   let q = supabase.from("customers").select("*", { count: "exact" }).eq("store_id", storeId);
   if (search && search.trim()) {
     const s = search.trim();
     q = q.or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,username.ilike.%${s}%,billing->>phone.ilike.%${s}%,billing->>city.ilike.%${s}%`);
+  }
+  if (roleFilter && roleFilter !== "all") {
+    if (roleFilter === "guest") q = q.is("woo_id", null);
+    else q = q.eq("role", roleFilter);
   }
   if (country && country !== "all") q = q.eq("billing->>country", country);
   if (city) q = q.ilike("billing->>city", `%${city}%`);
   if (state) q = q.ilike("billing->>state", `%${state}%`);
   if (minOrders !== undefined && minOrders > 0) q = q.gte("orders_count", minOrders);
   if (minSpent !== undefined && minSpent > 0) q = q.gte("total_spent", minSpent);
-  q = q.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
+  const dbSortField = sortField === "name" ? "first_name" : sortField;
+  q = q.order(dbSortField, { ascending: sortDirection === "asc", nullsFirst: false });
   q = q.range(page * pageSize, (page + 1) * pageSize - 1);
   const { data, count, error } = await q;
   if (error) throw error;
@@ -84,7 +90,7 @@ export function getCustomerInitials(c: { first_name?: string | null; last_name?:
   return (c.email?.[0] || "?").toUpperCase();
 }
 
-export function getCustomerBilling(c: CustomerRow): { city?: string; state?: string; country?: string; phone?: string; address_1?: string; address_2?: string; postcode?: string; first_name?: string; last_name?: string } {
+export function getCustomerBilling(c: CustomerRow): { city?: string; state?: string; country?: string; phone?: string; email?: string; address_1?: string; address_2?: string; postcode?: string; first_name?: string; last_name?: string } {
   return (c.billing as Record<string, string> | null) || {};
 }
 
@@ -121,10 +127,8 @@ export async function updateCustomer(id: string, patch: {
   return (await res.json()) as CustomerRow;
 }
 
-export async function deleteCustomer(id: string): Promise<void> {
-  const { data: cust, error: e0 } = await supabase.from("customers").select("store_id").eq("id", id).single();
-  if (e0 || !cust) throw e0 || new Error("Customer not found");
-  const res = await fetch(`/api/stores/${cust.store_id}/customers/${id}`, { method: "DELETE" });
+export async function deleteCustomer(storeId: string, id: string): Promise<void> {
+  const res = await fetch(`/api/stores/${storeId}/customers/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || err.error || `Delete failed (${res.status})`);

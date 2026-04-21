@@ -166,7 +166,7 @@ function CustomerRowExpanded({ customer, storeId, onDeleted }: { customer: Custo
                     </span>
                     <span className="font-mono text-xs text-muted-foreground">#{o.order_number || o.woo_id}</span>
                     <span className="text-xs text-muted-foreground flex-1 truncate">{o.date_created ? new Date(o.date_created).toLocaleDateString() : "—"}</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[180px]">{o.payment_method_title || o.payment_method || "—"}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[180px]">{o.payment_method_title || "—"}</span>
                     <span className="font-mono text-xs font-semibold">{formatMoney(o.total, o.currency || "KWD")}</span>
                   </Link>
                 );

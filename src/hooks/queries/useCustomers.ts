@@ -21,11 +21,11 @@ export function useCustomer(id: string | undefined) {
   });
 }
 
-export function useCustomerLastOrders(storeId: string, wooCustomerId: number | null | undefined, enabled = true, limit = 3) {
+export function useCustomerLastOrders(storeId: string, wooCustomerId: number | null | undefined, limit = 3) {
   return useQuery({
     queryKey: ["customer-last-orders", storeId, wooCustomerId, limit] as const,
     queryFn: () => fetchLastOrdersForCustomer(storeId, wooCustomerId ?? null, limit),
-    enabled: enabled && !!storeId && !!wooCustomerId,
+    enabled: !!storeId && !!wooCustomerId,
     staleTime: 60_000,
   });
 }
