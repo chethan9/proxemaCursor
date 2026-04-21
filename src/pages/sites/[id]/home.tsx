@@ -11,6 +11,7 @@ import { OrderStatusDonut } from "@/components/site/home/OrderStatusDonut";
 import { SparklineTile } from "@/components/site/home/SparklineTile";
 import { RecentOrdersCard } from "@/components/site/home/RecentOrdersCard";
 import { TopProductsCard } from "@/components/site/home/TopProductsCard";
+import { SiteBlockedBanner } from "@/components/site/SiteBlockedBanner";
 
 function fmtMoney(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
