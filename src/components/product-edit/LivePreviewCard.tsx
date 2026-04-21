@@ -1,12 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ProductFormState } from "@/services/productEditService";
 
 export function LivePreviewCard({ form }: { form: ProductFormState }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const thumbStripRef = useRef<HTMLDivElement>(null);
+  const thumbRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const images = form.images;
   const count = images.length;
@@ -15,6 +17,13 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
     if (activeIdx >= count && count > 0) setActiveIdx(0);
     if (count === 0 && activeIdx !== 0) setActiveIdx(0);
   }, [count, activeIdx]);
+
+  useEffect(() => {
+    const btn = thumbRefs.current[activeIdx];
+    if (btn) {
+      btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [activeIdx]);
 
   const prev = () => setActiveIdx((i) => (i - 1 + count) % count);
   const next = () => setActiveIdx((i) => (i + 1) % count);
@@ -89,18 +98,27 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
           </div>
 
           {count > 1 && (
-            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pt-2 pb-1">
-              {images.map((img, i) => (
-                <button
-                  key={img.id ?? `${img.src}-${i}`}
-                  type="button"
-                  onClick={() => setActiveIdx(i)}
-                  className={`h-14 w-14 rounded-md overflow-hidden shrink-0 border transition-all ${i === activeIdx ? "ring-2 ring-primary ring-offset-2 border-transparent" : "border-border hover:border-primary/40"}`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.src} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
+            <div className="relative -mx-1">
+              <div
+                ref={thumbStripRef}
+                className="flex gap-1.5 overflow-x-auto px-1 pt-2 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full"
+              >
+                {images.map((img, i) => (
+                  <button
+                    key={img.id ?? `${img.src}-${i}`}
+                    ref={(el) => { thumbRefs.current[i] = el; }}
+                    type="button"
+                    onClick={() => setActiveIdx(i)}
+                    className={`h-14 w-14 rounded-md overflow-hidden shrink-0 snap-start border transition-all ${i === activeIdx ? "ring-2 ring-primary ring-offset-2 border-transparent" : "border-border hover:border-primary/40"}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.src} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+              {count > 5 && (
+                <div className="pointer-events-none absolute top-2 bottom-2 right-0 w-6 bg-gradient-to-l from-card to-transparent rounded-r" />
+              )}
             </div>
           )}
 
