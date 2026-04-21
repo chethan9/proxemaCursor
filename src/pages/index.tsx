@@ -6,6 +6,7 @@ import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Users, Store, RefreshCw, Webhook, ArrowRight, Clock, TrendingUp, TrendingDown, CheckCircle2, XCircle, Activity, Heart, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthProvider";
 import { useClients } from "@/hooks/queries/useClients";
 import { useStores } from "@/hooks/queries/useStores";
 import { useSyncRuns } from "@/hooks/queries/useSyncRuns";
@@ -35,6 +36,7 @@ interface ActiveSync {
 }
 
 export default function Dashboard() {
+  const { isSuperAdmin } = useAuth();
   const { data: clients = [], isLoading: cLoading } = useClients();
   const { data: stores = [], isLoading: sLoading } = useStores();
   const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
@@ -125,16 +127,18 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.clients}</div>
-              <p className="text-xs text-muted-foreground">Organizations managed</p>
-            </CardContent>
-          </Card>
+          {isSuperAdmin && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.clients}</div>
+                <p className="text-xs text-muted-foreground">Organizations managed</p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

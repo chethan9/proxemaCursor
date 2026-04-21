@@ -426,7 +426,13 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          {menuTree.map((node) => {
+          {authLoading && menuTree.length === 0 ? (
+            <div className="px-2 space-y-1">
+              {[0,1,2,3,4].map(i => (
+                <div key={i} className={cn("h-8 rounded-md bg-sidebar-accent/30 animate-pulse", collapsed ? "w-9 mx-auto" : "")} />
+              ))}
+            </div>
+          ) : menuTree.map((node) => {
             if (node.type === "item") {
               return (
                 <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
