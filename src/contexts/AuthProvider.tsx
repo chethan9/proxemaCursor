@@ -129,8 +129,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setRole(null);
-    supabase.auth.signOut().catch(() => {});
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {}
     if (typeof window !== "undefined") {
+      try {
+        Object.keys(window.localStorage).forEach((k) => {
+          if (k.startsWith("sb-") || k.includes("supabase")) {
+            window.localStorage.removeItem(k);
+          }
+        });
+      } catch {}
       window.location.replace("/auth/login");
     } else {
       router.replace("/auth/login");
