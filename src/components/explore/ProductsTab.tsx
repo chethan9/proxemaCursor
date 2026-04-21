@@ -702,6 +702,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       };
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
                       const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
+                      const isVariable = p.type === "variable";
                       if (isCompact) {
                         return (
                           <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-lg overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
@@ -711,6 +712,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
                               ) : (
                                 <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                              )}
+                              {isVariable && (
+                                <div className="absolute bottom-1.5 left-1.5 h-6 w-6 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src="/variation.png" alt="Variable" className="h-3.5 w-3.5 object-contain" />
+                                </div>
                               )}
                               {stockOut && (
                                 <div className="absolute inset-0 bg-background/70 flex items-center justify-center backdrop-blur-[1px]">
@@ -739,6 +746,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" loading="lazy" />
                             ) : (
                               <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                            )}
+                            {isVariable && (
+                              <div className="absolute bottom-2.5 left-2.5 h-9 w-9 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src="/variation.png" alt="Variable" className="h-5 w-5 object-contain" />
+                              </div>
                             )}
                             <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background">
                               <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
@@ -1159,13 +1172,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     if (!useId) return null;
                     return (
                       <label key={name} className="flex items-center gap-2 text-xs cursor-pointer px-1 py-1 hover:bg-muted rounded">
-                        <Checkbox checked={bulkCategoryIds.has(id)} onCheckedChange={(v) => {
-                          setBulkCategoryIds((prev) => {
-                            const next = new Set(prev);
-                            if (v) next.add(id); else next.delete(id);
-                            return next;
-                          });
-                        }} />
+                        <Checkbox
+                          checked={bulkCategoryIds.has(id)}
+                          onCheckedChange={(v) => {
+                            setBulkCategoryIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(id); else next.delete(id);
+                              return next;
+                            });
+                          }}
+                        />
                         <span>{name}</span>
                       </label>
                     );
