@@ -277,7 +277,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
         store={editingIncomplete}
         clients={clients}
         isSuperAdmin={isSuperAdmin}
-        onSaved={() => { qc.invalidateQueries({ queryKey: queryKeys.stores() }); setEditingIncomplete(null); }}
+        onSaved={() => { qc.invalidateQueries({ queryKey: queryKeys.stores }); setEditingIncomplete(null); }}
       />
 
       <AlertDialog open={!!deletingStore} onOpenChange={(o) => !o && !deleting && setDeletingStore(null)}>
