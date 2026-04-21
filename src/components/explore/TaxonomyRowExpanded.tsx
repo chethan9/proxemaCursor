@@ -82,7 +82,7 @@ export function TaxonomyRowExpanded({ taxon, mode, allTaxons, storeUrl }: { taxo
   const wooViewUrl = storeUrl && taxon.slug ? `${storeUrl.replace(/\/$/, "")}/${mode === "categories" ? "product-category" : "product-tag"}/${taxon.slug}/` : null;
 
   return (
-    <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-5">
+    <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_180px] gap-5">
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <div>
@@ -133,23 +133,23 @@ export function TaxonomyRowExpanded({ taxon, mode, allTaxons, storeUrl }: { taxo
       <div className="space-y-3">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Actions</div>
-          <div className="space-y-1">
-            <button onClick={handleSave} disabled={saving || deleting} className="w-full inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          <div className="space-y-2">
+            <button onClick={handleSave} disabled={saving || deleting} className="w-full flex items-center gap-2 h-10 px-3 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               <span>Save changes</span>
               <span className="ml-auto">→</span>
             </button>
             {wooViewUrl && (
-              <a href={wooViewUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] border border-border bg-background hover:bg-muted transition-colors">
-                <ExternalLink className="h-3 w-3" />
+              <a href={wooViewUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 h-10 rounded-md text-sm border border-border bg-background hover:bg-muted transition-colors">
+                <ExternalLink className="h-3.5 w-3.5" />
                 <span>View on store</span>
                 <span className="ml-auto text-muted-foreground">→</span>
               </a>
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button disabled={saving || deleting} className="w-full inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100 transition-colors disabled:opacity-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900">
-                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                <button disabled={saving || deleting} className="w-full flex items-center gap-2 h-10 px-3 rounded-md text-sm font-medium bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100 transition-colors disabled:opacity-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900">
+                  {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   <span>Delete</span>
                   <span className="ml-auto">→</span>
                 </button>
