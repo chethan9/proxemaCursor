@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +37,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
   const router = useRouter();
   const createStoreMutation = useCreateStore();
   const [creating, setCreating] = useState(false);
+  const submitLock = useRef(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<"oauth" | "manual">("oauth");
   const [showSecrets, setShowSecrets] = useState(false);
@@ -102,12 +103,14 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
   };
 
   const handleCreate = async () => {
+    if (submitLock.current || creating) return;
     if (!newStore.name.trim() || !newStore.url.trim()) return;
     const validation = validateStoreUrl(newStore.url);
     if (!validation.valid) {
       setUrlError(validation.error || "Invalid URL");
       return;
     }
+    submitLock.current = true;
     const cleanedUrl = validation.cleanedUrl || cleanStoreUrl(newStore.url);
     setUrlError(null);
     setCreating(true);
@@ -125,6 +128,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
       if (authMode === "oauth") {
         const authUrl = buildWooCommerceAuthUrl({ storeUrl: cleanedUrl, storeId: store.id });
         window.location.href = authUrl;
+        return;
       } else {
         reset();
         onOpenChange(false);
@@ -134,7 +138,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     } catch (error) {
       console.error("[AddSite] Error:", error);
       alert(`Error creating store: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
-    } finally {
+      submitLock.current = false;
       setCreating(false);
     }
   };
@@ -286,9 +290,9 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" disabled={creating}>Cancel</Button>
           <Button onClick={handleCreate} disabled={creating || !newStore.name.trim() || !newStore.url.trim() || !!existingIncomplete} size="sm">
-            {creating ? "Creating..." : authMode === "oauth" ? "Connect Store" : "Add Site"}
+            {creating ? (authMode === "oauth" ? "Redirecting…" : "Creating…") : authMode === "oauth" ? "Connect Store" : "Add Site"}
           </Button>
         </DialogFooter>
       </DialogContent>
