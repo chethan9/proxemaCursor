@@ -1,6 +1,6 @@
 ---
 title: Categories and Tags pages regression fix + explorer standard reapply
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [categories, tags, taxonomy, ui-consistency, regression]
