@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthProvider";
 import { getStores, type StoreWithClient } from "@/services/storeService";
 import { getSiteMenuConfig } from "@/services/menuConfigService";
-import { mergeSiteMenu, resolveForSiteSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
+import { mergeSiteMenu, resolveForSiteSidebar, buildInitialSiteTree, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -52,35 +52,40 @@ export function SiteSidebar({ siteId }: Props) {
   const [search, setSearch] = useState("");
   const roleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const menuCacheKey = `${roleKey}:${siteId}`;
-  const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => cachedSiteMenuByKey.get(menuCacheKey) || []);
-  const [menuLoading, setMenuLoading] = useState(!cachedSiteMenuByKey.has(menuCacheKey));
+  const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
+    const cached = cachedSiteMenuByKey.get(menuCacheKey);
+    if (cached) return cached;
+    return buildInitialSiteTree(siteId, can);
+  });
   const queryClient = useQueryClient();
 
   const currentSite = useMemo(() => sites.find((s) => s.id === siteId), [sites, siteId]);
 
   useEffect(() => {
     getStores().then((list) => {
+      const cachedHash = sites.map((s) => `${s.id}:${s.updated_at || ""}`).join("|");
+      const newHash = list.map((s) => `${s.id}:${s.updated_at || ""}`).join("|");
       cachedSites = list;
       try { localStorage.setItem("sidebar-sites-cache", JSON.stringify(list)); } catch { /* ignore */ }
-      setSites(list);
+      if (cachedHash !== newHash) setSites(list);
     }).catch(() => { /* keep cached */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const cached = cachedSiteMenuByKey.get(menuCacheKey);
     if (cached) {
-      setMenuTree(cached);
-      setMenuLoading(false);
+      setMenuTree((prev) => (JSON.stringify(prev) === JSON.stringify(cached) ? prev : cached));
     } else {
-      setMenuLoading(true);
+      const defaults = buildInitialSiteTree(siteId, can);
+      setMenuTree((prev) => (JSON.stringify(prev) === JSON.stringify(defaults) ? prev : defaults));
     }
     getSiteMenuConfig(roleKey, siteId).then((cfg) => {
       const { tree } = mergeSiteMenu(cfg);
       const resolved = resolveForSiteSidebar(tree, siteId, can);
       cachedSiteMenuByKey.set(menuCacheKey, resolved);
-      setMenuTree(resolved);
-      setMenuLoading(false);
-    }).catch(() => { setMenuLoading(false); });
+      setMenuTree((prev) => (JSON.stringify(prev) === JSON.stringify(resolved) ? prev : resolved));
+    }).catch(() => { /* keep current */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleKey, siteId]);
 
@@ -235,11 +240,7 @@ export function SiteSidebar({ siteId }: Props) {
 
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto py-2">
-        {menuLoading && menuTree.length === 0 ? (
-          <div className="px-2 space-y-1.5">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
-          </div>
-        ) : menuTree.map((node) => {
+        {menuTree.map((node) => {
           if (node.type === "item") {
             return (
               <div key={node.id} className="mb-1 px-2">
