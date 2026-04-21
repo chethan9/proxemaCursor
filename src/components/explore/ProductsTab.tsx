@@ -714,9 +714,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                               )}
                               {isVariable && (
-                                <div className="absolute bottom-1.5 left-1.5 h-4 w-4 rounded-full bg-background/50 backdrop-blur-sm shadow-sm border border-border/40 flex items-center justify-center" title="Has variations">
+                                <div className="absolute bottom-1.5 left-1.5 h-5 w-5 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src="/variation.png" alt="Variable" className="h-2.5 w-2.5 object-contain" />
+                                  <img src="/variation.png" alt="Variable" className="h-3 w-3 object-contain" />
                                 </div>
                               )}
                               {stockOut && (
@@ -748,9 +748,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
                             )}
                             {isVariable && (
-                              <div className="absolute bottom-2.5 left-2.5 h-6 w-6 rounded-full bg-background/50 backdrop-blur-sm shadow-sm border border-border/40 flex items-center justify-center" title="Has variations">
+                              <div className="absolute bottom-2.5 left-2.5 h-8 w-8 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src="/variation.png" alt="Variable" className="h-3.5 w-3.5 object-contain" />
+                                <img src="/variation.png" alt="Variable" className="h-5 w-5 object-contain" />
                               </div>
                             )}
                             <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background">
