@@ -7,8 +7,6 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { BrandingProvider } from "@/contexts/BrandingProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
-import { NotificationProvider } from "@/contexts/NotificationProvider";
-import { NotificationRenderer } from "@/components/notifications/NotificationRenderer";
 import { Toaster } from "@/components/ui/toaster";
 import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
@@ -42,13 +40,10 @@ function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <CacheBuster />
         <BrandingProvider>
-          <NotificationProvider>
-            {children}
-            <NotificationRenderer />
-            <BulkJobsToast />
-            <GlobalScrollButton />
-            <IncompleteOnboardingPrompt />
-          </NotificationProvider>
+          {children}
+          <BulkJobsToast />
+          <GlobalScrollButton />
+          <IncompleteOnboardingPrompt />
         </BrandingProvider>
       </AuthProvider>
     </ThemeProvider>

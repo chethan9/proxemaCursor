@@ -10,12 +10,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useQueryClient } from "@tanstack/react-query";
-import { getStores, getStore, type StoreWithClient } from "@/services/storeService";
+import { getStore, type StoreWithClient } from "@/services/storeService";
 import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
-import { NotificationBell } from "@/components/layout/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,39 +23,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, ChevronsLeft, ChevronsRight, LogOut, Lock, Unlock, MoreHorizontal, Check, Bell } from "lucide-react";
+import { Zap, LogOut, Lock, Unlock, MoreHorizontal, Check } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
-import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
-import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
-
-function ProgressRing({ value, size = 22, stroke = 2.5 }: { value: number; size?: number; stroke?: number }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c - (Math.max(0, Math.min(100, value)) / 100) * c;
-  return (
-    <span className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="hsl(var(--sidebar-border))" strokeWidth={stroke} fill="none" />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="hsl(var(--success))"
-          strokeWidth={stroke}
-          fill="none"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.5s ease" }}
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums text-success">
-        {value}
-      </span>
-    </span>
-  );
-}
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -126,13 +95,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const collapsed = locked ? collapsedPref : (forceCollapsed || collapsedPref);
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const { data: storesData } = useStores();
-  const { data: activeSyncs = [] } = useAllActiveSyncs();
-  const unreadCount = useUnreadNotifications();
-  const activeSyncMap = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const s of activeSyncs) m.set(s.store_id, s.progress);
-    return m;
-  }, [activeSyncs]);
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
@@ -172,7 +134,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
 
-  // Sort by created_at DESC (fallback to id for stability)
   const sortedSites = useMemo(() => {
     return [...sites].sort((a, b) => {
       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -181,13 +142,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     });
   }, [sites]);
 
-  // Visible = active site (if any) + newest sites, capped at 5, preserving newest-first order
   const visibleSites = useMemo(() => {
     if (sortedSites.length <= SIDEBAR_SITE_CAP) return sortedSites;
     const top = sortedSites.slice(0, SIDEBAR_SITE_CAP);
     const active = activeSiteId ? sortedSites.find((s) => s.id === activeSiteId) : null;
     if (!active || top.some((s) => s.id === active.id)) return top;
-    // Replace the oldest of the top-5 with the active one, keep newest-first order
     const withActive = [active, ...top.slice(0, SIDEBAR_SITE_CAP - 1)];
     return [...withActive].sort((a, b) => {
       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -373,8 +332,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     {can(PERMISSIONS.SITES_VIEW) && visibleSites.map((site) => {
                       const href = `/sites/${site.id}/products`;
                       const isActive = site.id === activeSiteId;
-                      const syncPct = activeSyncMap.get(site.id);
-                      const isSyncing = typeof syncPct === "number";
                       if (collapsed) {
                         return (
                           <li key={site.id}>
@@ -383,23 +340,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                                 <Link href={href} onMouseEnter={() => prefetchStore(site.id)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                                   isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
-                                  {isSyncing ? (
-                                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[14px] px-1 rounded-full bg-success text-[8px] font-bold text-white flex items-center justify-center ring-1 ring-sidebar">
-                                      {syncPct}
-                                    </span>
-                                  ) : (
-                                    <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
-                                      site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
-                                  )}
-                                  {isSyncing && (
-                                    <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full overflow-hidden">
-                                      <span className="block h-full w-full sync-shimmer" />
-                                    </span>
-                                  )}
+                                  <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
+                                    site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
                                 </Link>
                               </TooltipTrigger>
                               <TooltipContent side="right" sideOffset={8} className="z-[100]">
-                                {site.name}{isSyncing ? ` — syncing ${syncPct}%` : ""}
+                                {site.name}
                               </TooltipContent>
                             </Tooltip>
                           </li>
@@ -418,16 +364,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                             )}
                             <SiteIcon site={site} size="sm" />
                             <span className="truncate">{site.name}</span>
-                            {isSyncing ? (
-                              <ProgressRing value={syncPct!} />
-                            ) : (
-                              <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
-                            )}
-                            {isSyncing && (
-                              <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full overflow-hidden">
-                                <span className="block h-full w-full sync-shimmer" />
-                              </span>
-                            )}
+                            <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
                           </Link>
                         </li>
                       );
@@ -483,26 +420,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           })}
         </nav>
 
-        <div className={cn("border-t border-sidebar-border px-2 py-1.5")}>
-          <NotificationBell collapsed={collapsed} />
-        </div>
-
         <div className={cn("border-t border-sidebar-border p-2")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={cn("w-full flex items-center gap-2 rounded-md p-1.5 hover:bg-sidebar-accent/60 transition-colors", collapsed && "justify-center")}
                 aria-label="User menu">
-                <div className="relative flex-shrink-0">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-xs">{initials}</AvatarFallback>
-                  </Avatar>
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-destructive opacity-60 animate-ping" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive ring-1 ring-sidebar" />
-                    </span>
-                  )}
-                </div>
+                <Avatar className="h-7 w-7 flex-shrink-0">
+                  <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-xs">{initials}</AvatarFallback>
+                </Avatar>
                 {!collapsed && (
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-xs font-medium truncate">{profile?.full_name || profile?.email}</p>

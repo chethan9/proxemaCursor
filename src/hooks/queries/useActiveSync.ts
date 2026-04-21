@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const ASPECTS = ["products", "orders", "customers", "categories", "tags", "coupons"];
@@ -11,12 +12,27 @@ const ASPECT_WEIGHTS: Record<string, number> = {
   coupons: 3,
 };
 
+type ActiveSyncData = {
+  running: boolean;
+  progress: number;
+  currentAspect: string | null;
+  elapsed_seconds: number;
+  estimated_total: number;
+  processed: number;
+  started_at?: string;
+  is_initial: boolean;
+} | null;
+
 export function useActiveSync(storeId: string | null) {
-  return useQuery({
+  const qc = useQueryClient();
+  const prevRunningRef = useRef(false);
+  const prevStoreIdRef = useRef<string | null>(null);
+
+  const query = useQuery({
     queryKey: ["active-sync", storeId],
     enabled: !!storeId,
     refetchInterval: 2000,
-    queryFn: async () => {
+    queryFn: async (): Promise<ActiveSyncData> => {
       if (!storeId) return null;
 
       const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
@@ -86,4 +102,24 @@ export function useActiveSync(storeId: string | null) {
       };
     },
   });
+
+  useEffect(() => {
+    if (!storeId || !query.data) return;
+    if (prevStoreIdRef.current !== storeId) {
+      prevStoreIdRef.current = storeId;
+      prevRunningRef.current = query.data.running;
+      return;
+    }
+    if (prevRunningRef.current && !query.data.running) {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["taxonomy"] });
+      qc.invalidateQueries({ queryKey: ["webhooks"] });
+      qc.invalidateQueries({ queryKey: ["sync-runs"] });
+      qc.invalidateQueries({ queryKey: ["active-syncs-all"] });
+    }
+    prevRunningRef.current = query.data.running;
+  }, [query.data, storeId, qc]);
+
+  return query;
 }

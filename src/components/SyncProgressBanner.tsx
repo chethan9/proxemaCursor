@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
 import { useActiveSync } from "@/hooks/queries/useActiveSync";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { X, Rocket, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, ChevronRight } from "lucide-react";
 import { pickAnyMessage } from "@/lib/sync-messages";
 import { SiteIcon } from "@/components/site/SiteIcon";
-import { supabase } from "@/integrations/supabase/client";
 
 const ASPECT_META: Record<string, { Icon: typeof Package }> = {
   products: { Icon: Package }, orders: { Icon: ShoppingCart }, customers: { Icon: Users },
@@ -22,14 +19,8 @@ function formatElapsed(s: number): string {
   return `${m}m ${s % 60}s`;
 }
 
-const cachedConfetti: object | null = null;
-
-type SnapshotSite = { store_id: string; store_name: string; store_url: string; store_logo_url: string | null };
-
 export function SyncProgressBanner() {
   const router = useRouter();
-  const { toast } = useToast();
-  const qc = useQueryClient();
   const storeId = (router.query.id as string) || null;
   const { data } = useActiveSync(storeId);
   const { data: allSyncs = [] } = useAllActiveSyncs();
@@ -42,87 +33,6 @@ export function SyncProgressBanner() {
     return v ? parseFloat(v) : 0;
   });
   const lastWriteRef = useRef(0);
-  const prevRunningRef = useRef(false);
-  const prevStoreIdRef = useRef<string | null>(null);
-  const seenCompletionsRef = useRef<Set<string>>(new Set());
-
-  const invalidateAll = (sid?: string | null) => {
-    qc.invalidateQueries({ queryKey: ["orders"] });
-    qc.invalidateQueries({ queryKey: ["products"] });
-    qc.invalidateQueries({ queryKey: ["taxonomy"] });
-    qc.invalidateQueries({ queryKey: ["webhooks"] });
-    qc.invalidateQueries({ queryKey: ["sync-runs"] });
-    qc.invalidateQueries({ queryKey: ["active-syncs-all"] });
-    if (sid) qc.invalidateQueries({ queryKey: ["active-sync", sid] });
-  };
-
-  // Current-site completion detection
-  useEffect(() => {
-    if (!data || !storeId) return;
-    if (prevStoreIdRef.current !== storeId) return;
-    if (prevRunningRef.current && !data.running) {
-      const key = `${storeId}-${data.started_at ?? ""}`;
-      if (!seenCompletionsRef.current.has(key)) {
-        seenCompletionsRef.current.add(key);
-        invalidateAll(storeId);
-        if (storageKey) localStorage.removeItem(storageKey);
-      }
-    }
-    prevRunningRef.current = data.running;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, storeId]);
-
-  // Background completion toasts — debounced: site must be absent for 2 consecutive polls
-  // Also skip the first run after storeId change to avoid firing during navigation
-  const prevSnapshotRef = useRef<Map<string, SnapshotSite>>(new Map());
-  const pendingRemovalRef = useRef<Map<string, SnapshotSite>>(new Map());
-  const skipNextBgCheckRef = useRef(true);
-
-  useEffect(() => {
-    skipNextBgCheckRef.current = true;
-  }, [storeId]);
-
-  useEffect(() => {
-    const currentMap = new Map<string, SnapshotSite>();
-    for (const s of allSyncs) {
-      currentMap.set(s.store_id, {
-        store_id: s.store_id,
-        store_name: s.store_name,
-        store_url: s.store_url,
-        store_logo_url: s.store_logo_url,
-      });
-    }
-
-    if (skipNextBgCheckRef.current) {
-      skipNextBgCheckRef.current = false;
-      prevSnapshotRef.current = currentMap;
-      pendingRemovalRef.current.clear();
-      return;
-    }
-
-    // Confirm pending removals — if still absent this poll, fire toast
-    for (const [id, snap] of pendingRemovalRef.current) {
-      if (!currentMap.has(id)) {
-        const seenKey = `bg-toast:${id}:${snap.store_name}`;
-        if (!seenCompletionsRef.current.has(seenKey) && id !== storeId) {
-          seenCompletionsRef.current.add(seenKey);
-          toast({ title: `${snap.store_name} sync complete ✨`, description: "Click to view details" });
-          invalidateAll();
-        }
-      }
-    }
-    pendingRemovalRef.current.clear();
-
-    // Stage new removals for next-poll confirmation
-    for (const [id, snap] of prevSnapshotRef.current) {
-      if (!currentMap.has(id)) {
-        pendingRemovalRef.current.set(id, snap);
-      }
-    }
-
-    prevSnapshotRef.current = currentMap;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSyncs, storeId]);
 
   useEffect(() => {
     const target = data?.progress ?? 0;
@@ -150,6 +60,12 @@ export function SyncProgressBanner() {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [data?.progress, storageKey]);
+
+  useEffect(() => {
+    if (!data?.running && storageKey) {
+      localStorage.removeItem(storageKey);
+    }
+  }, [data?.running, storageKey]);
 
   useEffect(() => {
     if (!data?.running) return;
@@ -200,59 +116,57 @@ export function SyncProgressBanner() {
   const aspectLabel = data.currentAspect ? data.currentAspect.charAt(0).toUpperCase() + data.currentAspect.slice(1) : "Preparing";
 
   return (
-    <>
-      <div className="sticky top-0 z-40 bg-card border-b border-border/60 px-4 py-2.5 shadow-sm">
-        <div className="flex items-center gap-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-xs font-semibold text-foreground">Syncing</span>
-            <span className="text-muted-foreground text-xs">·</span>
-            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-foreground">{aspectLabel}</span>
-          </div>
+    <div className="sticky top-0 z-40 bg-card border-b border-border/60 px-4 py-2.5 shadow-sm">
+      <div className="flex items-center gap-4 max-w-7xl mx-auto">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="text-xs font-semibold text-foreground">Syncing</span>
+          <span className="text-muted-foreground text-xs">·</span>
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium text-foreground">{aspectLabel}</span>
+        </div>
 
-          <div className="w-full max-w-sm relative">
-            <div className="h-2.5 rounded-full bg-emerald-500/10 overflow-visible relative">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 relative overflow-hidden" style={{ width: `${displayProgress}%` }}>
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]" />
-              </div>
-              <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none" style={{ left: `${displayProgress}%` }}>
-                <div className="relative animate-[rocket-bob_1.8s_ease-in-out_infinite]">
-                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-0.5 w-1 h-1 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite]" />
-                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-2 w-0.5 h-0.5 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite] [animation-delay:0.15s]" />
-                  <span className="absolute top-1/2 right-full -translate-y-1/2 mr-3 w-0.5 h-0.5 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite] [animation-delay:0.3s]" />
-                  <Rocket className="h-4 w-4 text-primary drop-shadow-sm rotate-45" strokeWidth={2.5} />
-                </div>
+        <div className="w-full max-w-sm relative">
+          <div className="h-2.5 rounded-full bg-emerald-500/10 overflow-visible relative">
+            <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 relative overflow-hidden" style={{ width: `${displayProgress}%` }}>
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]" />
+            </div>
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none" style={{ left: `${displayProgress}%` }}>
+              <div className="relative animate-[rocket-bob_1.8s_ease-in-out_infinite]">
+                <span className="absolute top-1/2 right-full -translate-y-1/2 mr-0.5 w-1 h-1 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite]" />
+                <span className="absolute top-1/2 right-full -translate-y-1/2 mr-2 w-0.5 h-0.5 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite] [animation-delay:0.15s]" />
+                <span className="absolute top-1/2 right-full -translate-y-1/2 mr-3 w-0.5 h-0.5 rounded-full bg-emerald-500 animate-[trail-pulse_0.9s_ease-in-out_infinite] [animation-delay:0.3s]" />
+                <Rocket className="h-4 w-4 text-primary drop-shadow-sm rotate-45" strokeWidth={2.5} />
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0 ml-auto">
-            <span key={tick} className="text-xs text-muted-foreground w-64 truncate hidden md:inline animate-in fade-in slide-in-from-bottom-1 duration-500 text-right">
-              {message}
-            </span>
-            <span className="text-xs tabular-nums text-muted-foreground hidden lg:inline">Elapsed {formatElapsed(data.elapsed_seconds)}</span>
-            <span className="text-xs font-semibold tabular-nums text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">{data.progress}%</span>
-            {bgSyncs.length > 0 && (
-              <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline" title={`${bgSyncs.length} other site${bgSyncs.length > 1 ? "s" : ""} syncing`}>
-                +{bgSyncs.length}
-              </span>
-            )}
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground" onClick={() => setDismissed(true)}>
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
         </div>
 
-        <style jsx global>{`
-          @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-          @keyframes rocket-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
-          @keyframes trail-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        `}</style>
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
+          <span key={tick} className="text-xs text-muted-foreground w-64 truncate hidden md:inline animate-in fade-in slide-in-from-bottom-1 duration-500 text-right">
+            {message}
+          </span>
+          <span className="text-xs tabular-nums text-muted-foreground hidden lg:inline">Elapsed {formatElapsed(data.elapsed_seconds)}</span>
+          <span className="text-xs font-semibold tabular-nums text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">{data.progress}%</span>
+          {bgSyncs.length > 0 && (
+            <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline" title={`${bgSyncs.length} other site${bgSyncs.length > 1 ? "s" : ""} syncing`}>
+              +{bgSyncs.length}
+            </span>
+          )}
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground" onClick={() => setDismissed(true)}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
-    </>
+
+      <style jsx global>{`
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes rocket-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+        @keyframes trail-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+      `}</style>
+    </div>
   );
 }
