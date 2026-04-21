@@ -11,7 +11,7 @@ function wooTermToCategory(t: Record<string, unknown>, storeId: string): Categor
     woo_id: (t.id as number) ?? null,
     name: (t.name as string) ?? null,
     slug: (t.slug as string) ?? null,
-    parent: (t.parent as number) ?? null,
+    parent_id: (t.parent as number) ?? null,
     description: (t.description as string) ?? null,
     display: (t.display as string) ?? null,
     image: t.image as unknown as CategoryRow["image"],
@@ -21,7 +21,7 @@ function wooTermToCategory(t: Record<string, unknown>, storeId: string): Categor
     synced_at: null,
     created_at: null,
     updated_at: null,
-  } as CategoryRow;
+  } as unknown as CategoryRow;
 }
 
 function wooTermToTag(t: Record<string, unknown>, storeId: string): TagRow {
@@ -37,7 +37,7 @@ function wooTermToTag(t: Record<string, unknown>, storeId: string): TagRow {
     synced_at: null,
     created_at: null,
     updated_at: null,
-  } as TagRow;
+  } as unknown as TagRow;
 }
 
 export async function fetchCategories(storeId: string, search: string, page: number, pageSize = 50, useLive = false) {

@@ -1,7 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-export type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
+export type OrderRow = Database["public"]["Tables"]["orders"]["Row"] & {
+  refunds?: unknown;
+  meta_data?: unknown;
+  subtotal?: string | null;
+};
 export type OrderSortField = "date_created" | "total" | "order_number" | "synced_at" | "created_at";
 export type SortDirection = "asc" | "desc";
 
@@ -44,8 +48,8 @@ function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
     shipping_lines: o.shipping_lines as unknown as OrderRow["shipping_lines"],
     fee_lines: o.fee_lines as unknown as OrderRow["fee_lines"],
     coupon_lines: o.coupon_lines as unknown as OrderRow["coupon_lines"],
-    refunds: o.refunds as unknown as OrderRow["refunds"],
-    meta_data: o.meta_data as unknown as OrderRow["meta_data"],
+    refunds: o.refunds,
+    meta_data: o.meta_data,
     customer_note: (o.customer_note as string) ?? null,
     date_created: (o.date_created as string) ?? null,
     date_modified: (o.date_modified as string) ?? null,
@@ -55,7 +59,7 @@ function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
     synced_at: null,
     created_at: (o.date_created as string) ?? null,
     updated_at: (o.date_modified as string) ?? null,
-  } as OrderRow;
+  } as unknown as OrderRow;
 }
 
 export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: OrderRow[]; count: number; live?: boolean }> {
