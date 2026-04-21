@@ -1,6 +1,6 @@
 ---
 title: Fix sidebar menu flicker on first visit / first click
-status: todo
+status: done
 priority: high
 type: bug
 tags: [ui, sidebar, performance]
