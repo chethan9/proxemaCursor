@@ -98,10 +98,10 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
           </div>
 
           {count > 1 && (
-            <div className="relative -mx-1">
+            <div className="relative">
               <div
                 ref={thumbStripRef}
-                className="flex gap-1.5 overflow-x-auto px-1 pt-2 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full"
+                className="flex gap-1.5 overflow-x-auto px-2.5 pt-2.5 pb-2.5 snap-x snap-mandatory scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full"
               >
                 {images.map((img, i) => (
                   <button
