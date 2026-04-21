@@ -1,6 +1,5 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
-import { AppSidebar } from "./AppSidebar";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/hooks/queries/useStores";
@@ -30,8 +29,7 @@ export function SiteLayout({ children }: Props) {
   }, [siteId, isFetched, isLoading, store, router, toast]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <AppSidebar />
+    <div className="flex h-full w-full overflow-hidden">
       {siteId ? (
         <SiteSidebar siteId={siteId} />
       ) : (
@@ -41,10 +39,10 @@ export function SiteLayout({ children }: Props) {
           <Skeleton className="h-8 w-full" />
         </aside>
       )}
-      <main className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <InitialSyncBanner />
         {children}
-      </main>
+      </div>
     </div>
   );
 }
