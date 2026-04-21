@@ -1,22 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooLiveFetch } from "@/lib/woo-live-fetch";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 async function warmWrite(storeId: string, items: Record<string, unknown>[]) {
   if (!items.length) return;
   try {
-    const rows = items.map((t) => ({
+    const rows: TablesInsert<"categories">[] = items.map((t) => ({
       store_id: storeId,
       woo_id: t.id as number,
-      name: (t.name as string) ?? null,
+      name: (t.name as string) ?? "",
       slug: (t.slug as string) ?? null,
       parent_id: (t.parent as number) ?? null,
       description: (t.description as string) ?? null,
       display: (t.display as string) ?? null,
-      image: t.image ?? null,
+      image: (t.image ?? null) as TablesInsert<"categories">["image"],
       menu_order: (t.menu_order as number) ?? null,
       count: (t.count as number) ?? null,
-      raw_data: t,
+      raw_data: t as TablesInsert<"categories">["raw_data"],
       synced_at: new Date().toISOString(),
     }));
     await supabaseAdmin.from("categories").upsert(rows, { onConflict: "store_id,woo_id" });
