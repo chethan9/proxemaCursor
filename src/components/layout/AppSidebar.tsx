@@ -12,7 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useQueryClient } from "@tanstack/react-query";
 import { getStore, type StoreWithClient } from "@/services/storeService";
 import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
-import { mergeMenu, resolveForSidebar, type ResolvedMenuNode } from "@/lib/menu-merge";
+import { mergeMenu, resolveForSidebar, buildInitialTree, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import {
@@ -71,6 +71,12 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
   return "user";
 }
 
+function serialize(tree: ResolvedMenuNode[]): string {
+  return JSON.stringify(tree.map(function reduce(n): unknown {
+    return { i: n.id, t: n.type, l: n.label, c: n.iconColor, h: n.href, ch: n.children?.map(reduce) };
+  }));
+}
+
 function extractActiveSiteId(asPath: string): string | null {
   const m = asPath.match(/^\/(?:sites|explore)\/([^/?#]+)/);
   return m ? m[1] : null;
@@ -98,13 +104,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const [sitePopoverOpen, setSitePopoverOpen] = useState(false);
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
-    if (typeof window === "undefined") return [];
-    const candidates: RoleKey[] = ["super_admin", "admin", "user"];
-    for (const r of candidates) {
-      const cached = loadCachedMenu(r);
-      if (cached.length > 0) return cached;
-    }
-    return [];
+    const exactCache = loadCachedMenu(currentRoleKey);
+    if (exactCache.length > 0) return exactCache;
+    return buildInitialTree(can, isSuperAdmin);
   });
 
   useEffect(() => {
@@ -119,18 +121,24 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   useEffect(() => {
     if (authLoading) return;
     if (!profile && !role) return;
+    if (permissions.length === 0 && !isSuperAdmin) return;
     const roleKey = currentRoleKey;
-    const cached = loadCachedMenu(roleKey);
-    if (cached.length > 0) setMenuTree(cached);
+    const exactCache = loadCachedMenu(roleKey);
+    if (exactCache.length > 0 && serialize(exactCache) !== serialize(menuTree)) {
+      setMenuTree(exactCache);
+    } else if (exactCache.length === 0) {
+      const defaults = buildInitialTree(can, isSuperAdmin);
+      if (serialize(defaults) !== serialize(menuTree)) setMenuTree(defaults);
+    }
     getMenuConfig(roleKey).then((cfg) => {
       const { tree } = mergeMenu(cfg);
       const resolved = resolveForSidebar(tree, can, isSuperAdmin);
       cachedMenuByRole.set(roleKey, resolved);
       try { localStorage.setItem(menuStorageKey(roleKey), JSON.stringify(resolved)); } catch { /* ignore */ }
-      setMenuTree(resolved);
-    }).catch(() => { if (cached.length === 0) setMenuTree([]); });
+      setMenuTree((prev) => (serialize(prev) === serialize(resolved) ? prev : resolved));
+    }).catch(() => { /* keep current tree */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentRoleKey, permissions.join(","), !!profile]);
+  }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin]);
 
   const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
 
@@ -306,16 +314,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          {authLoading && menuTree.length === 0 ? (
-            <div className={cn("mb-2 space-y-1.5", collapsed ? "px-1.5" : "px-2")}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className={cn("flex items-center gap-2.5 rounded-md px-2.5 py-1.5", collapsed && "justify-center px-0 py-1.5")}>
-                  <div className="h-4 w-4 rounded bg-sidebar-foreground/10 animate-pulse" />
-                  {!collapsed && <div className="h-3 flex-1 rounded bg-sidebar-foreground/10 animate-pulse" />}
-                </div>
-              ))}
-            </div>
-          ) : menuTree.map((node) => {
+          {menuTree.map((node) => {
             if (node.type === "item") {
               return (
                 <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
