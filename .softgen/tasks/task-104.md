@@ -1,6 +1,6 @@
 ---
 title: Sync retry with exponential backoff + failure diagnostics
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sync, resilience, debugging]
@@ -50,18 +50,18 @@ Two problems, one task:
 
 ## Checklist
 
-- [ ] Migration: add `attempt`, `next_retry_at`, `request_url`, `request_method`, `request_params`, `response_status`, `response_body`, `response_headers` columns to `sync_runs`; allow `retrying` in status check; add index `(status, next_retry_at)`
-- [ ] Error classifier `src/lib/sync-error.ts` with `isRetryableError(err, statusCode)` — retryable on network errors, 5xx, 408, 429, timeouts; NOT on 400/401/403/404
-- [ ] Wrap Woo client calls in `src/lib/woo-client.ts` so every error carries `{ url, method, params, status, body, headers }`
-- [ ] `src/pages/api/stores/[storeId]/sync.ts` and `src/pages/api/cron/sync-scheduler.ts`: on failure, persist all diagnostic columns; if retryable and attempt<5 mark `retrying` with backoff, else `failed`
-- [ ] New cron endpoint `src/pages/api/cron/sync-retry.ts` at `*/1 * * * *` picking due retrying runs, re-running aspect sync, updating `attempt`
-- [ ] Register retry cron in `vercel.json`
-- [ ] Sync-runs detail dialog shows: status + diagnostic block (Method/URL/Params/Response status/Response body/Headers) for failed runs
-- [ ] "Copy as curl" button generates a valid curl command with masked or real credentials based on user role
-- [ ] "Retry now" button on failed runs resets to `retrying` with `next_retry_at=now()`
-- [ ] Sync-runs table shows `retrying` status badge with countdown "Retrying in Xm (attempt N/5)"
-- [ ] `useActiveSync` treats `retrying` as still running so the top banner stays visible during backoff waits with message "Retrying in 2m… (attempt 3/5)"
-- [ ] Verify: simulate a 502 by pointing at wrong URL — confirm retries at 30s/2m/5m/15m, then permanent fail; confirm curl command reproduces the failure; verify 403 fails instantly (no retry)
+- [x] Migration: add `attempt`, `next_retry_at`, `request_url`, `request_method`, `request_params`, `response_status`, `response_body`, `response_headers` columns to `sync_runs`; allow `retrying` in status check; add index `(status, next_retry_at)`
+- [x] Error classifier `src/lib/sync-error.ts` with `isRetryableError(err, statusCode)` — retryable on network errors, 5xx, 408, 429, timeouts; NOT on 400/401/403/404
+- [x] Wrap Woo client calls in `src/lib/woo-client.ts` so every error carries `{ url, method, params, status, body, headers }`
+- [x] `src/pages/api/stores/[storeId]/sync.ts` and `src/pages/api/cron/sync-scheduler.ts`: on failure, persist all diagnostic columns; if retryable and attempt<5 mark `retrying` with backoff, else `failed`
+- [x] New cron endpoint `src/pages/api/cron/sync-retry.ts` at `*/1 * * * *` picking due retrying runs, re-running aspect sync, updating `attempt`
+- [x] Register retry cron in `vercel.json`
+- [x] Sync-runs detail dialog shows: status + diagnostic block (Method/URL/Params/Response status/Response body/Headers) for failed runs
+- [x] "Copy as curl" button generates a valid curl command with masked or real credentials based on user role
+- [x] "Retry now" button on failed runs resets to `retrying` with `next_retry_at=now()`
+- [x] Sync-runs table shows `retrying` status badge with countdown "Retrying in Xm (attempt N/5)"
+- [x] `useActiveSync` treats `retrying` as still running so the top banner stays visible during backoff waits with message "Retrying in 2m… (attempt 3/5)"
+- [x] Verify: simulate a 502 by pointing at wrong URL — confirm retries at 30s/2m/5m/15m, then permanent fail; confirm curl command reproduces the failure; verify 403 fails instantly (no retry)
 
 ## Acceptance
 
