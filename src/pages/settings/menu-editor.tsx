@@ -12,7 +12,7 @@ import { listRoles, type RoleRow } from "@/services/userService";
 import { mergeMenu } from "@/lib/menu-merge";
 import { MENU_REGISTRY } from "@/lib/menu-registry";
 import { IconPicker } from "@/components/menu-editor/IconPicker";
-import { Eye, EyeOff, Trash2, FolderPlus, RotateCcw, Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Eye, EyeOff, Trash2, FolderPlus, RotateCcw, Loader2, ArrowUp, ArrowDown, ChevronDown, PanelRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ROOT_ID = "__root__";
@@ -52,24 +52,23 @@ function flattenTree(tree: MenuNode[]): { rows: FlatRow[]; groups: MenuNode[]; o
   return { rows, groups, order };
 }
 
-function rebuildTree(rows: FlatRow[], groups: MenuNode[], order: string[]): MenuNode[] {
+function rebuildTree(rows: FlatRow[], groups: MenuNode[]): MenuNode[] {
   const byGroup = new Map<string, FlatRow[]>();
   for (const r of rows) {
     if (!byGroup.has(r.groupId)) byGroup.set(r.groupId, []);
     byGroup.get(r.groupId)!.push(r);
   }
   const result: MenuNode[] = [];
-  for (const gid of order) {
-    if (gid === ROOT_ID) {
-      const rootRows = byGroup.get(ROOT_ID) || [];
-      for (const r of rootRows) result.push({ id: r.itemId, type: "item", label: r.label, icon: r.icon, hidden: r.hidden });
-    } else {
-      const g = groups.find((x) => x.id === gid);
-      if (!g) continue;
-      const children = (byGroup.get(gid) || []).map((r) => ({
-        id: r.itemId, type: "item" as const, label: r.label, icon: r.icon, hidden: r.hidden,
-      }));
-      if (children.length > 0 || gid.startsWith("group-custom-")) result.push({ ...g, children });
+  const rootRows = byGroup.get("__root__") || [];
+  for (const r of rootRows) {
+    result.push({ id: r.itemId, type: "item", label: r.label, icon: r.icon, hidden: r.hidden });
+  }
+  for (const g of groups) {
+    const children = (byGroup.get(g.id) || []).map((r) => ({
+      id: r.itemId, type: "item" as const, label: r.label, icon: r.icon, hidden: r.hidden,
+    }));
+    if (children.length > 0 || g.id.startsWith("group-custom-")) {
+      result.push({ ...g, children });
     }
   }
   return result;
@@ -176,7 +175,7 @@ function MenuEditorInner() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const tree = rebuildTree(rows, groups, order);
+      const tree = rebuildTree(rows, groups);
       await saveMenuConfig(role, tree);
       setDirty(false);
       toast({ title: "Saved", description: `Menu for ${humanizeRole(role)} updated.` });
@@ -190,6 +189,11 @@ function MenuEditorInner() {
     await resetMenuConfig(role);
     await load(role);
     toast({ title: "Reset", description: "Menu restored to defaults." });
+  };
+
+  const toggleGroupMode = (gid: string) => {
+    setGroups((gs) => gs.map((g) => g.id === gid ? { ...g, displayMode: g.displayMode === "panel" ? "inline" : "panel" } : g));
+    setDirty(true);
   };
 
   const groupOptions = useMemo(() => {
