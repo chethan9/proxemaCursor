@@ -10,16 +10,24 @@ export function useTaxonomyRows(
   pageSize: number
 ) {
   const { data: syncStatus } = useStoreSyncStatus(storeId);
-  const useLive = syncStatus ? !syncStatus.initialSyncDone : false;
+  const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
+  const fetcher = mode === "categories" ? fetchCategories : fetchTags;
   return useQuery({
-    queryKey: ["taxonomy", mode, storeId, search, page, pageSize, useLive] as const,
-    queryFn: () =>
-      mode === "categories"
-        ? fetchCategories(storeId, search, page, pageSize, useLive)
-        : fetchTags(storeId, search, page, pageSize, useLive),
+    queryKey: ["taxonomy", mode, storeId, search, page, pageSize, initialSyncRunning ? "hybrid" : "db"] as const,
+    queryFn: async () => {
+      const dbRes = await fetcher(storeId, search, page, pageSize, false);
+      if (dbRes.data.length > 0 || !initialSyncRunning) return dbRes;
+      try {
+        return await fetcher(storeId, search, page, pageSize, true);
+      } catch (e) {
+        console.warn(`[useTaxonomy:${mode}] live fetch failed:`, e);
+        return dbRes;
+      }
+    },
     placeholderData: keepPreviousData,
     enabled: !!storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 }
 

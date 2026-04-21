@@ -6,14 +6,24 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 export function useOrders(opts: FetchOrdersOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
-  const useLive = opts.useLive ?? (syncStatus ? !syncStatus.initialSyncDone : false);
-  const effectiveOpts = { ...opts, useLive };
+  const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   return useQuery({
-    queryKey: [...queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>), useLive] as const,
-    queryFn: () => fetchOrders(effectiveOpts),
+    queryKey: [...queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "hybrid" : "db"] as const,
+    queryFn: async () => {
+      const dbRes = await fetchOrders({ ...opts, useLive: false });
+      if (dbRes.data.length > 0 || !initialSyncRunning) return dbRes;
+      try {
+        const live = await fetchOrders({ ...opts, useLive: true });
+        return live;
+      } catch (e) {
+        console.warn("[useOrders] live fetch failed:", e);
+        return dbRes;
+      }
+    },
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 }
 
