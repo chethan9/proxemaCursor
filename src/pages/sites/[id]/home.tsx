@@ -35,22 +35,17 @@ function HomeInner() {
   if (storeLoading) return <SiteLoadingSkeleton />;
 
   return (
-    <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{store?.name || "Site"}</h1>
-          <p className="text-sm text-muted-foreground truncate">{store?.url || ""}</p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => qc.invalidateQueries({ queryKey: ["site-home-stats", storeId] })}
-          disabled={isFetching}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
+    <div className="p-6 space-y-5 max-w-[1600px] mx-auto relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 right-4 h-8 w-8 text-muted-foreground hover:text-foreground z-10"
+        onClick={() => qc.invalidateQueries({ queryKey: ["site-home-stats", storeId] })}
+        disabled={isFetching}
+        title="Refresh"
+      >
+        <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+      </Button>
 
       {!isLoading && !hasAnyData ? (
         <Card>
