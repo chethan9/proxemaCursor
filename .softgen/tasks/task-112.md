@@ -1,6 +1,6 @@
 ---
 title: Scope dashboards and logs to user's own stores
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [security, rls, multi-tenant]
