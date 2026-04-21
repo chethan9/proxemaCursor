@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1147,6 +1147,7 @@ export type Database = {
           short_id: string | null
           status: string | null
           sync_interval: number | null
+          timezone: string | null
           updated_at: string | null
           url: string
           woo_key_id: number | null
@@ -1173,6 +1174,7 @@ export type Database = {
           short_id?: string | null
           status?: string | null
           sync_interval?: number | null
+          timezone?: string | null
           updated_at?: string | null
           url: string
           woo_key_id?: number | null
@@ -1199,6 +1201,7 @@ export type Database = {
           short_id?: string | null
           status?: string | null
           sync_interval?: number | null
+          timezone?: string | null
           updated_at?: string | null
           url?: string
           woo_key_id?: number | null
