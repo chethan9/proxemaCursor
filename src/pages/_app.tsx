@@ -42,6 +42,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   const noShellRoute =
     router.pathname.startsWith("/auth") ||
     router.pathname.startsWith("/sites/connect") ||
+    router.pathname.startsWith("/sites/[id]") ||
     router.pathname === "/404";
 
   if (noShellRoute || loading || !user) {
