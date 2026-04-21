@@ -36,6 +36,7 @@ function HomeInner() {
 
   return (
     <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
+      {storeId && <SiteBlockedBanner storeId={storeId} />}
       <Button
         variant="outline"
         size="icon"

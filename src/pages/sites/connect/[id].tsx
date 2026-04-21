@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { buildWooCommerceAuthUrl } from "@/lib/woocommerce-auth";
 import { updateStore } from "@/services/storeService";
+import { ConnectionDiagnostic } from "@/components/project/ConnectionDiagnostic";
 
 type StepStatus = "pending" | "active" | "done" | "error";
 interface Step { id: string; label: string; status: StepStatus; }
@@ -413,6 +414,13 @@ export default function ConnectSuccessPage() {
                     </p>
                   </div>
                 </div>
+
+                {siteId && (
+                  <div className="pt-2 border-t border-border/60">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Connection diagnostic</p>
+                    <ConnectionDiagnostic storeId={siteId} autoRun />
+                  </div>
+                )}
 
                 <Button onClick={handleRestartOAuth} className="w-full" size="lg" disabled={!storeUrl}>
                   <RefreshCw className="h-4 w-4 mr-2" />
