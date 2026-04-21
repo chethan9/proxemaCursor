@@ -7,13 +7,26 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 export function useProducts(opts: FetchProductsOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
   const useLive = opts.useLive ?? (syncStatus ? !syncStatus.initialSyncDone : false);
-  const effectiveOpts = { ...opts, useLive };
   return useQuery({
     queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), useLive] as const,
-    queryFn: () => fetchProducts(effectiveOpts),
+    queryFn: async () => {
+      if (useLive) {
+        try {
+          const res = await fetchProducts({ ...opts, useLive: true });
+          if (res.data.length > 0 || res.count > 0) return res;
+          // Live returned empty — fall through to DB as a safety net
+          return await fetchProducts({ ...opts, useLive: false });
+        } catch (e) {
+          console.warn("[useProducts] live fetch failed, falling back to DB:", e);
+          return fetchProducts({ ...opts, useLive: false });
+        }
+      }
+      return fetchProducts({ ...opts, useLive: false });
+    },
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 }
 
