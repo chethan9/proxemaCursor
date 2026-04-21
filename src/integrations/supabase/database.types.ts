@@ -1632,6 +1632,10 @@ export type Database = {
       can_bootstrap_super_admin: { Args: never; Returns: boolean }
       current_user_client_id: { Args: never; Returns: string }
       current_user_role: { Args: never; Returns: string }
+      get_site_home_stats: {
+        Args: { p_store_id: string; p_tz?: string }
+        Returns: Json
+      }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }
