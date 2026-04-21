@@ -270,12 +270,12 @@ function CustomerDetailsInner() {
           </div>
         ) : (
           <div className="p-5 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <StatTile icon={<ShoppingBag className="h-4 w-4" />} label="Total orders" value={String(totalOrders)} />
-              <StatTile icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} label="Completed" value={String(stats?.completed || 0)} sub={`${completedPct}% of loaded`} />
-              <StatTile icon={<XCircle className="h-4 w-4 text-rose-600" />} label="Cancelled" value={String(stats?.cancelled || 0)} />
-              <StatTile icon={<Wallet className="h-4 w-4 text-blue-600" />} label="Total spent" value={fmtMoney(totalSpent)} />
-              <StatTile icon={<TrendingUp className="h-4 w-4 text-violet-600" />} label="Avg order" value={fmtMoney(aov)} />
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+              <StatTile tone="slate" icon={<ShoppingBag className="h-3.5 w-3.5" />} label="Total orders" value={String(totalOrders)} />
+              <StatTile tone="emerald" icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Completed" value={String(stats?.completed || 0)} sub={`${completedPct}% of loaded`} />
+              <StatTile tone="rose" icon={<XCircle className="h-3.5 w-3.5" />} label="Cancelled" value={String(stats?.cancelled || 0)} />
+              <StatTile tone="blue" icon={<Wallet className="h-3.5 w-3.5" />} label="Total spent" value={fmtMoney(totalSpent)} />
+              <StatTile tone="violet" icon={<TrendingUp className="h-3.5 w-3.5" />} label="Avg order" value={fmtMoney(aov)} />
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
@@ -334,12 +334,24 @@ function CustomerDetailsInner() {
   );
 }
 
-function StatTile({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+function StatTile({ icon, label, value, sub, tone = "slate" }: { icon: React.ReactNode; label: string; value: string; sub?: string; tone?: "slate" | "emerald" | "rose" | "blue" | "violet" }) {
+  const tones: Record<string, { bg: string; ring: string; badge: string; text: string; bar: string }> = {
+    slate:   { bg: "from-slate-50/70",   ring: "ring-slate-200/60",   badge: "bg-slate-100 text-slate-700",     text: "text-slate-900",   bar: "bg-slate-400" },
+    emerald: { bg: "from-emerald-50/70", ring: "ring-emerald-200/60", badge: "bg-emerald-100 text-emerald-700", text: "text-emerald-700", bar: "bg-emerald-500" },
+    rose:    { bg: "from-rose-50/70",    ring: "ring-rose-200/60",    badge: "bg-rose-100 text-rose-700",       text: "text-rose-700",    bar: "bg-rose-500" },
+    blue:    { bg: "from-blue-50/70",    ring: "ring-blue-200/60",    badge: "bg-blue-100 text-blue-700",       text: "text-blue-700",    bar: "bg-blue-500" },
+    violet:  { bg: "from-violet-50/70",  ring: "ring-violet-200/60",  badge: "bg-violet-100 text-violet-700",   text: "text-violet-700",  bar: "bg-violet-500" },
+  };
+  const t = tones[tone];
   return (
-    <div className="rounded-md border border-border bg-white px-2.5 py-2">
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{icon}<span>{label}</span></div>
-      <div className="text-sm font-semibold mt-0.5 font-mono tracking-tight">{value}</div>
-      {sub && <div className="text-[9px] text-muted-foreground mt-0.5">{sub}</div>}
+    <div className={`relative rounded-lg border border-border bg-gradient-to-br ${t.bg} to-white px-3 py-2.5 overflow-hidden`}>
+      <div className={`absolute top-0 left-0 h-0.5 w-8 ${t.bar} rounded-r`} />
+      <div className="flex items-center justify-between">
+        <div className={`h-6 w-6 rounded-md ${t.badge} flex items-center justify-center`}>{icon}</div>
+        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+      </div>
+      <div className={`text-lg font-bold ${t.text} font-mono tracking-tight mt-1.5 leading-none`}>{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground mt-1">{sub}</div>}
     </div>
   );
 }
