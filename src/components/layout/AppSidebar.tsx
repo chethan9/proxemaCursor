@@ -77,7 +77,7 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
 
 function serialize(tree: ResolvedMenuNode[]): string {
   return JSON.stringify(tree.map(function reduce(n): unknown {
-    return { i: n.id, t: n.type, l: n.label, c: n.iconColor, h: n.href, ch: n.children?.map(reduce) };
+    return { i: n.id, t: n.type, l: n.label, c: n.iconColor, h: n.href, d: n.displayMode, ch: n.children?.map(reduce) };
   }));
 }
 
