@@ -500,8 +500,18 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 ))}
               </div>
               <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
-                <Switch checked={excludeOutOfStock} onCheckedChange={(v) => setExcludeOutOfStock(!!v)} />
+                <Switch checked={excludeOutOfStock} onCheckedChange={(v) => {
+                  setExcludeOutOfStock(!!v);
+                  if (v && stockStatusFilter === "outofstock") setStockStatusFilter("all");
+                }} />
                 <span>Exclude out of stock</span>
+              </label>
+              <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
+                <Switch checked={stockStatusFilter === "outofstock"} onCheckedChange={(v) => {
+                  setStockStatusFilter(v ? "outofstock" : "all");
+                  if (v && excludeOutOfStock) setExcludeOutOfStock(false);
+                }} />
+                <span>Out of stock only</span>
               </label>
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
