@@ -81,7 +81,6 @@ export default function ThemeSettings() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Style Preset - takes 2 cols */}
           <Card className="lg:col-span-2">
             <CardContent className="p-4 space-y-3">
               <div className="pb-2 border-b">
@@ -118,7 +117,6 @@ export default function ThemeSettings() {
             </CardContent>
           </Card>
 
-          {/* Brand Identity - 1 col */}
           <Card>
             <CardContent className="p-4 space-y-3">
               <div className="pb-2 border-b">
@@ -149,7 +147,7 @@ export default function ThemeSettings() {
           </Card>
         </div>
 
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-6 flex items-center justify-end gap-2 pt-4 border-t">
           <Button variant="outline" size="sm" onClick={resetDefaults}>
             <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reset
           </Button>
