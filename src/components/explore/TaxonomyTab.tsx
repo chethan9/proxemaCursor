@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTaxonomy } from "@/hooks/queries/useTaxonomy";
+import { useTaxonomyRows, useAllCategories } from "@/hooks/queries/useTaxonomy";
 import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 
@@ -25,28 +25,29 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   const [pageSize, setPageSize] = useState(50);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const { data, isLoading } = useTaxonomy(storeId, mode);
-  const all = data || [];
+  const { data: pageRes, isLoading } = useTaxonomyRows(storeId, mode, search, page, pageSize);
+  const { data: allCats } = useAllCategories(storeId, mode === "categories");
 
-  const filtered = search.trim()
-    ? all.filter((t) => (t.name || "").toLowerCase().includes(search.toLowerCase()) || (t.slug || "").toLowerCase().includes(search.toLowerCase()))
-    : all;
-
-  const total = filtered.length;
+  const items = pageRes?.data || [];
+  const total = pageRes?.count || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const parentPool = mode === "categories" ? (allCats || []) : [];
 
   function handleExport() {
-    const rows = filtered.map((t) => ({
-      woo_id: t.woo_id,
-      name: t.name,
-      slug: t.slug,
-      description: t.description || "",
-      parent_woo_id: t.parent_woo_id || "",
-      products: t.count || 0,
-    }));
-    exportCsv(`${mode}-${storeName || storeId}`, rows);
+    const rows = items;
+    exportCsv(
+      rows,
+      [
+        { key: "woo_id", label: "Woo ID", accessor: (r) => r.woo_id },
+        { key: "name", label: "Name", accessor: (r) => r.name },
+        { key: "slug", label: "Slug", accessor: (r) => r.slug },
+        { key: "description", label: "Description", accessor: (r) => r.description || "" },
+        { key: "parent", label: "Parent Woo ID", accessor: (r) => r.parent_woo_id || "" },
+        { key: "count", label: "Products", accessor: (r) => r.count || 0 },
+      ],
+      `${mode}-${storeName || storeId}`
+    );
   }
 
   return (
@@ -76,7 +77,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => { onSearchChange(e.target.value); setPage(1); }}
             placeholder={`Search ${mode}...`}
             className="h-9 pl-9 bg-background"
           />
@@ -92,7 +93,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
           <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="h-7 px-1.5 rounded border border-border bg-background text-xs">
             {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <span>{(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, total)} of {total}</span>
+          <span>{total === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, total)} of {total}</span>
           <div className="flex items-center gap-0.5">
             <button onClick={() => setPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1} className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-background hover:bg-muted disabled:opacity-40">
               <ChevronRight className="h-3.5 w-3.5 rotate-180" />
@@ -128,14 +129,14 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                   <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                 </TableRow>
               ))
-            ) : pageItems.length === 0 ? (
+            ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
                   {search ? `No ${mode} match "${search}"` : `No ${mode} yet`}
                 </TableCell>
               </TableRow>
             ) : (
-              pageItems.map((t) => {
+              items.map((t) => {
                 const isExpanded = expanded === t.id;
                 return (
                   <Fragment key={t.id}>
@@ -155,7 +156,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                     {isExpanded && (
                       <TableRow className="bg-muted/20 hover:bg-muted/20 border-b border-border">
                         <TableCell colSpan={6} className="p-0">
-                          <TaxonomyRowExpanded taxon={t} mode={mode} allTaxons={all} storeUrl={storeUrl} />
+                          <TaxonomyRowExpanded taxon={t} mode={mode} allTaxons={parentPool} storeUrl={storeUrl} />
                         </TableCell>
                       </TableRow>
                     )}
