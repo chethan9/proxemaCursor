@@ -173,7 +173,7 @@ export default function SitesPage() {
                     <SelectItem value="connected">Connected</SelectItem>
                     <SelectItem value="syncing">Syncing</SelectItem>
                     <SelectItem value="error">Error</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="pending">Setup Incomplete</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">

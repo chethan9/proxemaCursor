@@ -335,32 +335,32 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
               <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
               <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
-              <div className="space-y-1.5">
-                <Label htmlFor="delete-confirm" className="text-xs">
-                  Type <span className="font-mono font-semibold">{store?.name}</span> to confirm deletion
-                </Label>
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirm" className="text-xs">
+                Type <span className="font-mono font-semibold">{store?.name}</span> to confirm deletion
+              </Label>
+              <div className="flex items-center gap-2">
                 <Input
                   id="delete-confirm"
                   value={deleteConfirmation}
                   onChange={(e) => setDeleteConfirmation(e.target.value)}
                   placeholder={store?.name || ""}
-                  className="h-9"
+                  className="h-9 flex-1"
                   disabled={deleting}
                 />
-                <p className="text-[11px] text-muted-foreground">Permanently deletes the site and all synced data. Cannot be undone.</p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="h-9 gap-1.5 shrink-0"
+                  disabled={!store || deleteConfirmation !== store.name || deleting}
+                  onClick={handleDeleteSite}
+                >
+                  {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  <span className="text-xs">{deleting ? "Deleting..." : "Delete Site"}</span>
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="h-9 gap-1.5"
-                disabled={!store || deleteConfirmation !== store.name || deleting}
-                onClick={handleDeleteSite}
-              >
-                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                <span className="text-xs">{deleting ? "Deleting..." : "Delete Site"}</span>
-              </Button>
+              <p className="text-[11px] text-muted-foreground">Permanently deletes the site and all synced data. Cannot be undone.</p>
             </div>
           </div>
         </div>

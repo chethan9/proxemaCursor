@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -50,7 +50,10 @@ export default function ResetPasswordPage() {
     setLoading(false);
     if (error) { setError(error.message); return; }
     setStatus("done");
-    setTimeout(() => router.push("/"), 1500);
+    setTimeout(async () => {
+      await supabase.auth.signOut();
+      router.push("/auth/login");
+    }, 1500);
   };
 
   if (status === "checking") {
@@ -93,7 +96,7 @@ export default function ResetPasswordPage() {
             </div>
           </div>
           <CardTitle>{status === "done" ? "Password updated" : "Set new password"}</CardTitle>
-          <CardDescription>{status === "done" ? "Redirecting..." : "Enter your new password below"}</CardDescription>
+          <CardDescription>{status === "done" ? "Redirecting to sign in..." : "Enter your new password (min 8 characters)"}</CardDescription>
         </CardHeader>
         <CardContent>
           {status === "valid" && (
@@ -101,11 +104,11 @@ export default function ResetPasswordPage() {
               {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
               <div className="space-y-2">
                 <Label htmlFor="password">New password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm">Confirm password</Label>
-                <Input id="confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+                <PasswordInput id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

@@ -91,6 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setUser(session?.user ?? null);
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth/reset-password")) {
+          window.location.replace("/auth/reset-password");
+        }
+        return;
+      }
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
         setUser(session?.user ?? null);
         return;

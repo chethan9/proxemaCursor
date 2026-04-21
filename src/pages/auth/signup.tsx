@@ -6,6 +6,7 @@ import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,7 +35,7 @@ export default function SignupPage() {
     }
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -45,6 +46,11 @@ export default function SignupPage() {
     setLoading(false);
     if (error) {
       setError(error.message);
+      return;
+    }
+    // Supabase returns empty identities[] when email already registered (anti-enumeration)
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setError("An account with this email already exists. Try signing in instead.");
       return;
     }
     setSent(true);
@@ -102,7 +108,7 @@ export default function SignupPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
+              <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
               <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

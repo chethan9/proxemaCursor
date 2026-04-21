@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -86,9 +87,12 @@ export default function ProfileSettings() {
     if (!user || !email.trim() || email === user.email) return;
     setSavingEmail(true);
     try {
-      const { error } = await supabase.auth.updateUser({ email: email.trim() });
+      const { error } = await supabase.auth.updateUser(
+        { email: email.trim() },
+        { emailRedirectTo: `${window.location.origin}/auth/confirm-email` }
+      );
       if (error) throw error;
-      toast({ title: "Confirmation sent", description: "Check your new email." });
+      toast({ title: "Confirmation sent", description: "Check your new email to confirm the change." });
     } catch (err) {
       toast({ title: "Update failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
     } finally {
@@ -98,7 +102,7 @@ export default function ProfileSettings() {
 
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) { toast({ title: "Min 6 characters", variant: "destructive" }); return; }
+    if (newPassword.length < 8) { toast({ title: "Password must be at least 8 characters", variant: "destructive" }); return; }
     if (newPassword !== confirmPassword) { toast({ title: "Passwords don't match", variant: "destructive" }); return; }
     setSavingPassword(true);
     try {
@@ -204,12 +208,12 @@ export default function ProfileSettings() {
               <form onSubmit={handleChangePassword} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="new_password" className="text-xs">New</Label>
-                    <Input id="new_password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="h-9" />
+                    <Label htmlFor="new_password" className="text-xs">New (min 8 chars)</Label>
+                    <PasswordInput id="new_password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="h-9" minLength={8} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="confirm_password" className="text-xs">Confirm</Label>
-                    <Input id="confirm_password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="h-9" />
+                    <PasswordInput id="confirm_password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="h-9" minLength={8} />
                   </div>
                 </div>
                 <div className="flex justify-end">
