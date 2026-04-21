@@ -1,11 +1,11 @@
 ---
 title: Resume onboarding from any exit point
-status: todo
+status: done
 priority: high
 type: feature
-tags: [onboarding, ux, state-recovery]
+tags: [onboarding, resume, ux]
 created_by: agent
-created_at: 2026-04-21T04:05:00Z
+created_at: 2026-04-21T03:50:00Z
 position: 107
 ---
 
