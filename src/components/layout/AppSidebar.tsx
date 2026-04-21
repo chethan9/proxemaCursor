@@ -314,11 +314,20 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
     if (isPanelMode && !collapsed) {
       const isOpen = activePanelId === node.id;
+      const firstChild = children.find((c) => c.type === "item" && c.href);
       return (
         <div key={node.id} className="mb-2 px-2">
           <button
             type="button"
-            onClick={() => setActivePanelId(isOpen ? null : node.id)}
+            onClick={() => {
+              if (isOpen) {
+                setActivePanelId(null);
+              } else if (firstChild?.href) {
+                router.push(firstChild.href);
+              } else {
+                setActivePanelId(node.id);
+              }
+            }}
             aria-expanded={isOpen}
             className={cn(
               "relative w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
