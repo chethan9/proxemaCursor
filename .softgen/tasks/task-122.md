@@ -1,6 +1,6 @@
 ---
 title: Order details page
-status: todo
+status: done
 priority: high
 type: feature
 tags: [orders, details, navigation]
