@@ -199,7 +199,7 @@ function CustomerDetailsInner() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-background p-5">
+      <div className="rounded-lg border border-border bg-white p-5">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
           <div className="flex items-center gap-3">
             <div className="h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-semibold">{getCustomerInitials(customer)}</div>
@@ -227,7 +227,7 @@ function CustomerDetailsInner() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-background overflow-hidden">
+      <div className="rounded-lg border border-border bg-white overflow-hidden">
         <div className="border-b border-border flex">
           <button onClick={() => setTab("details")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "details" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Basic Details</button>
           <button onClick={() => setTab("orders")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "orders" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Orders ({ordersTotal})</button>
@@ -336,10 +336,10 @@ function CustomerDetailsInner() {
 
 function StatTile({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/20 p-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">{icon}<span>{label}</span></div>
-      <div className="text-lg font-semibold mt-1 font-mono tracking-tight">{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+    <div className="rounded-md border border-border bg-white px-2.5 py-2">
+      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{icon}<span>{label}</span></div>
+      <div className="text-sm font-semibold mt-0.5 font-mono tracking-tight">{value}</div>
+      {sub && <div className="text-[9px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -356,7 +356,7 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
   const coupon = Array.isArray(order.coupon_lines) && order.coupon_lines[0]?.code;
 
   return (
-    <div className={`rounded-lg border border-border bg-background overflow-hidden ${expanded ? "ring-1 ring-primary/20" : "hover:border-primary/30"} transition-colors`}>
+    <div className={`rounded-lg border border-border bg-white overflow-hidden ${expanded ? "ring-1 ring-primary/20" : "hover:border-primary/30"} transition-colors`}>
       <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={onToggle}>
         <span className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset ${sc.pill}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />

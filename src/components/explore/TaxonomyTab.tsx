@@ -83,24 +83,6 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
 
   return (
     <div className="space-y-3">
-      {embedHeader && (
-        <div className="flex items-start gap-3">
-          <button
-            onClick={() => router.push(`/sites/${storeId}/home`)}
-            className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="flex items-center gap-2 min-w-0">
-            <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold truncate">{storeName || "Site"}</h1>
-              <div className="text-xs text-muted-foreground truncate">{storeUrl}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
