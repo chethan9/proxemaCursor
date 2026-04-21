@@ -220,10 +220,10 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
                   key={s}
                   disabled={!!saving}
                   onClick={() => handleStatusChange(s)}
-                  className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] capitalize font-medium transition-all ring-1 ${style.bg} ${style.text} ${style.ring} hover:ring-2 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:ring-1`}
+                  className={`w-full inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset transition-all ${style.bg} ${style.text} ${style.ring} hover:ring-2 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:ring-1`}
                 >
                   {isSaving ? (
-                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <span className={`h-1.5 w-1.5 rounded-full ${style.dot} shrink-0`} />
                   )}
