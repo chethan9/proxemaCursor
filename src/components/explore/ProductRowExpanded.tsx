@@ -129,8 +129,8 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
               className="flex items-center gap-2 px-3 h-10 rounded-md text-sm border border-border bg-background hover:bg-muted transition-colors"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              <span>View on store</span>
-              <span className="ml-auto text-muted-foreground">→</span>
+              <span>Open on Store</span>
+              <span className="ml-auto text-muted-foreground">↗</span>
             </a>
           )}
           <button
