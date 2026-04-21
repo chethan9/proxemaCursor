@@ -34,7 +34,7 @@ function HomeInner() {
   const showEmpty = !storeLoading && !isLoading && !hasAnyData;
 
   return (
-    <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
+    <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
       <Button
         variant="outline"
         size="icon"
@@ -77,9 +77,6 @@ function HomeInner() {
             <div className="lg:col-span-6">
               <SalesTrendCard data={data?.daily || []} currency={currency} loading={isLoading} />
             </div>
-            <div className="lg:col-span-4">
-              <OrderStatusDonut data={data?.status_breakdown || []} loading={isLoading} />
-            </div>
             <div className="lg:col-span-2 flex flex-col gap-4">
               <SparklineTile
                 label="Sales"
@@ -101,6 +98,9 @@ function HomeInner() {
                 loading={isLoading}
                 compact
               />
+            </div>
+            <div className="lg:col-span-4">
+              <OrderStatusDonut data={data?.status_breakdown || []} loading={isLoading} />
             </div>
           </div>
 
