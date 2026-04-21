@@ -101,7 +101,7 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
   const addr = [billing.address_1, billing.city, billing.state, billing.country].filter(Boolean).join(", ");
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-6 p-5 border-t border-border">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_180px] gap-6 p-5 border-t border-border">
       <div className="space-y-4 min-w-0">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Last orders</div>
@@ -150,17 +150,17 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
         <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Actions</div>
         <Link
           href={`/sites/${storeId}/customers/${customer.id}`}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-3 h-10 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
-          <Eye className="h-2.5 w-2.5" />
+          <Eye className="h-3.5 w-3.5" />
           <span className="font-medium">View details</span>
           <span className="ml-auto">→</span>
         </Link>
         <Link
           href={`/sites/${storeId}/customers/${customer.id}?edit=1`}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
+          className="flex items-center gap-2 px-3 h-10 rounded-md text-sm border border-border bg-background hover:bg-muted transition-colors"
         >
-          <Pencil className="h-2.5 w-2.5" />
+          <Pencil className="h-3.5 w-3.5" />
           <span>Edit customer</span>
           <span className="ml-auto text-muted-foreground">→</span>
         </Link>
