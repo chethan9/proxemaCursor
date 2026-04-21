@@ -1,6 +1,6 @@
 ---
 title: Developer submenu + simplified menu editor
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sidebar, menu-editor, ux]
