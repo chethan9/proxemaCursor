@@ -71,8 +71,9 @@ export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "/home", defaultGroup: "Main", defaultOrder: 0 },
   { id: "site-orders", defaultLabel: "Orders", defaultIcon: "ShoppingCart", path: "/orders", defaultGroup: "Main", defaultOrder: 1 },
   { id: "site-products", defaultLabel: "Products", defaultIcon: "Package", path: "/products", defaultGroup: "Main", defaultOrder: 2 },
-  { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 3 },
-  { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 4 },
+  { id: "site-customers", defaultLabel: "Customers", defaultIcon: "Users", path: "/customers", defaultGroup: "Main", defaultOrder: 3 },
+  { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 4 },
+  { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 5 },
   { id: "site-bulk-jobs", defaultLabel: "Bulk Jobs", defaultIcon: "Layers", path: "/bulk-jobs", defaultGroup: "Manage", defaultOrder: 0 },
   { id: "site-settings", defaultLabel: "Configuration", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 1 },
 ];
