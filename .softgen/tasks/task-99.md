@@ -61,6 +61,10 @@ Telemetry (nice-to-have, not required): log an `onboarding_step_entered` row whe
 - [x] Dashboard pages (index, projects/[id], clients/[id]): banner listing incomplete sites with per-site resume links — superseded by global `IncompleteOnboardingPrompt` modal (task 100), which covers all pages more broadly
 - [x] Empty state when no incomplete sites — banner hidden entirely (global modal auto-hides when zero incomplete sites)
 - [x] Manual "Switch to manual" path from credentials step stores the keys and advances without needing a fresh OAuth round-trip
+- [x] **Edit + Delete for incomplete sites** in the sites table: show `Resume`, `Edit` (pencil icon), and `Delete` (trash icon) actions on rows with `Setup incomplete` status. Edit opens a dialog pre-filled with name + URL + client so typos can be corrected before resuming OAuth. Delete shows a confirm dialog ("Delete this incomplete setup? This site was never fully connected.") and hard-removes the store row (no WooCommerce cleanup needed since webhooks were never registered).
+- [x] Edit dialog must validate URL format and prevent duplicate URL within the same client (surface inline error if another store row already uses that URL).
+- [x] After edit succeeds, refresh the sites table and keep the "Resume" action pointing at the corrected URL.
+- [x] After delete succeeds, remove the row with a toast "Incomplete setup removed."
 
 ## Acceptance
 
