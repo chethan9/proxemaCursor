@@ -46,7 +46,9 @@ export async function fetchCategories(storeId: string, search: string, page: num
     qs.set("page", String(page + 1));
     qs.set("per_page", String(pageSize));
     if (search.trim()) qs.set("search", search.trim());
-    const res = await fetch(`/api/stores/${storeId}/live/categories?${qs.toString()}`);
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const res = await fetch(`/api/stores/${storeId}/live/categories?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
     return { data: (json.data as Record<string, unknown>[]).map((t) => wooTermToCategory(t, storeId)), count: json.count, live: true };
@@ -65,7 +67,9 @@ export async function fetchTags(storeId: string, search: string, page: number, p
     qs.set("page", String(page + 1));
     qs.set("per_page", String(pageSize));
     if (search.trim()) qs.set("search", search.trim());
-    const res = await fetch(`/api/stores/${storeId}/live/tags?${qs.toString()}`);
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const res = await fetch(`/api/stores/${storeId}/live/tags?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
     return { data: (json.data as Record<string, unknown>[]).map((t) => wooTermToTag(t, storeId)), count: json.count, live: true };

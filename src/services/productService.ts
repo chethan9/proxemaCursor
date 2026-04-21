@@ -86,7 +86,9 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     const orderMap: Record<string, string> = { name: "title", price: "price", woo_date_created: "date", created_at: "date", updated_at: "modified" };
     qs.set("orderby", orderMap[sortField] || "date");
     qs.set("order", sortDirection);
-    const res = await fetch(`/api/stores/${storeId}/live/products?${qs.toString()}`);
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const res = await fetch(`/api/stores/${storeId}/live/products?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
     return { data: (json.data as Record<string, unknown>[]).map((p) => wooProductToRow(p, storeId)), count: json.count, live: true };
