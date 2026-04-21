@@ -39,7 +39,7 @@ export function TaxonomyRowExpanded({ taxon, mode, allTaxons, storeUrl }: { taxo
     setSaving(true);
     try {
       const res = await fetch(`/api/stores/${taxon.store_id}/${endpoint}/${taxon.id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
