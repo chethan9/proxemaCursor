@@ -1,11 +1,11 @@
 ---
 title: Live-API-first rendering with background sync + cache warming
-status: todo
+status: done
 priority: high
 type: feature
-tags: [sync, performance, ux]
+tags: [sync, live-api, cache]
 created_by: agent
-created_at: 2026-04-21T04:10:00Z
+created_at: 2026-04-21T03:52:00Z
 position: 108
 ---
 
