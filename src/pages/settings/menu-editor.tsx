@@ -58,18 +58,22 @@ function rebuildTree(rows: FlatRow[], groups: MenuNode[]): MenuNode[] {
     if (!byGroup.has(r.groupId)) byGroup.set(r.groupId, []);
     byGroup.get(r.groupId)!.push(r);
   }
-  return groups
-    .map((g) => ({
-      ...g,
-      children: (byGroup.get(g.id) || []).map((r) => ({
-        id: r.itemId,
-        type: "item" as const,
-        label: r.label,
-        icon: r.icon,
-        hidden: r.hidden,
-      })),
-    }))
-    .filter((g) => (g.children?.length ?? 0) > 0 || g.id.startsWith("group-custom-"));
+  const result: MenuNode[] = [];
+  // Top-level items first
+  const rootRows = byGroup.get("__root__") || [];
+  for (const r of rootRows) {
+    result.push({ id: r.itemId, type: "item", label: r.label, icon: r.icon, hidden: r.hidden });
+  }
+  // Then groups with their items
+  for (const g of groups) {
+    const children = (byGroup.get(g.id) || []).map((r) => ({
+      id: r.itemId, type: "item" as const, label: r.label, icon: r.icon, hidden: r.hidden,
+    }));
+    if (children.length > 0 || g.id.startsWith("group-custom-")) {
+      result.push({ ...g, children });
+    }
+  }
+  return result;
 }
 
 function MenuEditorInner() {
@@ -180,12 +184,10 @@ function MenuEditorInner() {
   };
 
   const groupOptions = useMemo(() => {
-    const opts = groups.map((g) => ({ value: g.id, label: g.label }));
-    if (rows.some((r) => r.groupId === "__root__")) {
-      opts.unshift({ value: "__root__", label: "(no group)" });
-    }
+    const opts: { value: string; label: string }[] = [{ value: "__root__", label: "(no group)" }];
+    for (const g of groups) opts.push({ value: g.id, label: g.label });
     return opts;
-  }, [groups, rows]);
+  }, [groups]);
 
   const rowsByGroup = useMemo(() => {
     const map = new Map<string, FlatRow[]>();
@@ -197,11 +199,12 @@ function MenuEditorInner() {
   }, [rows]);
 
   const orderedGroups = useMemo(() => {
-    const list: { id: string; label: string; editable: boolean }[] = [];
-    if (rowsByGroup.has("__root__")) list.push({ id: "__root__", label: "Top level", editable: false });
+    const list: { id: string; label: string; editable: boolean }[] = [
+      { id: "__root__", label: "Top level", editable: false },
+    ];
     for (const g of groups) list.push({ id: g.id, label: g.label, editable: g.id.startsWith("group-custom-") });
     return list;
-  }, [groups, rowsByGroup]);
+  }, [groups]);
 
   if (roles.length === 0 && !loading) {
     return <div className="p-6 text-sm text-muted-foreground">No roles found.</div>;
