@@ -111,7 +111,6 @@ export function SiteSidebar({ siteId }: Props) {
   };
 
   const isItemActive = (href: string): boolean => {
-    // Normalize: site-scoped hrefs start with /sites/[id]
     const current = router.asPath.split("?")[0].split("#")[0];
     if (href === `/sites/${siteId}`) return current === href;
     return current === href || current.startsWith(href + "/");

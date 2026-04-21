@@ -68,7 +68,7 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
 export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Developer", "Administration", "System"];
 
 export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
-  { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "", defaultGroup: "Main", defaultOrder: 0 },
+  { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "/home", defaultGroup: "Main", defaultOrder: 0 },
   { id: "site-orders", defaultLabel: "Orders", defaultIcon: "ShoppingCart", path: "/orders", defaultGroup: "Main", defaultOrder: 1 },
   { id: "site-products", defaultLabel: "Products", defaultIcon: "Package", path: "/products", defaultGroup: "Main", defaultOrder: 2 },
   { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 3 },
