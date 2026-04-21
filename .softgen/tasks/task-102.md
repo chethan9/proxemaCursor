@@ -1,6 +1,6 @@
 ---
 title: Remove notification system + sidebar progress ring + completion popup
-status: todo
+status: done
 priority: urgent
 type: chore
 tags: [cleanup, notifications, sync-ui]
@@ -78,17 +78,17 @@ After: site row shows `[icon] todoo` — that's it. Progress info lives only in 
 
 ## Checklist
 
-- [ ] Delete `src/contexts/NotificationProvider.tsx`, `src/components/notifications/` folder, `src/components/layout/NotificationBell.tsx`, `src/components/notifications-admin/` folder, `src/hooks/useUnreadNotifications.ts`, `src/services/notificationAdminService.ts`
-- [ ] Delete `src/pages/admin/notifications.tsx`, `src/pages/api/notifications/` folder, `public/confetti.json`
-- [ ] Unwrap `NotificationProvider` and remove `<NotificationRenderer />` from `src/pages/_app.tsx`
-- [ ] Remove `NotificationBell` import and usage from `src/components/layout/AppSidebar.tsx`
-- [ ] Remove `ProgressRing` function and its usage from `src/components/layout/AppSidebar.tsx`, plus the `activeSyncs` Map lookup feeding `syncPct`
-- [ ] Remove any shimmer-line-under-active-site element in `AppSidebar.tsx` (per task-97) so the sidebar row is a plain icon + name again
-- [ ] In `src/components/SyncProgressBanner.tsx`, delete the background-completion toast effect, the current-site completion detection effect, and unused imports (`useToast`, `supabase`, `useRef`-based snapshot refs)
-- [ ] Move sync-end query invalidation into `src/hooks/queries/useActiveSync.ts` — when the hook detects `running: true → false` (via a `useRef`), call `queryClient.invalidateQueries` for `["orders"]`, `["products"]`, `["taxonomy"]`
-- [ ] Scan and remove any `/admin/notifications` sidebar menu entries in `src/lib/menu-registry.ts` or menu-config defaults
-- [ ] Run `<check_for_errors />` — fix any remaining imports of deleted files
-- [ ] Manual verify: no bell in sidebar; no percentage ring; sync completion silently unmounts banner; tables auto-refresh on completion
+- [x] Delete `src/contexts/NotificationProvider.tsx`, `src/components/notifications/` folder, `src/components/layout/NotificationBell.tsx`, `src/components/notifications-admin/` folder, `src/hooks/useUnreadNotifications.ts`, `src/services/notificationAdminService.ts`
+- [x] Delete `src/pages/admin/notifications.tsx`, `src/pages/api/notifications/` folder, `public/confetti.json`
+- [x] Unwrap `NotificationProvider` and remove `<NotificationRenderer />` from `src/pages/_app.tsx`
+- [x] Remove `NotificationBell` import and usage from `src/components/layout/AppSidebar.tsx`
+- [x] Remove `ProgressRing` function and its usage from `src/components/layout/AppSidebar.tsx`, plus the `activeSyncs` Map lookup feeding `syncPct`
+- [x] Remove any shimmer-line-under-active-site element in `AppSidebar.tsx` (per task-97) so the sidebar row is a plain icon + name again
+- [x] In `src/components/SyncProgressBanner.tsx`, delete the background-completion toast effect, the current-site completion detection effect, and unused imports (`useToast`, `supabase`, `useRef`-based snapshot refs)
+- [x] Move sync-end query invalidation into `src/hooks/queries/useActiveSync.ts` — when the hook detects `running: true → false` (via a `useRef`), call `queryClient.invalidateQueries` for `["orders"]`, `["products"]`, `["taxonomy"]`
+- [x] Scan and remove any `/admin/notifications` sidebar menu entries in `src/lib/menu-registry.ts` or menu-config defaults
+- [x] Run `<check_for_errors />` — fix any remaining imports of deleted files
+- [x] Manual verify: no bell in sidebar; no percentage ring; sync completion silently unmounts banner; tables auto-refresh on completion
 
 ## Acceptance
 
