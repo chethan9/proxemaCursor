@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Users, Store, RefreshCw, Webhook, ArrowRight, Clock, TrendingUp, TrendingDown, CheckCircle2, XCircle, Activity, Heart, AlertTriangle } from "lucide-react";
+import { Store, RefreshCw, ArrowRight, Clock, TrendingUp, TrendingDown, Activity, Heart, AlertTriangle, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useClients } from "@/hooks/queries/useClients";
 import { useStores } from "@/hooks/queries/useStores";
 import { useSyncRuns } from "@/hooks/queries/useSyncRuns";
 import {
@@ -26,25 +25,25 @@ import {
   Line,
 } from "recharts";
 
-interface ActiveSync {
-  store_id: string;
-  store_name: string;
-  aspects: { aspect: string; status: string; records_processed: number | null }[];
-  total_aspects: number;
-  completed_aspects: number;
-  started_at: string;
-}
-
 export default function Dashboard() {
-  const { isSuperAdmin } = useAuth();
-  const { data: clients = [], isLoading: cLoading } = useClients();
+  const router = useRouter();
+  const { user, profile, loading: authLoading } = useAuth();
   const { data: stores = [], isLoading: sLoading } = useStores();
   const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
-  const loading = cLoading || sLoading || rLoading;
 
-  // Calculate stats
+  // Redirect to /projects if user hasn't explicitly chosen "/" as their landing
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+    const pref = profile?.default_landing_path?.trim();
+    if (!pref || pref === "") {
+      router.replace("/projects");
+    }
+  }, [authLoading, user, profile, router]);
+
+  const loading = sLoading || rLoading;
+
   const stats = {
-    clients: clients.length,
     stores: stores.length,
     connectedStores: stores.filter((s) => s.status === "connected").length,
     totalSyncs: syncRuns.length,
@@ -54,11 +53,10 @@ export default function Dashboard() {
     totalRecords: syncRuns.reduce((sum, r) => sum + (r.records_processed || 0), 0),
   };
 
-  const successRate = stats.totalSyncs > 0 
-    ? Math.round((stats.successfulSyncs / stats.totalSyncs) * 100) 
+  const successRate = stats.totalSyncs > 0
+    ? Math.round((stats.successfulSyncs / stats.totalSyncs) * 100)
     : 0;
 
-  // Health stats
   const healthyStores = stores.filter(s => (s.health_score ?? 0) >= 80);
   const attentionStores = stores.filter(s => s.health_score != null && s.health_score < 80)
     .sort((a, b) => (a.health_score ?? 0) - (b.health_score ?? 0));
@@ -66,80 +64,74 @@ export default function Dashboard() {
     ? Math.round(stores.filter(s => s.health_score != null).reduce((sum, s) => sum + (s.health_score ?? 0), 0) / stores.filter(s => s.health_score != null).length)
     : null;
 
-  // Pie chart data for sync status
+  const hasSites = stores.length > 0;
+  const hasSyncs = syncRuns.length > 0;
+
+  // ---------- EMPTY STATE: no sites ----------
+  if (!loading && !hasSites) {
+    return (
+      <AppLayout title="Dashboard">
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
+          <div className="max-w-lg text-center space-y-6">
+            <div className="mx-auto h-20 w-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Sparkles className="h-10 w-10 text-primary" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight">Welcome to Proxima</h1>
+              <p className="text-base text-muted-foreground">
+                Add your first site to start monitoring sync health, activity, and fleet-wide insights.
+              </p>
+            </div>
+            <Button size="lg" asChild>
+              <Link href="/projects">
+                <Plus className="h-4 w-4 mr-2" />
+                Add your first site
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Charts data (only built when we have syncs)
   const syncStatusData = [
     { name: "Successful", value: stats.successfulSyncs, color: "#10b981" },
     { name: "Failed", value: stats.failedSyncs, color: "#ef4444" },
     { name: "Running", value: stats.runningSyncs, color: "#3b82f6" },
   ].filter(d => d.value > 0);
 
-  // Bar chart data for syncs by aspect
   const syncsByAspect = syncRuns.reduce((acc, run) => {
     const aspect = run.aspect || "unknown";
-    if (!acc[aspect]) {
-      acc[aspect] = { aspect, successful: 0, failed: 0 };
-    }
-    if (run.status === "completed") {
-      acc[aspect].successful++;
-    } else if (run.status === "failed") {
-      acc[aspect].failed++;
-    }
+    if (!acc[aspect]) acc[aspect] = { aspect, successful: 0, failed: 0 };
+    if (run.status === "completed") acc[aspect].successful++;
+    else if (run.status === "failed") acc[aspect].failed++;
     return acc;
   }, {} as Record<string, { aspect: string; successful: number; failed: number }>);
-
   const aspectChartData = Object.values(syncsByAspect);
 
-  // Line chart data for syncs over time (last 7 days)
   const syncsByDay = syncRuns.reduce((acc, run) => {
-    const date = new Date(run.started_at || "").toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric" 
-    });
-    if (!acc[date]) {
-      acc[date] = { date, successful: 0, failed: 0 };
-    }
-    if (run.status === "completed") {
-      acc[date].successful++;
-    } else if (run.status === "failed") {
-      acc[date].failed++;
-    }
+    const date = new Date(run.started_at || "").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (!acc[date]) acc[date] = { date, successful: 0, failed: 0 };
+    if (run.status === "completed") acc[date].successful++;
+    else if (run.status === "failed") acc[date].failed++;
     return acc;
   }, {} as Record<string, { date: string; successful: number; failed: number }>);
-
   const timelineData = Object.values(syncsByDay).slice(0, 7).reverse();
 
   return (
     <AppLayout title="Dashboard">
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Overview of your WooCommerce sync operations
-            </p>
-          </div>
-          <div className="text-right text-xs text-muted-foreground font-mono space-y-0.5">
-            <div>v1.0.0</div>
-            <div>Build 2026.04.18</div>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">
+            {hasSyncs ? "Overview of your WooCommerce sync operations" : "Your sites are ready — sync activity will appear here"}
+          </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-          {isSuperAdmin && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.clients}</div>
-                <p className="text-xs text-muted-foreground">Organizations managed</p>
-              </CardContent>
-            </Card>
-          )}
-
+        {/* KPI Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Active Sites</CardTitle>
@@ -151,32 +143,6 @@ export default function Dashboard() {
                 <span className="text-sm font-normal text-muted-foreground">/{stats.stores}</span>
               </div>
               <p className="text-xs text-muted-foreground">Connected WooCommerce stores</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-              {successRate >= 90 ? (
-                <TrendingUp className="h-4 w-4 text-success" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-destructive" />
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{successRate}%</div>
-              <p className="text-xs text-muted-foreground">{stats.successfulSyncs} of {stats.totalSyncs} syncs</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Records Synced</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalRecords.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Total records processed</p>
             </CardContent>
           </Card>
 
@@ -192,9 +158,39 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           )}
+
+          {hasSyncs && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                {successRate >= 90 ? (
+                  <TrendingUp className="h-4 w-4 text-success" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-destructive" />
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{successRate}%</div>
+                <p className="text-xs text-muted-foreground">{stats.successfulSyncs} of {stats.totalSyncs} syncs</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasSyncs && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Records Synced</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalRecords.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">Total records processed</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Attention Row - only when needed */}
+        {/* Attention */}
         {attentionStores.length > 0 && (
           <Card className="border-amber-200 bg-amber-50/30">
             <CardHeader className="pb-2">
@@ -206,7 +202,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="grid gap-2 md:grid-cols-2">
                 {attentionStores.slice(0, 6).map(store => (
-                  <Link key={store.id} href={`/sites/${store.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-100/50 transition-colors">
+                  <Link key={store.id} href={`/sites/${store.id}/home`} className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-100/50 transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
                       <Store className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm font-medium truncate">{store.name}</span>
@@ -221,285 +217,237 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Charts Row */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Sync Status Pie Chart */}
+        {/* PARTIAL STATE: sites but no syncs */}
+        {!loading && hasSites && !hasSyncs && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Sync Status Distribution</CardTitle>
-              <CardDescription>Breakdown of sync run outcomes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="h-[200px] flex items-center justify-center">
-                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : syncStatusData.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No sync data yet</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={syncStatusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {syncStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-              <div className="flex justify-center gap-4 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-success" />
-                  <span className="text-sm text-muted-foreground">Success</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-destructive" />
-                  <span className="text-sm text-muted-foreground">Failed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-primary" />
-                  <span className="text-sm text-muted-foreground">Running</span>
-                </div>
-              </div>
+            <CardContent className="py-12 text-center">
+              <RefreshCw className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+              <h3 className="text-lg font-medium mb-1">No sync data yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Syncs will appear here once they are triggered. You can start one from any site&apos;s page.
+              </p>
             </CardContent>
           </Card>
+        )}
 
-          {/* Syncs by Aspect Bar Chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">Syncs by Data Type</CardTitle>
-              <CardDescription>Successful vs failed syncs per aspect</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="h-[240px] flex items-center justify-center">
-                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : aspectChartData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No sync data yet</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="h-[240px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={aspectChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="aspect"
-                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                        axisLine={{ stroke: "hsl(var(--border))" }}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                        axisLine={false}
-                        tickLine={false}
-                        allowDecimals={false}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "hsl(var(--muted))" }}
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                        }}
-                      />
-                      <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
-                      <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                      <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sync Timeline */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Sync Activity Timeline</CardTitle>
-            <CardDescription>Daily sync outcomes over the past week</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-[200px] flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : timelineData.length === 0 ? (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No sync activity yet</p>
-                </div>
-              </div>
-            ) : (
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={timelineData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="successful" 
-                      name="Successful" 
-                      stroke="#10b981" 
-                      strokeWidth={2}
-                      dot={{ fill: "#10b981" }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="failed" 
-                      name="Failed" 
-                      stroke="#ef4444" 
-                      strokeWidth={2}
-                      dot={{ fill: "#ef4444" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Recent Stores */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Sites</CardTitle>
-                <CardDescription>Latest WooCommerce stores</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/projects">
-                  View all <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
-                  ))}
-                </div>
-              ) : stores.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Store className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No sites yet</p>
-                  <Button variant="link" asChild className="mt-2">
-                    <Link href="/projects">Add your first site</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {stores.slice(0, 5).map((store) => (
-                    <div
-                      key={store.id}
-                      className="flex items-center justify-between p-3 rounded-lg border"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{store.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {store.url}
-                        </p>
-                      </div>
-                      <StatusBadge
-                        variant={getStatusVariant(store.status || "pending")}
-                        pulse={store.status === "syncing"}
-                      >
-                        {store.status}
-                      </StatusBadge>
+        {/* FULL STATE: charts + tables */}
+        {hasSyncs && (
+          <>
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Donut */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Sync Status</CardTitle>
+                  <CardDescription>Breakdown of sync outcomes</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {syncStatusData.length === 0 ? (
+                    <div className="h-[220px] flex items-center justify-center text-muted-foreground">
+                      <p className="text-sm">No sync data yet</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Sync Runs */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Sync Runs</CardTitle>
-                <CardDescription>Latest sync operations</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/sync-runs">
-                  View all <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
-                  ))}
-                </div>
-              ) : syncRuns.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No sync runs yet</p>
-                  <p className="text-sm">Syncs will appear here when triggered</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {syncRuns.slice(0, 5).map((run) => (
-                    <div
-                      key={run.id}
-                      className="flex items-center justify-between p-3 rounded-lg border"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{run.store_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="capitalize">{run.aspect}</span>
-                          <span>•</span>
-                          <Clock className="h-3 w-3" />
-                          <span>
-                            {new Date(run.started_at || "").toLocaleTimeString()}
-                          </span>
+                  ) : (
+                    <>
+                      <div className="h-[220px] relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={syncStatusData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {syncStatusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-3xl font-bold tabular-nums">{successRate}%</span>
+                          <span className="text-xs text-muted-foreground">success rate</span>
                         </div>
                       </div>
-                      <StatusBadge
-                        variant={getStatusVariant(run.status || "running")}
-                        pulse={run.status === "running"}
-                      >
-                        {run.status}
-                      </StatusBadge>
+                      <div className="mt-4 space-y-1.5">
+                        {syncStatusData.map((d) => (
+                          <div key={d.name} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                              <span className="text-muted-foreground">{d.name}</span>
+                            </div>
+                            <span className="font-medium tabular-nums">{d.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Bar Chart */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg">Syncs by Data Type</CardTitle>
+                  <CardDescription>Successful vs failed syncs per aspect</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {aspectChartData.length === 0 ? (
+                    <div className="h-[260px] flex items-center justify-center text-muted-foreground">
+                      <p className="text-sm">No sync data yet</p>
                     </div>
-                  ))}
-                </div>
+                  ) : (
+                    <div className="h-[260px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={aspectChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barCategoryGap="20%">
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                          <XAxis
+                            dataKey="aspect"
+                            tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                            axisLine={{ stroke: "hsl(var(--border))" }}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                            axisLine={false}
+                            tickLine={false}
+                            allowDecimals={false}
+                          />
+                          <Tooltip
+                            cursor={{ fill: "hsl(var(--muted))" }}
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--background))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                            }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
+                          <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                          <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Timeline */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Sync Activity Timeline</CardTitle>
+                <CardDescription>Daily sync outcomes over the past week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {timelineData.length === 0 ? (
+                  <div className="h-[220px] flex items-center justify-center text-muted-foreground">
+                    <p className="text-sm">No sync activity yet</p>
+                  </div>
+                ) : (
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={timelineData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} tickLine={false} />
+                        <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+                        <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
+                        <Line type="monotone" dataKey="successful" name="Successful" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
+                        <Line type="monotone" dataKey="failed" name="Failed" stroke="#ef4444" strokeWidth={2} dot={{ fill: "#ef4444", r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {stores.length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Recent Sites</CardTitle>
+                      <CardDescription>Latest WooCommerce stores</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/projects">
+                        View all <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {stores.slice(0, 5).map((store) => (
+                        <Link
+                          key={store.id}
+                          href={`/sites/${store.id}/home`}
+                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{store.name}</p>
+                            <p className="text-sm text-muted-foreground truncate">{store.url}</p>
+                          </div>
+                          <StatusBadge
+                            variant={getStatusVariant(store.status || "pending")}
+                            pulse={store.status === "syncing"}
+                          >
+                            {store.status}
+                          </StatusBadge>
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
-        </div>
+
+              {syncRuns.length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Recent Sync Runs</CardTitle>
+                      <CardDescription>Latest sync operations</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/sync-runs">
+                        View all <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {syncRuns.slice(0, 5).map((run) => (
+                        <div
+                          key={run.id}
+                          className="flex items-center justify-between p-3 rounded-lg border"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{run.store_name}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span className="capitalize">{run.aspect}</span>
+                              <span>•</span>
+                              <Clock className="h-3 w-3" />
+                              <span>{new Date(run.started_at || "").toLocaleTimeString()}</span>
+                            </div>
+                          </div>
+                          <StatusBadge
+                            variant={getStatusVariant(run.status || "running")}
+                            pulse={run.status === "running"}
+                          >
+                            {run.status}
+                          </StatusBadge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );

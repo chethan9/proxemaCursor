@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Store, ExternalLink, Heart, Pencil, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, Rocket, PlayCircle, AlertTriangle, Trash2 } from "lucide-react";
+import { Store, ExternalLink, Heart, Pencil, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, Rocket, PlayCircle, AlertTriangle, Trash2, BarChart3 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import { getStore, type StoreWithClient } from "@/services/storeService";
@@ -92,8 +93,16 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
     }
   };
 
+  const handleRowKey = (e: React.KeyboardEvent, store: StoreWithClient, isIncomplete: boolean) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (isIncomplete) router.push(`/sites/connect/${store.id}?resume=1`);
+      else router.push(`/sites/${store.id}/home`);
+    }
+  };
+
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -102,7 +111,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
             <TableHead>Status</TableHead>
             <TableHead>Health</TableHead>
             <TableHead>Last Sync</TableHead>
-            <TableHead className="w-[180px]"></TableHead>
+            <TableHead className="w-[200px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -143,8 +152,10 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                 <>
                   <TableRow
                     key={store.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => isIncomplete ? router.push(`/sites/connect/${store.id}?resume=1`) : router.push(`/projects/${store.id}`)}
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    tabIndex={0}
+                    onClick={() => isIncomplete ? router.push(`/sites/connect/${store.id}?resume=1`) : router.push(`/sites/${store.id}/home`)}
+                    onKeyDown={(e) => handleRowKey(e, store, isIncomplete)}
                     onMouseEnter={() => prefetchStore(store.id)}
                   >
                     <TableCell>
@@ -224,6 +235,19 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                           </>
                         ) : (
                           <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => { e.stopPropagation(); router.push(`/projects/${store.id}`); }}
+                                >
+                                  <BarChart3 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View reports</TooltipContent>
+                            </Tooltip>
                             <Button variant="ghost" size="sm" className="h-8 px-2 gap-1.5"
                               onClick={(e) => { e.stopPropagation(); onEdit(store); }}>
                               <Pencil className="h-3.5 w-3.5" />
@@ -300,6 +324,6 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </TooltipProvider>
   );
 }

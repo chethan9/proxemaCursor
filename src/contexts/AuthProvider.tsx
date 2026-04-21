@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { hasPermission, type Permission } from "@/lib/permissions";
+import { clearPersistedCache } from "@/lib/query-persistence";
 
 export const authCleanupCallbacks = new Set<() => void>();
 
@@ -144,8 +145,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {}
     if (typeof window !== "undefined") {
       try {
+        clearPersistedCache();
         Object.keys(window.localStorage).forEach((k) => {
-          if (k.startsWith("sb-") || k.includes("supabase")) {
+          if (
+            k.startsWith("sb-") ||
+            k.includes("supabase") ||
+            k.startsWith("sidebar-") ||
+            k.startsWith("woosync-query-cache")
+          ) {
             window.localStorage.removeItem(k);
           }
         });

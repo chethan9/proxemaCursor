@@ -11,7 +11,29 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+
+async function resolveLandingPath(userId: string): Promise<string> {
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("default_landing_path")
+    .eq("id", userId)
+    .maybeSingle();
+  const pref = prof?.default_landing_path?.trim();
+  if (!pref) return "/projects";
+  // Validate site-scoped paths (site may have been deleted)
+  const siteMatch = pref.match(/^\/sites\/([^/?#]+)/);
+  if (siteMatch) {
+    const siteId = siteMatch[1];
+    const { data: site } = await supabase.from("stores").select("id").eq("id", siteId).maybeSingle();
+    if (!site) {
+      // Clear stale preference and fall back
+      try { await supabase.from("profiles").update({ default_landing_path: null }).eq("id", userId); } catch {}
+      return "/projects";
+    }
+  }
+  return pref;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,8 +47,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      const redirect = typeof router.query.redirect === "string" ? router.query.redirect : "/";
-      router.replace(redirect);
+      const redirect = typeof router.query.redirect === "string" ? router.query.redirect : null;
+      if (redirect) {
+        router.replace(redirect);
+      } else {
+        resolveLandingPath(user.id).then((dest) => router.replace(dest));
+      }
     }
   }, [user, authLoading, router]);
 
@@ -53,16 +79,12 @@ export default function LoginPage() {
       setError(error.message);
       return;
     }
-    let dest = typeof router.query.redirect === "string" ? router.query.redirect : "/";
-    if (data.user && dest === "/") {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("default_landing_path")
-        .eq("id", data.user.id)
-        .maybeSingle();
-      if (prof?.default_landing_path) dest = prof.default_landing_path;
+    const redirect = typeof router.query.redirect === "string" ? router.query.redirect : null;
+    let dest = redirect;
+    if (!dest && data.user) {
+      dest = await resolveLandingPath(data.user.id);
     }
-    router.replace(dest);
+    router.replace(dest || "/projects");
   };
 
   return (

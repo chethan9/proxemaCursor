@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
+import { authCleanupCallbacks } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -29,6 +30,13 @@ import { useStores } from "@/hooks/queries/useStores";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
+
+if (typeof window !== "undefined") {
+  authCleanupCallbacks.add(() => {
+    cachedSites = null;
+    cachedMenuByRole.clear();
+  });
+}
 
 const SIDEBAR_SITE_CAP = 5;
 
