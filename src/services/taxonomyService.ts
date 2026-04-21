@@ -1,10 +1,82 @@
-<![CDATA[import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integ
-...
-error } = await res.json().catch(() => ({ error: "Delete failed" }));
-    throw new Error(error);
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
+type TagRow = Database["public"]["Tables"]["tags"]["Row"];
+
+export type TaxonomySortField = "name" | "count" | "created_at";
+export type TaxonomySortDirection = "asc" | "desc";
+
+export async function fetchCategories(
+  storeId: string,
+  search: string,
+  page: number,
+  pageSize: number,
+  sortField: TaxonomySortField = "name",
+  sortDirection: TaxonomySortDirection = "asc",
+): Promise<{ data: CategoryRow[]; count: number }> {
+  let q = supabase.from("categories").select("*", { count: "exact" }).eq("store_id", storeId);
+  if (search && search.trim()) {
+    const s = search.trim();
+    q = q.or(`name.ilike.%${s}%,slug.ilike.%${s}%`);
+  }
+  q = q.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
+  q = q.range(page * pageSize, (page + 1) * pageSize - 1);
+  const { data, count, error } = await q;
+  if (error) throw error;
+  return { data: (data || []) as CategoryRow[], count: count || 0 };
+}
+
+export async function fetchAllCategories(storeId: string): Promise<CategoryRow[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data || []) as CategoryRow[];
+}
+
+export async function fetchTags(
+  storeId: string,
+  search: string,
+  page: number,
+  pageSize: number,
+  sortField: TaxonomySortField = "name",
+  sortDirection: TaxonomySortDirection = "asc",
+): Promise<{ data: TagRow[]; count: number }> {
+  let q = supabase.from("tags").select("*", { count: "exact" }).eq("store_id", storeId);
+  if (search && search.trim()) {
+    const s = search.trim();
+    q = q.or(`name.ilike.%${s}%,slug.ilike.%${s}%`);
+  }
+  q = q.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
+  q = q.range(page * pageSize, (page + 1) * pageSize - 1);
+  const { data, count, error } = await q;
+  if (error) throw error;
+  return { data: (data || []) as TagRow[], count: count || 0 };
+}
+
+export async function createCategory(storeId: string, payload: { name: string; slug?: string; description?: string; parent?: number }): Promise<void> {
+  const res = await fetch(`/api/stores/${storeId}/categories/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Create failed" }));
+    throw new Error(err.error || "Create failed");
   }
 }
-]]>
 
-[Tool result trimmed: kept first 100 chars and last 100 chars of 5198 chars.]
+export async function createTag(storeId: string, payload: { name: string; slug?: string; description?: string }): Promise<void> {
+  const res = await fetch(`/api/stores/${storeId}/tags/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Create failed" }));
+    throw new Error(err.error || "Create failed");
+  }
+}
