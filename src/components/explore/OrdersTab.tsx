@@ -319,6 +319,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
   });
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   return (
     <div className="space-y-3">
       {embedHeader && (
