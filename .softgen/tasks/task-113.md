@@ -1,6 +1,6 @@
 ---
 title: Two-level sidebar with site-specific inner panel
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sidebar, navigation, ux]

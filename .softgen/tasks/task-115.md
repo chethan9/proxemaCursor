@@ -1,6 +1,6 @@
 ---
 title: Menu editor — Inline/Panel toggle button per group
-status: todo
+status: done
 priority: high
 type: feature
 tags: [menu-editor, sidebar]
