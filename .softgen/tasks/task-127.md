@@ -1,11 +1,11 @@
 ---
 title: Customers list page revamp to explorer standard
-status: todo
+status: done
 priority: high
 type: feature
-tags: [customers, list, ui-consistency, explorer]
+tags: [customers, list, ui-consistency]
 created_by: agent
-created_at: 2026-04-21T20:00:00Z
+created_at: 2026-04-21T19:30:00Z
 position: 127
 ---
 
