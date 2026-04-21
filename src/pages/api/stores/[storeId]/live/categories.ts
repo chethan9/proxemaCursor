@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerSupabase } from "@/integrations/supabase/client";
+import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooLiveFetch } from "@/lib/woo-live-fetch";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -7,11 +7,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { storeId } = req.query;
   if (typeof storeId !== "string") return res.status(400).json({ error: "Invalid storeId" });
 
-  const supabase = createServerSupabase(req, res);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+  const { data: userRes } = await supabaseAdmin.auth.getUser(token);
+  if (!userRes.user) return res.status(401).json({ error: "Unauthorized" });
 
-  const { data: store } = await supabase.from("stores").select("id").eq("id", storeId).maybeSingle();
+  const { data: store } = await supabaseAdmin.from("stores").select("id").eq("id", storeId).maybeSingle();
   if (!store) return res.status(404).json({ error: "Store not found" });
 
   try {
