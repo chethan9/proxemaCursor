@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown } from "lucide-react";
+import { Zap, LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
 
@@ -289,10 +289,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const GroupIcon = resolveIcon(node.icon);
     const hasActiveChild = children.some((c) => c.href === router.pathname);
     const isExpanded = !!groupExpanded[node.id];
+    const isPanelMode = node.displayMode === "panel";
 
-    if (collapsed) {
+    if (collapsed || isPanelMode) {
       return (
-        <div key={node.id} className="mb-2 px-1.5">
+        <div key={node.id} className={cn("mb-2", collapsed ? "px-1.5" : "px-2")}>
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -301,15 +302,24 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     type="button"
                     aria-label={node.label}
                     className={cn(
-                      "relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
-                      hasActiveChild ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
+                      "relative flex items-center rounded-md transition-colors",
+                      collapsed
+                        ? "justify-center h-9 w-9 mx-auto"
+                        : "w-full gap-2.5 px-2.5 py-1.5 text-[13px] font-medium",
+                      hasActiveChild ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                     )}
                   >
-                    <GroupIcon className="h-4 w-4" style={node.iconColor ? { color: node.iconColor } : undefined} />
+                    <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
+                    {!collapsed && (
+                      <>
+                        <span className="truncate flex-1 text-left">{node.label}</span>
+                        <PanelRight className="h-3 w-3 shrink-0 opacity-60" />
+                      </>
+                    )}
                   </button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="z-[100]">{node.label}</TooltipContent>
+              {collapsed && <TooltipContent side="right" sideOffset={8} className="z-[100]">{node.label}</TooltipContent>}
             </Tooltip>
             <PopoverContent side="right" align="start" sideOffset={8} className="w-56 p-1 z-[100]">
               <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{node.label}</div>
