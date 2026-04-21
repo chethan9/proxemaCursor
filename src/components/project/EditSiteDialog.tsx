@@ -49,7 +49,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
   const [disconnecting, setDisconnecting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [form, setForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "" });
+  const [form, setForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "", timezone: "" });
 
   const wpConnected = !!(store?.wp_username && store?.wp_app_password);
   const wcConnected = !!store?.consumer_key;
@@ -62,6 +62,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
         consumer_key: store.consumer_key || "",
         consumer_secret: store.consumer_secret || "",
         client_id: store.client_id || "",
+        timezone: store.timezone || "",
       });
       setUrlError(null);
       setShowSecrets(false);
@@ -101,6 +102,7 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
           consumer_key: form.consumer_key.trim() || null,
           consumer_secret: form.consumer_secret.trim() || null,
           client_id: form.client_id || null,
+          timezone: form.timezone.trim() || null,
         },
       });
       onSaved?.();
@@ -211,6 +213,49 @@ export function EditSiteDialog({ open, onOpenChange, store, clients, isSuperAdmi
               <Input id="edit-url" value={form.url} onChange={(e) => { setForm({ ...form, url: e.target.value }); setUrlError(null); }} className={urlError ? "border-destructive" : ""} />
               {urlError && <p className="text-sm text-destructive">{urlError}</p>}
               <p className="text-xs text-muted-foreground">Changing the URL may break connections — you may need to re-authorize.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-tz">Store Timezone</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="edit-tz"
+                  value={form.timezone}
+                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                  placeholder="e.g. Asia/Kuwait"
+                  className="font-mono text-xs"
+                  list="tz-suggestions"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-xs shrink-0"
+                  onClick={() => {
+                    try {
+                      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                      setForm((f) => ({ ...f, timezone: tz }));
+                    } catch { /* ignore */ }
+                  }}
+                  title="Use your browser timezone"
+                >
+                  Use mine
+                </Button>
+              </div>
+              <datalist id="tz-suggestions">
+                <option value="Asia/Kuwait" />
+                <option value="Asia/Dubai" />
+                <option value="Asia/Riyadh" />
+                <option value="Asia/Qatar" />
+                <option value="Asia/Bahrain" />
+                <option value="Europe/London" />
+                <option value="Europe/Paris" />
+                <option value="America/New_York" />
+                <option value="America/Los_Angeles" />
+                <option value="UTC" />
+              </datalist>
+              <p className="text-xs text-muted-foreground">
+                IANA timezone name — dates across the app will render in this zone so they match the storefront. Leave blank to use the viewer&apos;s browser timezone.
+              </p>
             </div>
           </div>
 

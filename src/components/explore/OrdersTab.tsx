@@ -54,6 +54,8 @@ import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
+import { useStore } from "@/hooks/queries/useStores";
+import { formatStoreDateTime } from "@/lib/format-store-date";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -111,6 +113,8 @@ const STATUS_COLORS: Record<string, { wrap: string; dot: string }> = {
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
+  const { data: store } = useStore(storeId);
+  const storeTz = store?.timezone ?? null;
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -930,13 +934,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{cv || "—"}</TableCell>;
                             }
                             if (c.key === "date_created") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_created ? new Date(o.date_created).toLocaleString() : "—"}</TableCell>;
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_created ? formatStoreDateTime(o.date_created, storeTz) : "—"}</TableCell>;
                             }
                             if (c.key === "date_modified") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_modified ? new Date(o.date_modified).toLocaleString() : "—"}</TableCell>;
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_modified ? formatStoreDateTime(o.date_modified, storeTz) : "—"}</TableCell>;
                             }
                             if (c.key === "synced_at") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.synced_at ? new Date(o.synced_at).toLocaleString() : "—"}</TableCell>;
+                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.synced_at ? formatStoreDateTime(o.synced_at, storeTz) : "—"}</TableCell>;
                             }
                             return <TableCell key={c.key}>—</TableCell>;
                           })}
