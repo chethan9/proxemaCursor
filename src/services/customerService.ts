@@ -68,7 +68,7 @@ export async function fetchAllOrdersForCustomer(storeId: string, wooCustomerId: 
   if (!wooCustomerId) return { data: [], count: 0 };
   const { data, count, error } = await supabase
     .from("orders")
-    .select("id,woo_id,order_number,status,total,currency,date_created,payment_method_title,line_items,shipping_total,discount_total,total_tax,shipping_city,shipping_country,coupon_lines", { count: "exact" })
+    .select("id,woo_id,order_number,status,total,currency,date_created,payment_method_title,line_items,shipping_total,discount_total,total_tax,shipping,coupon_lines,shipping_lines", { count: "exact" })
     .eq("store_id", storeId)
     .eq("customer_id", wooCustomerId)
     .order("date_created", { ascending: false })
