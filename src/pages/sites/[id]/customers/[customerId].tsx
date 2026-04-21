@@ -74,7 +74,10 @@ function CustomerDetailsInner() {
   const customerId = router.query.customerId as string | undefined;
   const { data: customer, isLoading } = useCustomer(customerId);
   const [tab, setTab] = useState<"details" | "orders">("details");
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("edit") === "1";
+  });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [ordersPage, setOrdersPage] = useState(0);
