@@ -35,11 +35,12 @@ function HomeInner() {
   if (storeLoading) return <SiteLoadingSkeleton />;
 
   return (
-    <div className="p-6 space-y-5 max-w-[1600px] mx-auto relative">
+    <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="absolute top-4 right-4 h-8 w-8 text-muted-foreground hover:text-foreground z-10"
+        className="fixed bottom-20 right-6 h-10 w-10 rounded-full shadow-lg bg-background hover:shadow-xl"
+        style={{ zIndex: 9998 }}
         onClick={() => qc.invalidateQueries({ queryKey: ["site-home-stats", storeId] })}
         disabled={isFetching}
         title="Refresh"
