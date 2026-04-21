@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1253,48 +1253,72 @@ export type Database = {
       sync_runs: {
         Row: {
           aspect: string
+          attempt: number
           completed_at: string | null
           created_at: string | null
           error_message: string | null
           estimated_total: number | null
           id: string
           is_initial: boolean | null
+          next_retry_at: string | null
           processed_total: number | null
           records_created: number | null
           records_processed: number | null
           records_updated: number | null
+          request_method: string | null
+          request_params: Json | null
+          request_url: string | null
+          response_body: string | null
+          response_headers: Json | null
+          response_status: number | null
           started_at: string | null
           status: string | null
           store_id: string
         }
         Insert: {
           aspect: string
+          attempt?: number
           completed_at?: string | null
           created_at?: string | null
           error_message?: string | null
           estimated_total?: number | null
           id?: string
           is_initial?: boolean | null
+          next_retry_at?: string | null
           processed_total?: number | null
           records_created?: number | null
           records_processed?: number | null
           records_updated?: number | null
+          request_method?: string | null
+          request_params?: Json | null
+          request_url?: string | null
+          response_body?: string | null
+          response_headers?: Json | null
+          response_status?: number | null
           started_at?: string | null
           status?: string | null
           store_id: string
         }
         Update: {
           aspect?: string
+          attempt?: number
           completed_at?: string | null
           created_at?: string | null
           error_message?: string | null
           estimated_total?: number | null
           id?: string
           is_initial?: boolean | null
+          next_retry_at?: string | null
           processed_total?: number | null
           records_created?: number | null
           records_processed?: number | null
           records_updated?: number | null
+          request_method?: string | null
+          request_params?: Json | null
+          request_url?: string | null
+          response_body?: string | null
+          response_headers?: Json | null
+          response_status?: number | null
           started_at?: string | null
           status?: string | null
           store_id?: string

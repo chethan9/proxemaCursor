@@ -1,9 +1,9 @@
 ---
 title: Live WooCommerce fallback during initial sync
-status: todo
+status: done
 priority: high
 type: feature
-tags: [sync, ux, performance]
+tags: [sync, ux, woocommerce]
 created_by: agent
 created_at: 2026-04-21T03:00:00Z
 position: 103
