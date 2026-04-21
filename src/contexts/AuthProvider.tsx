@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { hasPermission, type Permission } from "@/lib/permissions";
 
+export const authCleanupCallbacks = new Set<() => void>();
+
 export interface Profile {
   id: string;
   email: string | null;
@@ -129,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setRole(null);
+    authCleanupCallbacks.forEach((cb) => { try { cb(); } catch {} });
     try {
       await supabase.auth.signOut({ scope: "local" });
     } catch {}

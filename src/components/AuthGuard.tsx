@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/contexts/AuthProvider";
+import { useAuth, authCleanupCallbacks } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
@@ -12,6 +12,9 @@ interface AuthGuardProps {
 }
 
 const passedGuards = new Set<string>();
+if (typeof window !== "undefined") {
+  authCleanupCallbacks.add(() => passedGuards.clear());
+}
 
 function guardKey(permission?: Permission, superAdmin?: boolean) {
   return `${permission || "_"}::${superAdmin ? "sa" : "_"}`;
@@ -19,7 +22,7 @@ function guardKey(permission?: Permission, superAdmin?: boolean) {
 
 export function AuthGuard({ children, requirePermission, requireSuperAdmin }: AuthGuardProps) {
   const router = useRouter();
-  const { user, profile, loading, can, isSuperAdmin } = useAuth();
+  const { user, profile, loading, can, isSuperAdmin, signOut } = useAuth();
 
   const userId = user?.id ?? null;
   const profileActive = profile ? profile.is_active : true;
@@ -43,7 +46,6 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
       return;
     }
     if (alreadyPassed) {
-      // Silent re-check in background; don't block render
       if (!userId || (profile && !profile.is_active) || (requireSuperAdmin && !isSuperAdmin) || (requirePermission && !can(requirePermission))) {
         passedGuards.delete(key);
         (async () => {
@@ -54,8 +56,7 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
             return;
           }
           if (profile && !profile.is_active) {
-            await supabase.auth.signOut();
-            router.replace("/auth/login?error=inactive");
+            await signOut();
             return;
           }
           router.replace("/?error=forbidden");
@@ -71,15 +72,14 @@ export function AuthGuard({ children, requirePermission, requireSuperAdmin }: Au
         return;
       }
       if (profile && !profile.is_active) {
-        await supabase.auth.signOut();
-        router.replace("/auth/login?error=inactive");
+        await signOut();
         return;
       }
       if (requireSuperAdmin && !isSuperAdmin) { router.replace("/?error=forbidden"); return; }
       if (requirePermission && !can(requirePermission)) { router.replace("/?error=forbidden"); return; }
       setChecking(false);
     })();
-  }, [loading, userId, profile, profileActive, requirePermission, requireSuperAdmin, isSuperAdmin, router, can, currentlyPasses, alreadyPassed, key, checking]);
+  }, [loading, userId, profile, profileActive, requirePermission, requireSuperAdmin, isSuperAdmin, router, can, currentlyPasses, alreadyPassed, key, checking, signOut]);
 
   if (!alreadyPassed && (loading || checking)) {
     return (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
@@ -15,9 +16,15 @@ export default function ConfirmEmailPage() {
       setStatus("error");
       return;
     }
-    setStatus("success");
-    const t = setTimeout(() => router.push("/"), 2000);
-    return () => clearTimeout(t);
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace("/");
+        return;
+      }
+      setStatus("success");
+      setTimeout(() => router.push("/auth/login"), 2000);
+    })();
   }, [router]);
 
   return (
