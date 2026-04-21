@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1133,6 +1133,7 @@ export type Database = {
           consumer_key: string | null
           consumer_secret: string | null
           created_at: string | null
+          currency: string | null
           health_checked_at: string | null
           health_issues: Json | null
           health_score: number | null
@@ -1158,6 +1159,7 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret?: string | null
           created_at?: string | null
+          currency?: string | null
           health_checked_at?: string | null
           health_issues?: Json | null
           health_score?: number | null
@@ -1183,6 +1185,7 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret?: string | null
           created_at?: string | null
+          currency?: string | null
           health_checked_at?: string | null
           health_issues?: Json | null
           health_score?: number | null
