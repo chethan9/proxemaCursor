@@ -223,6 +223,13 @@ See `JOURNAL.md` — track if/when these get split.
 - `.softgen/project.md` — project brief (vision, design, features)
 - `docs/JOURNAL.md` — append-only change log (agent writes here on every meaningful change)
 
+## Reference Docs
+
+- **[PAGE_CONVENTIONS.md](./PAGE_CONVENTIONS.md)** — Page structure, routing, layout
+- **[UI_REFERENCE.md](./UI_REFERENCE.md)** — Explorer page UI spec (toolbar, table, expanded row, pill actions). **Use for any new data-listing page.**
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Deployment workflow
+- **[JOURNAL.md](./JOURNAL.md)** — Decision log
+
 ## Quick navigation by intent
 
 - **Add a new data type to mirror** → migration → service → query hook → data-explorer tab → v1 API route → webhook handler topic
