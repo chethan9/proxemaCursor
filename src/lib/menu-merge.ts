@@ -12,6 +12,7 @@ export interface ResolvedMenuNode {
   icon: string;
   iconColor?: string | null;
   href?: string;
+  displayMode?: "inline" | "panel";
   permission?: Permission;
   superAdminOnly?: boolean;
   children?: ResolvedMenuNode[];
@@ -134,7 +135,7 @@ export function resolveForSidebar(
       } else {
         const children = depth < 1 ? resolve(n.children || [], depth + 1) : [];
         if (children.length === 0) continue;
-        out.push({ id: n.id, type: "group", label: n.label, icon: n.icon, iconColor: n.iconColor, children });
+        out.push({ id: n.id, type: "group", label: n.label, icon: n.icon, iconColor: n.iconColor, displayMode: n.displayMode, children });
       }
     }
     return out;
@@ -159,7 +160,7 @@ export function resolveForSiteSidebar(
       } else {
         const children = depth < 1 ? resolve(n.children || [], depth + 1) : [];
         if (children.length === 0) continue;
-        out.push({ id: n.id, type: "group", label: n.label, icon: n.icon, iconColor: n.iconColor, children });
+        out.push({ id: n.id, type: "group", label: n.label, icon: n.icon, iconColor: n.iconColor, displayMode: n.displayMode, children });
       }
     }
     return out;
