@@ -12,7 +12,7 @@ type Flow = "signup" | "email_change" | "unknown";
 
 export default function ConfirmEmailPage() {
   const router = useRouter();
-  const { branding } = useBranding();
+  const branding = useBranding();
   const [status, setStatus] = useState<Status>("loading");
   const [flow, setFlow] = useState<Flow>("unknown");
   const [email, setEmail] = useState<string>("");
@@ -42,8 +42,7 @@ export default function ConfirmEmailPage() {
       const user = data.session?.user;
       setEmail(user?.email || "");
 
-      const isEmailChange = detectedType === "email_change" || detectedType === "email"
-        || (user?.email_change === null && !!user?.email);
+      const isEmailChange = detectedType === "email_change" || detectedType === "email";
 
       if (user && (isEmailChange || detectedType === "")) {
         setFlow(isEmailChange ? "email_change" : "signup");
