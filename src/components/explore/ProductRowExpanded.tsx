@@ -115,9 +115,9 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Actions</div>
           <Link
             href={`/sites/${product.store_id}/products/edit/${product.id}`}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-2 px-3 h-10 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            <Pencil className="h-2.5 w-2.5" />
+            <Pencil className="h-3.5 w-3.5" />
             <span className="font-medium">Edit product</span>
             <span className="ml-auto">→</span>
           </Link>
@@ -126,18 +126,18 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
               href={permalink}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
+              className="flex items-center gap-2 px-3 h-10 rounded-md text-sm border border-border bg-background hover:bg-muted transition-colors"
             >
-              <ExternalLink className="h-2.5 w-2.5" />
+              <ExternalLink className="h-3.5 w-3.5" />
               <span>View on store</span>
               <span className="ml-auto text-muted-foreground">→</span>
             </a>
           )}
           <button
             disabled
-            className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background text-muted-foreground opacity-60 cursor-not-allowed"
+            className="w-full flex items-center gap-2 px-3 h-10 rounded-md text-sm border border-border bg-background text-muted-foreground opacity-60 cursor-not-allowed"
           >
-            <BarChart3 className="h-2.5 w-2.5" />
+            <BarChart3 className="h-3.5 w-3.5" />
             <span>Statistics</span>
             <span className="ml-auto">→</span>
           </button>
