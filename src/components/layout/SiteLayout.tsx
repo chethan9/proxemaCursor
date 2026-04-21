@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/hooks/queries/useStores";
 import { useToast } from "@/hooks/use-toast";
 import { InitialSyncBanner } from "@/components/site/InitialSyncBanner";
+import { useSyncCompletionInvalidation } from "@/hooks/queries/useSyncCompletionInvalidation";
 
 type Props = { children: React.ReactNode };
 
@@ -15,6 +16,7 @@ export function SiteLayout({ children }: Props) {
   const { data: store, isLoading, isFetched } = useStore(siteId);
   const { toast } = useToast();
   const redirectedRef = useRef(false);
+  useSyncCompletionInvalidation(siteId);
 
   useEffect(() => {
     if (!siteId) return;

@@ -77,5 +77,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   console.log("[wp-callback] SUCCESS — wp_username saved:", updated.wp_username, "for store:", updated.id);
+
+  // Eager sync: kick off full sync pipeline while user is still on the "connecting…" screen.
+  const protocol = (req.headers["x-forwarded-proto"] as string) || "https";
+  const host = req.headers.host;
+  if (host) {
+    const base = `${protocol}://${host}`;
+    fetch(`${base}/api/stores/${storeId}/sync-start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_initial: false }),
+    }).catch((e) => console.error("[wp-callback] eager sync trigger failed:", e));
+  }
+
   return res.redirect(302, buildRedirect("ok"));
 }

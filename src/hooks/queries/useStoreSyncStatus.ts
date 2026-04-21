@@ -14,6 +14,10 @@ export function useStoreSyncStatus(storeId: string | undefined) {
       return { initialSyncDone: !!data?.initial_sync_completed_at };
     },
     enabled: !!storeId,
-    staleTime: 30_000,
+    staleTime: 5_000,
+    refetchInterval: (query) => {
+      const data = query.state.data as { initialSyncDone: boolean } | undefined;
+      return data && !data.initialSyncDone ? 4000 : false;
+    },
   });
 }

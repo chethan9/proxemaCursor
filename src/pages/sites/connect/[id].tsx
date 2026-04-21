@@ -50,6 +50,9 @@ export default function ConnectSuccessPage() {
   const [credsBusy, setCredsBusy] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
     fetch("/confetti.json").then(r => r.json()).then(setConfettiData).catch(() => setConfettiData(null));
   }, []);
 

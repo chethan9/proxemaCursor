@@ -39,8 +39,22 @@ export default async function handler(
 
     console.log("Store connected successfully:", storeId);
 
-    // Webhook registration and initial sync are owned by the connect wizard (both OAuth and manual paths).
-    // This prevents double-registration and gives the user real-time feedback + retry capability.
+    // Eager sync: kick off background sync immediately after credentials are saved.
+    // This leverages the 10-20s window while user completes WP app-password flow —
+    // by the time they land on the Products page, categories/tags/products are often already populated.
+    const protocol = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host = req.headers.host;
+    if (host) {
+      const base = `${protocol}://${host}`;
+      fetch(`${base}/api/stores/${storeId}/sync-start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_initial: false }),
+      }).catch((e) => console.error("[callback] eager sync trigger failed:", e));
+    }
+
+    // Webhook registration and initial sync finalization are owned by the connect wizard.
+    // This just gets data flowing early; the wizard still controls completion state.
 
     // Return success - WooCommerce expects a 200 response
     return res.status(200).json({ success: true });
