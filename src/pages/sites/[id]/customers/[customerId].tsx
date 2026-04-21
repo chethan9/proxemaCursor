@@ -99,8 +99,9 @@ function CustomerDetailsInner() {
   }, [customer]);
 
   useEffect(() => {
+    if (!router.isReady) return;
     if (router.query.edit === "1") setEditing(true);
-  }, [router.query.edit]);
+  }, [router.isReady, router.query.edit]);
 
   const { data: allOrdersData } = useCustomerAllOrders(siteId, customer?.woo_id, ordersPage, 25);
   const orders = (allOrdersData?.data || []) as OrderRow[];
