@@ -139,6 +139,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.localStorage.removeItem(k);
           }
         });
+        Object.keys(window.sessionStorage).forEach((k) => {
+          if (k.startsWith("sb-") || k.includes("supabase")) {
+            window.sessionStorage.removeItem(k);
+          }
+        });
       } catch {}
       window.location.replace("/auth/login");
     } else {
