@@ -1,13 +1,32 @@
-<![CDATA[import { useQuery } from "@tanstack/react-query";
-import { fetchCategories, fetchTags } from "@/se
-...
-ze);
-      return { data, count };
-    },
+import { useQuery } from "@tanstack/react-query";
+import { fetchCategories, fetchTags, fetchAllCategories, type TaxonomySortField, type TaxonomySortDirection } from "@/services/taxonomyService";
+import { queryKeys } from "@/lib/query-client";
+
+export function useTaxonomyRows(
+  storeId: string,
+  mode: "categories" | "tags",
+  search: string,
+  page: number,
+  pageSize: number,
+  sortField: TaxonomySortField = "name",
+  sortDirection: TaxonomySortDirection = "asc",
+) {
+  return useQuery({
+    queryKey: [...queryKeys.taxonomy(storeId, mode), "rows", search, page, pageSize, sortField, sortDirection] as const,
+    queryFn: () => (mode === "categories"
+      ? fetchCategories(storeId, search, page, pageSize, sortField, sortDirection)
+      : fetchTags(storeId, search, page, pageSize, sortField, sortDirection)
+    ),
+    enabled: !!storeId,
+    staleTime: 60_000,
+  });
+}
+
+export function useAllCategories(storeId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...queryKeys.taxonomy(storeId, "categories"), "all"] as const,
+    queryFn: () => fetchAllCategories(storeId),
     enabled: !!storeId && enabled,
     staleTime: 60_000,
   });
 }
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 1362 chars.]
