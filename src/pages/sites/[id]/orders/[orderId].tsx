@@ -58,11 +58,11 @@ function fmtDateTime(s?: string | null) {
   }
 }
 
-function Stepper({ order }: { order: OrderRow }) {
+function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid?: string; dateCompleted?: string }) {
   const status = order.status || "pending";
   const placed = { label: "Order Placed", date: order.date_created, done: true };
-  const processing = { label: "Processing", date: order.date_modified, done: ["processing", "on-hold", "completed"].includes(status) };
-  const completed = { label: "Completed", date: order.date_completed, done: status === "completed" };
+  const processing = { label: "Processing", date: datePaid || order.date_modified, done: ["processing", "on-hold", "completed"].includes(status) };
+  const completed = { label: "Completed", date: dateCompleted, done: status === "completed" };
 
   const branchIcon = status === "cancelled" ? Ban : status === "refunded" ? RotateCcw : status === "failed" ? XCircle : null;
   const branchLabel = status === "cancelled" ? "Cancelled" : status === "refunded" ? "Refunded" : status === "failed" ? "Failed" : null;
@@ -128,7 +128,14 @@ export default function OrderDetailsPage() {
   const coupons = Array.isArray(order?.coupon_lines) ? (order!.coupon_lines as Array<{ code?: string; discount?: string }>) : [];
   const shippingLines = Array.isArray(order?.shipping_lines) ? (order!.shipping_lines as Array<{ method_title?: string; total?: string }>) : [];
   const currency = order?.currency || "KWD";
-  const raw = (order?.raw_data || {}) as { customer_ip_address?: string; order_notes?: Array<{ note?: string; date_created?: string; author?: string }> };
+  const raw = (order?.raw_data || {}) as {
+    customer_ip_address?: string;
+    order_notes?: Array<{ note?: string; date_created?: string; author?: string }>;
+    date_paid?: string;
+    date_completed?: string;
+    customer_note?: string;
+    transaction_id?: string;
+  };
   const persistedNotes = Array.isArray(raw.order_notes) ? raw.order_notes : [];
   const allNotes = [...localNotes, ...persistedNotes.map((n) => ({ note: n.note || "", date_created: n.date_created || "", author: n.author }))];
   const statusStyle = order ? STATUS_STYLES[order.status || "pending"] || STATUS_STYLES.pending : STATUS_STYLES.pending;
@@ -206,7 +213,7 @@ export default function OrderDetailsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
               {/* Main column */}
               <div className="space-y-4 min-w-0">
-                <Stepper order={order} />
+                <Stepper order={order} datePaid={raw.date_paid} dateCompleted={raw.date_completed} />
 
                 {/* 3-up info cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -244,10 +251,10 @@ export default function OrderDetailsPage() {
                       <dl className="text-sm space-y-1.5">
                         <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Placed on</dt><dd className="text-right">{fmtDateTime(order.date_created)}</dd></div>
                         <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Payment</dt><dd className="text-right truncate">{order.payment_method_title || order.payment_method || "—"}</dd></div>
-                        {order.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Txn ID</dt><dd className="text-right font-mono text-xs truncate">{order.transaction_id}</dd></div>}
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Paid on</dt><dd className="text-right">{fmtDateTime(order.date_paid)}</dd></div>
+                        {raw.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Txn ID</dt><dd className="text-right font-mono text-xs truncate">{raw.transaction_id}</dd></div>}
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Paid on</dt><dd className="text-right">{fmtDateTime(raw.date_paid)}</dd></div>
                         <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Updated</dt><dd className="text-right">{fmtDateTime(order.date_modified)}</dd></div>
-                        {order.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">Customer note</dt><dd className="text-xs">{order.customer_note}</dd></div>}
+                        {raw.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">Customer note</dt><dd className="text-xs">{raw.customer_note}</dd></div>}
                       </dl>
                     </CardContent>
                   </Card>
