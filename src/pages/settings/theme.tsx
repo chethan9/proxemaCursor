@@ -75,19 +75,9 @@ export default function ThemeSettings() {
   return (
     <SettingsLayout title="Theme">
       <div className="p-6 max-w-5xl">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Theme</h1>
-            <p className="text-xs text-muted-foreground">Style preset and brand identity</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={resetDefaults}>
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reset
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              <Save className="h-3.5 w-3.5 mr-1.5" /> {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
+        <div className="mb-4">
+          <h1 className="text-xl font-semibold flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Theme</h1>
+          <p className="text-xs text-muted-foreground">Style preset and brand identity</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -157,6 +147,15 @@ export default function ThemeSettings() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={resetDefaults}>
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reset
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Save className="h-3.5 w-3.5 mr-1.5" /> {saving ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
       </div>
     </SettingsLayout>
