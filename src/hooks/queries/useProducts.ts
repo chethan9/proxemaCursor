@@ -6,22 +6,21 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 export function useProducts(opts: FetchProductsOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
-  const useLive = opts.useLive ?? (syncStatus ? !syncStatus.initialSyncDone : false);
+  const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   return useQuery({
-    queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), useLive] as const,
+    queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "hybrid" : "db"] as const,
     queryFn: async () => {
-      if (useLive) {
-        try {
-          const res = await fetchProducts({ ...opts, useLive: true });
-          if (res.data.length > 0 || res.count > 0) return res;
-          // Live returned empty — fall through to DB as a safety net
-          return await fetchProducts({ ...opts, useLive: false });
-        } catch (e) {
-          console.warn("[useProducts] live fetch failed, falling back to DB:", e);
-          return fetchProducts({ ...opts, useLive: false });
-        }
+      // Always try DB first — fastest and we already warm-write live data into it
+      const dbRes = await fetchProducts({ ...opts, useLive: false });
+      if (dbRes.data.length > 0 || !initialSyncRunning) return dbRes;
+      // DB empty and sync still running — try live API
+      try {
+        const live = await fetchProducts({ ...opts, useLive: true });
+        return live;
+      } catch (e) {
+        console.warn("[useProducts] live fetch failed:", e);
+        return dbRes;
       }
-      return fetchProducts({ ...opts, useLive: false });
     },
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
