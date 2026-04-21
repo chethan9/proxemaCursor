@@ -137,9 +137,9 @@ export default function ConfirmEmailPage() {
             </div>
           )}
 
-          {branding?.appName && (
+          {branding?.brandName && (
             <p className="text-center text-[11px] text-muted-foreground pt-2">
-              {branding.appName}
+              {branding.brandName}
             </p>
           )}
         </CardContent>
