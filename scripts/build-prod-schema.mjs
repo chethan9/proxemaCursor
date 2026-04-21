@@ -25,6 +25,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- STEP 0b: Stub helper functions (real versions defined in migrations below)
+-- Needed because some early migrations reference these before they're created.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.is_super_admin() RETURNS boolean
+  LANGUAGE sql STABLE AS $$ SELECT false $$;
+CREATE OR REPLACE FUNCTION public.current_user_client_id() RETURNS uuid
+  LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+CREATE OR REPLACE FUNCTION public.user_can_access_store(p_store_id uuid) RETURNS boolean
+  LANGUAGE sql STABLE AS $$ SELECT true $$;
+
+-- ============================================================
 -- STEP 1: All project migrations (in order)
 -- ============================================================
 
