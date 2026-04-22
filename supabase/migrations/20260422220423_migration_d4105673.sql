@@ -1,0 +1,1 @@
+CREATE POLICY cpm_admin_write ON public.client_payment_methods FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin())

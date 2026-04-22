@@ -1,0 +1,1 @@
+CREATE POLICY cpm_client_read ON public.client_payment_methods FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin())

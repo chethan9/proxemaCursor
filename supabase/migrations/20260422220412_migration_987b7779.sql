@@ -1,0 +1,1 @@
+ALTER TABLE public.client_payment_methods ENABLE ROW LEVEL SECURITY

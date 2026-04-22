@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -467,6 +467,59 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_payment_methods: {
+        Row: {
+          card_brand: string | null
+          card_expiry_month: number | null
+          card_expiry_year: number | null
+          card_last4: string | null
+          client_id: string
+          created_at: string
+          gateway: Database["public"]["Enums"]["billing_gateway"]
+          gateway_token: string
+          id: string
+          is_default: boolean
+          recurring_eligible: boolean
+          updated_at: string
+        }
+        Insert: {
+          card_brand?: string | null
+          card_expiry_month?: number | null
+          card_expiry_year?: number | null
+          card_last4?: string | null
+          client_id: string
+          created_at?: string
+          gateway: Database["public"]["Enums"]["billing_gateway"]
+          gateway_token: string
+          id?: string
+          is_default?: boolean
+          recurring_eligible?: boolean
+          updated_at?: string
+        }
+        Update: {
+          card_brand?: string | null
+          card_expiry_month?: number | null
+          card_expiry_year?: number | null
+          card_last4?: string | null
+          client_id?: string
+          created_at?: string
+          gateway?: Database["public"]["Enums"]["billing_gateway"]
+          gateway_token?: string
+          id?: string
+          is_default?: boolean
+          recurring_eligible?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payment_methods_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]

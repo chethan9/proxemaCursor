@@ -1,0 +1,1 @@
+CREATE TRIGGER on_cpm_change AFTER INSERT OR UPDATE OR DELETE ON public.client_payment_methods FOR EACH ROW EXECUTE FUNCTION public.log_change_generic()

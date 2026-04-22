@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_cpm_client_default ON public.client_payment_methods (client_id, is_default) WHERE is_default = true
