@@ -76,7 +76,12 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (!store) throw new Error("No store");
-      const res = await fetch(`/api/stores/${store.id}/delete`, { method: "POST" });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const res = await fetch(`/api/stores/${store.id}/delete`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Delete failed");
