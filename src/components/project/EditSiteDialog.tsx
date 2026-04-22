@@ -42,6 +42,14 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [form, setForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "", timezone: "" });
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients-for-edit"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id, name").order("name");
+      return data || [];
+    },
+  });
+
   const wpConnected = !!(store?.wp_username && store?.wp_app_password);
   const wcConnected = !!store?.consumer_key;
   const clientChanged = !!store && form.client_id !== (store.client_id || "");
@@ -64,14 +72,6 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
       setDeleteConfirmation("");
     }
   }, [store]);
-
-  const { data: clients = [] } = useQuery({
-    queryKey: ["clients-for-edit"],
-    queryFn: async () => {
-      const { data } = await supabase.from("clients").select("id, name").order("name");
-      return data || [];
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
