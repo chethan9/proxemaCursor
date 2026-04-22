@@ -33,6 +33,10 @@ function Inner() {
     try {
       await createProduct(id, form);
       qc.invalidateQueries({ queryKey: ["products", id] });
+      qc.invalidateQueries({ queryKey: ["taxonomy", id, "categories"] });
+      qc.invalidateQueries({ queryKey: ["taxonomy", id, "tags"] });
+      qc.invalidateQueries({ queryKey: ["woo", "taxonomy", id, "categories"] });
+      qc.invalidateQueries({ queryKey: ["woo", "taxonomy", id, "tags"] });
       toast({ title: "Product created", description: form.name });
       router.push(`/sites/${id}/products`);
     } catch (e) {

@@ -102,7 +102,10 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
   if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
   if (stockStatusFilter && stockStatusFilter !== "all") query = query.eq("stock_status", stockStatusFilter);
   if (excludeOutOfStock) query = query.neq("stock_status", "outofstock");
-  if (categoryFilter) query = query.ilike("categories::text", `%"name":"${categoryFilter}"%`);
+  if (categoryFilter) {
+    // Use jsonb containment — reliable across jsonb-to-text formatting variants
+    query = query.contains("categories", [{ name: categoryFilter }]);
+  }
   if (priceMin !== undefined && !isNaN(priceMin)) query = query.gte("price", String(priceMin));
   if (priceMax !== undefined && !isNaN(priceMax)) query = query.lte("price", String(priceMax));
   if (sortField === "woo_date_created") {

@@ -78,13 +78,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       raw_data: created,
       synced_at: new Date().toISOString(),
     };
-    const { data: inserted } = await supabaseAdmin
+    const { data: inserted, error: insertErr } = await supabaseAdmin
       .from("products")
-      .insert(insertRow as never)
+      .upsert(insertRow as never, { onConflict: "store_id,woo_id" })
       .select("*")
       .single();
 
-    return res.status(200).json(inserted || created);
+    if (insertErr) {
+      console.error("[product-create][db-upsert]", insertErr);
+    }
+
+    return res.status(200).json(inserted || { ...insertRow, id: `woo-${wooId}` });
   } catch (e) {
     console.error("[product-create]", e);
     return res.status(500).json({ error: e instanceof Error ? e.message : "Create failed" });

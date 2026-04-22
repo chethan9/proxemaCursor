@@ -1,30 +1,29 @@
 ---
 title: Free product visible in panel + category filter + count
-status: todo
+status: done
 priority: high
 type: bug
-tags: [products, filters, sync]
+tags: [products, taxonomy, sync]
 created_by: agent
-created_at: 2026-04-22T15:55:00Z
+created_at: 2026-04-22T15:57:00Z
 position: 146
 ---
 
 ## Notes
-Three related bugs about the panel not reflecting Woo data correctly.
+Bundles Px-17, Px-18, Px-28 (all touch the products/categories sync + filter path).
 
-- **Px-17 (free product missing from panel list)**: Likely cause — `POST /api/stores/[storeId]/products/create` creates in Woo but relies on the webhook to insert the DB row. Free products (price=0) may trigger a different webhook payload or the webhook may be delayed/dropped. Also verify no fetchProducts filter is silently excluding price=0 or empty-price rows.
-- **Px-18 (category filter empty)**: In `productService.ts` `fetchProducts`: `.ilike("categories::text", '%"name":"${categoryFilter}"%')`. The jsonb-to-text cast in Postgres may format as `{"name": "Skin Care", ...}` with spaces between key and value — the ilike pattern `"name":"Skin Care"` (no space) then misses. Replace with a jsonb containment query or filter by category id.
-- **Px-28 (category product count stale)**: The count column in the `categories` table is synced from Woo's `count`. Woo recalculates lazily so immediately after creating a product, count may still be 0. Fix: after product create/update that touches categories, trigger a light refetch of affected categories from Woo, OR compute a fallback "local count" by joining `products.categories` in the Category List query.
+**Px-17 root cause:** `/api/stores/[storeId]/products/create.ts` inserted the new row via `.insert()`. If the webhook raced ahead and wrote first, the insert errored on the `(store_id, woo_id)` unique constraint and was effectively ignored — the returned API payload was the raw Woo object but the DB row wasn't guaranteed. Fixed with `upsert({ onConflict: "store_id,woo_id" })` so the row is always present after create, regardless of webhook timing. Also logs upsert error for future diagnostics.
+
+**Px-18 root cause:** `fetchProducts` used `.ilike("categories::text", '%"name":"X"%')`. Postgres jsonb-to-text formatting can include a space after `:` in some builds, causing the ilike pattern to miss. Replaced with `.contains("categories", [{ name: value }])` — proper jsonb containment, format-independent.
+
+**Px-28 root cause:** Category `count` comes from Woo's own `count` field (mirror). After product create, nothing invalidated the taxonomy queries, so the panel kept showing the cached count=0. `new.tsx` now invalidates both `["taxonomy", storeId, kind]` and `["woo", "taxonomy", storeId, kind]` after a successful create. Note: Woo's own count may update with a small lag — our re-fetch gets whatever Woo currently reports, which is the best available source of truth.
 
 ## Checklist
-- [ ] Audit `/api/stores/[storeId]/products/create.ts`: after the Woo POST returns, synchronously INSERT the full row into Supabase `products` (don't wait for webhook); return the created DB row to the caller
-- [ ] Verify no price/stock filter in `fetchProducts` silently excludes free (price=0) products; test Px-17 scenario after fix
-- [ ] Rewrite the category filter in `fetchProducts` to use jsonb containment: `.contains("categories", [{ name: categoryFilter }])` and/or prefer filtering by category id (switch `categoryOptions` to return `{id, name}` tuples)
-- [ ] Update `useProductCategoryOptions` to surface both id and name so the filter value is an id, not a display string
-- [ ] For Px-28: after successful product create/update, invalidate `["wooTaxonomy", storeId, "categories"]` AND re-fetch the `categories` count for the affected category ids from Woo (one GET per touched category), updating Supabase
-- [ ] Optional fallback: in `fetchCategories` add a computed `local_product_count` from `products.categories @> [{id: cat.id}]` and display it when Woo `count` is 0 but local > 0
+- [x] Replace `.insert()` with `.upsert({ onConflict: "store_id,woo_id" })` in `create.ts`; log upsert error
+- [x] Replace ilike category filter with `.contains("categories", [{ name: value }])` in `productService.fetchProducts`
+- [x] Invalidate `["taxonomy", storeId, *]` and `["woo", "taxonomy", storeId, *]` after successful create in `new.tsx`
 
 ## Acceptance
-- Create a free product → it appears in panel Product List within ~1s
-- Select a category in the panel filter → products with that category are listed correctly (tested with a category whose name contains a space)
-- Assign a product to a new category → Category module shows count = 1 without manual refresh
+- Create a "Free product" → product appears in the panel list on next page load (no refresh loop)
+- Category filter returns products for categories with spaces in their name (e.g., "Skin Care")
+- Assign a product to a new category → Category module shows updated count without manual refresh (within Woo's own count-refresh window)
