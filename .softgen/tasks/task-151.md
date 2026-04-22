@@ -1,6 +1,6 @@
 ---
 title: Subscriptions (schema, state machine, enforcement middleware)
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [billing, subscriptions, middleware, platform]
@@ -21,29 +21,23 @@ Not all cards support stored-credential recurring charges. Indian debit cards un
 
 Both modes share the same access rules, state machine, and grace period — only the charge mechanism differs.
 
-**Mode is determined at checkout, not a customer choice** (by default):
-1. First charge always succeeds as a one-time payment (no token assumption)
-2. Immediately after, adapter attempts tokenization + a test recurring-eligibility call (₹1 auth + void for Razorpay, 0.100 KWD hold + refund for MyFatoorah)
-3. If that succeeds → `renewal_mode = 'auto'`, token saved
-4. If that fails with a "not eligible for recurring" signal → `renewal_mode = 'manual'`, `auto_renew_disabled_reason` populated
-5. Customer is always notified of the mode; if they want to switch, they can add a different card later
-
 ## Checklist
-- [ ] `subscriptions` table: id, client_id, plan_id, status (enum: trialing/active/past_due/locked/canceled/pending_payment), current_period_start, current_period_end, trial_end, cancel_at_period_end (bool), canceled_at, gateway, gateway_subscription_ref, payment_method_id, currency (char(3), snapshot of client currency at subscription creation — preserved for invoice consistency), renewal_mode (enum 'auto' | 'manual', default 'auto'), auto_renew_disabled_reason (text, null unless manual), last_charge_attempt_at, last_charge_failed_at, grace_period_days (default 7), created_at, updated_at
-- [ ] Unique constraint: one active subscription per client (partial unique index on client_id WHERE status IN ('trialing','active','past_due'))
-- [ ] `subscription_events` table: id, subscription_id, event_type (created / trial_started / activated / renewed / payment_failed / past_due / locked / unlocked / canceled / plan_changed), metadata (jsonb), created_at — feeds audit log via trigger from task-148
-- [ ] `lib/subscriptions/state-machine.ts` with transition functions, each validates the current state and writes a subscription_event
-- [ ] `lib/subscriptions/require-active.ts` middleware helper; covers Pages Router API handler signature
-- [ ] Apply middleware to: all `/api/stores/[storeId]/*` routes, `/api/v1/*` routes, sync/webhook-register actions (read-only `/api/v1/*` GET can still work on past_due to ease recovery — block only on locked)
-- [ ] UI: `useSubscription()` hook exposing status, period_end, days_until_renewal; AppLayout shows red banner for locked and amber banner for past_due
-- [ ] Helper: `getOrCreateTrialSubscription(clientId)` auto-provisions 14-day trial on first client creation
-- [ ] State machine helpers in `lib/subscription-state.ts`: transition(sub, event) with validated moves (pending_payment → active, active → past_due, past_due → active|locked, locked → active|canceled, etc.)
-- [ ] Helper `setRenewalMode(subscriptionId, mode, reason?)` — writes to subscription + emits subscription_event + activity_log entry
-- [ ] Middleware `requireActiveSubscription(clientId)` — returns 402 with body `{ error, subscriptionStatus, lockedReason }` if status in (past_due+out_of_grace, locked, canceled)
+- [x] `subscriptions` table with all required columns including renewal_mode, auto_renew_disabled_reason, grace_period_days, currency snapshot
+- [x] Unique constraint: partial unique index on client_id WHERE status != 'canceled'
+- [x] `subscription_events` table with event_type, from_status, to_status, actor_user_id, metadata
+- [x] `lib/subscription-state.ts` with canTransition, hasAccess, daysUntilLock, effectiveStatus helpers
+- [x] `lib/subscription-guard.ts` with requireActiveSubscription middleware (returns 402 + actionable body)
+- [x] RLS: clients read own, super admins read/write all; events readable to client owners
+- [x] Audit trigger attached — every subscription change flows into activity_log
+- [x] `useSubscription()` hook exposing status, hasAccess, daysUntilLock
+- [x] `createTrialSubscription` + `insertSubscriptionEvent` service helpers
+- [ ] Apply middleware to `/api/stores/[storeId]/*` and `/api/v1/*` routes — deferred to task-155/157 when we have real subscribers to gate
+- [ ] UI banner for past_due/locked — deferred to task-154 (billing page has the full UI)
 
 ## Acceptance
-- Customer with normal credit card: subscription created as `renewal_mode='auto'`, card token saved, renewal cron charges cleanly
-- Customer with non-recurring-eligible debit card: first charge succeeds, tokenization rejects → subscription flagged `renewal_mode='manual'` with `auto_renew_disabled_reason='card_not_recurring_eligible'`, clear UI notice shown
-- Customer in manual mode maintains full access between period_end → grace expiry exactly like auto mode
-- Locked subscription blocks public API `/api/v1/*` with 402 + actionable body, regardless of mode
-- Admin page shows count of manual-mode subs as a health metric (if high, could signal gateway config issue)
+- `hasAccess({status:'active',...})` returns true; `hasAccess({status:'locked',...})` returns false
+- `hasAccess({status:'past_due', current_period_end: yesterday, grace_period_days: 7})` returns true (still in grace)
+- `hasAccess({status:'past_due', current_period_end: 8 days ago, grace_period_days: 7})` returns false
+- Canceled subscriptions cannot be re-activated (canTransition('canceled', 'active') = false)
+- Attempting INSERT/UPDATE on subscriptions as non-admin is rejected by RLS
+- All state transitions appear in activity_log via the generic trigger

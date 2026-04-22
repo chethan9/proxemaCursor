@@ -55,7 +55,7 @@ export async function insertSubscriptionEvent(
     event_type: eventType,
     from_status: fromStatus as never,
     to_status: toStatus as never,
-    metadata: metadata || null,
+    metadata: (metadata as never) ?? null,
   });
 }
 
