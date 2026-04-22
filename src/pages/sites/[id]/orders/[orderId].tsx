@@ -122,6 +122,27 @@ export default function OrderDetailsPage() {
     enabled: !!orderId,
   });
 
+  const custEmailForLookup = order ? getCustomerEmail(order.billing) : "";
+  const { data: linkedCustomer } = useQuery({
+    queryKey: ["order-customer-link", storeId, order?.customer_id, custEmailForLookup],
+    queryFn: async () => {
+      if (!order) return null;
+      const hasWooId = order.customer_id && order.customer_id > 0;
+      if (!hasWooId && !custEmailForLookup) return null;
+      let query = supabase.from("customers").select("id").eq("store_id", storeId).limit(1);
+      if (hasWooId) {
+        query = query.eq("woo_id", order.customer_id as number);
+      } else if (custEmailForLookup) {
+        query = query.ilike("email", custEmailForLookup);
+      }
+      const { data, error } = await query.maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!(order && storeId && (order.customer_id || custEmailForLookup)),
+    staleTime: 60_000,
+  });
+
   const billing = (order?.billing || {}) as { first_name?: string; last_name?: string; email?: string; phone?: string; address_1?: string; address_2?: string; city?: string; state?: string; postcode?: string; country?: string };
   const shipping = (order?.shipping || {}) as typeof billing;
   const lineItems = Array.isArray(order?.line_items) ? (order!.line_items as Array<{ name?: string; sku?: string; quantity?: number; price?: number | string; total?: string; image?: { src?: string }; meta_data?: Array<{ key?: string; value?: string; display_key?: string; display_value?: string }> }>) : [];
@@ -331,9 +352,15 @@ export default function OrderDetailsPage() {
                           <Mail className="h-3.5 w-3.5" /><span>Email invoice to customer</span><span className="ml-auto text-muted-foreground">→</span>
                         </a>
                       )}
-                      <button disabled className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-                        <User className="h-3.5 w-3.5" /><span>View Customer</span><span className="ml-auto">→</span>
-                      </button>
+                      {linkedCustomer?.id ? (
+                        <Link href={`/sites/${storeId}/customers/${linkedCustomer.id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
+                          <User className="h-3.5 w-3.5" /><span>View customer profile</span><span className="ml-auto text-muted-foreground">→</span>
+                        </Link>
+                      ) : (
+                        <button disabled title={custEmailForLookup ? "No matching customer profile found" : "No customer info on this order"} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
+                          <User className="h-3.5 w-3.5" /><span>View Customer</span><span className="ml-auto">→</span>
+                        </button>
+                      )}
                       <button disabled className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
                         <Send className="h-3.5 w-3.5" /><span>Resend new order notification</span><span className="ml-auto">→</span>
                       </button>
