@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -473,19 +473,25 @@ export type Database = {
       }
       clients: {
         Row: {
+          country: string | null
           created_at: string | null
+          currency: string
           id: string
           name: string
           updated_at: string | null
         }
         Insert: {
+          country?: string | null
           created_at?: string | null
+          currency?: string
           id?: string
           name: string
           updated_at?: string | null
         }
         Update: {
+          country?: string | null
           created_at?: string | null
+          currency?: string
           id?: string
           name?: string
           updated_at?: string | null
