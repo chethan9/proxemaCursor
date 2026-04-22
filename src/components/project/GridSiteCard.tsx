@@ -36,7 +36,12 @@ function SiteScreenshot({ url, name }: { url: string; name: string }) {
   let screenshotUrl: string | null = null;
   try {
     const u = new URL(url);
-    screenshotUrl = `https://image.thum.io/get/width/600/noanimate/${u.origin}`;
+    const apiKey = process.env.NEXT_PUBLIC_THUM_API_KEY;
+    if (apiKey) {
+      screenshotUrl = `https://image.thum.io/get/auth/${apiKey}/width/600/${u.origin}`;
+    } else {
+      screenshotUrl = `https://image.thum.io/get/width/600/${u.origin}`;
+    }
   } catch {
     screenshotUrl = null;
   }
@@ -197,7 +202,8 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
             <>
               <Button
                 size="sm"
-                className="flex-1 rounded-full h-9 gap-1.5"
+                variant="ghost"
+                className="flex-1 rounded-full h-9 gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary font-medium"
                 onClick={handleSync}
                 disabled={syncing}
               >
