@@ -1,6 +1,6 @@
 ---
 title: Site card redesign (Grid view)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [ui, projects, card]
