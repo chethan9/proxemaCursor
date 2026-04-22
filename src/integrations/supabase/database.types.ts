@@ -1385,6 +1385,135 @@ export type Database = {
           },
         ]
       }
+      subscription_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          from_status: Database["public"]["Enums"]["subscription_status"] | null
+          id: string
+          metadata: Json | null
+          subscription_id: string
+          to_status: Database["public"]["Enums"]["subscription_status"] | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          from_status?:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          id?: string
+          metadata?: Json | null
+          subscription_id: string
+          to_status?: Database["public"]["Enums"]["subscription_status"] | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          from_status?:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          id?: string
+          metadata?: Json | null
+          subscription_id?: string
+          to_status?: Database["public"]["Enums"]["subscription_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          auto_renew_disabled_reason: string | null
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          client_id: string
+          created_at: string
+          currency: string
+          current_period_end: string | null
+          current_period_start: string | null
+          gateway: Database["public"]["Enums"]["billing_gateway"] | null
+          gateway_subscription_ref: string | null
+          grace_period_days: number
+          id: string
+          last_charge_attempt_at: string | null
+          last_charge_failed_at: string | null
+          payment_method_id: string | null
+          plan_id: string
+          renewal_mode: Database["public"]["Enums"]["renewal_mode"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_renew_disabled_reason?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          client_id: string
+          created_at?: string
+          currency?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          gateway?: Database["public"]["Enums"]["billing_gateway"] | null
+          gateway_subscription_ref?: string | null
+          grace_period_days?: number
+          id?: string
+          last_charge_attempt_at?: string | null
+          last_charge_failed_at?: string | null
+          payment_method_id?: string | null
+          plan_id: string
+          renewal_mode?: Database["public"]["Enums"]["renewal_mode"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_renew_disabled_reason?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          client_id?: string
+          created_at?: string
+          currency?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          gateway?: Database["public"]["Enums"]["billing_gateway"] | null
+          gateway_subscription_ref?: string | null
+          grace_period_days?: number
+          id?: string
+          last_charge_attempt_at?: string | null
+          last_charge_failed_at?: string | null
+          payment_method_id?: string | null
+          plan_id?: string
+          renewal_mode?: Database["public"]["Enums"]["renewal_mode"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_benchmarks: {
         Row: {
           aspect: string
@@ -1815,7 +1944,15 @@ export type Database = {
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      billing_gateway: "myfatoorah" | "razorpay"
+      renewal_mode: "auto" | "manual"
+      subscription_status:
+        | "pending_payment"
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "locked"
+        | "canceled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1942,6 +2079,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      billing_gateway: ["myfatoorah", "razorpay"],
+      renewal_mode: ["auto", "manual"],
+      subscription_status: [
+        "pending_payment",
+        "trialing",
+        "active",
+        "past_due",
+        "locked",
+        "canceled",
+      ],
+    },
   },
 } as const

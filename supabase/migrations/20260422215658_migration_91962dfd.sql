@@ -1,0 +1,1 @@
+CREATE TYPE public.subscription_status AS ENUM ('pending_payment','trialing','active','past_due','locked','canceled');

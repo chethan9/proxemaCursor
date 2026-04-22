@@ -3,10 +3,9 @@ import type { Tables } from "@/integrations/supabase/types";
 
 export type SubscriptionSta
 ...
-: "past_due";
-  }
-  return sub.status;
+atus === "past_due" && !hasAccess(sub)) return "locked";
+  return sub.status as SubscriptionStatus;
 }
 ]]>
 
-[Tool result trimmed: kept first 100 chars and last 100 chars of 2886 chars.]
+[Tool result trimmed: kept first 100 chars and last 100 chars of 2096 chars.]

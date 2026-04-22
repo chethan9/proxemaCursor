@@ -1,0 +1,1 @@
+CREATE TYPE public.billing_gateway AS ENUM ('myfatoorah','razorpay');

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_client_active ON public.subscriptions (client_id) WHERE status != 'canceled'; CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions (status); CREATE INDEX IF NOT EXISTS idx_subscriptions_period_end ON public.subscriptions (current_period_end) WHERE status IN ('active','past_due');

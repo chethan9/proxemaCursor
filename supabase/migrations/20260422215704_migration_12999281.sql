@@ -1,0 +1,1 @@
+CREATE TYPE public.renewal_mode AS ENUM ('auto','manual');
