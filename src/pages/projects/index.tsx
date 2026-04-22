@@ -19,6 +19,7 @@ import { ProjectsToolbar, type ViewMode, type StatusFilter, type HealthFilter, t
 import { CompactSiteRow } from "@/components/project/CompactSiteRow";
 import { GridSiteCard } from "@/components/project/GridSiteCard";
 import { BulkActionBar } from "@/components/project/BulkActionBar";
+import { useSitesUptime } from "@/hooks/queries/useSitesUptime";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 const PAGE_SIZE = 50;
@@ -35,6 +36,8 @@ export default function SitesPage() {
   const { toast } = useToast();
   const { data: stores = [], isLoading: loading } = useStores();
   const { data: clients = [] } = useClients();
+  const storeIds = useMemo(() => stores.map((s) => s.id), [stores]);
+  const { data: uptimeMap = {} } = useSitesUptime(storeIds);
   const { prefs, update } = useViewPreferences<ProjectPrefs>("projects-view", { viewMode: "list" });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -329,6 +332,7 @@ export default function SitesPage() {
                   selected={selected.has(s.id)}
                   onToggleSelect={() => toggleSelect(s.id)}
                   onEdit={() => openEditDialog(s)}
+                  uptimeHistory={uptimeMap[s.id] || []}
                 />
               ))}
             </div>

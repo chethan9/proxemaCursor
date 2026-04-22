@@ -8,6 +8,8 @@ import { SiteAvatar } from "./SiteAvatar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
+import { UptimeBar } from "./UptimeBar";
+import type { UptimePoint } from "@/hooks/queries/useSitesUptime";
 
 interface Props {
   store: StoreWithClient;
@@ -15,6 +17,7 @@ interface Props {
   selected: boolean;
   onToggleSelect: () => void;
   onEdit: () => void;
+  uptimeHistory?: UptimePoint[];
 }
 
 function formatRelative(d: string | null): string {
@@ -74,7 +77,7 @@ function SiteScreenshot({ url, name }: { url: string; name: string }) {
   );
 }
 
-export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEdit }: Props) {
+export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEdit, uptimeHistory }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -149,21 +152,26 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
       </div>
 
       <div className="p-3 flex flex-col gap-2.5 flex-1">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-sm truncate">{store.name}</span>
-            {wcConnected && <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-sm truncate">{store.name}</span>
+              {wcConnected && <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />}
+            </div>
+            <div className="text-[11px] text-muted-foreground truncate font-mono">{store.url.replace(/^https?:\/\//, "")}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[11px] text-muted-foreground truncate">{clientName}</span>
+              {wpConnected && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 font-medium shrink-0">
+                  <CheckCircle2 className="h-2.5 w-2.5" />
+                  WP
+                </span>
+              )}
+            </div>
           </div>
-          <div className="text-[11px] text-muted-foreground truncate font-mono">{store.url.replace(/^https?:\/\//, "")}</div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[11px] text-muted-foreground truncate">{clientName}</span>
-            {wpConnected && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 font-medium shrink-0">
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                WP
-              </span>
-            )}
-          </div>
+          {uptimeHistory && uptimeHistory.length > 0 && (
+            <UptimeBar history={uptimeHistory} className="w-[78px] shrink-0 pt-0.5" />
+          )}
         </div>
 
         <div className="grid grid-cols-3 border-y border-border py-2">
