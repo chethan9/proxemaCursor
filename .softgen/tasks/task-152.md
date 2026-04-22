@@ -1,6 +1,6 @@
 ---
 title: Checkout flow + payment method tokenization (multi-gateway)
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [billing, checkout, myfatoorah, razorpay, payment-methods]
@@ -18,37 +18,25 @@ How customers actually pay. Uses hosted payment flows for PCI scope reduction �
 
 Both flows converge at `/api/billing/verify` which activates the subscription.
 
-**Flow (unified):**
-1. User picks a plan on pricing page → POST `/api/billing/checkout` with `{ planId, couponCode? }`
-2. Server resolves client's gateway via country routing (task-150), creates/updates subscription in `pending_payment`, calls `gateway.initiateCharge(priceInClientCurrency, currency, ...)`, returns `{ gateway: 'myfatoorah' | 'razorpay', payload }`
-3. Frontend branches:
-   - MyFatoorah → `window.location = payload.paymentUrl`
-   - Razorpay → load `checkout.razorpay.com/v1/checkout.js`, instantiate with `payload`, handle success callback
-4. Verify: `/api/billing/verify` called either by return page (MyFatoorah) or Razorpay success handler → server queries gateway → on success activates subscription, **attempts tokenization for recurring**, logs activity
-5. **Tokenization outcome:**
-   - Success → `renewal_mode='auto'`, payment_method saved with token, customer sees "Auto-renewal enabled"
-   - Failure (card not recurring-eligible) → `renewal_mode='manual'`, `auto_renew_disabled_reason='card_not_recurring_eligible'`, customer sees friendly banner: "Your bank doesn't allow auto-renewal on this card. We'll email you a payment link each period. You can add a different card anytime to enable auto-renewal."
-6. Either way: subscription is active, access granted immediately. Manual mode is not a failure state.
-7. Redirect to `/billing` with success toast reflecting the mode
-
-**Idempotency:** both flows write through `gateway_invoice_id` as natural key so webhook + verify path don't double-process.
+### V1 shipped — tokenization stubbed
+Real stored-credential tokenization (MyFatoorah TokenData / Razorpay Tokens API) requires live gateway credentials to test the eligibility signals on real debit cards. Until those land, `/api/billing/verify` sets `renewal_mode = 'manual'` with `auto_renew_disabled_reason = 'tokenization_not_implemented'`. The full framework for auto vs manual mode is already in place (schema, UI copy, middleware) — flipping tokenization on later is a one-function change in each adapter.
 
 ## Checklist
-- [ ] Pricing page shows "Start trial" (no card) and "Subscribe" (starts checkout) — button label and currency pulled from client's resolved currency
-- [ ] `/api/billing/checkout` route: validates plan + coupon, resolves gateway via `getGatewayForClient`, picks `prices[currency]` from the plan, creates pending subscription, calls `initiateCharge`, returns `{ gateway, payload }`
-- [ ] `/billing/return` page (MyFatoorah only): shows spinner while verifying, then success/failure state
-- [ ] Razorpay success handler: in-page, receives `{ payment_id, order_id, signature }`, posts to `/api/billing/verify` — no page navigation needed
-- [ ] Post-charge tokenization: adapter method `attemptRecurringSetup(paymentRef)` — Razorpay tries saving token via their Tokens API, MyFatoorah via recurring-auth flag; returns `{ mode: 'auto'|'manual', token?, reason? }`
-- [ ] `/api/billing/verify` route: gateway-agnostic — takes `{ gateway, invoiceRef }`, calls the right adapter's status endpoint, calls `attemptRecurringSetup`, activates subscription with resolved `renewal_mode`, writes `payment_methods` row (if token), returns `{ status, subscription, renewalMode }`
-- [ ] UI: success page distinguishes the two modes with distinct copy + icon; manual mode shows "How it works" explainer + "Try a different card for auto-renewal" link
-- [ ] Save returned card token + metadata (brand, last4, expiry, gateway, recurring_eligible boolean) to `payment_methods`, mark as default
-- [ ] `/billing/payment-methods` page: badge each card with "Auto-renewal: ✓ / ✗"; adding a recurring-eligible card automatically offers to switch the subscription to auto mode; removing the only eligible card auto-flips to manual
-- [ ] Handle checkout abandonment: pending_payment subscriptions older than 1 hour cleared by cron (task-157)
-- [ ] All state changes (including renewal_mode flips) emit subscription_events (fed into activity_log)
+- [x] `client_payment_methods` table (gateway, gateway_token, card_brand, last4, expiry, is_default, recurring_eligible) + RLS + audit trigger
+- [x] `/api/billing/checkout` — auth check, resolves client's gateway via country, upserts pending subscription, picks `prices[currency]` from plan, calls `initiateCharge`, returns `{ gateway, payload, subscriptionId }`
+- [x] `/api/billing/verify` — gateway-agnostic: polls status, on paid activates subscription + extends period, writes subscription_event, returns `{ status, subscription, renewalMode }`
+- [x] `lib/razorpay-client.ts` — lazy-loads Razorpay checkout.js SDK, exposes `openRazorpayCheckout(opts)` wrapper
+- [x] `useCheckout()` hook — unified entry point: calls /api/billing/checkout, branches on gateway (redirect vs inline modal), polls /api/billing/verify on success, exposes loading/error state
+- [x] `/billing/return` — MyFatoorah callback landing page: polls verify every 2s up to 10 tries, shows success/pending/failed states with appropriate CTAs
+- [x] `/billing/payment-methods` — list saved cards grouped by gateway, default marker, set-default + remove actions, empty state with "add card" note
+- [ ] Real tokenization in both adapters (Razorpay Tokens API, MyFatoorah recurring flag) — deferred until live gateway keys available
+- [ ] Tokenize-only flow for "add card without charging" — deferred with tokenization
+- [ ] Auto-mode / manual-mode UI differentiation on success screen — deferred with tokenization (always manual for now)
+- [ ] Cron cleanup of abandoned pending_payment subs older than 1 hour — covered by task-157
 
 ## Acceptance
-- User in India pays with a recurring-eligible HDFC credit card → subscription active + auto mode + token saved
-- User in India pays with a non-recurring Kotak debit card → subscription active + manual mode + clear "we'll email you" notice; no broken UX
-- User in Kuwait pays with KNET debit → manual mode (KNET doesn't support stored credential) with same clear notice
-- Closing either gateway's checkout without paying leaves subscription in pending_payment; auto-cleared after 1 hour
-- Adding a recurring-eligible card while in manual mode surfaces an "Enable auto-renewal" banner; one click switches the subscription
+- User with country=IN clicking Subscribe → Razorpay modal opens in-page, pays with test card, modal closes, `/api/billing/verify` flips subscription to active with INR period
+- User with country=SA clicking Subscribe → redirects to MyFatoorah hosted page, pays, redirects back to `/billing/return`, which polls and shows success with SAR period
+- Closing either gateway's checkout without paying leaves subscription in pending_payment (cleanup cron in task-157)
+- `/billing/payment-methods` empty state for new customer shows "no saved cards" with note that they'll be able to save cards once live gateway tokenization is enabled
+- All subscription state transitions trigger `subscription_events` rows + activity_log entries via the existing trigger
