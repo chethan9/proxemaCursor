@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { RefreshCw, Sparkles, AlertTriangle } from "lucide-react";
 import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { useSiteHomeStats } from "@/hooks/queries/useSiteStats";
 import { StatStrip } from "@/components/site/home/StatStrip";
@@ -22,7 +22,7 @@ function HomeInner() {
   const qc = useQueryClient();
   const storeId = store?.id;
   const currency = (store as { currency?: string } | null)?.currency || "KWD";
-  const { data, isLoading, isFetching } = useSiteHomeStats(storeId);
+  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId);
 
   const s = data?.stats;
   const aov = s && s.orders_month_count > 0 ? s.sales_month / s.orders_month_count : 0;
@@ -31,8 +31,9 @@ function HomeInner() {
   const salesSpark = useMemo(() => (data?.daily || []).map((d) => ({ v: d.revenue })), [data]);
   const ordersSpark = useMemo(() => (data?.daily || []).map((d) => ({ v: d.orders })), [data]);
 
-  const hasAnyData = s && s.orders_total > 0;
-  const showEmpty = !storeLoading && !isLoading && !hasAnyData;
+  const hasError = !!error;
+  const querySucceeded = !storeLoading && !isLoading && !hasError && !!data;
+  const showEmpty = querySucceeded && (!s || s.orders_total === 0);
 
   return (
     <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
@@ -49,7 +50,23 @@ function HomeInner() {
         <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
       </Button>
 
-      {showEmpty ? (
+      {hasError ? (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="py-10 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-destructive/10 mb-3">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <h2 className="text-lg font-semibold mb-1">Unable to load dashboard stats</h2>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+              {(error as Error)?.message || "Something went wrong fetching site statistics."}
+            </p>
+            <Button onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      ) : showEmpty ? (
         <Card>
           <CardContent className="py-16 text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-4">
