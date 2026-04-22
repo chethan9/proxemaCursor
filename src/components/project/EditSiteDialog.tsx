@@ -39,6 +39,7 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
   const [showSecret, setShowSecret] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [form, setForm] = useState({ name: "", url: "", consumer_key: "", consumer_secret: "", client_id: "", timezone: "" });
 
   const wpConnected = !!(store?.wp_username && store?.wp_app_password);
@@ -57,6 +58,7 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
       setShowKey(false);
       setShowSecret(false);
       setConfirmDelete(false);
+      setDeleteConfirmation("");
     }
   }, [store]);
 
