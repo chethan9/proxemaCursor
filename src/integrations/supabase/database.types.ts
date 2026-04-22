@@ -956,6 +956,66 @@ export type Database = {
         }
         Relationships: []
       }
+      plans: {
+        Row: {
+          billing_interval: string
+          created_at: string
+          description: string | null
+          features: Json
+          id: string
+          is_active: boolean
+          is_custom: boolean
+          max_api_calls_per_month: number
+          max_products_per_site: number
+          max_sites: number
+          max_users: number
+          name: string
+          prices: Json
+          slug: string
+          sort_order: number
+          trial_days: number
+          updated_at: string
+        }
+        Insert: {
+          billing_interval?: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_custom?: boolean
+          max_api_calls_per_month?: number
+          max_products_per_site?: number
+          max_sites?: number
+          max_users?: number
+          name: string
+          prices?: Json
+          slug: string
+          sort_order?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_interval?: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_custom?: boolean
+          max_api_calls_per_month?: number
+          max_products_per_site?: number
+          max_sites?: number
+          max_users?: number
+          name?: string
+          prices?: Json
+          slug?: string
+          sort_order?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_variations: {
         Row: {
           attributes: Json | null

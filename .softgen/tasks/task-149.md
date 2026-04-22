@@ -1,6 +1,6 @@
 ---
 title: Plans + quotas + multi-currency pricing (schema, admin CRUD, enforcement helpers)
-status: todo
+status: in_progress
 priority: urgent
 type: feature
 tags: [billing, plans, admin, currency, platform]
