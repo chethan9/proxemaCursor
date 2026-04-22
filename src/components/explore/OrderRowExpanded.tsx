@@ -1,5 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText } from "lucide-react";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
@@ -41,6 +43,25 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   const custName = getCustomerName(order.billing);
   const custEmail = getCustomerEmail(order.billing);
   const currency = order.currency || "KWD";
+
+  const { data: linkedCustomer } = useQuery({
+    queryKey: ["order-customer-link", order.store_id, order.customer_id, custEmail],
+    queryFn: async () => {
+      const hasWooId = order.customer_id && order.customer_id > 0;
+      if (!hasWooId && !custEmail) return null;
+      let query = supabase.from("customers").select("id").eq("store_id", order.store_id).limit(1);
+      if (hasWooId) {
+        query = query.eq("woo_id", order.customer_id as number);
+      } else if (custEmail) {
+        query = query.ilike("email", custEmail);
+      }
+      const { data, error } = await query.maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!(order.store_id && (order.customer_id || custEmail)),
+    staleTime: 60_000,
+  });
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === order.status) return;
@@ -256,11 +277,26 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
                 <span className="ml-auto text-muted-foreground">→</span>
               </a>
             )}
-            <button disabled className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-              <User className="h-2.5 w-2.5" />
-              <span>Customer</span>
-              <span className="ml-auto">→</span>
-            </button>
+            {linkedCustomer?.id ? (
+              <Link
+                href={`/sites/${order.store_id}/customers/${linkedCustomer.id}`}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
+              >
+                <User className="h-2.5 w-2.5" />
+                <span>Customer profile</span>
+                <span className="ml-auto text-muted-foreground">→</span>
+              </Link>
+            ) : (
+              <button
+                disabled
+                title={custEmail ? "No matching customer profile found" : "No customer info on this order"}
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border text-muted-foreground opacity-60 cursor-not-allowed"
+              >
+                <User className="h-2.5 w-2.5" />
+                <span>Customer</span>
+                <span className="ml-auto">→</span>
+              </button>
+            )}
           </div>
         </div>
 
