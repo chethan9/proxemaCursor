@@ -1,6 +1,6 @@
 ---
 title: Fix site home dashboard stats to match WooCommerce analytics
-status: todo
+status: done
 priority: high
 type: bug
 tags: [dashboard, analytics, stats, rpc]

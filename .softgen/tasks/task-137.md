@@ -1,6 +1,6 @@
 ---
 title: Default site navigation to home page
-status: todo
+status: done
 priority: high
 type: bug
 tags: [navigation, sidebar, ux]
