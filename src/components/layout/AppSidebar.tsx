@@ -290,7 +290,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   value={`${site.name} ${site.url || ""}`}
                   onSelect={() => {
                     setSitePopoverOpen(false);
-                    router.push(`/sites/${site.id}/products`);
+                    router.push(`/sites/${site.id}/home`);
                   }}
                   className="gap-2"
                 >
@@ -518,7 +518,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   <ul className="space-y-0.5">
                     {node.children?.map((c) => renderItem(c))}
                     {can(PERMISSIONS.SITES_VIEW) && visibleSites.map((site) => {
-                      const href = `/sites/${site.id}/products`;
+                      const href = `/sites/${site.id}/home`;
                       const isActive = site.id === activeSiteId;
                       if (collapsed) {
                         return (
