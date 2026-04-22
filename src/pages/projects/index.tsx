@@ -375,7 +375,7 @@ export default function SitesPage() {
       <EditSiteDialog
         open={editOpen}
         onOpenChange={(o) => { setEditOpen(o); if (!o) setEditStoreId(null); }}
-        store={editStore}
+        site={editStore}
       />
     </AppLayout>
   );
