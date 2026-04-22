@@ -33,3 +33,23 @@ Operations console + public API for agencies managing multiple WooCommerce store
 - Excel-like data explorer with search, filters, CSV export, side panel detail view
 - Public REST API v1 with per-client bearer tokens + rate limiting for Flutter/external app access
 - Complete sync + webhook + cron logs with history
+
+### SaaS monetization layer (major release)
+- Tiered plans with quota enforcement (max sites, products per site, users, monthly API calls) + feature flags
+- Subscription lifecycle: trialing → active → past_due → locked → canceled, with grace period
+- **Multi-gateway, region-routed**: MyFatoorah for Middle East (KW/SA/AE/BH/OM/QA/JO — for KNET + local card support), Razorpay for the rest of the world. Pluggable architecture so Tap/Stripe/etc can drop in later.
+- **Localized pricing per country**: plans store a `prices` map (`{USD: 29, KWD: 9, INR: 2400, AED: 110}`), not FX conversion. Each region sees its native currency.
+- **Country/currency detection** at signup via Cloudflare header → IP geo fallback → timezone heuristic. User can override in profile.
+- Tokenized card capture, recurring charges via saved token, webhook-driven status updates (both gateways)
+- Our cron is source-of-truth for renewals (not gateway) — retries, grace periods, coupons under our control
+- Auto-lock on non-payment with UI banner + API 402 response
+- Coupon system (percent / fixed / free-months) with usage caps and plan scoping
+- User-facing billing page: current plan, usage meter, payment method, invoice history, printable invoices — in the user's currency
+- Admin panel: plans CRUD (per-currency prices), subscriptions overview, manual refunds/comps/plan overrides, coupons CRUD
+- Public pricing page with auto-detected currency + manual country/currency switcher
+
+### Accountability layer
+- Unified `activity_log` (actor, entity, action, before/after diff, IP, user-agent) covering config tables via Postgres triggers AND semantic actions via app-layer logging
+- Admin viewer with filters (who, when, entity type, action) + per-entity history panel
+- User-facing "my activity" page for transparency
+- Every billing-impacting action logged (plan change, refund, coupon apply, subscription override) so disputes have evidence
