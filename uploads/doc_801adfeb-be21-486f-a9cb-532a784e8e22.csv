@@ -1,0 +1,137 @@
+﻿Bug ID,Remarks,Title ,Module,Platform ,Priority ,Bug Type,Test Type,Status,Short Description ,Test Steps,Expected Result,Actual Result,Screenshot,Reported By,Date 
+Px - 09,,"Negative values are allowed in price, inventory, and shipping fields",Product / Add Product,Desktop ,Low,Bug Logic,Functional ,Open,System allows entering negative values in fields where only positive values should be accepted.,"1. Login to Proxema panel.
+2. Go to Product module.
+3. Click on ‚ÄúAdd Product‚Äù.
+4. In Price section, enter negative value in Regular Price and Sale Price.
+5. In Inventory, enter negative value in Track Stock.
+6. In Shipping fields, enter negative values. [When clicking on the input field, the up and down arrows appear. The up arrow increases the value, and the down arrow decreases it; however, when the value is at 0, clicking the down arrow directly changes it to a negative value (e.g., -0.01).]
+",System should not allow negative values and should show validation message.,"System accepts negative values in price, inventory, and shipping fields without any validation.",https://prnt.sc/QlS11XfS8L8I,Arvind,22/04/2026
+Px - 10,,Description editor options are not working in Add Product form,Product / Add Product / Description Field,Desktop ,Medium,Bug Frontend,Functional ,Open,"Description editor options like numbered list, bullet list, blockquote, and code are not working when clicked.","1. Login to Proxema panel.
+2. Go to Product module.
+3. Click on ‚ÄúAdd Product‚Äù.
+4. Go to Description field.
+5. Click on options like Paragraph, Numbered List, Bullet List, Blockquote, and Code.
+6. Observe the behavior.
+",Selected option should apply formatting in the description field.,Clicking on options does not perform any action.,https://prnt.sc/WRiHpvREJl-n ,Arvind,22/04/2026
+Px - 13,,Add auto-generate option for SKU field in Add Product form,Product / Add Product,Desktop ,Medium,Enhancement ,Functional ,Open,Add an option to automatically generate SKU for products instead of entering manually.,"1. Login to Proxema panel.
+2. Go to Product module.
+3. Click on ‚ÄúAdd Product‚Äù.
+4. Check SKU field for auto-generate option.
+",System should provide an option (button or auto-fill) to generate SKU automatically.,"There is no option to auto-generate SKU, and user must enter it manually.",https://prnt.sc/3nJhG2oEo5gQ ,Arvind,22/04/2026
+Px - 14,,Product can be published with only Product Name filled,Product / Add Product,Desktop ,High,Bug Logic,Functional ,Open,System allows publishing a product by entering only the Product Name without other important details.,"1. Login to Proxema panel.
+2. Go to Product module.
+3. Click on ‚ÄúAdd Product‚Äù.
+4. Enter only Product Name.
+5. Leave all other fields empty.
+6. Click on Publish.
+",System should not allow publishing and should ask to fill required product details.,Product is published successfully with only Product Name entered.,https://prnt.sc/bXcfxSek51UC ,Arvind,22/04/2026
+Px - 15,,Image upload sometimes fails and shows loading without uploading,Product / Gallery / Product Image Upload,Desktop ,Medium,Bug Backend ,Functional ,Open,Image upload does not complete sometimes and keeps showing loading without uploading the image.,"1. Login to Proxema panel.
+2. Go to Product module.
+3. Open Add Product or Edit Product.
+4. Go to Gallery or Product Image section.
+5. Click on ‚ÄúUpload New‚Äù.
+6. Select an image to upload.
+7. Observe the upload behavior.
+","
+Selected image should upload successfully and be displayed.
+","Loading animation is shown, but image is not uploaded sometimes.
+",,Arvind,22/04/2026
+Px - 16,,Product status not updated in list after change until page refresh,Product / Product List / Edit Product,Desktop ,Medium,Bug Frontend,Functional ,Open,"After updating product status, the change is not reflected immediately in the product list. The same issue is observed for other statuses as well, such as Pending and Private.","1. Login to Proxema panel.
+2. Go to Product module.
+3. Open any product with Published status.
+4. Click on Edit.
+5. Change status to Draft.
+6. Click on Update.
+7. Observe the product list page.
+8. Check both Published and Draft tabs.
+9. Repeat the same steps for other statuses like Pending and Private.
+",Product should appear only in the selected status tab and should be removed from the previous status immediately for all statuses.,Product appears in both old and new status tabs until the page is manually refreshed. The same issue occurs for other statuses like Pending and Private.,[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 17,,Published free product not visible in panel product list,Product / Add Product / Product List,Desktop ,High,Bug Backend ,Functional ,Open,"When a product is created with the ‚ÄúFree Product‚Äù option and published, it is successfully displayed on the website but not shown in the product list in the Proxema panel. This creates inconsistency between panel and website data.","1. Login to Proxema panel for Dr. Ala website.
+2. Navigate to Product module.
+3. Click on ‚ÄúAdd Product‚Äù to open the form.
+4. Enter all required product details.
+5. In the Price section, select ‚ÄúFree Product‚Äù.
+6. Click on ‚ÄúPublish‚Äù.
+7. After publishing, you will be redirected to the product list page.
+8. Search for the newly created product (e.g., ‚ÄúAnti Aging Cream‚Äù) in the panel.
+9. Open the Dr. Ala website and check the same product.
+","The published product should be visible in both the Proxema panel product list and the website, maintaining data consistency.","The product is successfully published and visible on the website, but it is not displayed in the product list in the Proxema panel.",[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 18,,Category filter shows ‚ÄúNo product found‚Äù even when products exist,Product / Product List / Category Filter,Desktop ,High,Bug Logic,Functional ,Open,Category filter is not showing products even though products are available for the selected category.,"1. Login to Proxema panel for Dr. Ala website.
+2. Go to Product module.
+3. Click on Category dropdown on top left.
+4. Select a category (e.g., ‚ÄúSkin Care‚Äù).
+5. Observe the product list.
+",Products related to the selected category should be displayed.,System shows ‚ÄúNo product found‚Äù even though products exist in that category.,https://prnt.sc/XbyDXBGU2LwC ,Arvind,22/04/2026
+Px - 19,,Updated stock status not reflected in product list without page refresh,Product / Product List / Edit Product,Desktop ,Medium,Bug Frontend,Functional ,Open,"After updating stock status, the change is not shown immediately in the product list.","1. Login to Proxema panel for Dr. Ala website.
+2. Go to Product module.
+3. Click on Edit for any product.
+4. Check current stock status (e.g., Backorder).
+5. Change status to ‚ÄúIn Stock‚Äù.
+6. Click on ‚ÄúUpdate‚Äù.
+7. Observe the product list page.
+",Updated stock status should be shown immediately in the product list.,Stock status still shows old value (Backorder) and updates only after page refresh.,[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 20,,Updated product details not reflected in product list without refresh,Product / Product List / Edit Product,Desktop ,Medium,Bug Frontend,Functional ,Open,"After editing and saving product details, the updated data is not shown immediately in the product widget.","1. Login to Proxema panel for Dr. Ala website.
+2. Go to Product module.
+3. Click on Edit for any product.
+4. Mosift any fileds (ex: name, price, stock, etc)
+5. Clcik on ""save changes.
+6. Observe the product widget in product list after redirection.",Updated prodcut details should be refelcted immediately in the product list.,Changes are not visible immediately and appeat only after refreshing the page or waitng for some time.,[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 22,,Quick Edit changes are not reflected in product widget without page refresh,Product / Quick Edit / Product List,Desktop ,Medium,Bug Frontend,Functional ,Open,"After saving changes in Quick Edit, updated values are not shown immediately in the product widget.
+
+----------------------
+
+This issue also occurs when changing product status (Active/Draft).","1. Login to Proxema panel.
+2. Go to Product module.
+3. Click on Quick Edit for any product.
+4. Modify Regular Price, Offer Price, Stock Status and quantity.
+5. Click on ‚ÄúSave Changes‚Äù.
+6. Observe the product widget in the list.
+",Updated values should be reflected immediately in the product widget.,Old values are still displayed and updates are visible only after page refresh.,[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 23,,Managed stock quantity not reflected in product widget and Quick Edit after saving,Product / Quick Edit / Product List,Desktop ,High,Bug Logic,Functional ,Open,"After enabling Manage Stock and saving quantity, the updated quantity is not shown in product widget or Quick Edit view.","1. Login to Proxema panel.
+2. Go to Product module.
+3. Click on Quick Edit for any product with stock status (In Stock / Out of Stock / Backorders).
+4. Enable ‚ÄúManage Stock‚Äù.
+5. Enter quantity (e.g., 27).
+6. Click on ‚ÄúSave Changes‚Äù.
+7. Reload the page.
+8. Check product widget.
+9. Open Quick Edit again for the same product.
+","Product widget should display updated quantity, and Quick Edit should show Manage Stock enabled with entered quantity.","Product widget still shows stock status, and Quick Edit shows stock status instead of reflecting managed stock quantity.",[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 25,,Improve alignment consistency for Product and Description columns (labels and content),Category/ Categroy List,Desktop ,Low,Enhancement ,Ui Testing,Open,"Both Lables and content in prodcut and description columns should have consistent alignment for better UI clarity.
+-------------------------------
+[The same alignment issue is also observed in the Tags module. Both labels and content in the Product and Description columns show inconsistent alignment here as well.]","1. Login to Proxema panel ( Dr . ala site.)
+2. Select Dr. Ala site
+3. Go to Category module.
+4. Observe the labels and content under Product and Description columns.",Both labels and content in prodcut and description columns should be aligned consistenlty.,"Product column (Label and content) is right-aligned, while description column (Label and content ) is left-aligned, causing inconsistency.","Categroy :
+
+https://prnt.sc/1K7f02gDpwPl
+
+Tag:",Arvind,22/04/2026
+Px - 26,,Updated category name not reflected in Add Product dropdown without page refresh,Category / Product / Add Product,Desktop ,Medium,Bug Frontend,Functional ,Open,Updated category name is not shown immediately in the Add Product category dropdown.,"1. Login to Proxema panel (Dr. Ala site).
+2. Go to Category module.
+3. Click on any category (e.g., ‚ÄúMoisturize‚Äù).
+4. Change the name to ‚ÄúMoisturizes‚Äù using Quick Edit.
+5. Click on ‚ÄúSave Changes‚Äù.
+6. Go to Product module.
+7. Click on ‚ÄúAdd Product‚Äù.
+8. Open Add Category dropdown.
+",Updated category name should be shown immediately in the dropdown.,Old category name is shown in the dropdown and updates only after page refresh.,[ Screen recording is available. Please reach out.],Arvind,22/04/2026
+Px - 27,,Add option to select existing tags in Add Product tag field,Tag / Product / Add Product,Desktop ,Medium,Enhancement ,Functional ,Open,Add option to view and select existing tags in the Add Product tag field instead of only allowing new tag creation.,"1. Login to Proxema panel (Dr. Ala site).
+2. Go to Tag module and confirm existing tags are available.
+3. Navigate to Product module.
+4. Click on ‚ÄúAdd Product‚Äù.
+5. Go to Tag section.
+6. Click on the tag input field.
+",System should show existing tags in a dropdown or suggestion list and allow selection. It should also allow adding new tags.,Tag field allows only entering new tags and does not show existing tags for selection.,"Tag :
+
+https://prnt.sc/rf_VY7qXM6dM 
+
+Add Prodcut  [ Tag] : 
+
+https://prnt.sc/m11prkivNtj9 ",Arvind,22/04/2026
+Px - 28,,Category product count not updated after assigning product to category,Category / Product / Add Product,Desktop ,High,Bug Logic,Functional ,Open,"When a product is created and assigned to a category, the category product count does not update. Even after refreshing the page, the count still shows 0, which is incorrect. This creates inconsistency between actual data and displayed count.","1. Login to Proxema panel.
+2. Create a category (e.g., ‚ÄúMoisturizer‚Äù) in Category module.
+3. Add a new product and assign it to this category.
+4. Publish the product.
+5. Go back to Category module and check product count.
+",Category product count should update based on assigned products.,Category product count remains 0 even after assigning a product.,[ Screen recording is available. Please reach out.],Arvind,22/04/2026

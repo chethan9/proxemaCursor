@@ -11,6 +11,19 @@ type Props = {
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
 };
 
+function clampNonNegNum(v: string): number | null {
+  if (v === "") return null;
+  const n = Number(v);
+  if (Number.isNaN(n)) return null;
+  return Math.max(0, n);
+}
+function clampNonNegStr(v: string): string {
+  if (v === "" || v === "-") return "";
+  const n = parseFloat(v);
+  if (Number.isNaN(n)) return v;
+  return n < 0 ? "0" : v;
+}
+
 const STOCK_STATUSES: { value: ProductFormState["stock_status"]; label: string }[] = [
   { value: "instock", label: "In Stock" },
   { value: "outofstock", label: "Out Of Stock" },
@@ -45,7 +58,7 @@ export function InventoryShippingTab({ form, setForm }: Props) {
           {form.manage_stock && (
             <div className="space-y-1.5">
               <Label className="text-xs">Quantity</Label>
-              <Input type="number" value={form.stock_quantity ?? ""} onChange={(e) => setForm((p) => ({ ...p, stock_quantity: e.target.value ? Number(e.target.value) : null }))} />
+              <Input type="number" min="0" value={form.stock_quantity ?? ""} onChange={(e) => setForm((p) => ({ ...p, stock_quantity: clampNonNegNum(e.target.value) }))} />
             </div>
           )}
           <div className="space-y-1.5">
@@ -78,14 +91,14 @@ export function InventoryShippingTab({ form, setForm }: Props) {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Weight <span className="text-muted-foreground">(kg)</span></Label>
-            <Input value={form.weight} onChange={(e) => setForm((p) => ({ ...p, weight: e.target.value }))} placeholder="0.000" />
+            <Input type="number" min="0" step="0.01" value={form.weight} onChange={(e) => setForm((p) => ({ ...p, weight: clampNonNegStr(e.target.value) }))} placeholder="0.000" />
           </div>
           <div>
             <Label className="text-xs">Dimensions <span className="text-muted-foreground">(cm)</span></Label>
             <div className="grid grid-cols-3 gap-2 mt-1.5">
-              <Input placeholder="Length" value={form.dimensions.length} onChange={(e) => setForm((p) => ({ ...p, dimensions: { ...p.dimensions, length: e.target.value } }))} />
-              <Input placeholder="Width" value={form.dimensions.width} onChange={(e) => setForm((p) => ({ ...p, dimensions: { ...p.dimensions, width: e.target.value } }))} />
-              <Input placeholder="Height" value={form.dimensions.height} onChange={(e) => setForm((p) => ({ ...p, dimensions: { ...p.dimensions, height: e.target.value } }))} />
+              <Input type="number" min="0" step="0.01" placeholder="Length" value={form.dimensions.length} onChange={(e) => setForm((p) => ({ ...p, dimensions: { ...p.dimensions, length: clampNonNegStr(e.target.value) } }))} />
+              <Input type="number" min="0" step="0.01" placeholder="Width" value={form.dimensions.width} onChange={(e) => setForm((p) => ({ ...p, dimensions: { ...p.dimensions, width: clampNonNegStr(e.target.value) } }))} />
+              <Input type="number" min="0" step="0.01" placeholder="Height" value={form.dimensions.height} onChange={(e) => setForm((p) => ({ ...p, dimensions: { ...p.dimensions, height: clampNonNegStr(e.target.value) } }))} />
             </div>
           </div>
         </div>

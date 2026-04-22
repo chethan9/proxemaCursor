@@ -121,9 +121,14 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
+                      min="0"
                       step="0.01"
                       value={regularPrice}
-                      onChange={(e) => setRegularPrice(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const n = parseFloat(v);
+                        setRegularPrice(v === "" ? "" : (!Number.isNaN(n) && n < 0 ? "0" : v));
+                      }}
                       placeholder="Regular price"
                       className="h-9"
                     />
@@ -132,9 +137,14 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
+                      min="0"
                       step="0.01"
                       value={salePrice}
-                      onChange={(e) => setSalePrice(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const n = parseFloat(v);
+                        setSalePrice(v === "" ? "" : (!Number.isNaN(n) && n < 0 ? "0" : v));
+                      }}
                       placeholder="Sale price (optional)"
                       className="h-9"
                     />
@@ -161,8 +171,13 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
                       <Label className="text-xs text-muted-foreground">Quantity</Label>
                       <Input
                         type="number"
+                        min="0"
                         value={stockQuantity}
-                        onChange={(e) => setStockQuantity(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const n = parseInt(v, 10);
+                          setStockQuantity(v === "" ? "" : (!Number.isNaN(n) && n < 0 ? "0" : v));
+                        }}
                         placeholder="0"
                         className="h-9 mt-1"
                       />

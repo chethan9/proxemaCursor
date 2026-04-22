@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical } from "lucide-react";
+import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical, AlertCircle } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
@@ -62,6 +62,15 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
   const saleNum = parseFloat(form.sale_price) || 0;
   const isFree = regularNum === 0 && form.regular_price === "0";
   const discountPct = regularNum > 0 && saleNum > 0 && saleNum < regularNum ? Math.round(((regularNum - saleNum) / regularNum) * 100) : 0;
+  const publishBlocked = form.status === "publish" && !isFree && regularNum <= 0;
+
+  // Clamp negative numeric string to 0 (defensive: spinner arrows can bypass min="0" in some browsers)
+  const clampNonNegative = (v: string): string => {
+    if (v === "" || v === "-") return "";
+    const n = parseFloat(v);
+    if (Number.isNaN(n)) return v;
+    return n < 0 ? "0" : v;
+  };
 
   const filteredCats = useMemo(() => {
     const q = catSearch.trim().toLowerCase();
@@ -302,11 +311,11 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-[11px] text-muted-foreground">Regular</Label>
-                  <Input type="number" step="0.01" disabled={isFree} value={form.regular_price} onChange={(e) => setForm((p) => ({ ...p, regular_price: e.target.value }))} placeholder="0.00" />
+                  <Input type="number" min="0" step="0.01" disabled={isFree} value={form.regular_price} onChange={(e) => setForm((p) => ({ ...p, regular_price: clampNonNegative(e.target.value) }))} placeholder="0.00" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px] text-muted-foreground">Sale</Label>
-                  <Input type="number" step="0.01" disabled={isFree} value={form.sale_price} onChange={(e) => setForm((p) => ({ ...p, sale_price: e.target.value }))} placeholder="0.00" />
+                  <Input type="number" min="0" step="0.01" disabled={isFree} value={form.sale_price} onChange={(e) => setForm((p) => ({ ...p, sale_price: clampNonNegative(e.target.value) }))} placeholder="0.00" />
                 </div>
               </div>
               <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
@@ -326,7 +335,12 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
               {form.manage_stock && (
                 <div className="space-y-1">
                   <Label className="text-[11px] text-muted-foreground">Stock quantity</Label>
-                  <Input type="number" value={form.stock_quantity ?? ""} onChange={(e) => setForm((p) => ({ ...p, stock_quantity: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+                  <Input type="number" min="0" value={form.stock_quantity ?? ""} onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") { setForm((p) => ({ ...p, stock_quantity: null })); return; }
+                    const n = Number(v);
+                    setForm((p) => ({ ...p, stock_quantity: Number.isNaN(n) ? null : Math.max(0, n) }));
+                  }} placeholder="0" />
                 </div>
               )}
               <div className="space-y-1.5">
@@ -359,15 +373,22 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
               <div className="text-sm font-medium">Shipping</div>
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">Weight (kg)</Label>
-                <Input type="number" step="0.01" value={form.weight || ""} onChange={(e) => setForm((p) => ({ ...p, weight: e.target.value }))} placeholder="0.00" />
+                <Input type="number" min="0" step="0.01" value={form.weight || ""} onChange={(e) => setForm((p) => ({ ...p, weight: clampNonNegative(e.target.value) }))} placeholder="0.00" />
               </div>
             </CardContent>
           </Card>
 
+          {publishBlocked && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+              <AlertCircle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
+              <span className="text-foreground/80">Add a price or mark as <span className="font-medium">Free product</span> to publish. Save as Draft to skip pricing for now.</span>
+            </div>
+          )}
+
           <div className="flex gap-2 sticky bottom-4">
             <Button variant="outline" className="flex-1" onClick={onCancel} disabled={saving}>Cancel</Button>
-            <Button className="flex-1" onClick={onPublish} disabled={saving || !form.name.trim()}>
-              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save changes" : "Publish")}
+            <Button className="flex-1" onClick={onPublish} disabled={saving || !form.name.trim() || publishBlocked}>
+              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save changes" : (form.status === "publish" ? "Publish" : "Save"))}
             </Button>
           </div>
         </div>
