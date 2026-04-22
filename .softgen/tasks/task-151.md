@@ -1,6 +1,6 @@
 ---
 title: Subscriptions (schema, state machine, enforcement middleware)
-status: todo
+status: in_progress
 priority: urgent
 type: feature
 tags: [billing, subscriptions, middleware, platform]
