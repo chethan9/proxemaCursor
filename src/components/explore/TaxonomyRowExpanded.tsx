@@ -54,6 +54,7 @@ export function TaxonomyRowExpanded({ taxon, mode, allTaxons, storeUrl }: { taxo
       }
       toast({ title: "Saved", description: `${mode === "categories" ? "Category" : "Tag"} updated in WooCommerce.` });
       qc.invalidateQueries({ queryKey: queryKeys.taxonomy(taxon.store_id, mode) });
+      qc.invalidateQueries({ queryKey: ["woo", "taxonomy", taxon.store_id, mode] });
     } catch (e) {
       toast({ title: "Save failed", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -72,6 +73,7 @@ export function TaxonomyRowExpanded({ taxon, mode, allTaxons, storeUrl }: { taxo
       await supabase.from(mode === "categories" ? "categories" : "tags").delete().eq("id", taxon.id);
       toast({ title: "Deleted", description: `${mode === "categories" ? "Category" : "Tag"} deleted from WooCommerce.` });
       qc.invalidateQueries({ queryKey: queryKeys.taxonomy(taxon.store_id, mode) });
+      qc.invalidateQueries({ queryKey: ["woo", "taxonomy", taxon.store_id, mode] });
     } catch (e) {
       toast({ title: "Delete failed", description: (e as Error).message, variant: "destructive" });
     } finally {

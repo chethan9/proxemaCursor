@@ -53,10 +53,9 @@ export function ProductQuickEdit({ product, open, onClose, onSaved }: Props) {
         price: salePrice || regularPrice || null,
         stock_status: stockStatus,
         status: available ? "publish" : "draft",
+        manage_stock: manageStock,
+        stock_quantity: manageStock ? (stockQuantity ? parseInt(stockQuantity, 10) : null) : null,
       };
-      if (manageStock) {
-        updates.stock_quantity = stockQuantity ? parseInt(stockQuantity, 10) : null;
-      }
       const updated = await updateProduct(product.id, updates);
       toast({ title: "Product updated", description: product.name || "" });
       onSaved(updated);
