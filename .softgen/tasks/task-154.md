@@ -1,6 +1,6 @@
 ---
 title: Billing page (user-facing)
-status: todo
+status: in_progress
 priority: high
 type: feature
 tags: [billing, ui, user-experience]
