@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import { UptimeBar } from "./UptimeBar";
 import type { UptimePoint } from "@/hooks/queries/useSitesUptime";
+import { useSiteScreenshot } from "@/hooks/queries/useSiteScreenshot";
 
 interface Props {
   store: StoreWithClient;
@@ -33,23 +34,21 @@ function formatRelative(d: string | null): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function SiteScreenshot({ url, name }: { url: string; name: string }) {
+function SiteScreenshot({ storeId, url, name }: { storeId: string; url: string; name: string }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
-  let screenshotUrl: string | null = null;
-  try {
-    const u = new URL(url);
-    const apiKey = process.env.NEXT_PUBLIC_THUM_API_KEY;
-    if (apiKey) {
-      screenshotUrl = `https://image.thum.io/get/auth/${apiKey}/width/600/${u.origin}`;
-    } else {
-      screenshotUrl = `https://image.thum.io/get/width/600/${u.origin}`;
-    }
-  } catch {
-    screenshotUrl = null;
+  const { data, isLoading } = useSiteScreenshot(storeId);
+  const screenshotUrl = data?.url;
+
+  if (!url) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 via-primary/10 to-primary/20">
+        <SiteAvatar url={url} name={name} size={56} />
+      </div>
+    );
   }
 
-  if (!screenshotUrl || errored) {
+  if (errored || (!screenshotUrl && !isLoading)) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 via-primary/10 to-primary/20">
         <SiteAvatar url={url} name={name} size={56} />
@@ -59,20 +58,22 @@ function SiteScreenshot({ url, name }: { url: string; name: string }) {
 
   return (
     <>
-      {!loaded && (
+      {(!loaded || !screenshotUrl) && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted via-muted to-muted/60 animate-pulse flex items-center justify-center">
           <SiteAvatar url={url} name={name} size={40} className="opacity-40" />
         </div>
       )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={screenshotUrl}
-        alt={`${name} preview`}
-        className={`w-full h-full object-cover object-top transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-        onLoad={() => setLoaded(true)}
-        onError={() => setErrored(true)}
-        loading="lazy"
-      />
+      {screenshotUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={screenshotUrl}
+          alt={`${name} preview`}
+          className={`w-full h-full object-cover object-top transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+          loading="lazy"
+        />
+      )}
     </>
   );
 }
@@ -131,7 +132,7 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
     <div className={`group rounded-2xl border border-border bg-card overflow-hidden flex flex-col transition-all hover:shadow-md ${ringTone}`}>
       <div className="relative p-1.5 pb-0">
         <div className="relative rounded-xl overflow-hidden aspect-[16/11] bg-muted cursor-pointer" onClick={navigateToSite}>
-          <SiteScreenshot url={store.url} name={store.name} />
+          <SiteScreenshot storeId={store.id} url={store.url || ""} name={store.name} />
           <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
           <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/55 backdrop-blur-sm">
             <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
