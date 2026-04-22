@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical, AlertCircle } from "lucide-react";
+import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical, AlertCircle, Sparkles } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
@@ -111,6 +111,20 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
     } else {
       setForm((p) => ({ ...p, regular_price: "" }));
     }
+  };
+
+  const generateSku = () => {
+    const base = (form.name || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]+/g, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 4)
+      .join("-");
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const sku = base ? `${base}-${suffix}` : `SKU-${Date.now().toString(36).toUpperCase()}`;
+    setForm((p) => ({ ...p, sku }));
   };
 
   const statusOptions: { value: ProductFormState["status"]; label: string }[] = [
@@ -363,7 +377,19 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">SKU</Label>
-                <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Optional" />
+                <div className="flex gap-1.5">
+                  <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Optional" className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={generateSku}
+                    title={form.name.trim() ? "Auto-generate from product name" : "Enter product name first for name-based SKU"}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
