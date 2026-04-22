@@ -310,16 +310,28 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-destructive">Are you sure? This cannot be undone.</div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+              <div className="space-y-2">
+                <div className="text-xs text-destructive">
+                  This permanently deletes the site and all synced products, orders, customers, webhooks, sync runs, and logs. This cannot be undone.
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Type the site name <span className="font-mono font-semibold">{store.name}</span> to confirm:
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder={store.name}
+                    className="h-8 text-xs font-mono"
+                    autoFocus
+                  />
+                  <Button type="button" variant="ghost" size="sm" className="h-8 text-xs shrink-0" onClick={() => { setConfirmDelete(false); setDeleteConfirmation(""); }}>Cancel</Button>
                   <Button
                     type="button"
                     variant="destructive"
                     size="sm"
-                    className="h-8 text-xs"
-                    disabled={deleting}
+                    className="h-8 text-xs shrink-0"
+                    disabled={deleting || deleteConfirmation !== store.name}
                     onClick={async () => { setDeleting(true); try { await deleteMutation.mutateAsync(); } finally { setDeleting(false); } }}
                   >
                     {deleting ? "Deleting…" : "Yes, delete"}
