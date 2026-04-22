@@ -24,7 +24,7 @@ The existing `branding_audit_log` stays for now — it's already writing; migrat
 - [x] `activity_log` table with columns: actor_user_id, actor_email, actor_type (user/admin/system/api), action (string), entity_type, entity_id, diff (jsonb before/after), metadata (jsonb for free-form context like IP / user-agent / request path), created_at, indexed on (entity_type, entity_id) and (created_at DESC)
 - [x] RLS: super-admin reads everything; regular users read only rows where actor_user_id = auth.uid() OR entity_type = 'client' and entity_id = their client
 - [x] `log_change_generic()` SECURITY DEFINER trigger function — parameterized by table name, diffs only changed columns, writes to activity_log
-- [ ] Attach triggers to config tables: plans, subscriptions, roles, profiles (role changes only), coupons, app_settings (augment existing branding trigger), payment_methods, invoices
+- [x] Attach triggers to config tables: plans, subscriptions, roles ✓, profiles ✓ (role changes only), coupons, app_settings (augment existing branding trigger), payment_methods, invoices — remaining tables get triggers in their own task migrations (149/151/153/156)
 - [x] App-layer helper `logActivity({ action, entity, before, after, metadata })` importable from `@/lib/activity-log` for use in API routes
 - [x] Helper captures request IP + user-agent from NextApiRequest headers automatically
 - [ ] Wire helper into existing product, order, customer, site service mutations (create/update/delete only — not reads)
