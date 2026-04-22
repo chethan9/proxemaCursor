@@ -44,6 +44,9 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
 
   const wpConnected = !!(store?.wp_username && store?.wp_app_password);
   const wcConnected = !!store?.consumer_key;
+  const clientChanged = !!store && form.client_id !== (store.client_id || "");
+  const originalClientName = clients.find((c) => c.id === (store?.client_id || ""))?.name || "Unassigned";
+  const newClientName = clients.find((c) => c.id === form.client_id)?.name || "Unassigned";
 
   useEffect(() => {
     if (store) {
@@ -171,6 +174,12 @@ export function EditSiteDialog({ open, onOpenChange, store, onStoreDeleted }: Pr
               </select>
             </div>
           </div>
+
+          {clientChanged && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <span className="font-semibold">Heads up:</span> Reassigning from <span className="font-mono font-semibold">{originalClientName}</span> to <span className="font-mono font-semibold">{newClientName}</span> changes who can access this site. Users of {originalClientName} will lose access immediately; users of {newClientName} will gain access. API keys issued under {originalClientName} will stop returning this site&apos;s data.
+            </div>
+          )}
 
           <div className="grid grid-cols-12 gap-3">
             <div className="col-span-12 space-y-1">
