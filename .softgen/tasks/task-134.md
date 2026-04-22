@@ -40,6 +40,14 @@ Persist view mode per user via `useViewPreferences` (key: `projects-view-mode`).
 - When ≥1 selected, show floating action bar: Sync selected / Export CSV / Clear selection
 - Count badge ("N sites selected")
 
+**Must preserve (do not regress during redesign):**
+- `IncompleteOnboardingPrompt` (app-level "Resume site setup?" dialog) continues to render and navigate to `/sites/connect/{id}?resume=1`
+- The "Resume setup" row action on sites where `onboarding_completed_at` is null must remain accessible in all three view modes (list/grid/compact) — not just list
+- The `router.query.wp` / `router.query.store` return handler (WordPress OAuth callback → reopens `EditSiteDialog` focused on that store) stays wired at the page level
+- The Lottie cat empty state (when `stores.length === 0`) is retained — show the "Add Site" CTA inside the empty state even though the toolbar button is hidden when empty
+- `IncompleteSiteDialog` (opened from SitesTable row for incomplete sites) continues to work — client list, URL validation, update flow
+- Existing `useStores` / `useClients` query keys and invalidation on site add/edit/delete keep working
+
 ## Checklist
 
 - [ ] Remove page heading + subheading; lift table container to top of main area with comfortable top padding only
