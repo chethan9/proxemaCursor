@@ -60,7 +60,7 @@ export async function getCurrentUsage(clientId: string): Promise<UsageSnapshot> 
   const client = supabaseAdmin;
   const [sites, products, users] = await Promise.all([
     client.from("stores").select("id", { count: "exact", head: true }).eq("client_id", clientId),
-    client.from("products").select("id", { count: "exact", head: true }).eq("client_id", clientId),
+    client.from("products").select("id, stores!inner(client_id)", { count: "exact", head: true }).eq("stores.client_id", clientId),
     client.from("profiles").select("id", { count: "exact", head: true }).eq("client_id", clientId),
   ]);
   return {
