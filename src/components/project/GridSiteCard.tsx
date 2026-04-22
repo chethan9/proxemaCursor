@@ -129,8 +129,8 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
 
   return (
     <div className={`group rounded-2xl border border-border bg-card overflow-hidden flex flex-col transition-all hover:shadow-md ${ringTone}`}>
-      <div className="relative p-2 pb-0">
-        <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-muted cursor-pointer" onClick={navigateToSite}>
+      <div className="relative p-1.5 pb-0">
+        <div className="relative rounded-xl overflow-hidden aspect-[16/11] bg-muted cursor-pointer" onClick={navigateToSite}>
           <SiteScreenshot url={store.url} name={store.name} />
           <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
           <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/55 backdrop-blur-sm">
@@ -151,7 +151,7 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
         </div>
       </div>
 
-      <div className="p-3 flex flex-col gap-2.5 flex-1">
+      <div className="p-2.5 flex flex-col gap-2 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -174,7 +174,7 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
           )}
         </div>
 
-        <div className="grid grid-cols-3 border-y border-border py-2">
+        <div className="grid grid-cols-3 border-y border-border py-1.5">
           <div className="text-center px-1">
             <div className={`flex items-center justify-center gap-1 text-sm font-semibold ${healthTone}`}>
               {store.health_score != null ? (
@@ -196,14 +196,14 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 mt-auto">
+        <div className="flex items-center gap-1 mt-auto">
           {isIncomplete ? (
             <Button
               size="sm"
-              className="flex-1 rounded-full h-9 gap-1.5"
+              className="flex-1 rounded-full h-8 gap-1.5 text-xs"
               onClick={(e) => { e.stopPropagation(); router.push(`/sites/connect/${store.id}?resume=1`); }}
             >
-              <PlayCircle className="h-4 w-4" />
+              <PlayCircle className="h-3.5 w-3.5" />
               Resume setup
             </Button>
           ) : (
@@ -211,39 +211,39 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
               <Button
                 size="sm"
                 variant="ghost"
-                className="flex-1 rounded-full h-9 gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary font-medium"
+                className="flex-1 rounded-full h-8 gap-1 bg-primary/10 hover:bg-primary/20 text-primary font-medium text-xs"
                 onClick={handleSync}
                 disabled={syncing}
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
-                {syncing ? "Starting..." : "Sync all"}
+                <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "..." : "Sync all"}
               </Button>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full shrink-0"
+                className="h-8 w-8 rounded-full shrink-0"
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 title="Edit site"
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-3 w-3" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full shrink-0"
+                className="h-8 w-8 rounded-full shrink-0"
                 onClick={(e) => { e.stopPropagation(); router.push(`/projects/${store.id}`); }}
                 title="Sync engine"
               >
-                <BarChart3 className="h-3.5 w-3.5" />
+                <BarChart3 className="h-3 w-3" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full shrink-0"
+                className="h-8 w-8 rounded-full shrink-0"
                 onClick={(e) => { e.stopPropagation(); window.open(store.url, "_blank"); }}
                 title="Open store"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <ExternalLink className="h-3 w-3" />
               </Button>
             </>
           )}
