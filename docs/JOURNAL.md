@@ -17,6 +17,47 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 
 ---
 
+## 2026-04-22 — Bugfix batch (Bugfix2.csv) + site screenshot cache + delete UX
+
+**Scope:** bug + feature + schema
+**Commit:** uncommitted (checkpoint `ded7f35` before batch)
+**Files:**
+- Product validation: `src/components/product-edit/BasicEditor.tsx`, `src/components/product-edit/tabs/PricingTaxTab.tsx`, `src/components/product-edit/tabs/InventoryShippingTab.tsx`, `src/components/explore/ProductQuickEdit.tsx`, `src/components/product-edit/variants/VariationEditDialog.tsx`, `src/services/productEditService.ts`
+- Editor: `src/components/product-edit/RichTextEditor.tsx`
+- Cache invalidation: `src/components/explore/TaxonomyRowExpanded.tsx`, `src/pages/sites/[id]/products/new.tsx`
+- Product API: `src/pages/api/stores/[storeId]/products/create.ts`, `src/services/productService.ts`
+- Image uploads: `src/services/wpMediaService.ts`, `src/hooks/queries/useWpMedia.ts`, `src/components/product-edit/ImagePickerDialog.tsx`
+- Delete UX: `src/components/project/EditSiteDialog.tsx`
+- Site screenshots: `src/pages/api/stores/[storeId]/screenshot.ts` (new), `src/hooks/queries/useSiteScreenshot.ts` (new), `src/components/project/GridSiteCard.tsx`, `src/integrations/supabase/types.ts`
+- Task files: `.softgen/tasks/task-141.md` … `task-147.md` (task 147 still `todo`)
+
+**Why:** Address 15 bugs + 3 enhancements from `uploads/Bugfix2.csv` and UX issues reported in-session (dialog lock during site delete, slow screenshot loads).
+
+**What:**
+- **Px-09 negative values** → `min="0"` + `clampNonNegative` on every price/stock/weight/dimension input across Basic, Advanced (all tabs), Quick Edit, and Variation Edit. Server-side `formToWooPayload` floors negatives at 0 as defense-in-depth.
+- **Px-14 publish guard** → Basic mode Publish button disabled when `status === "publish"` and no price set and free flag off. Inline warning hint instead of toast.
+- **Px-10 rich text editor** → removed dead `prose prose-sm` classes (no typography plugin installed); existing `.ProseMirror` CSS in `globals.css` already renders lists/blockquote/code correctly.
+- **Px-13 auto-SKU in Basic** → sparkle button beside SKU field generates `NAME-PARTS-XXXX` (uppercase, alphanumeric, 4-char random suffix); falls back to `SKU-<timestamp>` when name empty.
+- **Px-16 / 19 / 20 / 22 list invalidation** → verified existing `["products", storeId]` prefix invalidation already works; no code change needed.
+- **Px-23 manage_stock in Quick Edit** → now always included in update payload (was only sent when true → toggling off never persisted).
+- **Px-26 category name in Add Product dropdown** → `TaxonomyRowExpanded` now also invalidates `["woo", "taxonomy", storeId, mode]` (separate cache from `["taxonomy", ...]`).
+- **Px-17 free product not in panel** → `/api/stores/[storeId]/products/create.ts` switched from `.insert()` to `.upsert({ onConflict: "store_id,woo_id" })` so DB row lands regardless of webhook race.
+- **Px-18 category filter** → `fetchProducts` swapped brittle `.ilike("categories::text", ...)` for reliable `.contains("categories", [{ name }])` jsonb containment.
+- **Px-28 category count** → `new.tsx` now invalidates both taxonomy query keys after product create; panel refreshes count on next fetch.
+- **Px-15 image upload reliability** → `wpMediaService.uploadWpMedia` wrapped in `AbortController` with 90s hard timeout; `ImagePickerDialog` surfaces per-file failures via summary toast (`"4 uploaded · 1 failed"`).
+- **Delete site UX lock** → `EditSiteDialog` now blocks close (escape/overlay/X), disables all buttons, and shows a full-panel spinner overlay `"Deleting {site.name}…"` until the API resolves.
+- **Site screenshot cache** → replaced per-render thum.io fetches with a DB-backed cache (see schema below). First capture: thum.io → upload to Supabase Storage → store public URL + timestamp. Subsequent loads serve from Supabase CDN. Refreshes every 7 days; serves stale URL on refresh failure.
+
+**Schema changes (requires production migration — see `MIGRATIONS.md`):**
+- `stores.screenshot_url text` + `stores.screenshot_captured_at timestamptz`
+- New public Storage bucket `site-screenshots` with RLS policies for public read + service-role write/update
+
+**Follow-ups:**
+- `task-147` still `todo` — auto-SKU is done (Px-13), but column alignment (Px-25) and existing-tag picker (Px-27) are deferred.
+- Consider pre-warming screenshots via a cron job to avoid any user-facing capture latency on brand-new sites.
+
+---
+
 ## 2026-04-20 — Instant onboarding + progressive background sync
 
 **Scope:** feature
