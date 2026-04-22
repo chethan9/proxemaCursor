@@ -1,4 +1,4 @@
-import { Search, Plus, LayoutGrid, List, AlignJustify } from "lucide-react";
+import { Search, Plus, LayoutGrid, List, Grid3x3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -123,7 +123,7 @@ export function ProjectsToolbar(props: Props) {
           <LayoutGrid className="h-4 w-4" />
         </Button>
         <Button type="button" variant={viewMode === "compact" ? "secondary" : "ghost"} size="sm" className="h-7 w-8 p-0" onClick={() => onViewModeChange("compact")} title="Compact view">
-          <AlignJustify className="h-4 w-4" />
+          <Grid3x3 className="h-4 w-4" />
         </Button>
       </div>
 
