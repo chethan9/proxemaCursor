@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -249,6 +249,51 @@ export type Database = {
           sidebar_color?: string | null
           theme_preset?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      branding_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          id: string
+          new_brand_name: string | null
+          new_logo_url: string | null
+          new_primary_color: string | null
+          new_theme_preset: string | null
+          previous_brand_name: string | null
+          previous_logo_url: string | null
+          previous_primary_color: string | null
+          previous_theme_preset: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          id?: string
+          new_brand_name?: string | null
+          new_logo_url?: string | null
+          new_primary_color?: string | null
+          new_theme_preset?: string | null
+          previous_brand_name?: string | null
+          previous_logo_url?: string | null
+          previous_primary_color?: string | null
+          previous_theme_preset?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          id?: string
+          new_brand_name?: string | null
+          new_logo_url?: string | null
+          new_primary_color?: string | null
+          new_theme_preset?: string | null
+          previous_brand_name?: string | null
+          previous_logo_url?: string | null
+          previous_primary_color?: string | null
+          previous_theme_preset?: string | null
         }
         Relationships: []
       }
