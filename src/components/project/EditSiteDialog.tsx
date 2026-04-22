@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useToast } from "@/hooks/use-toast";
-import { Store, Image as ImageIcon, Copy, ExternalLink, Trash2, AlertTriangle, Unlink } from "lucide-react";
+import { Store, Image as ImageIcon, Copy, ExternalLink, Trash2, AlertTriangle, Unlink, Loader2 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Store = Tables<"stores">;
@@ -81,12 +81,12 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
       await deleteStore(site.id);
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       toast({ title: "Site deleted" });
+      setDeleting(false);
       onOpenChange(false);
       if (router.pathname.includes("/sites/")) router.push("/projects");
     } catch (err) {
-      toast({ title: "Delete failed", description: (err as Error).message, variant: "destructive" });
-    } finally {
       setDeleting(false);
+      toast({ title: "Delete failed", description: (err as Error).message, variant: "destructive" });
     }
   };
 
@@ -100,14 +100,24 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 gap-0 max-h-[90vh] flex flex-col">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (deleting) return; // block close while a delete is in flight
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        className="max-w-3xl p-0 gap-0 max-h-[90vh] flex flex-col"
+        onInteractOutside={(e) => { if (deleting) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (deleting) e.preventDefault(); }}
+      >
         <DialogHeader className="px-5 pt-5 pb-3 border-b">
           <DialogTitle className="text-lg">Edit Site</DialogTitle>
           <DialogDescription className="text-xs">Manage site details, WooCommerce API, and WordPress media access.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className={deleting ? "flex-1 overflow-y-auto px-5 py-4 space-y-4 pointer-events-none select-none opacity-40" : "flex-1 overflow-y-auto px-5 py-4 space-y-4"} aria-hidden={deleting}>
           {/* Row 1: basics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
@@ -247,7 +257,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                <Button variant="outline" size="sm" className="h-8 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={deleting || saving}>
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete site
                 </Button>
               </AlertDialogTrigger>
@@ -259,7 +269,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
                     {deleting ? "Deleting…" : "Delete permanently"}
                   </AlertDialogAction>
@@ -271,11 +281,20 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
 
         {/* Sticky footer */}
         <div className="flex items-center justify-end gap-2 border-t px-5 py-3 bg-background">
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} size="sm" className="h-9 min-w-[90px]">
+          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9" disabled={saving || deleting}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="h-9 min-w-[90px]">
             {saving ? "Saving…" : "Save changes"}
           </Button>
         </div>
+
+        {/* Blocking overlay while deleting — covers everything including the Dialog's close (X) button */}
+        {deleting && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/85 backdrop-blur-sm rounded-lg">
+            <Loader2 className="h-8 w-8 animate-spin text-destructive" />
+            <div className="text-sm font-medium">Deleting <span className="text-destructive">{site.name}</span>…</div>
+            <div className="text-xs text-muted-foreground">Please wait — this may take a few seconds.</div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
