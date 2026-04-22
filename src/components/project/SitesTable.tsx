@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Store, ExternalLink, Heart, Pencil, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, Rocket, PlayCircle, AlertTriangle, Trash2, BarChart3 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import { getStore, type StoreWithClient } from "@/services/storeService";
@@ -39,6 +40,8 @@ interface Props {
   loading: boolean;
   hasFilters: boolean;
   onEdit: (store: StoreWithClient) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
 const ASPECT_ICON: Record<string, typeof Package> = {
@@ -53,7 +56,7 @@ const formatDate = (dateString: string | null) => {
   });
 };
 
-export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Props) {
+export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selectedIds, onToggleSelect }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -106,6 +109,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
       <Table>
         <TableHeader>
           <TableRow>
+            {onToggleSelect && <TableHead className="w-10"></TableHead>}
             <TableHead>Site</TableHead>
             <TableHead>Client</TableHead>
             <TableHead>Status</TableHead>
@@ -118,6 +122,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
           {loading && stores.length === 0 ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={`sk-${i}`}>
+                {onToggleSelect && <TableCell></TableCell>}
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-9 w-9 rounded-lg" />
@@ -136,7 +141,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
             ))
           ) : stores.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={onToggleSelect ? 7 : 6} className="text-center py-8 text-muted-foreground">
                 {hasFilters ? "No sites match your filters" : "No sites yet. Add your first site to get started."}
               </TableCell>
             </TableRow>
@@ -158,6 +163,14 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                     onKeyDown={(e) => handleRowKey(e, store, isIncomplete)}
                     onMouseEnter={() => prefetchStore(store.id)}
                   >
+                    {onToggleSelect && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds?.has(store.id) ?? false}
+                          onCheckedChange={() => onToggleSelect(store.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -265,7 +278,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit }: Pro
                   {sync && (
                     <TableRow key={`${store.id}-sync`} className="hover:bg-transparent border-t-0">
                       <TableCell
-                        colSpan={6}
+                        colSpan={onToggleSelect ? 7 : 6}
                         className="py-2 pl-[60px] pr-6 cursor-pointer hover:bg-emerald-500/5 transition-colors group"
                         onClick={(e) => { e.stopPropagation(); router.push(`/projects/${store.id}`); }}
                         title="View sync engine details"
