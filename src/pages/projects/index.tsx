@@ -204,9 +204,6 @@ export default function SitesPage() {
           open={editOpen}
           onOpenChange={(o) => { setEditOpen(o); if (!o) setEditStoreId(null); }}
           store={editStore}
-          clients={clients}
-          isSuperAdmin={isSuperAdmin}
-          onSaved={reloadData}
         />
       </div>
     </AppLayout>
