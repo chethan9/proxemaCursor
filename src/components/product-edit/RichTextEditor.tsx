@@ -80,7 +80,7 @@ export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props
     content: value || "",
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none focus:outline-none px-3 py-2.5 min-h-[120px]",
+        class: "richtext-content max-w-none focus:outline-none px-3 py-2.5 min-h-[120px]",
         style: `min-height:${rows * 24}px`,
       },
     },
