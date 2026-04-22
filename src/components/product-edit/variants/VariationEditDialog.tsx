@@ -28,7 +28,12 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
 
   const priceInput = (value: string, onChange: (v: string) => void) => (
     <div className="relative">
-      <Input type="number" step="0.01" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 pr-12 text-sm" />
+      <Input type="number" min="0" step="0.01" value={value} onChange={(e) => {
+        const v = e.target.value;
+        if (v === "" || v === "-") { onChange(""); return; }
+        const n = parseFloat(v);
+        onChange(Number.isNaN(n) ? v : (n < 0 ? "0" : v));
+      }} className="h-9 pr-12 text-sm" />
       <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground">KWD</span>
     </div>
   );
@@ -104,7 +109,12 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-[11px] font-medium text-muted-foreground">Quantity</Label>
-                  <Input className="h-9" type="number" value={variation.stock_quantity ?? ""} onChange={(e) => onUpdate({ stock_quantity: e.target.value ? Number(e.target.value) : null, manage_stock: true })} placeholder="—" />
+                  <Input className="h-9" type="number" min="0" value={variation.stock_quantity ?? ""} onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") { onUpdate({ stock_quantity: null, manage_stock: true }); return; }
+                    const n = Number(v);
+                    onUpdate({ stock_quantity: Number.isNaN(n) ? null : Math.max(0, n), manage_stock: true });
+                  }} placeholder="—" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px] font-medium text-muted-foreground">Stock</Label>
@@ -127,14 +137,34 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label className="text-[11px] font-medium text-muted-foreground">Weight (kg)</Label>
-                <Input className="h-9" value={variation.weight} onChange={(e) => onUpdate({ weight: e.target.value })} placeholder="—" />
+                <Input className="h-9" type="number" min="0" step="0.01" value={variation.weight} onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "" || v === "-") { onUpdate({ weight: "" }); return; }
+                  const n = parseFloat(v);
+                  onUpdate({ weight: Number.isNaN(n) ? v : (n < 0 ? "0" : v) });
+                }} placeholder="—" />
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px] font-medium text-muted-foreground">Dimensions (cm)</Label>
                 <div className="grid grid-cols-3 gap-1.5">
-                  <Input className="h-9" value={variation.dimensions.length} onChange={(e) => onUpdate({ dimensions: { ...variation.dimensions, length: e.target.value } })} placeholder="L" />
-                  <Input className="h-9" value={variation.dimensions.width} onChange={(e) => onUpdate({ dimensions: { ...variation.dimensions, width: e.target.value } })} placeholder="W" />
-                  <Input className="h-9" value={variation.dimensions.height} onChange={(e) => onUpdate({ dimensions: { ...variation.dimensions, height: e.target.value } })} placeholder="H" />
+                  <Input className="h-9" type="number" min="0" step="0.01" value={variation.dimensions.length} onChange={(e) => {
+                    const v = e.target.value;
+                    const n = parseFloat(v);
+                    const next = v === "" || v === "-" ? "" : (Number.isNaN(n) ? v : (n < 0 ? "0" : v));
+                    onUpdate({ dimensions: { ...variation.dimensions, length: next } });
+                  }} placeholder="L" />
+                  <Input className="h-9" type="number" min="0" step="0.01" value={variation.dimensions.width} onChange={(e) => {
+                    const v = e.target.value;
+                    const n = parseFloat(v);
+                    const next = v === "" || v === "-" ? "" : (Number.isNaN(n) ? v : (n < 0 ? "0" : v));
+                    onUpdate({ dimensions: { ...variation.dimensions, width: next } });
+                  }} placeholder="W" />
+                  <Input className="h-9" type="number" min="0" step="0.01" value={variation.dimensions.height} onChange={(e) => {
+                    const v = e.target.value;
+                    const n = parseFloat(v);
+                    const next = v === "" || v === "-" ? "" : (Number.isNaN(n) ? v : (n < 0 ? "0" : v));
+                    onUpdate({ dimensions: { ...variation.dimensions, height: next } });
+                  }} placeholder="H" />
                 </div>
               </div>
               <div className="space-y-1">

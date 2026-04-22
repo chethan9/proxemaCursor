@@ -88,6 +88,13 @@ export function compositeVariationKey(attrs: { name: string; option: string }[])
   return attrs.map((a) => `${a.name}=${a.option}`).join("|");
 }
 
+function floorNumStr(v: string | undefined | null): string {
+  if (!v) return "";
+  const n = parseFloat(v);
+  if (Number.isNaN(n)) return "";
+  return n < 0 ? "0" : String(n);
+}
+
 export function formToWooPayload(form: ProductFormState): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     name: form.name,
@@ -95,8 +102,8 @@ export function formToWooPayload(form: ProductFormState): Record<string, unknown
     status: form.status,
     description: form.description,
     short_description: form.short_description || "",
-    regular_price: form.regular_price || "",
-    sale_price: form.sale_price || "",
+    regular_price: floorNumStr(form.regular_price),
+    sale_price: floorNumStr(form.sale_price),
     sku: form.sku || "",
     manage_stock: form.manage_stock,
     stock_status: form.stock_status,
@@ -114,24 +121,32 @@ export function formToWooPayload(form: ProductFormState): Record<string, unknown
       visible: a.visible,
     })),
   };
-  if (form.manage_stock && form.stock_quantity != null) payload.stock_quantity = form.stock_quantity;
-  if (form.weight) payload.weight = form.weight;
+  if (form.manage_stock && form.stock_quantity != null) payload.stock_quantity = Math.max(0, form.stock_quantity);
+  if (form.weight) payload.weight = floorNumStr(form.weight);
   if (form.dimensions && (form.dimensions.length || form.dimensions.width || form.dimensions.height)) {
-    payload.dimensions = form.dimensions;
+    payload.dimensions = {
+      length: floorNumStr(form.dimensions.length),
+      width: floorNumStr(form.dimensions.width),
+      height: floorNumStr(form.dimensions.height),
+    };
   }
   if (form.brands && form.brands.length) payload.brands = form.brands.map((b) => ({ id: b.id }));
   if (form.meta_data) payload.meta_data = form.meta_data;
   if (form.type === "variable" && form.variations.length > 0) {
     payload.variations = form.variations.map((v) => ({
       id: v.id,
-      regular_price: v.regular_price,
-      sale_price: v.sale_price,
+      regular_price: floorNumStr(v.regular_price),
+      sale_price: floorNumStr(v.sale_price),
       sku: v.sku,
       manage_stock: v.manage_stock,
-      stock_quantity: v.stock_quantity,
+      stock_quantity: v.stock_quantity == null ? null : Math.max(0, v.stock_quantity),
       stock_status: v.stock_status,
-      weight: v.weight,
-      dimensions: v.dimensions,
+      weight: floorNumStr(v.weight),
+      dimensions: {
+        length: floorNumStr(v.dimensions.length),
+        width: floorNumStr(v.dimensions.width),
+        height: floorNumStr(v.dimensions.height),
+      },
       description: v.description,
       image: v.image,
       gallery: v.gallery || [],
