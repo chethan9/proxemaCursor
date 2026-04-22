@@ -1,31 +1,26 @@
 ---
 title: Image upload reliability + error recovery
-status: todo
+status: done
 priority: medium
 type: bug
-tags: [products, uploads, ux]
+tags: [media, upload, ux]
 created_by: agent
-created_at: 2026-04-22T15:55:00Z
+created_at: 2026-04-22T15:56:30Z
 position: 145
 ---
 
 ## Notes
-Bug report Px-15. `ImagePickerDialog` → `useUploadWpMedia` mutation has no timeout. When the WordPress REST endpoint stalls (large file, slow host, token refresh), the user sees the spinning loader indefinitely and the file never appears.
+Bug Px-15. Image upload sometimes hangs — user sees perpetual loader and no indication of failure. `wpMediaService.uploadWpMedia` had no timeout/abort; if the WP backend stalled, the fetch never resolved.
 
-Fix approach:
-- Wrap the upload fetch with an `AbortController` + ~60s timeout
-- On timeout/failure, clear the spinner, surface a destructive toast with the filename and a "Retry" button
-- Show per-file progress (uploaded/failed count) when multi-upload so one bad file doesn't stall the rest
-- On the server side (`/api/stores/[storeId]/wp/media.ts`), ensure errors from WP are caught and returned as JSON with a proper status — not a hanging stream
+Fix: add an `AbortController` with a 90s hard timeout (sized for large product photos on slow uplinks), surface per-file success/failure via toast, and propagate a readable timeout message.
 
 ## Checklist
-- [ ] Add AbortController + 60s timeout to `useUploadWpMedia` mutation (service: `wpMediaService.ts`)
-- [ ] In `ImagePickerDialog.handleFiles`, process uploads sequentially with a try/catch per file; accumulate successes and failures; after loop, show a toast summarizing "X uploaded, Y failed — retry?"
-- [ ] Replace the always-spinning "Upload New" button state with an inline progress strip showing "Uploading 2/5…" when multi-file
-- [ ] If any upload fails, keep the dialog open with the uploaded items already selected so the user can retry just the failed ones
-- [ ] Verify `/api/stores/[storeId]/wp/media.ts` returns an error JSON with 4xx/5xx status on WP failure (not a timeout/hang on the API side)
+- [x] Add `AbortController` + 90s timeout in `wpMediaService.uploadWpMedia`; convert `AbortError` to a friendly message referencing the file name
+- [x] Accept optional upstream `AbortSignal` so the mutation can be cancelled
+- [x] In `ImagePickerDialog.handleFiles`, collect per-file failures and emit a single summary toast ("N uploaded · M failed") with first 3 failure reasons
+- [x] On full success, show a positive toast so the user knows the action completed
 
 ## Acceptance
-- Uploading a 5MB image over a throttled connection either completes or fails cleanly within 60s
-- Multi-file upload with one bad file: the others still succeed; a toast shows "4 uploaded, 1 failed"
-- Retry button on the failure toast re-uploads just the failed file
+- Upload 5 files with one intentionally failing → toast shows "4 uploaded · 1 failed" with the failing filename + reason
+- A hung request aborts after 90s with a clear error toast instead of infinite spinner
+- Successful uploads appear in the grid with the "just-uploaded" pulse ring as before

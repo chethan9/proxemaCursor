@@ -35,19 +35,38 @@ export async function listWpMedia(
   return (await res.json()) as WpMediaPage;
 }
 
-export async function uploadWpMedia(storeId: string, file: File): Promise<WpMediaItem> {
+export async function uploadWpMedia(storeId: string, file: File, signal?: AbortSignal): Promise<WpMediaItem> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`/api/stores/${storeId}/wp/media`, {
-    method: "POST",
-    body: formData,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const error = new Error(err.error || err.message || `Upload failed (${res.status})`);
-    (error as Error & { code?: string }).code = err.code;
-    throw error;
+  // 90s timeout for large image uploads; abort releases the hung request.
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(() => ctrl.abort(), 90_000);
+  const upstream = signal;
+  if (upstream) {
+    if (upstream.aborted) ctrl.abort();
+    else upstream.addEventListener("abort", () => ctrl.abort(), { once: true });
   }
-  return (await res.json()) as WpMediaItem;
+
+  try {
+    const res = await fetch(`/api/stores/${storeId}/wp/media`, {
+      method: "POST",
+      body: formData,
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const error = new Error(err.error || err.message || `Upload failed (${res.status})`);
+      (error as Error & { code?: string }).code = err.code;
+      throw error;
+    }
+    return (await res.json()) as WpMediaItem;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error(`Upload timed out after 90s for "${file.name}"`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

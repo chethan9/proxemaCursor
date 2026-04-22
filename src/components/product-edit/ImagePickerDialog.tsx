@@ -7,6 +7,7 @@ import { useInfiniteWpMedia, useUploadWpMedia, type WpMediaItem } from "@/hooks/
 import { cn } from "@/lib/utils";
 import { Search, Upload, ImageOff, Loader2, AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 export type SelectedImage = { id: number; src: string; alt: string; name: string };
 
@@ -31,6 +32,7 @@ export function ImagePickerDialog({
   onConfirm,
   title = "Select Images",
 }: Props) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selected, setSelected] = useState<Map<number, WpMediaItem>>(new Map());
@@ -122,17 +124,29 @@ export function ImagePickerDialog({
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const uploadedIds: number[] = [];
+    const failures: { name: string; reason: string }[] = [];
     for (const file of Array.from(files)) {
       try {
         const res = await upload.mutateAsync({ file, alt: file.name });
         uploadedIds.push(res.id);
       } catch (e) {
+        const reason = e instanceof Error ? e.message : "Unknown error";
         console.error("Upload failed", file.name, e);
+        failures.push({ name: file.name, reason });
       }
     }
     if (uploadedIds.length) {
       setJustUploadedIds(new Set(uploadedIds));
       setTimeout(() => setJustUploadedIds(new Set()), 3000);
+    }
+    if (failures.length) {
+      toast({
+        title: uploadedIds.length ? `${uploadedIds.length} uploaded · ${failures.length} failed` : `Upload failed (${failures.length})`,
+        description: failures.slice(0, 3).map((f) => `${f.name}: ${f.reason}`).join(" · "),
+        variant: "destructive",
+      });
+    } else if (uploadedIds.length) {
+      toast({ title: `Uploaded ${uploadedIds.length} ${uploadedIds.length === 1 ? "image" : "images"}` });
     }
   };
 

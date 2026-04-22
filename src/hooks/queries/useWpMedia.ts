@@ -22,7 +22,7 @@ export function useInfiniteWpMedia(storeId: string, opts: MediaOptions = {}) {
 export function useUploadWpMedia(storeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ file }: { file: File; alt?: string }) => uploadWpMedia(storeId, file),
+    mutationFn: ({ file, signal }: { file: File; alt?: string; signal?: AbortSignal }) => uploadWpMedia(storeId, file, signal),
     onSuccess: (item: WpMediaItem) => {
       qc.invalidateQueries({ queryKey: ["wp", "media", "infinite", storeId] });
       return item;
