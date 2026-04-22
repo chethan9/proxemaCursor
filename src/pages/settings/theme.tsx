@@ -7,8 +7,87 @@ import { Label } from "@/components/ui/label";
 import { useBranding, type ThemePreset } from "@/contexts/BrandingProvider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, RotateCcw, Palette, Upload, Loader2, Check } from "lucide-react";
+import { Save, RotateCcw, Palette, Upload, Loader2, Check, History } from "lucide-react";
+import { PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+
+interface AuditEntry {
+  id: string;
+  changed_at: string;
+  changed_by_email: string | null;
+  previous_brand_name: string | null;
+  new_brand_name: string | null;
+  previous_logo_url: string | null;
+  new_logo_url: string | null;
+  previous_theme_preset: string | null;
+  new_theme_preset: string | null;
+}
+
+function AuditLogSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["branding-audit-log"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("branding_audit_log" as never)
+        .select("*")
+        .order("changed_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data || []) as unknown as AuditEntry[];
+    },
+    staleTime: 30_000,
+  });
+
+  const diffRow = (label: string, before: string | null, after: string | null) => {
+    if (before === after) return null;
+    return (
+      <div key={label} className="flex items-start gap-2 text-[11px]">
+        <span className="text-muted-foreground font-medium min-w-[80px]">{label}:</span>
+        <span className="text-muted-foreground line-through truncate max-w-[200px]">{before || "—"}</span>
+        <span className="text-muted-foreground">→</span>
+        <span className="font-medium text-foreground truncate max-w-[200px]">{after || "—"}</span>
+      </div>
+    );
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="pb-2 border-b flex items-center gap-2">
+          <History className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Change History</h2>
+          <span className="text-[11px] text-muted-foreground ml-auto">Last 20 changes</span>
+        </div>
+        {isLoading ? (
+          <div className="text-xs text-muted-foreground py-4 text-center">Loading history…</div>
+        ) : !data || data.length === 0 ? (
+          <div className="text-xs text-muted-foreground py-4 text-center">No changes recorded yet.</div>
+        ) : (
+          <div className="space-y-2 max-h-[320px] overflow-y-auto">
+            {data.map((entry) => (
+              <div key={entry.id} className="rounded-md border border-border bg-muted/30 p-2.5 space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="font-medium text-foreground truncate">{entry.changed_by_email || "Unknown"}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground" title={new Date(entry.changed_at).toLocaleString()}>
+                    {formatDistanceToNow(new Date(entry.changed_at), { addSuffix: true })}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {diffRow("Brand", entry.previous_brand_name, entry.new_brand_name)}
+                  {diffRow("Logo", entry.previous_logo_url, entry.new_logo_url)}
+                  {diffRow("Preset", entry.previous_theme_preset, entry.new_theme_preset)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 const THEME_PRESETS: { id: ThemePreset; name: string; description: string; preview: { bg: string; surface: string; accent: string; sidebar: string; sidebarFg: string; radius: string } }[] = [
   {
@@ -73,7 +152,7 @@ export default function ThemeSettings() {
   };
 
   return (
-    <SettingsLayout title="Theme">
+    <SettingsLayout title="Theme" requirePermission={PERMISSIONS.SETTINGS_MANAGE}>
       <div className="p-6 max-w-5xl">
         <div className="mb-4">
           <h1 className="text-xl font-semibold flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Theme</h1>
@@ -154,6 +233,10 @@ export default function ThemeSettings() {
           <Button size="sm" onClick={handleSave} disabled={saving}>
             <Save className="h-3.5 w-3.5 mr-1.5" /> {saving ? "Saving..." : "Save Changes"}
           </Button>
+        </div>
+
+        <div className="mt-6">
+          <AuditLogSection />
         </div>
       </div>
     </SettingsLayout>

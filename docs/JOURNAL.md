@@ -17,6 +17,31 @@ Keep entries concise. Link to task files (`.softgen/tasks/task-N.md`) or PRs whe
 
 ---
 
+## 2026-04-22 — Lock branding behind super-admin + audit log
+
+**Scope:** schema + security + feature
+**Commit:** uncommitted
+**Files:**
+- Schema: `app_settings` RLS tightened; new `branding_audit_log` + trigger `on_app_settings_change`
+- UI: `src/components/layout/SettingsLayout.tsx` (forwards `requirePermission`, hides Theme nav for non-admins), `src/pages/settings/theme.tsx` (guarded + audit viewer)
+- Docs: `docs/MIGRATIONS.md` section 3, this journal
+
+**Why:** Any authenticated user could overwrite the global brand name/logo via the permissive `public_update_settings` / `public_write_settings` policies. Also no audit trail — if someone changed branding by accident we had no way to see who/when/what.
+
+**What:**
+- Dropped `public_update_settings` and `public_write_settings`; replaced with `app_settings_admin_write` + `app_settings_admin_update` scoped to `is_super_admin()`. Kept `public_read_settings` so every session still loads branding.
+- New `branding_audit_log` table with `changed_by`, `changed_by_email`, and before/after values for `brand_name`, `logo_url`, `theme_preset`. Indexed on `changed_at DESC`.
+- RLS on audit log: super-admin SELECT only; no INSERT policy — the trigger runs `SECURITY DEFINER`.
+- Trigger `log_branding_change()` fires on INSERT/UPDATE and only writes when a tracked field actually changes (`IS DISTINCT FROM`), so no noise from identical saves.
+- `SettingsLayout` now accepts `requirePermission` / `requireSuperAdmin` and forwards to `AppLayout`. Theme nav item hidden for users without `settings.manage`.
+- `/settings/theme` guarded with `requirePermission={PERMISSIONS.SETTINGS_MANAGE}` and now shows a "Change History" card listing the last 20 audit entries (who, when, what changed, diff view).
+
+**Follow-ups:**
+- If we introduce more global-scope settings on `app_settings`, extend the trigger to track them too.
+- Consider a 1-year retention cleanup cron if the audit log ever grows (unlikely given change frequency).
+
+---
+
 ## 2026-04-22 — Bugfix batch (Bugfix2.csv) + site screenshot cache + delete UX
 
 **Scope:** bug + feature + schema

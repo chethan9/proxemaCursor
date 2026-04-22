@@ -4,17 +4,21 @@ import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
 import { User, Palette, CreditCard, UserCog, Shield, ListTree } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { PERMISSIONS } from "@/lib/permissions";
+import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 interface SettingsLayoutProps {
   children: ReactNode;
   title?: string;
+  requirePermission?: Permission;
+  requireSuperAdmin?: boolean;
 }
 
-export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutProps) {
+export function SettingsLayout({ children, title = "Settings", requirePermission, requireSuperAdmin }: SettingsLayoutProps) {
   const router = useRouter();
   const { can, isSuperAdmin } = useAuth();
+
+  const canManageSettings = isSuperAdmin || can(PERMISSIONS.SETTINGS_MANAGE);
 
   const groups = [
     {
@@ -26,7 +30,7 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
     {
       label: "Appearance",
       items: [
-        { href: "/settings/theme", icon: Palette, label: "Theme", show: true },
+        { href: "/settings/theme", icon: Palette, label: "Theme", show: canManageSettings },
       ],
     },
     {
@@ -42,7 +46,7 @@ export function SettingsLayout({ children, title = "Settings" }: SettingsLayoutP
     router.pathname === href || router.pathname.startsWith(href + "/");
 
   return (
-    <AppLayout title={title}>
+    <AppLayout title={title} requirePermission={requirePermission} requireSuperAdmin={requireSuperAdmin}>
       <div className="flex min-h-[calc(100vh-3.5rem)]">
         <aside className="w-60 shrink-0 border-r border-border bg-muted/30 p-4">
           <h2 className="text-lg font-semibold px-2 mb-4">Settings</h2>
