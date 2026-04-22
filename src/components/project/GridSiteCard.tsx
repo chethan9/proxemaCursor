@@ -2,14 +2,12 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { Heart, Pencil, ExternalLink, PlayCircle, AlertTriangle, BarChart3, RefreshCw, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Heart, Pencil, ExternalLink, PlayCircle, BarChart3, RefreshCw, CheckCircle2, BadgeCheck } from "lucide-react";
+import type { StoreWithClient } from "@/services/storeService";
+import { SiteAvatar } from "./SiteAvatar";
+import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
-import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
-import { useToast } from "@/hooks/use-toast";
-import { SiteAvatar } from "./SiteAvatar";
-import type { StoreWithClient } from "@/services/storeService";
 
 interface Props {
   store: StoreWithClient;
@@ -19,43 +17,95 @@ interface Props {
   onEdit: () => void;
 }
 
-const formatDate = (d: string | null) => {
+function formatRelative(d: string | null): string {
   if (!d) return "Never";
-  return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-};
+  const diff = Date.now() - new Date(d).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function SiteScreenshot({ url, name }: { url: string; name: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+  let screenshotUrl: string | null = null;
+  try {
+    const u = new URL(url);
+    screenshotUrl = `https://image.thum.io/get/width/600/noanimate/${u.origin}`;
+  } catch {
+    screenshotUrl = null;
+  }
+
+  if (!screenshotUrl || errored) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 via-primary/10 to-primary/20">
+        <SiteAvatar url={url} name={name} size={56} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {!loaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-muted via-muted to-muted/60 animate-pulse flex items-center justify-center">
+          <SiteAvatar url={url} name={name} size={40} className="opacity-40" />
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={screenshotUrl}
+        alt={`${name} preview`}
+        className={`w-full h-full object-cover object-top transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        onLoad={() => setLoaded(true)}
+        onError={() => setErrored(true)}
+        loading="lazy"
+      />
+    </>
+  );
+}
 
 export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEdit }: Props) {
   const router = useRouter();
-  const qc = useQueryClient();
   const { toast } = useToast();
-  const { data: activeSyncs = [] } = useAllActiveSyncs();
-  const activeSync = activeSyncs.find((s) => s.store_id === store.id);
+  const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
 
   const isIncomplete = !store.onboarding_completed_at;
-  const wcConnected = !!store.consumer_key;
+  const wcConnected = !!store.consumer_key && !isIncomplete;
   const wpConnected = !!(store.wp_username && store.wp_app_password);
 
-  const healthColor =
+  const healthTone =
     store.health_score == null ? "text-muted-foreground" :
     store.health_score >= 80 ? "text-emerald-600" :
     store.health_score >= 50 ? "text-amber-600" : "text-red-600";
 
-  const topBorder =
-    isIncomplete ? "border-t-amber-500" :
-    store.status === "error" ? "border-t-red-500" :
-    store.health_score != null && store.health_score >= 80 ? "border-t-emerald-500" :
-    store.health_score != null && store.health_score >= 50 ? "border-t-amber-500" :
-    store.health_score != null ? "border-t-red-500" :
-    "border-t-border";
+  const ringTone =
+    isIncomplete ? "ring-1 ring-amber-300/60" :
+    store.status === "error" ? "ring-1 ring-red-300/60" :
+    "ring-1 ring-transparent";
 
-  const navigate = () => {
+  const statusDot =
+    isIncomplete ? "bg-amber-400" :
+    store.status === "error" ? "bg-red-500" :
+    store.status === "syncing" ? "bg-blue-500" :
+    store.status === "connected" ? "bg-emerald-500" :
+    "bg-slate-400";
+
+  const statusLabel = isIncomplete ? "Setup incomplete" : (store.status || "unknown");
+
+  const navigateToSite = () => {
     if (isIncomplete) router.push(`/sites/connect/${store.id}?resume=1`);
     else router.push(`/sites/${store.id}/home`);
   };
 
   const handleSync = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isIncomplete || syncing) return;
     setSyncing(true);
     try {
       const res = await fetch(`/api/stores/${store.id}/sync-start`, { method: "POST" });
@@ -63,126 +113,127 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
       toast({ title: "Sync started", description: store.name });
       qc.invalidateQueries({ queryKey: queryKeys.stores });
     } catch {
-      toast({ title: "Failed to start sync", variant: "destructive" });
+      toast({ title: "Failed to start sync", description: store.name, variant: "destructive" });
     } finally {
       setSyncing(false);
     }
   };
 
-  const isSyncing = !!activeSync || syncing;
-
   return (
-    <div className={`relative rounded-lg border border-border bg-card border-t-[3px] ${topBorder} flex flex-col hover:shadow-md transition-shadow overflow-hidden`}>
-      <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
-        <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
-      </div>
-
-      <div className="p-4 pb-3 cursor-pointer" onClick={navigate}>
-        <div className="flex items-start gap-3 pr-8">
-          <SiteAvatar url={store.url} name={store.name} size={44} />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-sm truncate">{store.name}</div>
-            <div className="text-[11px] text-muted-foreground truncate font-mono">{store.url}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{clientName}</div>
+    <div className={`group rounded-2xl border border-border bg-card overflow-hidden flex flex-col transition-all hover:shadow-md ${ringTone}`}>
+      <div className="relative p-2 pb-0">
+        <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-muted cursor-pointer" onClick={navigateToSite}>
+          <SiteScreenshot url={store.url} name={store.name} />
+          <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/55 backdrop-blur-sm">
+            <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
+            <span className="text-[10px] font-medium text-white capitalize">{statusLabel}</span>
           </div>
-        </div>
-      </div>
-
-      <div className="px-4 pb-3 flex items-center gap-1.5 flex-wrap">
-        {isIncomplete ? (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/10 text-warning border border-warning/30">
-            <AlertTriangle className="h-3 w-3" />
-            Setup incomplete
-          </span>
-        ) : (
-          <StatusBadge variant={getStatusVariant(store.status)}>{store.status}</StatusBadge>
-        )}
-        <span
-          className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${
-            wcConnected ? "text-emerald-700 border-emerald-200 bg-emerald-50" : "text-muted-foreground border-border bg-muted"
-          }`}
-          title={wcConnected ? "WooCommerce API connected" : "WooCommerce API not connected"}
-        >
-          {wcConnected ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-          WC
-        </span>
-        <span
-          className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${
-            wpConnected ? "text-emerald-700 border-emerald-200 bg-emerald-50" : "text-muted-foreground border-border bg-muted"
-          }`}
-          title={wpConnected ? "WordPress media access connected" : "WordPress media access not connected"}
-        >
-          {wpConnected ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-          WP
-        </span>
-        {store.health_score != null && (
-          <span className={`inline-flex items-center gap-1 text-xs font-medium ml-auto ${healthColor}`}>
-            <Heart className="h-3 w-3 fill-current" />
-            {store.health_score}
-          </span>
-        )}
-      </div>
-
-      <div className="px-4 pb-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <Activity className="h-3 w-3" />
-        {isIncomplete ? "Never synced" : `Last sync: ${formatDate(store.last_sync_at)}`}
-      </div>
-
-      {activeSync && (
-        <div className="px-4 pb-2">
-          <div className="flex items-center justify-between mb-1 text-[10px] font-medium text-emerald-600">
-            <span className="inline-flex items-center gap-1">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-              </span>
-              Syncing {activeSync.currentAspect || "…"}
-            </span>
-            <span className="tabular-nums">{activeSync.progress}%</span>
-          </div>
-          <div className="h-1 rounded-full bg-emerald-500/10 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
-              style={{ width: `${activeSync.progress}%` }}
+          <div
+            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100"
+            data-checked={selected}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={selected}
+              onCheckedChange={onToggleSelect}
+              className="border-white data-[state=checked]:bg-white data-[state=checked]:text-black h-4 w-4"
             />
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="mt-auto px-3 py-2 border-t border-border flex items-center gap-1">
-        {isIncomplete ? (
-          <Button
-            variant="default"
-            size="sm"
-            className="h-8 flex-1 gap-1.5"
-            onClick={() => router.push(`/sites/connect/${store.id}?resume=1`)}
-          >
-            <PlayCircle className="h-3.5 w-3.5" />
-            Resume setup
-          </Button>
-        ) : (
-          <>
+      <div className="p-3 flex flex-col gap-2.5 flex-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm truncate">{store.name}</span>
+            {wcConnected && <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />}
+          </div>
+          <div className="text-[11px] text-muted-foreground truncate font-mono">{store.url.replace(/^https?:\/\//, "")}</div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[11px] text-muted-foreground truncate">{clientName}</span>
+            {wpConnected && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 font-medium shrink-0">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                WP
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 border-y border-border py-2">
+          <div className="text-center px-1">
+            <div className={`flex items-center justify-center gap-1 text-sm font-semibold ${healthTone}`}>
+              {store.health_score != null ? (
+                <>
+                  <Heart className="h-3 w-3 fill-current" />
+                  {store.health_score}
+                </>
+              ) : "—"}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Health</div>
+          </div>
+          <div className="text-center px-1 border-x border-border">
+            <div className="text-sm font-semibold truncate">{isIncomplete ? "—" : formatRelative(store.last_sync_at)}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Last Sync</div>
+          </div>
+          <div className="text-center px-1">
+            <div className="text-sm font-semibold capitalize truncate">{isIncomplete ? "Setup" : store.status || "—"}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Status</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 mt-auto">
+          {isIncomplete ? (
             <Button
-              variant="default"
               size="sm"
-              className="h-8 flex-1 gap-1.5"
-              disabled={isSyncing}
-              onClick={handleSync}
+              className="flex-1 rounded-full h-9 gap-1.5"
+              onClick={(e) => { e.stopPropagation(); router.push(`/sites/connect/${store.id}?resume=1`); }}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-              {isSyncing ? "Syncing" : "Sync all"}
+              <PlayCircle className="h-4 w-4" />
+              Resume setup
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} title="Edit site">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/projects/${store.id}`)} title="Sync engine">
-              <BarChart3 className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(store.url, "_blank")} title="Open storefront">
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          </>
-        )}
+          ) : (
+            <>
+              <Button
+                size="sm"
+                className="flex-1 rounded-full h-9 gap-1.5"
+                onClick={handleSync}
+                disabled={syncing}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "Starting..." : "Sync all"}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full shrink-0"
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                title="Edit site"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full shrink-0"
+                onClick={(e) => { e.stopPropagation(); router.push(`/projects/${store.id}`); }}
+                title="Sync engine"
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full shrink-0"
+                onClick={(e) => { e.stopPropagation(); window.open(store.url, "_blank"); }}
+                title="Open store"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
