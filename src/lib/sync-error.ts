@@ -62,7 +62,7 @@ const APP_URL =
   process.env.NEXT_PUBLIC_VERCEL_URL ||
   "https://woosync.app";
 const APP_URL_NORMALIZED = APP_URL.startsWith("http") ? APP_URL : `https://${APP_URL}`;
-export const WOO_USER_AGENT = `Proxima-WooSync/1.0 (+${APP_URL_NORMALIZED})`;
+export const WOO_USER_AGENT = `Proxima/1.0 (+${APP_URL_NORMALIZED})`;
 
 export function detectBlockingService(
   status: number,

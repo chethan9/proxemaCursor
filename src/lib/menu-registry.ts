@@ -62,7 +62,7 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "webhooks-activity", defaultLabel: "Activity", defaultIcon: "Activity", href: "/webhooks/activity", defaultGroup: "Developer", defaultOrder: 2, permission: PERMISSIONS.WEBHOOKS_VIEW },
   { id: "api", defaultLabel: "API", defaultIcon: "Key", href: "/api-management", defaultGroup: "Developer", defaultOrder: 3, permission: PERMISSIONS.API_VIEW },
   { id: "billing", defaultLabel: "Overview", defaultIcon: "Receipt", href: "/billing", defaultGroup: "Billing", defaultOrder: 0 },
-  { id: "payment-methods", defaultLabel: "Billing", defaultIcon: "CreditCard", href: "/billing/payment-methods", defaultGroup: "Billing", defaultOrder: 1 },
+  { id: "payment-methods", defaultLabel: "Payment Methods", defaultIcon: "CreditCard", href: "/billing/payment-methods", defaultGroup: "Billing", defaultOrder: 1 },
   { id: "pricing", defaultLabel: "Plans", defaultIcon: "DollarSign", href: "/pricing", defaultGroup: "Billing", defaultOrder: 2 },
   { id: "users", defaultLabel: "Users", defaultIcon: "UserCog", href: "/settings/users", defaultGroup: "Administration", defaultOrder: 0, permission: PERMISSIONS.USERS_VIEW },
   { id: "roles", defaultLabel: "Roles", defaultIcon: "Shield", href: "/settings/roles", defaultGroup: "Administration", defaultOrder: 1, permission: PERMISSIONS.ROLES_VIEW },

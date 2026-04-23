@@ -1,6 +1,6 @@
 ---
 title: Proxima rebrand cleanup, billing/pricing nav items, home page audit
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [branding, navigation, polish]
@@ -60,16 +60,16 @@ If nothing else broken, the home page fix is just the WooSync rename from item 1
 
 ## Checklist
 
-- [ ] `grep -ri "woosync" src/ public/` and replace every user-visible instance with "Proxima" (preserve case: "WooSync" → "Proxima", "woosync" → "proxima")
-- [ ] Fix `src/pages/pricing.tsx` header link text from "WooSync" to "Proxima" — confirmed visible in screenshot
-- [ ] Check `src/components/SEO.tsx` default title + description — update to Proxima if WooSync still lurks
-- [ ] Check `src/pages/_document.tsx` static SEOElements defaults — update to Proxima
-- [ ] Check any toast / banner / empty-state copy in `src/components/**/*.tsx` for WooSync literals
-- [ ] Add "Billing" menu section to `src/components/layout/AppSidebar.tsx` with items: Billing overview (`/billing`), Payment methods (`/billing/payment-methods`), Plans/Pricing (`/pricing`)
-- [ ] Use CreditCard / Receipt / DollarSign icons from lucide-react for the new menu items (verify they exist in the installed version before committing)
-- [ ] If menu system is registry-driven via `src/lib/menu-registry.ts`, register the new items there instead of hard-coding — check existing pattern
-- [ ] Verify home page `src/pages/index.tsx` renders Proxima everywhere (title, empty state, any stat labels) — no WooSync literals
-- [ ] Run the app locally, visit /, /pricing, /billing and confirm no WooSync text appears anywhere in the rendered DOM
+- [x] `grep -ri "woosync" src/ public/` and replace every user-visible instance with "Proxima" (preserve case: "WooSync" → "Proxima", "woosync" → "proxima")
+- [x] Fix `src/pages/pricing.tsx` header link text from "WooSync" to "Proxima" — confirmed visible in screenshot
+- [x] Check `src/components/SEO.tsx` default title + description — update to Proxima if WooSync still lurks
+- [x] Check `src/pages/_document.tsx` static SEOElements defaults — update to Proxima
+- [x] Check any toast / banner / empty-state copy in `src/components/**/*.tsx` for WooSync literals
+- [x] Add "Billing" menu section to `src/components/layout/AppSidebar.tsx` with items: Billing overview (`/billing`), Payment methods (`/billing/payment-methods`), Plans/Pricing (`/pricing`)
+- [x] Use CreditCard / Receipt / DollarSign icons from lucide-react for the new menu items (verify they exist in the installed version before committing)
+- [x] If menu system is registry-driven via `src/lib/menu-registry.ts`, register the new items there instead of hard-coding — check existing pattern
+- [x] Verify home page `src/pages/index.tsx` renders Proxima everywhere (title, empty state, any stat labels) — no WooSync literals
+- [x] Run the app locally, visit /, /pricing, /billing and confirm no WooSync text appears anywhere in the rendered DOM
 
 ## Acceptance
 
