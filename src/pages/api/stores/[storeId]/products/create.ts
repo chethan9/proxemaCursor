@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import type { Json } from "@/integrations/supabase/database.types";
 
 type WooVariationInput = {
   id?: number;
@@ -51,7 +52,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
       });
       try {
-        await wooRequest(creds, "POST", `products/${wooId}/variations/batch`, { create: createPayload });
+        type WooVarBatch = { create?: Array<Record<string, unknown>> };
+        const batchRes = await wooRequest<WooVarBatch>(
+          creds,
+          "POST",
+          `products/${wooId}/variations/batch`,
+          { create: createPayload }
+        );
+        const createdVars = Array.isArray(batchRes?.create) ? batchRes.create : [];
+        if (createdVars.length > 0) {
+          const now = new Date().toISOString();
+          const { data: parentRow } = await supabaseAdmin
+            .from("products")
+            .select("id")
+            .eq("store_id", storeId)
+            .eq("woo_id", wooId)
+            .maybeSingle();
+          if (parentRow?.id) {
+            const varRows = createdVars.map((v) => {
+              const rp = v.regular_price as string | undefined;
+              const sp = v.sale_price as string | undefined;
+              const pr = v.price as string | undefined;
+              const dims = (v.dimensions as { length?: string; width?: string; height?: string } | undefined) || {};
+              return {
+                store_id: storeId,
+                product_id: parentRow.id,
+                woo_parent_id: wooId,
+                woo_id: v.id as number,
+                sku: (v.sku as string) || null,
+                regular_price: rp ? parseFloat(rp) : null,
+                sale_price: sp ? parseFloat(sp) : null,
+                price: pr ? parseFloat(pr) : null,
+                stock_quantity: (v.stock_quantity as number | null) ?? null,
+                stock_status: (v.stock_status as string) || null,
+                manage_stock: !!v.manage_stock,
+                status: (v.status as string) || "publish",
+                virtual: !!v.virtual,
+                downloadable: !!v.downloadable,
+                tax_class: (v.tax_class as string) || null,
+                weight: (v.weight as string) || null,
+                dimensions: JSON.parse(JSON.stringify(dims)) as Json,
+                description: (v.description as string) || null,
+                attributes: JSON.parse(JSON.stringify(v.attributes || [])) as Json,
+                image: v.image ? (JSON.parse(JSON.stringify(v.image)) as Json) : null,
+                gallery: [] as unknown as Json,
+                menu_order: (v.menu_order as number) || 0,
+                raw_data: JSON.parse(JSON.stringify(v)) as Json,
+                synced_at: now,
+              };
+            });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabaseAdmin as any)
+              .from("product_variations")
+              .upsert(varRows, { onConflict: "store_id,woo_id" });
+          }
+        }
       } catch (ve) {
         console.error("[variations-batch]", ve);
       }
