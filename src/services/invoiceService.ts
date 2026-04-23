@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type Invoice = Tables<"invoices">;
@@ -11,7 +10,11 @@ export function generateInvoiceNumber(): string {
 }
 
 export async function listInvoicesByClient(clientId: string): Promise<Invoice[]> {
-  const { data, error } = await supabase.from("invoices").select("*").eq("client_id", clientId).order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
 }
@@ -21,5 +24,3 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
   if (error) throw error;
   return data;
 }
-
-export { supabaseAdmin };

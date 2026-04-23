@@ -1,6 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
+if (typeof window !== "undefined") {
+  throw new Error(
+    "supabaseAdmin is server-only and must not be imported from client code. " +
+      "Import from a *.server.ts service module inside an API route instead."
+  );
+}
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
