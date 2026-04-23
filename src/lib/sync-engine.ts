@@ -69,14 +69,6 @@ export async function fetchWooWithRetry(
   throw lastError ?? new Error("Retry exhausted");
 }
 
-export interface PagesConcurrentOptions {
-  concurrency?: number;
-  maxPages?: number;
-  perPage?: number;
-  onProgress?: (fetched: number, total?: number) => void;
-  onBatch?: (items: unknown[]) => Promise<void>;
-}
-
 /**
  * Parallel page fetcher: reads X-WP-TotalPages from first response,
  * then fetches remaining pages in concurrent batches.
@@ -86,7 +78,7 @@ export async function fetchPagesConcurrent<T>(
   auth: string,
   endpoint: string,
   params: Record<string, string> = {},
-  opts: PagesConcurrentOptions = {}
+  opts: PagesConcurrentOptions & { onBatch?: (items: T[]) => Promise<void> } = {}
 ): Promise<T[]> {
   const concurrency = opts.concurrency ?? 2;
   const maxPages = opts.maxPages ?? 50;
