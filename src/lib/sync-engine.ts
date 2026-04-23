@@ -88,7 +88,7 @@ export async function fetchPagesConcurrent<T>(
   opts: PagesConcurrentOptions & { onBatch?: (items: T[]) => Promise<void> } = {}
 ): Promise<T[]> {
   const concurrency = opts.concurrency ?? 2;
-  const maxPages = opts.maxPages ?? 50;
+  const maxPages = opts.maxPages ?? 5000;
   const perPage = opts.perPage ?? 100;
 
   const firstUrl = buildUrl(storeUrl, endpoint, { ...params, per_page: String(perPage), page: "1" });
