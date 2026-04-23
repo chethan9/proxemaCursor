@@ -1,5 +1,5 @@
 "use client";
-import { Loader2, Check, AlertCircle, Cloud, CloudCheck } from "lucide-react";
+import { Loader2, Check, CheckCheck, AlertCircle, Cloud } from "lucide-react";
 import { useMutationStatus, type MutationStatus } from "@/contexts/RecentMutationsProvider";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ const CONFIG: Record<MutationStatus, { Icon: typeof Loader2; label: string; cls:
     spin: true,
   },
   synced: {
-    Icon: CloudCheck,
+    Icon: CheckCheck,
     label: "Woo confirmed",
     cls: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900",
   },
