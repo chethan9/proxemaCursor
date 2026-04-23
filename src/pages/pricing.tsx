@@ -42,7 +42,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
   const router = useRouter();
   const { toast } = useToast();
   const { startCheckout, loading: checkoutLoading } = useCheckout();
-  const subscription = useSubscription();
+  const { subscription, refetch } = useSubscription();
 
   const [country, setCountry] = useState(initialCountry);
   const [currency, setCurrency] = useState(initialCurrency);
@@ -89,10 +89,10 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
 
   const { mainPlans, currentPlan, currentPlanIndex } = useMemo(() => {
     const main = plans.slice(0, 3);
-    const current = subscription.data?.plan_id ? plans.find((p) => p.id === subscription.data!.plan_id) || null : null;
+    const current = subscription?.plan_id ? plans.find((p) => p.id === subscription.plan_id) || null : null;
     const currentIdx = current ? plans.findIndex((p) => p.id === current.id) : -1;
     return { mainPlans: main, currentPlan: current, currentPlanIndex: currentIdx };
-  }, [plans, subscription.data]);
+  }, [plans, subscription]);
 
   const getAction = (plan: Plan, idx: number): "subscribe" | "upgrade" | "downgrade" | "current" | "contact" => {
     if (getPlanPrice(plan, currency) == null) return "contact";
@@ -134,19 +134,15 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
       if (dialogMode === "upgrade") {
         await startCheckout(pendingPlan.id);
       } else {
-        const sub = subscription.data;
+        const sub = subscription;
         if (!sub) throw new Error("No active subscription");
         const before = { plan_id: sub.plan_id };
-        const after = { pending_plan_id: pendingPlan.id, effective_at: sub.current_period_end };
-        const { error: updateErr } = await supabase
-          .from("subscriptions")
-          .update({ pending_plan_id: pendingPlan.id })
-          .eq("id", sub.id);
-        if (updateErr) throw updateErr;
+        const after = { scheduled_plan_id: pendingPlan.id, effective_at: sub.current_period_end };
         await supabase.from("subscription_events").insert({
           subscription_id: sub.id,
           event_type: "plan_downgrade_scheduled",
-          details: { from_plan_id: sub.plan_id, to_plan_id: pendingPlan.id, effective_at: sub.current_period_end },
+          metadata: { from_plan_id: sub.plan_id, to_plan_id: pendingPlan.id, effective_at: sub.current_period_end },
+          actor_user_id: user.id,
         });
         await supabase.from("activity_log").insert({
           actor_user_id: user.id,
@@ -158,8 +154,8 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
           client_id: profile.client_id,
           diff: { before, after },
         });
-        toast({ title: "Downgrade scheduled", description: `Your plan will change on ${new Date(sub.current_period_end).toLocaleDateString()}.` });
-        subscription.refetch();
+        toast({ title: "Downgrade scheduled", description: sub.current_period_end ? `Your plan will change on ${new Date(sub.current_period_end).toLocaleDateString()}.` : "Will apply at period end." });
+        refetch();
       }
       setDialogOpen(false);
     } catch (e) {
@@ -240,7 +236,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
         currentPlan={currentPlan}
         newPlan={pendingPlan}
         currency={currency}
-        periodEnd={subscription.data?.current_period_end}
+        periodEnd={subscription?.current_period_end}
         onConfirm={confirmPlanChange}
         loading={changeLoading || checkoutLoading}
       />

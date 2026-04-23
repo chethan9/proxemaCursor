@@ -26,7 +26,7 @@ function featuresFor(plan: Plan): string[] {
     `${plan.max_users.toLocaleString()} team ${plan.max_users === 1 ? "member" : "members"}`,
     `${plan.max_api_calls_per_month.toLocaleString()} API calls/mo`,
   ];
-  const flags = (plan.feature_flags as Record<string, boolean>) || {};
+  const flags = (plan.features as Record<string, boolean>) || {};
   if (flags.webhooks) base.push("Real-time webhook sync");
   if (flags.bulk_operations) base.push("Bulk edit & jobs");
   if (flags.advanced_analytics) base.push("Advanced analytics");
