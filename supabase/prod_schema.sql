@@ -2235,3 +2235,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS menu_configs_role_site_key
 
 CREATE INDEX IF NOT EXISTS idx_menu_configs_scope_site
   ON public.menu_configs (scope, site_id);
+
+-- 20260423154151_migration_545c74db.sql
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS country_code text,
+  ADD COLUMN IF NOT EXISTS billing_currency text,
+  ADD COLUMN IF NOT EXISTS avatar_url text;

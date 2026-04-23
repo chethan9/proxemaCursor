@@ -1,0 +1,1 @@
+CREATE POLICY "authenticated_read_roles" ON roles FOR SELECT TO authenticated USING (true);
