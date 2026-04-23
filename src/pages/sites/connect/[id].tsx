@@ -170,6 +170,7 @@ export default function ConnectSuccessPage() {
             setStep("wp", "done");
             runWebhooksAndLaunch();
           } else {
+            kickBackgroundWebhooks(sid);
             setStage("wp");
             advanceFrom("wp");
           }
@@ -207,6 +208,7 @@ export default function ConnectSuccessPage() {
         setStep("wp", "done");
         runWebhooksAndLaunch();
       } else {
+        kickBackgroundWebhooks(siteId);
         setStage("wp");
         advanceFrom("wp");
       }
@@ -294,6 +296,7 @@ export default function ConnectSuccessPage() {
       setStep("creds", "done");
 
       if (!store.wp_username) {
+        kickBackgroundWebhooks(siteId);
         setStage("wp");
         advanceFrom("wp");
         if (resume === "1") {
