@@ -121,12 +121,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     return localStorage.getItem("sidebar-active-panel");
   });
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
-  const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>(() => {
-    const exactCache = loadCachedMenu(currentRoleKey);
-    if (exactCache.length > 0) return exactCache;
-    return buildInitialTree(can, isSuperAdmin);
-  });
-  const [menuReady, setMenuReady] = useState<boolean>(() => loadCachedMenu(currentRoleKey).length > 0);
+  const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>([]);
+  const [menuReady, setMenuReady] = useState<boolean>(false);
 
   // Clear cached menu/sites when signed-in user changes (prevents flash of previous user's menu)
   useEffect(() => {
@@ -149,6 +145,17 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (typeof window !== "undefined") localStorage.setItem(lastUserKey, user.id);
   }, [user?.id]);
 
+  // Hydrate sites from cache only after user.id is confirmed matching
+  useEffect(() => {
+    if (!user?.id) return;
+    if (sites.length > 0) return;
+    const lastUserId = typeof window !== "undefined" ? localStorage.getItem("sidebar-last-user-id") : null;
+    if (lastUserId === user.id) {
+      const cached = loadCachedSites();
+      if (cached.length > 0) setSites(cached);
+    }
+  }, [user?.id, sites.length]);
+
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
     if (!storesData) return;
@@ -162,14 +169,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (authLoading) return;
     if (!profile && !role) return;
     if (permissions.length === 0 && !isSuperAdmin) return;
+    if (!user?.id) return;
     const roleKey = currentRoleKey;
-    const exactCache = loadCachedMenu(roleKey);
+    const lastUserId = typeof window !== "undefined" ? localStorage.getItem("sidebar-last-user-id") : null;
+    const sameUser = lastUserId === user.id;
+    const exactCache = sameUser ? loadCachedMenu(roleKey) : [];
     if (exactCache.length > 0 && serialize(exactCache) !== serialize(menuTree)) {
       setMenuTree(exactCache);
       setMenuReady(true);
-    } else if (exactCache.length === 0) {
-      const defaults = buildInitialTree(can, isSuperAdmin);
-      if (serialize(defaults) !== serialize(menuTree)) setMenuTree(defaults);
     }
     getMenuConfig(roleKey).then((cfg) => {
       const { tree } = mergeMenu(cfg);
@@ -180,7 +187,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       setMenuReady(true);
     }).catch(() => { setMenuReady(true); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin]);
+  }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin, user?.id]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
