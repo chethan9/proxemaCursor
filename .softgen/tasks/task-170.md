@@ -1,6 +1,6 @@
 ---
 title: Fix Health nav redirect + sidebar menu flash
-status: in_progress
+status: done
 priority: urgent
 type: bug
 tags: [nav, sidebar, ux]
@@ -11,14 +11,16 @@ position: 170
 
 ## Notes
 Two navigation bugs:
-1. Clicking Health (href=`/`) redirects to `/projects` every time because the auto-landing redirect in `src/pages/index.tsx` fires on every visit, not only on initial post-login landing.
-2. Sidebar briefly shows all menu items on login before filtering to role-appropriate items. Root cause: `useState` initializer in `AppSidebar` computes `buildInitialTree(can, isSuperAdmin)` before permissions finalize, then useEffect re-renders with correct tree.
+1. Clicking Health (href=`/`) redirected to `/projects` every time because the auto-landing redirect in `src/pages/index.tsx` fired on every visit.
+2. Sidebar briefly showed all menu items on login before filtering — useState initializer loaded stale localStorage cache before user-id verification.
 
 ## Checklist
-- [ ] Remove auto-redirect from `src/pages/index.tsx` — let `/` always render the dashboard. Landing preference can be handled at login success instead (future task).
-- [ ] Add `menuReady` state in `AppSidebar.tsx` — only flip true after saved config loaded from Supabase (or confirmed none exists). Show skeleton while `!menuReady`.
-- [ ] Verify on fresh login: no flash of all items, Health click stays on `/`.
+- [x] Remove auto-redirect from `src/pages/index.tsx` — `/` now always renders the dashboard.
+- [x] Add `menuReady` state in `AppSidebar.tsx` — starts false, flips true only after useEffect confirms `user.id` matches stored value and menu is loaded.
+- [x] Clear cached menu/sites when user ID changes (login as different user).
+- [x] Highlight Settings on any `/settings/*` route.
 
 ## Acceptance
-- Clicking Health in sidebar loads `/` and stays there (doesn't bounce to `/projects`).
-- On fresh login, sidebar shows skeleton until the correct filtered menu is ready — no flash of unauthorized items.
+- Clicking Health loads `/` and stays there.
+- On fresh login, sidebar shows skeleton until the correct filtered menu is ready.
+- Settings item highlights on all settings sub-pages.

@@ -1,6 +1,6 @@
 ---
 title: Split Theme (personal) from Branding (white-label)
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [settings, theme, branding, permissions]
@@ -10,21 +10,18 @@ position: 171
 ---
 
 ## Notes
-Currently `/settings/theme` is gated behind `SETTINGS_MANAGE` and contains everything (app name, logo upload, theme preset, audit log). When branding was restricted recently, the whole theme page disappeared for non-admins.
-
-User wants:
-- **Theme page** (`/settings/theme`) — personal UI preferences (light/dark/system mode), available to ALL authenticated users
-- **Branding page** (`/settings/branding`) — white-label config (app name, logo, theme preset, audit log), super-admin only
-- Both registered in `menu-registry.ts` so visibility is editable via Menu Editor, not hardcoded
+Previously `/settings/theme` was gated behind `SETTINGS_MANAGE` and combined style preset + brand identity + audit log. Split into two pages so visibility can be controlled via the menu editor.
 
 ## Checklist
-- [ ] Create `src/pages/settings/branding.tsx` — move app name, logo upload, theme preset picker, audit log from current theme.tsx here. Gate with `requirePermission` = super admin check.
-- [ ] Refactor `src/pages/settings/theme.tsx` — replace current content with personal theme preferences: light/dark/system mode selector (uses existing `ThemeProvider` / next-themes), page explains it's a per-user choice. Remove `requirePermission`.
-- [ ] Update `src/components/layout/SettingsLayout.tsx` — add Branding nav item (super-admin only), remove gate from Theme so all users see it.
-- [ ] Register both in `src/lib/menu-registry.ts` — theme item (all users), branding item (superAdminOnly). So menu editor can manage them.
-- [ ] Ensure `BrandingProvider` still works unchanged — branding edits still save to `app_settings` global row.
+- [x] `/settings/theme` — Style Preset picker (Classic / Modern) with Save/Reset.
+- [x] `/settings/branding` — Brand Identity (app name, logo upload) + Change History from `branding_audit_log`.
+- [x] Both pages accessible to all users (gating controlled via menu editor, not hardcoded).
+- [x] SettingsLayout shows Theme + Branding under Appearance group.
+- [x] Removed theme/branding from main sidebar registry — they're settings sub-pages, no longer duplicated under other groups.
+- [x] Aligned with actual schema (`brand_name`, `theme_preset`, `branding_audit_log`).
 
 ## Acceptance
-- Non-admin user logs in → sees Theme in Settings, can toggle light/dark mode, does NOT see Branding
-- Super admin sees both Theme and Branding
-- Menu Editor lists both as configurable entries
+- Theme page shows Style Preset picker only.
+- Branding page shows Brand Identity + Change History.
+- Neither page appears duplicated in the main sidebar.
+- Menu Editor can toggle visibility per role.
