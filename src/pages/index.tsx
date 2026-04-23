@@ -34,12 +34,15 @@ export default function Dashboard() {
   const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
   const { brandName } = useBranding();
 
-  // Redirect to /projects if user hasn't explicitly chosen "/" as their landing
+  // Redirect to /projects on initial session landing only — not when user clicks Health (/)
   useEffect(() => {
     if (authLoading) return;
     if (!user) return;
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem("landing-redirected") === "1") return;
     const pref = profile?.default_landing_path?.trim();
     if (!pref || pref === "") {
+      sessionStorage.setItem("landing-redirected", "1");
       router.replace("/projects");
     }
   }, [authLoading, user, profile, router]);
