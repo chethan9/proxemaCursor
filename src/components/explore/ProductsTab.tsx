@@ -660,6 +660,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />Clear</Button>
             </div>
           )}
@@ -730,7 +731,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const isVariable = p.type === "variable";
                       if (isCompact) {
                         return (
-                          <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group relative border border-border rounded-lg overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition cursor-pointer">
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              if (selectedIds.size > 0) toggleSelect(p.id);
+                              else setQuickEditProduct(p);
+                            }}
+                            className={`group relative border rounded-lg overflow-hidden bg-card hover:shadow-md transition cursor-pointer ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                          >
+                            <div
+                              onClick={(e) => { e.stopPropagation(); toggleSelect(p.id); }}
+                              className={`absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                            >
+                              <Checkbox checked={selectedIds.has(p.id)} className="pointer-events-none" />
+                            </div>
                             <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                               {thumb ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -764,7 +778,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         );
                       }
                       return (
-                        <div key={p.id} onClick={() => setQuickEditProduct(p)} className="group border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-lg transition-all bg-card flex flex-col cursor-pointer">
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            if (selectedIds.size > 0) toggleSelect(p.id);
+                            else setQuickEditProduct(p);
+                          }}
+                          className={`group border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col cursor-pointer ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                        >
+                          <div
+                            onClick={(e) => { e.stopPropagation(); toggleSelect(p.id); }}
+                            className={`absolute top-2.5 left-2.5 z-10 h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                          >
+                            <Checkbox checked={selectedIds.has(p.id)} className="pointer-events-none" />
+                          </div>
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                             {thumb ? (
                               // eslint-disable-next-line @next/next/no-img-element

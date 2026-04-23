@@ -280,11 +280,14 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
         </div>
 
         {/* Sticky footer */}
-        <div className="flex items-center justify-end gap-2 border-t px-5 py-3 bg-background">
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9" disabled={saving || deleting}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="h-9 min-w-[90px]">
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
+        <div className="flex items-center justify-between gap-2 border-t px-5 py-3 bg-muted/30 rounded-b-lg">
+          <div className="text-[11px] text-muted-foreground">Changes are saved to WooSync only. WooCommerce credentials stay private.</div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9" disabled={saving || deleting}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="h-9 min-w-[110px]">
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
         </div>
 
         {/* Blocking overlay while deleting — covers everything including the Dialog's close (X) button */}
