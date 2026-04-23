@@ -1,6 +1,6 @@
 ---
 title: Fix post-save cache staleness — change not visible after edit until manual refresh
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [react-query, cache, ux]

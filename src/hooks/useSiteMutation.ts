@@ -57,7 +57,8 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
       toast({ title: "Save failed", description: msg, variant: "destructive" });
       onErrorExtra?.(err, vars);
     },
-    onSuccess: (data, vars) => {
+    onSuccess: async (data, vars) => {
+      await Promise.all(invalidateKeys.map((key) => qc.invalidateQueries({ queryKey: key })));
       if (successToast) {
         const msg = typeof successToast === "function" ? successToast(data, vars) : successToast;
         toast({
@@ -68,9 +69,7 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
       onSuccessExtra?.(data, vars);
     },
     onSettled: () => {
-      for (const key of invalidateKeys) {
-        qc.invalidateQueries({ queryKey: key });
-      }
+      // no-op: invalidation now happens in onSuccess to guarantee ordering before onSuccessExtra navigation
     },
   });
 }

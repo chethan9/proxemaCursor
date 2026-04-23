@@ -7,7 +7,7 @@ export function makeQueryClient() {
         staleTime: 2 * 60_000,
         gcTime: 10 * 60_000,
         refetchOnWindowFocus: false,
-        refetchOnMount: false,
+        refetchOnMount: "always",
         retry: 1,
       },
     },
