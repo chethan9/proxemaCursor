@@ -126,6 +126,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (exactCache.length > 0) return exactCache;
     return buildInitialTree(can, isSuperAdmin);
   });
+  const [menuReady, setMenuReady] = useState<boolean>(() => loadCachedMenu(currentRoleKey).length > 0);
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
@@ -144,6 +145,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const exactCache = loadCachedMenu(roleKey);
     if (exactCache.length > 0 && serialize(exactCache) !== serialize(menuTree)) {
       setMenuTree(exactCache);
+      setMenuReady(true);
     } else if (exactCache.length === 0) {
       const defaults = buildInitialTree(can, isSuperAdmin);
       if (serialize(defaults) !== serialize(menuTree)) setMenuTree(defaults);
@@ -154,7 +156,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       cachedMenuByRole.set(roleKey, resolved);
       try { localStorage.setItem(menuStorageKey(roleKey), JSON.stringify(resolved)); } catch { /* ignore */ }
       setMenuTree((prev) => (serialize(prev) === serialize(resolved) ? prev : resolved));
-    }).catch(() => { /* keep current tree */ });
+      setMenuReady(true);
+    }).catch(() => { setMenuReady(true); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin]);
 
@@ -488,7 +491,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          {(authLoading || (!profile && !role)) ? (
+          {(authLoading || (!profile && !role) || !menuReady) ? (
             <div className="px-2 space-y-1">
               {[0,1,2,3,4,5,6].map(i => (
                 <div key={i} className={cn("h-8 rounded-md bg-sidebar-accent/30 animate-pulse", collapsed ? "w-9 mx-auto" : "")} />
