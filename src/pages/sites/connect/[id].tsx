@@ -347,6 +347,8 @@ export default function ConnectSuccessPage() {
   };
 
   const completedCount = steps.filter((s) => s.status === "done").length;
+  const visibleSteps = steps.filter((s) => s.id !== "webhooks");
+  const visibleCompleted = visibleSteps.filter((s) => s.status === "done").length;
 
   if (!siteId || stage === "loading") {
     return (
@@ -391,12 +393,12 @@ export default function ConnectSuccessPage() {
                   : "Connecting Store"}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {failed ? "Something didn't complete as expected" : `Step ${Math.min(completedCount + 1, steps.length)} of ${steps.length}`}
+                {failed ? "Something didn't complete as expected" : `Step ${Math.min(visibleCompleted + 1, visibleSteps.length)} of ${visibleSteps.length}`}
               </p>
             </div>
 
             <div className="space-y-2 mb-5">
-              {steps.map((step) => (
+              {visibleSteps.map((step) => (
                 <div key={step.id} className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2">
                   <div className="shrink-0">
                     {step.status === "done" && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
