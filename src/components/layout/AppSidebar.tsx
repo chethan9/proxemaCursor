@@ -42,7 +42,7 @@ if (typeof window !== "undefined") {
 const SIDEBAR_SITE_CAP = 5;
 
 function menuStorageKey(role: RoleKey) {
-  return `sidebar-menu-cache:${role}`;
+  return `sidebar-menu-cache:v3:${role}`;
 }
 
 function groupExpandKey(id: string) {

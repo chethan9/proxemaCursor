@@ -46,6 +46,7 @@ interface AuthContextValue {
   profile: Profile | null;
   role: Role | null;
   loading: boolean;
+  profileLoaded: boolean;
   isSuperAdmin: boolean;
   permissions: string[];
   can: (permission: Permission) => boolean;
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const initializedRef = useRef(false);
 
   const loadProfileAndRole = async (userId: string) => {
@@ -81,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setRole(null);
     }
+    setProfileLoaded(true);
   };
 
   const refresh = async () => {
@@ -91,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setProfile(null);
       setRole(null);
+      setProfileLoaded(true);
     }
   };
 
@@ -102,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         await loadProfileAndRole(session.user.id);
+      } else {
+        setProfileLoaded(true);
       }
       setLoading(false);
       initializedRef.current = true;
@@ -124,13 +130,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           if (!initializedRef.current) {
             setLoading(true);
+            setProfileLoaded(false);
             setTimeout(async () => {
               await loadProfileAndRole(session.user.id);
               setLoading(false);
               initializedRef.current = true;
             }, 0);
           } else {
-            // Silent background refresh — no loading flip
             setTimeout(() => { loadProfileAndRole(session.user.id); }, 0);
           }
           void logAuthEvent("auth.login", { email: session.user.email });
@@ -142,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setRole(null);
         setLoading(false);
+        setProfileLoaded(true);
         return;
       }
     });
@@ -195,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, role, loading, isSuperAdmin, permissions, can, signOut, refresh }}>
+    <AuthContext.Provider value={{ user, profile, role, loading, profileLoaded, isSuperAdmin, permissions, can, signOut, refresh }}>
       {children}
     </AuthContext.Provider>
   );
