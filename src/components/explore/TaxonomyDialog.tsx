@@ -6,8 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { createCategory, createTag } from "@/services/taxonomyService";
 
@@ -17,6 +16,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   storeId: string;
+  siteName?: string;
   mode: "categories" | "tags";
   parentOptions?: ParentOption[];
 };
@@ -25,15 +25,12 @@ function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
 }
 
-export function TaxonomyDialog({ open, onOpenChange, storeId, mode, parentOptions = [] }: Props) {
-  const { toast } = useToast();
-  const qc = useQueryClient();
+export function TaxonomyDialog({ open, onOpenChange, storeId, siteName, mode, parentOptions = [] }: Props) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [parent, setParent] = useState("0");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,47 +50,38 @@ export function TaxonomyDialog({ open, onOpenChange, storeId, mode, parentOption
 
   const singular = mode === "categories" ? "category" : "tag";
 
+  const create = useSiteMutation<void, { name: string; slug?: string; description?: string; parent?: number }>({
+    mutationFn: async (payload) => {
+      if (mode === "categories") {
+        await createCategory(storeId, payload);
+      } else {
+        await createTag(storeId, { name: payload.name, slug: payload.slug, description: payload.description });
+      }
+    },
+    invalidateKeys: [queryKeys.taxonomy(storeId, mode), ["woo", "taxonomy", storeId, mode]],
+    siteName,
+    successToast: `${singular.charAt(0).toUpperCase() + singular.slice(1)} created`,
+    onSuccessExtra: () => onOpenChange(false),
+    onErrorExtra: (err) => setError((err as Error).message),
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     const trimmed = name.trim();
-    if (!trimmed) {
-      setError("Name is required");
-      return;
-    }
-    if (trimmed.length > 120) {
-      setError("Name must be 120 characters or fewer");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      if (mode === "categories") {
-        await createCategory(storeId, {
-          name: trimmed,
-          slug: slug || undefined,
-          description: description || undefined,
-          parent: Number(parent) || 0,
-        });
-      } else {
-        await createTag(storeId, {
-          name: trimmed,
-          slug: slug || undefined,
-          description: description || undefined,
-        });
-      }
-      toast({ title: "Created", description: `${singular.charAt(0).toUpperCase() + singular.slice(1)} created in WooCommerce.` });
-      qc.invalidateQueries({ queryKey: queryKeys.taxonomy(storeId, mode) });
-      onOpenChange(false);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+    if (!trimmed) { setError("Name is required"); return; }
+    if (trimmed.length > 120) { setError("Name must be 120 characters or fewer"); return; }
+    create.mutate({
+      name: trimmed,
+      slug: slug || undefined,
+      description: description || undefined,
+      parent: Number(parent) || 0,
+    });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-white">
+      <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>New {singular}</DialogTitle>
@@ -129,9 +117,9 @@ export function TaxonomyDialog({ open, onOpenChange, storeId, mode, parentOption
             {error && <div className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-3 py-2 rounded-md">{error}</div>}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-            <Button type="submit" disabled={submitting || !name.trim()}>
-              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={create.isPending}>Cancel</Button>
+            <Button type="submit" disabled={create.isPending || !name.trim()}>
+              {create.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Create {singular}
             </Button>
           </DialogFooter>

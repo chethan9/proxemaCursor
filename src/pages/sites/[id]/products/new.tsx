@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { BasicEditor } from "@/components/product-edit/BasicEditor";
 import { AdvancedShell, AdvancedTabKey } from "@/components/product-edit/AdvancedShell";
@@ -12,39 +11,33 @@ import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
 import { emptyProductForm, createProduct, ProductFormState } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useSiteMutation } from "@/hooks/useSiteMutation";
+import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 
 function Inner() {
   const router = useRouter();
-  const qc = useQueryClient();
-  const { toast } = useToast();
   const { id, store, loading } = useSiteFromRoute();
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const [form, setForm] = useState<ProductFormState>(emptyProductForm());
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
-  const [saving, setSaving] = useState(false);
+
+  const create = useSiteMutation<{ id?: string }, void>({
+    mutationFn: () => createProduct(id, form),
+    invalidateKeys: [
+      queryKeys.products(id),
+      ["taxonomy", id, "categories"],
+      ["taxonomy", id, "tags"],
+      ["woo", "taxonomy", id, "categories"],
+      ["woo", "taxonomy", id, "tags"],
+    ],
+    siteName: store?.name,
+    successToast: (r) => `Product created${r && typeof r === "object" && "name" in r ? "" : ""}`,
+    onSuccessExtra: () => router.push(`/sites/${id}/products`),
+  });
 
   if (loading) return <SiteLoadingSkeleton />;
   if (!store) return <div className="p-6">Store not found</div>;
-
-  const onPublish = async () => {
-    setSaving(true);
-    try {
-      await createProduct(id, form);
-      qc.invalidateQueries({ queryKey: ["products", id] });
-      qc.invalidateQueries({ queryKey: ["taxonomy", id, "categories"] });
-      qc.invalidateQueries({ queryKey: ["taxonomy", id, "tags"] });
-      qc.invalidateQueries({ queryKey: ["woo", "taxonomy", id, "categories"] });
-      qc.invalidateQueries({ queryKey: ["woo", "taxonomy", id, "tags"] });
-      toast({ title: "Product created", description: form.name });
-      router.push(`/sites/${id}/products`);
-    } catch (e) {
-      toast({ title: "Failed to create", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const canAdvance = (tab: AdvancedTabKey) => {
     if (tab === "basic") return form.name.trim().length > 0;
@@ -64,7 +57,7 @@ function Inner() {
         </div>
       </div>
       {mode === "basic" ? (
-        <BasicEditor storeId={id} form={form} setForm={setForm} saving={saving} onCancel={() => router.push(`/sites/${id}/products`)} onPublish={onPublish} isEdit={false} />
+        <BasicEditor storeId={id} form={form} setForm={setForm} saving={create.isPending} onCancel={() => router.push(`/sites/${id}/products`)} onPublish={() => create.mutate()} isEdit={false} />
       ) : (
         <AdvancedShell
           form={form}
@@ -72,8 +65,8 @@ function Inner() {
           setActiveTab={setActiveTab}
           canAdvance={canAdvance}
           onCancel={() => router.push(`/sites/${id}/products`)}
-          onPublish={onPublish}
-          saving={saving}
+          onPublish={() => create.mutate()}
+          saving={create.isPending}
           isEdit={false}
           tabContent={{
             basic: <BasicInfoTab storeId={id} form={form} setForm={setForm} />,

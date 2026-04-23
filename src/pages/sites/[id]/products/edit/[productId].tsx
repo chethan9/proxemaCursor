@@ -136,19 +136,20 @@ export default function ProductEditPage() {
     },
   });
 
-  const onPublish = useCallback(async () => {
+  const save = useSiteMutation<unknown, void>({
+    mutationFn: () => updateProduct(storeId!, productId!, form!),
+    invalidateKeys: storeId && productId ? [queryKeys.products(storeId), ["product", productId]] : [],
+    siteName: store?.name,
+    successToast: "Saved",
+    onSuccessExtra: () => {
+      if (storeId) router.push(`/sites/${storeId}/products`);
+    },
+  });
+
+  const onPublish = useCallback(() => {
     if (!form || !storeId || !productId) return;
-    setSaving(true);
-    try {
-      await updateProduct(storeId, productId, form);
-      toast({ title: "Saved", description: store?.name ? `Synced to ${store.name}` : "Synced to WooCommerce" });
-      router.push(`/sites/${storeId}/products`);
-    } catch (e) {
-      toast({ title: "Save failed", description: (e as Error).message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  }, [form, storeId, productId, store?.name, toast, router]);
+    save.mutate();
+  }, [form, storeId, productId, save]);
 
   const onCancel = useCallback(() => {
     if (storeId) router.push(`/sites/${storeId}/products`);
