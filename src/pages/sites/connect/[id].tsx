@@ -44,6 +44,13 @@ export default function ConnectSuccessPage() {
   const webhookRegisteredRef = useRef(false);
   const initRef = useRef(false);
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bgWebhooksFiredRef = useRef(false);
+
+  const kickBackgroundWebhooks = (sid: string) => {
+    if (bgWebhooksFiredRef.current) return;
+    bgWebhooksFiredRef.current = true;
+    fetch(`/api/stores/${sid}/register-webhooks`, { method: "POST" }).catch(() => {});
+  };
 
   const [showCredsManual, setShowCredsManual] = useState(false);
   const [credsKey, setCredsKey] = useState("");
