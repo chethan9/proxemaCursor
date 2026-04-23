@@ -22,6 +22,8 @@ import { Eye, EyeOff, AlertTriangle, ExternalLink, HelpCircle, CheckCircle2, Pla
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { useCreateStore } from "@/hooks/queries/useStores";
 import type { Client } from "@/services/clientService";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,6 +37,7 @@ interface Props {
 
 export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCreated }: Props) {
   const router = useRouter();
+  const { toast } = useToast();
   const createStoreMutation = useCreateStore();
   const [creating, setCreating] = useState(false);
   const submitLock = useRef(false);
@@ -137,7 +140,18 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
       }
     } catch (error) {
       console.error("[AddSite] Error:", error);
-      alert(`Error creating store: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      const msg = error instanceof Error ? error.message : JSON.stringify(error);
+      const isQuota = /plan|upgrade|quota|limit/i.test(msg);
+      toast({
+        title: isQuota ? "Plan limit reached" : "Failed to create site",
+        description: msg,
+        variant: "destructive",
+        action: isQuota ? (
+          <ToastAction altText="Upgrade" onClick={() => router.push("/pricing")}>
+            Upgrade
+          </ToastAction>
+        ) : undefined,
+      });
       submitLock.current = false;
       setCreating(false);
     }

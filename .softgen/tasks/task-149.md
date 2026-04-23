@@ -1,6 +1,6 @@
 ---
 title: Plans + quotas + multi-currency pricing (schema, admin CRUD, enforcement helpers)
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [billing, plans, admin, currency, platform]
@@ -27,16 +27,16 @@ Only currencies supported by the gateway serving that country should appear. Adm
 **Enforcement philosophy:** Block at create/write path, not at read. A customer over quota can still view everything they own; they just can't add more. Clear error messages with an "Upgrade" CTA.
 
 ## Checklist
-- [ ] `plans` table: id, name, slug (unique), description, `prices` (jsonb — currency → smallest-unit integer), billing_interval (month/year), max_sites, max_products_per_site, max_users, max_api_calls_per_month, features (jsonb), trial_days, is_active, is_custom (true = contact sales), sort_order, created_at, updated_at
-- [ ] Seed four plans (Starter / Growth / Scale / Enterprise) with prices in USD, INR, KWD, SAR, AED and realistic quotas
-- [ ] Admin page `/settings/plans` (super-admin only): list, create, edit, archive plans; drag-to-reorder; per-currency price editor validated against gateway support
-- [ ] Live pricing-card preview on plan editor shows how the plan renders in each currency
-- [ ] `lib/quota.ts` helpers: getClientQuota(clientId), getCurrentUsage(clientId), canAddSite(clientId), canAddProduct(clientId, siteId), canAddUser(clientId), getRemainingApiCalls(clientId), getPlanPrice(plan, currency)
-- [ ] `getPlanPrice(plan, currency)` returns null if the plan has no price for that currency — triggers "contact sales" fallback
-- [ ] Wire canAddSite into site create API; return 402 Payment Required with quota context if blocked
-- [ ] Wire canAddProduct into product create API; same 402 response
-- [ ] Quota-tripped errors include: current usage, plan limit, upgrade URL — UI surfaces this in a toast with "Upgrade" button
-- [ ] Monthly API call counter increments on every `/api/v1/*` hit; resets at subscription period boundary
+- [x] `plans` table: id, name, slug (unique), description, `prices` (jsonb — currency → smallest-unit integer), billing_interval (month/year), max_sites, max_products_per_site, max_users, max_api_calls_per_month, features (jsonb), trial_days, is_active, is_custom (true = contact sales), sort_order, created_at, updated_at
+- [x] Seed four plans (Starter / Growth / Scale / Enterprise) with prices in USD, INR, KWD, SAR, AED and realistic quotas
+- [x] Admin page `/settings/plans` (super-admin only): list, create, edit, archive plans; drag-to-reorder; per-currency price editor validated against gateway support
+- [x] Live pricing-card preview on plan editor shows how the plan renders in each currency
+- [x] `lib/quota.ts` helpers: getClientQuota(clientId), getCurrentUsage(clientId), canAddSite(clientId), canAddProduct(clientId, siteId), canAddUser(clientId), getRemainingApiCalls(clientId), getPlanPrice(plan, currency)
+- [x] `getPlanPrice(plan, currency)` returns null if the plan has no price for that currency — triggers "contact sales" fallback
+- [x] Wire canAddSite into site create API; return 402 Payment Required with quota context if blocked
+- [x] Wire canAddProduct into product create API; same 402 response
+- [x] Quota-tripped errors include: current usage, plan limit, upgrade URL — UI surfaces this in a toast with "Upgrade" button
+- [x] Monthly API call counter increments on every `/api/v1/*` hit; resets at subscription period boundary
 
 ## Acceptance
 - Admin creates a new plan with USD + INR + KWD prices; trying to set an RUB price is blocked because no configured gateway supports it
