@@ -19,6 +19,13 @@ export interface FetchRetryOptions {
   attempts?: number;
 }
 
+export interface PagesConcurrentOptions {
+  concurrency?: number;
+  maxPages?: number;
+  perPage?: number;
+  onProgress?: (fetched: number, total?: number) => void;
+}
+
 /**
  * Fetch with exponential backoff. Retries on:
  * - Network errors / timeouts
