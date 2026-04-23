@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useStores } from "@/hooks/queries/useStores";
 import { useSyncRuns } from "@/hooks/queries/useSyncRuns";
 import { BrandLogo } from "@/components/BrandLogo";
+import { useBranding } from "@/contexts/BrandingProvider";
 import {
   PieChart,
   Pie,
@@ -31,6 +32,7 @@ export default function Dashboard() {
   const { user, profile, loading: authLoading } = useAuth();
   const { data: stores = [], isLoading: sLoading } = useStores();
   const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
+  const { brandName } = useBranding();
 
   // Redirect to /projects if user hasn't explicitly chosen "/" as their landing
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function Dashboard() {
           <div className="max-w-lg text-center space-y-6">
             <BrandLogo size="xl" className="mx-auto" />
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight">Welcome to {useAuth as never && ""}Proxima</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">Welcome to {brandName}</h1>
               <p className="text-base text-muted-foreground">
                 Add your first site to start monitoring sync health, activity, and fleet-wide insights.
               </p>

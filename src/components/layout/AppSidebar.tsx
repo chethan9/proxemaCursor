@@ -16,6 +16,7 @@ import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, buildInitialTree, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
+import { BrandLogo } from "@/components/BrandLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Zap, LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight } from "lucide-react";
+import { LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight } from "lucide-react";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
 
@@ -456,12 +457,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               aria-label="Expand sidebar"
               className="flex items-center justify-center rounded-md p-1 hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary"
             >
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={brandName} className="h-6 w-6 rounded object-contain flex-shrink-0" />
-              ) : (
-                <Zap className="h-5 w-5 text-sidebar-primary flex-shrink-0" aria-hidden="true" />
-              )}
+              <BrandLogo size="sm" />
             </button>
           ) : (
             <button
@@ -473,12 +469,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 locked && "cursor-default"
               )}
             >
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={brandName} className="h-6 w-6 rounded object-contain flex-shrink-0" />
-              ) : (
-                <Zap className="h-5 w-5 text-sidebar-primary flex-shrink-0" aria-hidden="true" />
-              )}
+              <BrandLogo size="sm" />
               <span className="font-semibold text-sm truncate">{brandName}</span>
             </button>
           )}
