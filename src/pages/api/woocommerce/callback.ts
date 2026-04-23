@@ -21,6 +21,32 @@ export default async function handler(
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const { data: existing } = await supabase
+      .from("stores")
+      .select("url, woo_key_id, consumer_key, consumer_secret")
+      .eq("id", storeId)
+      .maybeSingle();
+
+    if (
+      existing?.woo_key_id &&
+      existing.consumer_key &&
+      existing.consumer_secret &&
+      existing.url &&
+      existing.woo_key_id !== key_id
+    ) {
+      const oldAuth = Buffer.from(`${existing.consumer_key}:${existing.consumer_secret}`).toString("base64");
+      const oldBase = existing.url.replace(/\/$/, "");
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 5000);
+      fetch(`${oldBase}/wp-json/wc/v3/keys/${existing.woo_key_id}?force=true`, {
+        method: "DELETE",
+        headers: { Authorization: `Basic ${oldAuth}` },
+        signal: controller.signal,
+      })
+        .catch((e) => console.error("[callback] revoke old key failed:", e instanceof Error ? e.message : e))
+        .finally(() => clearTimeout(t));
+    }
+
     // Update the store with the received credentials
     const { error } = await supabase
       .from("stores")
