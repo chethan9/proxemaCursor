@@ -25,7 +25,6 @@ import {
   ArrowUpDown,
   Download,
   Users,
-  Filter,
   ChevronLeft,
   ChevronRight,
   GripVertical,
