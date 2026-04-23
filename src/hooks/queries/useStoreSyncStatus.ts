@@ -5,19 +5,22 @@ export function useStoreSyncStatus(storeId: string | undefined) {
   return useQuery({
     queryKey: ["store-sync-status", storeId] as const,
     queryFn: async () => {
-      if (!storeId) return { initialSyncDone: false };
-      const { data } = await supabase
-        .from("stores")
-        .select("initial_sync_completed_at")
-        .eq("id", storeId)
-        .maybeSingle();
-      return { initialSyncDone: !!data?.initial_sync_completed_at };
+      if (!storeId) return { initialSyncDone: false, running: false };
+      const [storeRes, runsRes] = await Promise.all([
+        supabase.from("stores").select("initial_sync_completed_at").eq("id", storeId).maybeSingle(),
+        supabase.from("sync_runs").select("id").eq("store_id", storeId).eq("status", "running").limit(1),
+      ]);
+      return {
+        initialSyncDone: !!storeRes.data?.initial_sync_completed_at,
+        running: (runsRes.data || []).length > 0,
+      };
     },
     enabled: !!storeId,
-    staleTime: 5_000,
+    staleTime: 3_000,
     refetchInterval: (query) => {
-      const data = query.state.data as { initialSyncDone: boolean } | undefined;
-      return data && !data.initialSyncDone ? 4000 : false;
+      const data = query.state.data as { initialSyncDone: boolean; running: boolean } | undefined;
+      if (!data) return false;
+      return (!data.initialSyncDone || data.running) ? 4000 : false;
     },
   });
 }
