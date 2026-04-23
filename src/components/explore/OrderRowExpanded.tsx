@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText } from "lucide-react";
+import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText, Hourglass, PauseCircle, AlertCircle, CircleDashed, CheckCircle2, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,14 +13,14 @@ interface Props {
   onSaved: (o: OrderRow) => void;
 }
 
-const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; ring: string }> = {
-  processing: { dot: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", ring: "ring-blue-200 dark:ring-blue-900" },
-  "on-hold": { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900" },
-  completed: { dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-300", ring: "ring-emerald-200 dark:ring-emerald-900" },
-  cancelled: { dot: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300", ring: "ring-rose-200 dark:ring-rose-900" },
-  refunded: { dot: "bg-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-700 dark:text-violet-300", ring: "ring-violet-200 dark:ring-violet-900" },
-  failed: { dot: "bg-slate-500", bg: "bg-slate-100 dark:bg-slate-800/50", text: "text-slate-700 dark:text-slate-300", ring: "ring-slate-200 dark:ring-slate-700" },
-  pending: { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900" },
+const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; ring: string; Icon: LucideIcon }> = {
+  processing: { dot: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", ring: "ring-blue-200 dark:ring-blue-900", Icon: CircleDashed },
+  "on-hold": { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900", Icon: PauseCircle },
+  completed: { dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-300", ring: "ring-emerald-200 dark:ring-emerald-900", Icon: CheckCircle2 },
+  cancelled: { dot: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300", ring: "ring-rose-200 dark:ring-rose-900", Icon: XCircle },
+  refunded: { dot: "bg-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-700 dark:text-violet-300", ring: "ring-violet-200 dark:ring-violet-900", Icon: RotateCcw },
+  failed: { dot: "bg-slate-500", bg: "bg-slate-100 dark:bg-slate-800/50", text: "text-slate-700 dark:text-slate-300", ring: "ring-slate-200 dark:ring-slate-700", Icon: AlertCircle },
+  pending: { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900", Icon: Hourglass },
 };
 
 const STATUS_CHANGE_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
@@ -236,6 +236,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
             {STATUS_CHANGE_OPTIONS.filter((s) => s !== order.status).map((s) => {
               const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
               const isSaving = saving === s;
+              const Icon = style.Icon;
               return (
                 <button
                   key={s}
@@ -246,7 +247,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
                   {isSaving ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    <span className={`h-1.5 w-1.5 rounded-full ${style.dot} shrink-0`} />
+                    <Icon className="h-3 w-3 shrink-0" />
                   )}
                   <span className="truncate">{s}</span>
                 </button>

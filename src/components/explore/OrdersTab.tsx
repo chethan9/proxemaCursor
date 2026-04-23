@@ -696,134 +696,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       {s}
                     </DropdownMenuItem>
                   ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={overLimit} onClick={() => setBulkAction({ type: "delete" })}>
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </Button>
-              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}>
-                <X className="h-3.5 w-3.5" />
-                Clear
-              </Button>
-            </div>
-          )}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="w-8 pl-3 pr-0">
-                    <Checkbox
-                      checked={orders.length > 0 && orders.every((o) => selectedIds.has(o.id))}
-                      onCheckedChange={(v) => {
-                        if (v) setSelectedIds(new Set(orders.map((o) => o.id)));
-                        else setSelectedIds(new Set());
-                      }}
-                    />
-                  </TableHead>
-                  {visibleColList.map((c) => {
-                    const dragProps = {
-                      draggable: true,
-                      onDragStart: (e: React.DragEvent) => {
-                        setDragKey(c.key);
-                        e.dataTransfer.effectAllowed = "move";
-                      },
-                      onDragOver: (e: React.DragEvent) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                      },
-                      onDrop: (e: React.DragEvent) => {
-                        e.preventDefault();
-                        if (!dragKey || dragKey === c.key) return;
-                        setColumnOrder((prev) => {
-                          const next = prev.filter((k) => k !== dragKey);
-                          const targetIdx = next.indexOf(c.key);
-                          next.splice(targetIdx, 0, dragKey);
-                          return next;
-                        });
-                        setDragKey(null);
-                      },
-                      onDragEnd: () => setDragKey(null),
-                      className: `cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`,
-                    };
-                    const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
-                    const alignCls = isNumeric ? "text-right" : "text-left";
-                    if (c.key === "total") {
-                      const active = !!(totalMin || totalMax);
-                      return (
-                        <TableHead key={c.key} {...dragProps} className={`${dragProps.className} ${alignCls}`}>
-                          <div className="flex items-center justify-end gap-1">
-                            <GripVertical className="h-3 w-3 text-muted-foreground/30" />
-                            <span>{c.label}</span>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="sm" className={`h-5 w-5 p-0 ${active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}>
-                                  <Filter className="h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent align="start" className="w-60 p-3">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs font-semibold">Filter by total</span>
-                                  {active && (
-                                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5 font-normal" onClick={() => { setTotalMin(""); setTotalMax(""); }}>
-                                      Clear
-                                    </Button>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Input type="number" value={totalMin} onChange={(e) => setTotalMin(e.target.value)} placeholder="Min" className="h-8 text-xs" />
-                                  <span className="text-muted-foreground text-xs">to</span>
-                                  <Input type="number" value={totalMax} onChange={(e) => setTotalMax(e.target.value)} placeholder="Max" className="h-8 text-xs" />
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            <GripVertical className="h-3 w-3 text-muted-foreground/30 ml-0.5" />
-                          </div>
-                        </TableHead>
-                      );
-                    }
-                    return (
-                      <TableHead key={c.key} {...dragProps}>
-                        <span className={`inline-flex items-center gap-1 ${isNumeric ? "justify-end w-full" : ""}`}>
-                          {c.label}
-                          <GripVertical className="h-3 w-3 text-muted-foreground/30" />
-                        </span>
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 10 }).map((_, i) => (
-                    <TableRow key={`sk-${i}`}>
-                      <TableCell className="w-8 pl-3 pr-0"><Skeleton className="h-4 w-4" /></TableCell>
-                      {visibleColList.map((c) => (
-                        <TableCell key={c.key}>
-                          <Skeleton className="h-4 w-24" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : orders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={visibleColList.length + 1} className="text-center py-16">
-                      {activeSync ? (
-                        <>
-                          <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
-                          <p className="text-sm font-medium">Syncing your orders…</p>
-                          <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new orders will appear automatically</p>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                          <p className="text-sm text-muted-foreground">No orders found</p>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  orders.map((o) => {
+                  {orders.map((o) => {
                     const isExpanded = expandedRowId === o.id;
                     const isSelected = selectedIds.has(o.id);
                     return (
@@ -961,10 +834,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                         )}
                       </React.Fragment>
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
