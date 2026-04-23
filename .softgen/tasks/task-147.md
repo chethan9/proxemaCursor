@@ -1,6 +1,6 @@
 ---
 title: Product editor UX enhancements (auto-SKU, tag picker, alignment)
-status: todo
+status: done
 priority: low
 type: feature
 tags: [products, ux]
@@ -17,10 +17,10 @@ Bundle of the three enhancement-class items from the bug report. Treat as low pr
 - **Px-27 (existing tags picker in Add Product)**: Currently `BasicEditor.tsx` tag input only accepts free-text new tags. Mirror the category popover pattern — show a searchable list of existing tags from `useWooTaxonomy(storeId, "tags")` with an option to create a new one if no match. Same change in `BasicInfoTab.tsx` (Advanced).
 
 ## Checklist
-- [ ] Add an "Auto SKU" button next to the SKU input in `BasicEditor.tsx`, reusing the generator logic from `InventoryShippingTab.tsx` (3-letter prefix from name + 7-digit random)
-- [ ] In `BasicEditor.tsx` tag input: replace the plain Input with a Popover + search pattern identical to the category picker; load tags via `useWooTaxonomy(storeId, "tags")`; allow "Create new tag" when the search string has no match
-- [ ] Apply the same tag-picker upgrade to `BasicInfoTab.tsx` (Advanced)
-- [ ] In the Category + Tag list tables, ensure header alignment matches cell alignment per column (numbers right, text left); verify in both Category module and Tag module
+- [x] Add an "Auto SKU" button next to the SKU input in `BasicEditor.tsx`, reusing the generator logic from `InventoryShippingTab.tsx` (3-letter prefix from name + 7-digit random)
+- [x] In `BasicEditor.tsx` tag input: replace the plain Input with a Popover + search pattern identical to the category picker; load tags via `useWooTaxonomy(storeId, "tags")`; allow "Create new tag" when the search string has no match
+- [x] Apply the same tag-picker upgrade to `BasicInfoTab.tsx` (Advanced)
+- [x] In the Category + Tag list tables, ensure header alignment matches cell alignment per column (numbers right, text left); verify in both Category module and Tag module
 
 ## Acceptance
 - Basic mode SKU field has an Auto SKU button that fills a generated value
