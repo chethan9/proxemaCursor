@@ -4,6 +4,9 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { fetchPagesConcurrent, basicAuth } from "@/lib/sync-engine";
 import { getAppUrl } from "@/lib/app-url";
 
+export const maxDuration = 300;
+export const config = { maxDuration: 300 };
+
 interface StoreToSync {
   id: string;
   name: string;
