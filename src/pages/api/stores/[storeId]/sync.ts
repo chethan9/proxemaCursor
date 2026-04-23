@@ -70,7 +70,7 @@ async function syncProducts(store: StoreToSync, syncRunId: string, modifiedAfter
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
   await fetchPagesConcurrent<WooProduct>(store.url, store.auth, "products", params, {
-    concurrency: 2,
+    concurrency: 4,
     onBatch: async (items) => {
       const now = new Date().toISOString();
       const rows = items.map((p) => ({
@@ -92,7 +92,7 @@ async function syncOrders(store: StoreToSync, syncRunId: string, modifiedAfter: 
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
   await fetchPagesConcurrent<WooOrder>(store.url, store.auth, "orders", params, {
-    concurrency: 2,
+    concurrency: 4,
     onBatch: async (items) => {
       const now = new Date().toISOString();
       const rows = items.map((o) => ({
@@ -116,7 +116,7 @@ async function syncCustomers(store: StoreToSync, syncRunId: string, modifiedAfte
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
   await fetchPagesConcurrent<WooCustomer>(store.url, store.auth, "customers", params, {
-    concurrency: 2,
+    concurrency: 4,
     onBatch: async (items) => {
       const now = new Date().toISOString();
       const rows = items.map((c) => ({
@@ -135,7 +135,7 @@ async function syncCustomers(store: StoreToSync, syncRunId: string, modifiedAfte
 async function syncCategories(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
   const counters: Counters = { processed: 0, created: 0, updated: 0 };
   await fetchPagesConcurrent<WooCategory>(store.url, store.auth, "products/categories", {}, {
-    concurrency: 2,
+    concurrency: 4,
     onBatch: async (items) => {
       const now = new Date().toISOString();
       const rows = items.map((c) => ({
@@ -154,7 +154,7 @@ async function syncCoupons(store: StoreToSync, syncRunId: string, modifiedAfter:
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
   await fetchPagesConcurrent<WooCoupon>(store.url, store.auth, "coupons", params, {
-    concurrency: 2,
+    concurrency: 4,
     onBatch: async (items) => {
       const now = new Date().toISOString();
       const rows = items.map((c) => ({
@@ -177,7 +177,7 @@ async function syncCoupons(store: StoreToSync, syncRunId: string, modifiedAfter:
 async function syncTags(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
   const counters: Counters = { processed: 0, created: 0, updated: 0 };
   await fetchPagesConcurrent<WooTag>(store.url, store.auth, "products/tags", {}, {
-    concurrency: 2,
+    concurrency: 4,
     onBatch: async (items) => {
       const now = new Date().toISOString();
       const rows = items.map((t) => ({
@@ -257,9 +257,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
   try {
-    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const tenMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     await supabase.from("sync_runs").update({
-      status: "failed", error_message: "Auto-timeout: sync exceeded 10 minute limit",
+      status: "failed", error_message: "Auto-timeout: sync exceeded 30 minute limit",
       completed_at: new Date().toISOString(),
     }).eq("store_id", storeId).eq("status", "running").lt("started_at", tenMinAgo);
 
