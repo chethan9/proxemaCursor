@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { WOO_USER_AGENT } from "@/lib/sync-error";
+import { logActivity } from "@/lib/activity-log";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "DELETE" && req.method !== "POST") {
@@ -133,6 +134,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (delErr) {
     return res.status(500).json({ error: delErr.message });
   }
+
+  void logActivity({
+    action: "site.delete",
+    entityType: "store",
+    entityId: storeId,
+    clientId: store.client_id,
+    before: store as Record<string, unknown>,
+    metadata: {
+      webhooks_removed: webhookResults.filter((r) => r.ok).length,
+      api_key_removed: apiKeyRemoved,
+    },
+    req,
+  });
 
   return res.status(200).json({
     success: true,

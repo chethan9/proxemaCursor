@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import type { Json } from "@/integrations/supabase/database.types";
+import { logActivity } from "@/lib/activity-log";
 
 type WooVariationInput = {
   id?: number;
@@ -142,6 +143,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (insertErr) {
       console.error("[product-create][db-upsert]", insertErr);
     }
+
+    void logActivity({
+      action: "product.create",
+      entityType: "product",
+      entityId: inserted?.id ?? `woo-${wooId}`,
+      after: (inserted ?? insertRow) as Record<string, unknown>,
+      metadata: { woo_id: wooId, store_id: storeId },
+      req,
+    });
 
     return res.status(200).json(inserted || { ...insertRow, id: `woo-${wooId}` });
   } catch (e) {

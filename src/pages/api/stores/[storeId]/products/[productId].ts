@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { logActivity } from "@/lib/activity-log";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -112,6 +113,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         snapshot_after: null,
         source: "dashboard",
         status: "success",
+      });
+
+      void logActivity({
+        action: "product.delete",
+        entityType: "product",
+        entityId: productId,
+        before: localProduct as Record<string, unknown>,
+        metadata: { woo_id: localProduct.woo_id, store_id: storeId },
+        req,
       });
 
       return res.status(200).json({ success: true });
@@ -310,6 +320,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       snapshot_after: afterSnapshot,
       source: "dashboard",
       status: "success",
+    });
+
+    void logActivity({
+      action: "product.update",
+      entityType: "product",
+      entityId: productId,
+      before: localProduct as Record<string, unknown>,
+      after: saved as Record<string, unknown>,
+      metadata: { woo_id: localProduct.woo_id, store_id: storeId },
+      req,
     });
 
     return res.status(200).json(saved);

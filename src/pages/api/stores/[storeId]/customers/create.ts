@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { logActivity } from "@/lib/activity-log";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -61,6 +62,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
     const { data, error } = await supabaseAdmin.from("customers").insert(insert).select("*").single();
     if (error) return res.status(500).json({ error: error.message });
+    void logActivity({
+      action: "customer.create",
+      entityType: "customer",
+      entityId: data.id,
+      after: data as Record<string, unknown>,
+      metadata: { woo_id: wooData.id, store_id: storeId },
+      req,
+    });
     return res.status(200).json(data);
   } catch (e) {
     const err = e as { message?: string };

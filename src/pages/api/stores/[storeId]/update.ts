@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST" && req.method !== "PATCH") {
@@ -58,6 +59,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error("[store-update] error:", updErr);
     return res.status(500).json({ error: updErr.message });
   }
+
+  void logActivity({
+    action: "site.update",
+    entityType: "store",
+    entityId: storeId,
+    clientId: updated?.client_id ?? null,
+    after: updated as Record<string, unknown>,
+    metadata: { patch },
+    req,
+  });
 
   return res.status(200).json({ store: updated });
 }

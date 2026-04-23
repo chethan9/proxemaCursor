@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { logActivity } from "@/lib/activity-log";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -69,6 +70,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select("*")
         .single();
       if (upErr) return res.status(500).json({ error: upErr.message });
+      void logActivity({
+        action: "customer.update",
+        entityType: "customer",
+        entityId: customerId,
+        before: cust as Record<string, unknown>,
+        after: updated as Record<string, unknown>,
+        metadata: { woo_id: cust.woo_id, store_id: storeId },
+        req,
+      });
       return res.status(200).json(updated);
     } catch (e) {
       const err = e as { message?: string };
@@ -79,11 +89,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "DELETE") {
     if (!cust.woo_id) {
       await supabaseAdmin.from("customers").delete().eq("id", customerId);
+      void logActivity({
+        action: "customer.delete",
+        entityType: "customer",
+        entityId: customerId,
+        before: cust as Record<string, unknown>,
+        metadata: { store_id: storeId },
+        req,
+      });
       return res.status(200).json({ ok: true });
     }
     try {
       await wooRequest(store, "DELETE", `customers/${cust.woo_id}?force=true`);
       await supabaseAdmin.from("customers").delete().eq("id", customerId);
+      void logActivity({
+        action: "customer.delete",
+        entityType: "customer",
+        entityId: customerId,
+        before: cust as Record<string, unknown>,
+        metadata: { woo_id: cust.woo_id, store_id: storeId },
+        req,
+      });
       return res.status(200).json({ ok: true });
     } catch (e) {
       const err = e as { message?: string };

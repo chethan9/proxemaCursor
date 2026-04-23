@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -70,6 +71,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error("[api/stores/create] insert failed:", error);
     return res.status(500).json({ error: error.message });
   }
+
+  void logActivity({
+    action: "site.create",
+    entityType: "store",
+    entityId: data.id,
+    clientId: finalClientId,
+    after: data as Record<string, unknown>,
+    req,
+  });
 
   return res.status(200).json({ store: data });
 }
