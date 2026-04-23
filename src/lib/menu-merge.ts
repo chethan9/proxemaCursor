@@ -86,15 +86,16 @@ export function mergeMenu(config: MenuNode[]): { tree: MenuNode[]; unassignedIds
   const ids = new Set(MENU_REGISTRY.map((r) => r.id));
   const { pruned, unassigned } = mergeGeneric(config, ids, buildDefaultTree());
   if (unassigned.length > 0) {
-    const grp: MenuNode = {
-      id: "group-unassigned", type: "group", label: "Unassigned (new)", icon: "Folder",
-      children: unassigned.map((id) => {
-        const r = reg.get(id)!;
-        return { id, type: "item", label: r.defaultLabel, icon: r.defaultIcon, hidden: false };
-      }),
-    };
+    const newChildren = unassigned.map((id) => {
+      const r = reg.get(id)!;
+      return { id, type: "item" as const, label: r.defaultLabel, icon: r.defaultIcon, hidden: false };
+    });
     const idx = pruned.findIndex((n) => n.id === "group-unassigned");
-    if (idx >= 0) pruned[idx] = grp; else pruned.push(grp);
+    if (idx >= 0) {
+      pruned[idx] = { ...pruned[idx], children: [...(pruned[idx].children || []), ...newChildren] };
+    } else {
+      pruned.push({ id: "group-unassigned", type: "group", label: "Unassigned (new)", icon: "Folder", children: newChildren });
+    }
   }
   return { tree: pruned, unassignedIds: unassigned };
 }
@@ -104,15 +105,16 @@ export function mergeSiteMenu(config: MenuNode[]): { tree: MenuNode[]; unassigne
   const ids = new Set(SITE_MENU_REGISTRY.map((r) => r.id));
   const { pruned, unassigned } = mergeGeneric(config, ids, buildDefaultSiteTree());
   if (unassigned.length > 0) {
-    const grp: MenuNode = {
-      id: "sitegroup-unassigned", type: "group", label: "Unassigned (new)", icon: "Folder",
-      children: unassigned.map((id) => {
-        const r = reg.get(id)!;
-        return { id, type: "item", label: r.defaultLabel, icon: r.defaultIcon, hidden: false };
-      }),
-    };
+    const newChildren = unassigned.map((id) => {
+      const r = reg.get(id)!;
+      return { id, type: "item" as const, label: r.defaultLabel, icon: r.defaultIcon, hidden: false };
+    });
     const idx = pruned.findIndex((n) => n.id === "sitegroup-unassigned");
-    if (idx >= 0) pruned[idx] = grp; else pruned.push(grp);
+    if (idx >= 0) {
+      pruned[idx] = { ...pruned[idx], children: [...(pruned[idx].children || []), ...newChildren] };
+    } else {
+      pruned.push({ id: "sitegroup-unassigned", type: "group", label: "Unassigned (new)", icon: "Folder", children: newChildren });
+    }
   }
   return { tree: pruned, unassignedIds: unassigned };
 }

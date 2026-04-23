@@ -383,7 +383,6 @@ function MenuEditorInner() {
                 const g = groups.find((x) => x.id === entry.id);
                 if (!g) return null;
                 const sectionRows = rowsByGroup.get(g.id) || [];
-                const editable = g.id.startsWith("group-custom-");
                 const isPanel = g.displayMode === "panel";
                 return (
                   <div key={`group-${g.id}`} className="p-3">
@@ -397,18 +396,14 @@ function MenuEditorInner() {
                         </button>
                       </div>
                       <IconPicker value={g.icon || "Folder"} onChange={(icon) => { setGroups((gs) => gs.map((x) => x.id === g.id ? { ...x, icon } : x)); setDirty(true); }} />
-                      {editable ? (
-                        <Input value={g.label} onChange={(e) => renameGroup(g.id, e.target.value)} className="h-7 text-[11px] uppercase tracking-wider font-semibold max-w-[200px]" />
-                      ) : (
-                        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{g.label}</span>
-                      )}
+                      <Input value={g.label} onChange={(e) => renameGroup(g.id, e.target.value)} className="h-7 text-[11px] uppercase tracking-wider font-semibold max-w-[220px]" />
                       <span className="text-[10px] text-muted-foreground">({sectionRows.length})</span>
                       <div className="flex-1" />
                       <Button size="sm" variant={isPanel ? "default" : "outline"} onClick={() => toggleGroupMode(g.id)} title="Inline expands below. Panel opens as second sidebar column." className="h-6 px-2 text-[10px] gap-1">
                         <PanelRight className="h-3 w-3" />
                         {isPanel ? "Panel" : "Inline"}
                       </Button>
-                      {editable && (
+                      {g.id.startsWith("group-custom-") && (
                         <Button size="icon" variant="ghost" onClick={() => deleteGroup(g.id)} title="Delete group" className="h-6 w-6">
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
