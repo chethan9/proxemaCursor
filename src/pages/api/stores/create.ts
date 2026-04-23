@@ -2,7 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
-import { canAddSiteServer, quotaErrorPayload } from "@/lib/quota";
+import { quotaErrorPayload } from "@/lib/quota";
+import { canAddSiteServer } from "@/lib/quota.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {

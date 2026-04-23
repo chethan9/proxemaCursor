@@ -3,7 +3,8 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import type { Json } from "@/integrations/supabase/database.types";
 import { logActivity } from "@/lib/activity-log";
-import { canAddProductServer, quotaErrorPayload } from "@/lib/quota";
+import { quotaErrorPayload } from "@/lib/quota";
+import { canAddProductServer } from "@/lib/quota.server";
 
 type WooVariationInput = {
   id?: number;
