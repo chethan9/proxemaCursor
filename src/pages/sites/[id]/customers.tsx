@@ -49,6 +49,7 @@ import {
 } from "@/services/customerService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { useToast } from "@/hooks/use-toast";
+import { SyncPill } from "@/components/ui/sync-pill";
 
 type ColumnKey =
   | "name"
@@ -532,8 +533,11 @@ function CustomersInner() {
                                     <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0 text-[11px] font-semibold text-foreground/70">
                                       {initials}
                                     </div>
-                                    <div className="min-w-0">
-                                      <div className="font-medium truncate">{name}</div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <div className="font-medium truncate">{name}</div>
+                                        <SyncPill entityType="customer" entityId={c.id} />
+                                      </div>
                                       {c.username && <div className="text-[11px] text-muted-foreground truncate">@{c.username}</div>}
                                     </div>
                                   </div>

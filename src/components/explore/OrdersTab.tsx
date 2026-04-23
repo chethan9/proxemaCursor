@@ -56,6 +56,7 @@ import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { useStore } from "@/hooks/queries/useStores";
 import { formatStoreDateTime } from "@/lib/format-store-date";
+import { SyncPill } from "@/components/ui/sync-pill";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -763,7 +764,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               return <TableCell key={c.key} className="font-mono text-[10px] text-muted-foreground">{o.id.slice(0, 8)}</TableCell>;
                             }
                             if (c.key === "order_number") {
-                              return <TableCell key={c.key} className="font-mono font-medium">#{o.order_number || o.woo_id}</TableCell>;
+                              return (
+                                <TableCell key={c.key} className="font-mono font-medium">
+                                  <span className="inline-flex items-center gap-2">
+                                    #{o.order_number || o.woo_id}
+                                    <SyncPill entityType="order" entityId={o.id} />
+                                  </span>
+                                </TableCell>
+                              );
                             }
                             if (c.key === "woo_id") {
                               return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.woo_id}</TableCell>;

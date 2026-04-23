@@ -69,6 +69,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
   const mutation = useSiteMutation<Record<string, unknown>, Record<string, unknown>>({
     mutationFn: (patch) => patchProduct(product!.store_id, product!.id, patch),
     invalidateKeys: product ? [queryKeys.products(product.store_id), ["product", product.id]] : [],
+    track: product ? { entityType: "product", storeId: product.store_id, entityId: () => product.id } : undefined,
     optimisticUpdates: product
       ? [
           {

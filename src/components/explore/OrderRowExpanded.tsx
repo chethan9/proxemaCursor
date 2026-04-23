@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText, Hourglass, PauseCircle, AlertCircle, CircleDashed, CheckCircle2, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
 import { useToast } from "@/hooks/use-toast";
+import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
 
 interface Props {
   order: OrderRow;
@@ -27,6 +28,7 @@ const STATUS_CHANGE_OPTIONS = ["processing", "on-hold", "completed", "cancelled"
 
 export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   const { toast } = useToast();
+  const { track, markSaved, markFailed } = useRecentMutations();
   const [saving, setSaving] = useState<string | null>(null);
 
   const billing = (order.billing || {}) as {
@@ -68,12 +70,15 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
     setSaving(newStatus);
     const previousStatus = order.status;
     onSaved({ ...order, status: newStatus });
+    track("order", order.id, order.store_id);
     try {
       const updated = await updateOrderStatus(order.id, newStatus);
       onSaved(updated);
+      markSaved("order", order.id);
       toast({ title: "Status updated", description: `Order #${order.order_number || order.woo_id} → ${newStatus}` });
     } catch (e) {
       onSaved({ ...order, status: previousStatus });
+      markFailed("order", order.id);
       toast({ title: "Update failed — reverted", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setSaving(null);

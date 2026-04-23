@@ -42,6 +42,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
+import { SyncPill } from "@/components/ui/sync-pill";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -940,7 +941,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "name") {
                                 return (
                                   <TableCell key={c.key} className="max-w-[320px]">
-                                    <div className="font-medium truncate">{p.name || "—"}</div>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className="font-medium truncate">{p.name || "—"}</div>
+                                      <SyncPill entityType="product" entityId={p.id} />
+                                    </div>
                                     {p.type && p.type !== "simple" && (
                                       <div className="text-[10px] text-muted-foreground uppercase mt-0.5">{p.type}</div>
                                     )}
