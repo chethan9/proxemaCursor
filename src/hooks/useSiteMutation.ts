@@ -1,9 +1,16 @@
 import { useMutation, useQueryClient, type QueryKey, type UseMutationOptions } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
 
 type OptimisticPatch<TVars> = {
   queryKey: QueryKey;
   updater: (old: unknown, vars: TVars) => unknown;
+};
+
+export type TrackConfig<TVars, TData> = {
+  entityType: string;
+  storeId: string;
+  entityId: (vars: TVars, data?: TData) => string | null | undefined;
 };
 
 export type UseSiteMutationOptions<TData, TVars> = {
@@ -15,11 +22,13 @@ export type UseSiteMutationOptions<TData, TVars> = {
   successToast?: string | ((data: TData, vars: TVars) => string);
   errorToast?: string | ((err: unknown) => string);
   siteName?: string;
+  track?: TrackConfig<TVars, TData>;
 } & Omit<UseMutationOptions<TData, unknown, TVars, { snapshots: Array<[QueryKey, unknown]> }>, "mutationFn" | "onMutate" | "onError" | "onSuccess" | "onSettled">;
 
 export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TData, TVars>) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const recent = useRecentMutations();
   const {
     mutationFn,
     invalidateKeys = [],
@@ -29,6 +38,7 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
     successToast,
     errorToast,
     siteName,
+    track,
     ...rest
   } = options;
 
@@ -36,6 +46,10 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
     ...rest,
     mutationFn,
     onMutate: async (vars) => {
+      if (track) {
+        const id = track.entityId(vars);
+        if (id) recent.track(track.entityType, String(id), track.storeId);
+      }
       const snapshots: Array<[QueryKey, unknown]> = [];
       for (const patch of optimisticUpdates) {
         await qc.cancelQueries({ queryKey: patch.queryKey });
@@ -51,6 +65,10 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
           qc.setQueryData(key, prev);
         }
       }
+      if (track) {
+        const id = track.entityId(vars);
+        if (id) recent.markFailed(track.entityType, String(id), err instanceof Error ? err.message : undefined);
+      }
       const msg = typeof errorToast === "function"
         ? errorToast(err)
         : errorToast ?? (err instanceof Error ? err.message : "Something went wrong");
@@ -58,6 +76,10 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
       onErrorExtra?.(err, vars);
     },
     onSuccess: async (data, vars) => {
+      if (track) {
+        const id = track.entityId(vars, data);
+        if (id) recent.markSaved(track.entityType, String(id));
+      }
       await Promise.all(invalidateKeys.map((key) => qc.invalidateQueries({ queryKey: key })));
       if (successToast) {
         const msg = typeof successToast === "function" ? successToast(data, vars) : successToast;
@@ -67,9 +89,6 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
         });
       }
       onSuccessExtra?.(data, vars);
-    },
-    onSettled: () => {
-      // no-op: invalidation now happens in onSuccess to guarantee ordering before onSuccessExtra navigation
     },
   });
 }
