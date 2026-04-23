@@ -167,8 +167,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   useEffect(() => {
     if (authLoading) return;
-    if (!profile && !role) return;
-    if (permissions.length === 0 && !isSuperAdmin) return;
     if (!user?.id) return;
     const roleKey = currentRoleKey;
     const lastUserId = typeof window !== "undefined" ? localStorage.getItem("sidebar-last-user-id") : null;
@@ -522,7 +520,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          {(authLoading || (!profile && !role) || !menuReady) ? (
+          {(authLoading || !user?.id || !menuReady) ? (
             <div className="px-2 space-y-1">
               {[0,1,2,3,4,5,6].map(i => (
                 <div key={i} className={cn("h-8 rounded-md bg-sidebar-accent/30 animate-pulse", collapsed ? "w-9 mx-auto" : "")} />
