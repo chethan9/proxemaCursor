@@ -7,15 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 
 function NewCustomerInner() {
   const router = useRouter();
   const { toast } = useToast();
-  const qc = useQueryClient();
   const { id: siteId, store, loading } = useSiteFromRoute();
-  const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     email: "", first_name: "", last_name: "", username: "", password: "",
@@ -25,26 +23,21 @@ function NewCustomerInner() {
 
   const copyBillingToShipping = () => setForm(p => ({ ...p, shipping: { first_name: p.billing.first_name, last_name: p.billing.last_name, address_1: p.billing.address_1, address_2: p.billing.address_2, city: p.billing.city, state: p.billing.state, postcode: p.billing.postcode, country: p.billing.country } }));
 
-  const handleSave = async () => {
-    if (!form.email) {
-      toast({ title: "Email required", variant: "destructive" });
-      return;
-    }
-    setSaving(true);
-    try {
-      const created = await createCustomer(siteId, {
-        email: form.email, first_name: form.first_name || undefined, last_name: form.last_name || undefined,
-        username: form.username || undefined, password: form.password || undefined,
-        billing: form.billing, shipping: form.shipping,
-      });
-      toast({ title: "Customer created" });
-      await qc.invalidateQueries({ queryKey: ["customers", siteId] });
-      router.push(`/sites/${siteId}/customers/${created.id}`);
-    } catch (e) {
-      const err = e as { message?: string };
-      toast({ title: "Create failed", description: err.message, variant: "destructive" });
-      setSaving(false);
-    }
+  const create = useSiteMutation<{ id: string }, void>({
+    mutationFn: () => createCustomer(siteId, {
+      email: form.email, first_name: form.first_name || undefined, last_name: form.last_name || undefined,
+      username: form.username || undefined, password: form.password || undefined,
+      billing: form.billing, shipping: form.shipping,
+    }),
+    invalidateKeys: [["customers", siteId]],
+    siteName: store?.name,
+    successToast: "Customer created",
+    onSuccessExtra: (created) => router.push(`/sites/${siteId}/customers/${created.id}`),
+  });
+
+  const handleSave = () => {
+    if (!form.email) { toast({ title: "Email required", variant: "destructive" }); return; }
+    create.mutate();
   };
 
   if (loading) return <SiteLoadingSkeleton />;
@@ -60,9 +53,9 @@ function NewCustomerInner() {
             <div className="text-xs text-primary mt-0.5">Customers / New</div>
           </div>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-          {saving ? "Creating…" : "Create customer"}
+        <Button size="sm" onClick={handleSave} disabled={create.isPending}>
+          {create.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+          {create.isPending ? "Creating…" : "Create customer"}
         </Button>
       </div>
 

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Edit3, Save, X, Loader2, Copy, Mail, Phone, Trash2, User, Package, ChevronDown, ChevronRight, ShoppingBag, CheckCircle2, XCircle, Wallet, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSiteMutation } from "@/hooks/useSiteMutation";
 
 type LineItem = {
   name?: string;
@@ -78,8 +79,6 @@ function CustomerDetailsInner() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).get("edit") === "1";
   });
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [ordersPage, setOrdersPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -138,36 +137,31 @@ function CustomerDetailsInner() {
 
   const copy = (v?: string | null) => { if (!v) return; navigator.clipboard?.writeText(v); toast({ title: "Copied" }); };
 
-  const handleSave = async () => {
-    if (!customer) return;
-    setSaving(true);
-    try {
-      await updateCustomer(customer.id, { first_name: form.first_name, last_name: form.last_name, email: form.email, username: form.username, billing: form.billing, shipping: form.shipping });
-      toast({ title: "Customer updated" });
-      await qc.invalidateQueries({ queryKey: ["customer", customer.id] });
-      await qc.invalidateQueries({ queryKey: ["customers", siteId] });
-      setEditing(false);
-    } catch (e) {
-      const err = e as { message?: string };
-      toast({ title: "Update failed", description: err.message, variant: "destructive" });
-    } finally { setSaving(false); }
-  };
+  const save = useSiteMutation<unknown, void>({
+    mutationFn: () => updateCustomer(customer!.id, { first_name: form.first_name, last_name: form.last_name, email: form.email, username: form.username, billing: form.billing, shipping: form.shipping }),
+    invalidateKeys: customer ? [["customer", customer.id], ["customers", siteId]] : [],
+    siteName: store?.name,
+    successToast: "Customer updated",
+    onSuccessExtra: () => setEditing(false),
+  });
 
-  const handleDelete = async () => {
+  const remove = useSiteMutation<unknown, void>({
+    mutationFn: () => deleteCustomer(siteId, customer!.id),
+    invalidateKeys: [["customers", siteId]],
+    siteName: store?.name,
+    successToast: "Customer deleted",
+    onSuccessExtra: () => router.push(`/sites/${siteId}/customers`),
+  });
+
+  const handleSave = () => { if (!customer) return; save.mutate(); };
+  const handleDelete = () => {
     if (!customer) return;
     if (!confirm(`Delete ${getCustomerName(customer)}? This will remove them from WooCommerce.`)) return;
-    setDeleting(true);
-    try {
-      await deleteCustomer(siteId, customer.id);
-      toast({ title: "Customer deleted" });
-      await qc.invalidateQueries({ queryKey: ["customers", siteId] });
-      router.push(`/sites/${siteId}/customers`);
-    } catch (e) {
-      const err = e as { message?: string };
-      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
-      setDeleting(false);
-    }
+    remove.mutate();
   };
+
+  const saving = save.isPending;
+  const deleting = remove.isPending;
 
   if (siteLoading || isLoading) return <SiteLoadingSkeleton />;
   if (!store) return <div className="p-6">Store not found</div>;

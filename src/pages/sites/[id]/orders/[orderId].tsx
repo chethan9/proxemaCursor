@@ -36,6 +36,7 @@ import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } f
 import { useToast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
+import { useSiteMutation } from "@/hooks/useSiteMutation";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing" },
@@ -161,18 +162,23 @@ export default function OrderDetailsPage() {
   const allNotes = [...localNotes, ...persistedNotes.map((n) => ({ note: n.note || "", date_created: n.date_created || "", author: n.author }))];
   const statusStyle = order ? STATUS_STYLES[order.status || "pending"] || STATUS_STYLES.pending : STATUS_STYLES.pending;
 
-  const handleStatusChange = async (newStatus: string) => {
+  const statusMutation = useSiteMutation<OrderRow, string>({
+    mutationFn: (newStatus) => updateOrderStatus(orderId, newStatus),
+    invalidateKeys: [["order", orderId], storeId ? queryKeys.orders(storeId) : ["orders"]],
+    optimisticUpdates: [
+      {
+        queryKey: ["order", orderId],
+        updater: (old, newStatus) => old ? { ...(old as OrderRow), status: newStatus } : old,
+      },
+    ],
+    siteName: store?.name,
+    successToast: (_d, newStatus) => `Order → ${newStatus}`,
+    onSuccessExtra: (updated) => queryClient.setQueryData(["order", orderId], updated),
+  });
+
+  const handleStatusChange = (newStatus: string) => {
     if (!order || newStatus === order.status) return;
-    setSavingStatus(newStatus);
-    try {
-      const updated = await updateOrderStatus(order.id, newStatus);
-      queryClient.setQueryData(["order", orderId], updated);
-      toast({ title: "Status updated", description: `Order #${order.order_number || order.woo_id} → ${newStatus}` });
-    } catch (e) {
-      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setSavingStatus(null);
-    }
+    statusMutation.mutate(newStatus);
   };
 
   const handleAddNote = () => {
