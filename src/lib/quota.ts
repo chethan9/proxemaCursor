@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Plan } from "@/services/planService";
 
 export interface QuotaSnapshot {
@@ -19,9 +18,8 @@ export interface UsageSnapshot {
   apiCallsThisMonth: number;
 }
 
-export async function getClientPlan(clientId: string, useAdmin = false): Promise<Plan | null> {
-  const client = useAdmin ? supabaseAdmin : supabase;
-  const { data: sub } = await client
+export async function getClientPlan(clientId: string): Promise<Plan | null> {
+  const { data: sub } = await supabase
     .from("subscriptions" as never)
     .select("plan_id")
     .eq("client_id", clientId)
@@ -34,16 +32,16 @@ export async function getClientPlan(clientId: string, useAdmin = false): Promise
   }
 
   if (!planId) {
-    const { data } = await client.from("plans").select("*").eq("slug", "starter").maybeSingle();
+    const { data } = await supabase.from("plans").select("*").eq("slug", "starter").maybeSingle();
     return (data as Plan) || null;
   }
 
-  const { data } = await client.from("plans").select("*").eq("id", planId).maybeSingle();
+  const { data } = await supabase.from("plans").select("*").eq("id", planId).maybeSingle();
   return (data as Plan) || null;
 }
 
-export async function getClientQuota(clientId: string, useAdmin = false): Promise<QuotaSnapshot | null> {
-  const plan = await getClientPlan(clientId, useAdmin);
+export async function getClientQuota(clientId: string): Promise<QuotaSnapshot | null> {
+  const plan = await getClientPlan(clientId);
   if (!plan) return null;
   return {
     max_sites: plan.max_sites,
@@ -57,11 +55,10 @@ export async function getClientQuota(clientId: string, useAdmin = false): Promis
 }
 
 export async function getCurrentUsage(clientId: string): Promise<UsageSnapshot> {
-  const client = supabaseAdmin;
   const [sites, products, users] = await Promise.all([
-    client.from("stores").select("id", { count: "exact", head: true }).eq("client_id", clientId),
-    client.from("products").select("id, stores!inner(client_id)", { count: "exact", head: true }).eq("stores.client_id", clientId),
-    client.from("profiles").select("id", { count: "exact", head: true }).eq("client_id", clientId),
+    supabase.from("stores").select("id", { count: "exact", head: true }).eq("client_id", clientId),
+    supabase.from("products").select("id, stores!inner(client_id)", { count: "exact", head: true }).eq("stores.client_id", clientId),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("client_id", clientId),
   ]);
   return {
     sites: sites.count || 0,
@@ -72,7 +69,7 @@ export async function getCurrentUsage(clientId: string): Promise<UsageSnapshot> 
 }
 
 export async function canAddSite(clientId: string): Promise<{ ok: boolean; limit: number; current: number; planName: string }> {
-  const quota = await getClientQuota(clientId, true);
+  const quota = await getClientQuota(clientId);
   const usage = await getCurrentUsage(clientId);
   if (!quota) return { ok: true, limit: 0, current: usage.sites, planName: "" };
   return {
@@ -84,7 +81,7 @@ export async function canAddSite(clientId: string): Promise<{ ok: boolean; limit
 }
 
 export async function canAddProduct(clientId: string): Promise<{ ok: boolean; limit: number; current: number; planName: string }> {
-  const quota = await getClientQuota(clientId, true);
+  const quota = await getClientQuota(clientId);
   const usage = await getCurrentUsage(clientId);
   if (!quota) return { ok: true, limit: 0, current: usage.products, planName: "" };
   return {
