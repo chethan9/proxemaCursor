@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
+import { waitUntil } from "@vercel/functions";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -49,11 +50,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const base = getAppUrl(req);
-  fetch(`${base}/api/stores/${storeId}/sync`, {
+  const syncPromise = fetch(`${base}/api/stores/${storeId}/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
   }).catch((e) => console.error("[sync-start] bg trigger:", e));
+  waitUntil(syncPromise);
 
   return res.status(200).json({ sync_run_id: run?.id, queued: true });
 }

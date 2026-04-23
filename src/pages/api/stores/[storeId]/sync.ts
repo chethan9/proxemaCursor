@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { fetchPagesConcurrent, basicAuth } from "@/lib/sync-engine";
 import { getAppUrl } from "@/lib/app-url";
+import { waitUntil } from "@vercel/functions";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -382,11 +383,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Variations fire-and-forget
+    // Variations fire-and-forget — waitUntil keeps function alive on Vercel
     const base = getAppUrl(req);
-    fetch(`${base}/api/stores/${storeId}/sync-variations`, {
+    const variationsPromise = fetch(`${base}/api/stores/${storeId}/sync-variations`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
     }).catch((e) => console.error("[Sync] variations trigger:", e));
+    waitUntil(variationsPromise);
 
     return res.status(200).json({
       success: true,
