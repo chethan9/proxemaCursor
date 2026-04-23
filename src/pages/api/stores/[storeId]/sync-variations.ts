@@ -3,6 +3,9 @@ import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { fetchPagesConcurrent, basicAuth } from "@/lib/sync-engine";
 
+export const maxDuration = 300;
+export const config = { maxDuration: 300 };
+
 interface WooVariation {
   id: number;
   sku: string;
