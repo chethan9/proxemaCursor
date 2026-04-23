@@ -59,7 +59,7 @@ function variationChanged(
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "PUT" && req.method !== "DELETE") {
+  if (req.method !== "GET" && req.method !== "PUT" && req.method !== "DELETE") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -77,6 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!localProduct?.woo_id) {
     return res.status(404).json({ error: "Product not found" });
+  }
+
+  if (req.method === "GET") {
+    return res.status(200).json(localProduct);
   }
 
   const beforeSnapshot = toJson(localProduct);
