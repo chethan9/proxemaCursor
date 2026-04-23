@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
+import { getBrowserTimezoneCountry } from "@/lib/payments/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -39,7 +40,10 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          signup_country: getBrowserTimezoneCountry(),
+        },
         emailRedirectTo: `${window.location.origin}/auth/confirm-email`,
       },
     });

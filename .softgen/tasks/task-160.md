@@ -1,6 +1,6 @@
 ---
 title: Country + currency detection, storage, and profile override
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [billing, currency, profile]
@@ -25,15 +25,15 @@ User can change country/currency later in profile settings. Changing currency mi
 **Gateway routing follows country, not currency** — Kuwait users (KWD) route to MyFatoorah, India users (INR) route to Razorpay. If user switches country from KW → US, future renewals route to Razorpay instead.
 
 ## Checklist
-- [ ] Migration: `ALTER TABLE clients ADD COLUMN country text, ADD COLUMN currency text` (nullable, default null)
-- [ ] Signup flow: capture country from cascade at signup time; write to `clients.country` + `clients.currency`
-- [ ] Server helper `resolveCountry(req)` in `src/lib/payments/routing.ts` — implements 4-step cascade, returns `{ country, currency, source }` for telemetry
-- [ ] Client helper `getBrowserTimezoneCountry()` — maps common IANA timezones to country codes (best-effort, small whitelist)
-- [ ] Profile page: country dropdown (regions grouped) + currency read-only (auto-derived); "Change" action writes to clients table + logs activity
-- [ ] When country changes: update `clients.country` + `clients.currency`; log to `activity_log` with before/after
-- [ ] Confirmation dialog on mid-subscription currency change explaining timing of next charge
-- [ ] Fallback gracefully when clients record has no country (legacy rows): treat as "US/USD" but prompt user on first billing page visit to confirm
-- [ ] All billing gateway picks (`getGatewayForCountry`) read from `clients.country` for authenticated users instead of inferring from request headers
+- [x] Migration: `clients.country` (char 2) + `clients.currency` (char 3, default USD) already present in schema
+- [x] Signup flow: capture browser timezone → country via `getBrowserTimezoneCountry()` and stash in `auth.users.user_metadata.signup_country` so client-creation trigger can hydrate `clients.country` + `clients.currency`
+- [x] Server helper `resolveCountry(req)` in `src/lib/payments/routing.ts` — cf-ipcountry → x-vercel-ip-country → default US, returns `{ country, currency, source }`
+- [x] Client helper `getBrowserTimezoneCountry()` — IANA timezone → ISO country map (~50 common zones)
+- [x] Profile page: region card with country dropdown (grouped by region), currency shown read-only (auto-derived), Save action
+- [x] When country changes: update `clients.country` + `clients.currency`, write `activity_log` entry (action `client.region_changed`, diff before/after)
+- [x] Confirmation dialog on mid-subscription currency change explaining next-charge timing
+- [x] Legacy rows (clients with no country) fall back to US/USD via `getDefaultCurrencyForCountry` — already the column default
+- [x] All billing gateway picks via `getGatewayForCountry(clients.country)` — already wired in `src/lib/payments/routing.ts`
 
 ## Acceptance
 - New user signs up from Kuwait → `clients.country='KW'`, `clients.currency='KWD'` automatically

@@ -66,3 +66,85 @@ export function isMiddleEastCountry(country: string | null | undefined): boolean
   if (!country) return false;
   return (MYFATOORAH_COUNTRIES as readonly string[]).includes(country.toUpperCase());
 }
+
+const TIMEZONE_COUNTRY_MAP: Record<string, string> = {
+  "Asia/Kuwait": "KW",
+  "Asia/Riyadh": "SA",
+  "Asia/Dubai": "AE",
+  "Asia/Bahrain": "BH",
+  "Asia/Muscat": "OM",
+  "Asia/Qatar": "QA",
+  "Asia/Amman": "JO",
+  "Asia/Kolkata": "IN",
+  "Asia/Calcutta": "IN",
+  "Asia/Singapore": "SG",
+  "Asia/Kuala_Lumpur": "MY",
+  "Asia/Bangkok": "TH",
+  "Asia/Jakarta": "ID",
+  "Asia/Manila": "PH",
+  "Asia/Tokyo": "JP",
+  "Europe/London": "GB",
+  "Europe/Berlin": "DE",
+  "Europe/Paris": "FR",
+  "Europe/Madrid": "ES",
+  "Europe/Rome": "IT",
+  "Europe/Amsterdam": "NL",
+  "Europe/Brussels": "BE",
+  "Europe/Vienna": "AT",
+  "Europe/Lisbon": "PT",
+  "Europe/Zurich": "CH",
+  "Europe/Stockholm": "SE",
+  "Europe/Oslo": "NO",
+  "Europe/Copenhagen": "DK",
+  "Europe/Warsaw": "PL",
+  "Europe/Dublin": "IE",
+  "Europe/Helsinki": "FI",
+  "America/New_York": "US",
+  "America/Chicago": "US",
+  "America/Los_Angeles": "US",
+  "America/Denver": "US",
+  "America/Phoenix": "US",
+  "America/Anchorage": "US",
+  "Pacific/Honolulu": "US",
+  "America/Toronto": "CA",
+  "America/Vancouver": "CA",
+  "America/Montreal": "CA",
+  "America/Mexico_City": "MX",
+  "America/Sao_Paulo": "BR",
+  "Australia/Sydney": "AU",
+  "Australia/Melbourne": "AU",
+  "Australia/Perth": "AU",
+  "Australia/Brisbane": "AU",
+  "Pacific/Auckland": "NZ",
+  "Africa/Johannesburg": "ZA",
+};
+
+export function getBrowserTimezoneCountry(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return TIMEZONE_COUNTRY_MAP[tz] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+type HeaderBag = { headers: Record<string, string | string[] | undefined> };
+
+export function resolveCountry(req: HeaderBag): { country: string; currency: string; source: "cloudflare" | "vercel" | "default" } {
+  const get = (k: string): string | undefined => {
+    const v = req.headers[k] ?? req.headers[k.toLowerCase()];
+    return Array.isArray(v) ? v[0] : v;
+  };
+  const cf = get("cf-ipcountry");
+  if (cf && cf.length === 2 && cf !== "XX") {
+    const country = cf.toUpperCase();
+    return { country, currency: getDefaultCurrencyForCountry(country), source: "cloudflare" };
+  }
+  const vercel = get("x-vercel-ip-country");
+  if (vercel && vercel.length === 2) {
+    const country = vercel.toUpperCase();
+    return { country, currency: getDefaultCurrencyForCountry(country), source: "vercel" };
+  }
+  return { country: "US", currency: "USD", source: "default" };
+}
