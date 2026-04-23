@@ -1,6 +1,7 @@
+<![CDATA[
 ---
-title: Public pricing page + currency detection + upgrade/downgrade flow
-status: todo
+title: Public pricing page + country/currency detection + Subscribe flow
+status: in_progress
 priority: medium
 type: feature
 tags: [billing, marketing, pricing, currency]
