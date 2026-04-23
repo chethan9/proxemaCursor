@@ -1,6 +1,6 @@
 ---
 title: Fix AuthGuard race — super_admin locked out with ?error=forbidden
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [auth, critical, production]
@@ -29,12 +29,12 @@ The sidebar fix (`a84ffb5`) addressed `AppSidebar.tsx`. `AuthGuard.tsx` has the 
 **Immediate workaround for user while fix ships:** in browser DevTools console on prod, run `localStorage.clear(); location.reload()` — clears any poisoned sidebar cache from the earlier bug. Does NOT fix the redirect (that requires the code fix), but restores the correct sidebar once the code fix lands.
 
 ## Checklist
-- [ ] `src/components/AuthGuard.tsx`: add gate so the effect does NOT redirect until auth state is truly stable — treat "profile still loading" as pending, not as forbidden
-- [ ] Stability gate: `authLoading === false` AND `profile !== null` (profile query has returned). For `requireSuperAdmin` or `requirePermission` checks: additionally wait until role is loaded (role !== null) OR profile.role === "super_admin" (super admin doesn't need role row)
-- [ ] While gate is not satisfied, show the same loader `AuthGuard` already renders during `checking` — do not redirect
-- [ ] 3-second safety timeout: if profile still hasn't loaded after 3s, fall back to current redirect logic so users aren't stuck on a spinner
-- [ ] `src/contexts/AuthProvider.tsx`: expose a `profileLoaded` boolean (separate from `loading`) so AuthGuard can distinguish "no profile query run yet" from "query completed, no profile found"
-- [ ] Bump localStorage cache keys one more time to invalidate any remaining poisoned sidebar caches on affected users' browsers (change `MENU_CACHE_VERSION` from `v2` to `v3`)
+- [x] `src/components/AuthGuard.tsx`: add gate so the effect does NOT redirect until auth state is truly stable — treat "profile still loading" as pending, not as forbidden
+- [x] Stability gate: `authLoading === false` AND `profile !== null` (profile query has returned). For `requireSuperAdmin` or `requirePermission` checks: additionally wait until role is loaded (role !== null) OR profile.role === "super_admin" (super admin doesn't need role row)
+- [x] While gate is not satisfied, show the same loader `AuthGuard` already renders during `checking` — do not redirect
+- [x] 3-second safety timeout: if profile still hasn't loaded after 3s, fall back to current redirect logic so users aren't stuck on a spinner
+- [x] `src/contexts/AuthProvider.tsx`: expose a `profileLoaded` boolean (separate from `loading`) so AuthGuard can distinguish "no profile query run yet" from "query completed, no profile found"
+- [x] Bump localStorage cache keys one more time to invalidate any remaining poisoned sidebar caches on affected users' browsers (change `MENU_CACHE_VERSION` from `v2` to `v3`)
 - [ ] Smoke test on prod deploy: log in as super_admin → hit `/settings/menu-editor` directly by URL on a fresh tab → should land on the page, not `/?error=forbidden`
 - [ ] Smoke test on prod: log in as regular user (`chethan@vizsoft.in`) with `sites.view` permission → hit `/sites/[siteId]/customers` → should load without flicker-redirect
 - [ ] Smoke test on prod: regular user sidebar shows Sites, Sync Runs, Webhooks, API, Payment Methods (all items they have permission for), not just Health/Billing/Settings
