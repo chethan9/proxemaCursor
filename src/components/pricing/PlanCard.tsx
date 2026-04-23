@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getPlanPrice } from "@/services/planService";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/helpers";
 import { Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 

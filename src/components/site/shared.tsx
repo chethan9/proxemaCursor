@@ -10,7 +10,7 @@ import { ArrowLeft, Search, type LucideIcon } from "lucide-react";
 import { getStore } from "@/services/storeService";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/helpers";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 

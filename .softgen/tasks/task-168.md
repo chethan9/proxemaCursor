@@ -1,6 +1,6 @@
 ---
 title: Audit and backfill empty migration files
-status: todo
+status: done
 priority: high
 type: chore
 tags: [database, migrations, deployment]

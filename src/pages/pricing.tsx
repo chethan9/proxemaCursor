@@ -17,7 +17,7 @@ import { BillingIntervalToggle } from "@/components/pricing/BillingIntervalToggl
 import { PricingFAQ } from "@/components/pricing/PricingFAQ";
 import { PlanChangeDialog } from "@/components/pricing/PlanChangeDialog";
 import { BrandLogo } from "@/components/BrandLogo";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/helpers";
 
 type Plan = Tables<"plans">;
 type Props = { plans: Plan[]; initialCountry: string; initialCurrency: string; detectionSource: string };

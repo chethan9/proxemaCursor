@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/helpers";
 
 export type Subscription = Tables<"subscriptions">;
 

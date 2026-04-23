@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/helpers";
 import { computeDiscount } from "./couponService";
 
 export type BillingCoupon = Tables<"billing_coupons">;

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/helpers";
 
 export type OrderRow = Database["public"]["Tables"]["orders"]["Row"] & {
   refunds?: unknown;

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/helpers";
 
 type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 type TagRow = Database["public"]["Tables"]["tags"]["Row"];

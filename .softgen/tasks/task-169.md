@@ -1,6 +1,6 @@
 ---
 title: Harden types.ts against regeneration wipes
-status: todo
+status: done
 priority: high
 type: chore
 tags: [typescript, supabase, build]

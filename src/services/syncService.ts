@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/helpers";
 
 export type SyncRun = Tables<"sync_runs">;
 export type SyncRunInsert = TablesInsert<"sync_runs">;

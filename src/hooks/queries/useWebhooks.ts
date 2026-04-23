@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/helpers";
 
 export type WebhookWithStore = Tables<"webhooks"> & { store_name?: string; store_url?: string };
 export type WebhookEventWithStore = Tables<"webhook_events"> & { store_name?: string };

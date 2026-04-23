@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooRequest, getStoreCreds } from "@/lib/woo-client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/helpers";
 
 type Json = Database["public"]["Tables"]["tags"]["Row"]["raw_data"];
 

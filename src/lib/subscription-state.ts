@@ -1,4 +1,4 @@
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/helpers";
 
 export type SubscriptionStatus = "pending_payment" | "trialing" | "active" | "past_due" | "locked" | "canceled";
 export type RenewalMode = "auto" | "manual";

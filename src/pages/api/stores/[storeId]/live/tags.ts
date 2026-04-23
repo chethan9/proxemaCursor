@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooLiveFetch } from "@/lib/woo-live-fetch";
-import type { TablesInsert } from "@/integrations/supabase/types";
+import type { TablesInsert } from "@/integrations/supabase/helpers";
 
 async function warmWrite(storeId: string, items: Record<string, unknown>[]) {
   if (!items.length) return;

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/helpers";
 
 type Json = Database["public"]["Tables"]["user_view_preferences"]["Row"]["preferences"];
 
