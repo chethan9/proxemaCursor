@@ -90,7 +90,7 @@ const SORT_OPTIONS: { field: CustomerSortField; direction: SortDirection; label:
   { field: "name", direction: "desc", label: "Name Z→A" },
 ];
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500];
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
 
 function formatMoney(v: number | string | null | undefined, currency = "KWD") {
   const n = typeof v === "string" ? parseFloat(v) : v;

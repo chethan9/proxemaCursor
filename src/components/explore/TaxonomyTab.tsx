@@ -32,7 +32,7 @@ type Props = {
   onNewClick?: () => void;
 };
 
-const PAGE_SIZES = [25, 50, 100, 200];
+const PAGE_SIZES = [25, 50, 100, 200, 500, 1000];
 
 const SORT_OPTIONS: { field: TaxonomySortField; direction: TaxonomySortDirection; label: string }[] = [
   { field: "name", direction: "asc", label: "Name A→Z" },

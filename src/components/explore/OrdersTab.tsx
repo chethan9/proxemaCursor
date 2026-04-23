@@ -100,7 +100,7 @@ const SORT_OPTIONS: { field: OrderSortField; direction: SortDirection; label: st
   { field: "synced_at", direction: "desc", label: "Recently synced" },
 ];
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500];
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
 const ORDER_STATUSES = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
 const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIcon }> = {
