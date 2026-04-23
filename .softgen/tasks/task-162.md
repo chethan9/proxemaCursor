@@ -1,11 +1,11 @@
 ---
 title: Write-through mirror audit across all mutation endpoints
-status: todo
+status: done
 priority: urgent
 type: chore
-tags: [sync, api, backend, data-freshness]
+tags: [sync, backend, audit]
 created_by: agent
-created_at: 2026-04-23T05:50:00Z
+created_at: 2026-04-23
 position: 1
 ---
 
