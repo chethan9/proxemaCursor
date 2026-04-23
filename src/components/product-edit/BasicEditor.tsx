@@ -10,6 +10,7 @@ import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical, AlertCircle, S
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
+import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 import { cn } from "@/lib/utils";
 
@@ -276,15 +277,11 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
               </div>
               <div className="space-y-1.5">
                 <Label>Tags</Label>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {form.tags.map((t, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1.5 py-1">
-                      {t.name}
-                      <button onClick={() => setForm((p) => ({ ...p, tags: p.tags.filter((_, idx) => idx !== i) }))}><X className="h-3 w-3" /></button>
-                    </Badge>
-                  ))}
-                  <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }} onBlur={() => addTag(tagInput)} placeholder="Type and press Enter" className="h-7 w-40 text-sm" />
-                </div>
+                <TagPicker
+                  storeId={storeId}
+                  selected={form.tags}
+                  onChange={(tags) => setForm((p) => ({ ...p, tags }))}
+                />
               </div>
             </CardContent>
           </Card>

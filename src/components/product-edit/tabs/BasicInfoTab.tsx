@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
+import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 
 type Props = {
@@ -183,18 +184,11 @@ export function BasicInfoTab({ storeId, form, setForm }: Props) {
 
       <div className="space-y-1.5">
         <Label>Product Tags</Label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {form.tags.map((t, i) => (
-            <Badge key={i} variant="secondary" className="gap-1.5">
-              {t.name}
-              <button onClick={() => setForm((p) => ({ ...p, tags: p.tags.filter((_, idx) => idx !== i) }))}><X className="h-3 w-3" /></button>
-            </Badge>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }} placeholder="Type and press Enter" />
-          <Button type="button" variant="outline" onClick={() => addTag(tagInput)} disabled={!tagInput.trim()}>Add</Button>
-        </div>
+        <TagPicker
+          storeId={storeId}
+          selected={form.tags}
+          onChange={(tags) => setForm((p) => ({ ...p, tags }))}
+        />
       </div>
 
       {imageOpen && (
