@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     subId = ins.data.id;
   }
 
-  const host = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.host}`;
+  const host = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.host}`;
   const init = await gw.initiateCharge({
     amountMinor: amt, currency, description: `${plan.name} plan`,
     customerEmail: profile.email || ud.user.email || "",

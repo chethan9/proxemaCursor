@@ -35,7 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) continue;
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+        || process.env.NEXT_PUBLIC_SITE_URL
         || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
       fetch(`${baseUrl}/api/stores/${run.store_id}/sync-start?aspect=${run.aspect}&runId=${run.id}`, {
         method: "POST",
