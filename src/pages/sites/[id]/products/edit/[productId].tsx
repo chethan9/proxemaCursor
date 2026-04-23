@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
@@ -6,14 +6,83 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { BasicEditor } from "@/components/product-edit/BasicEditor";
-import { AdvancedShell } from "@/components/product-edit/AdvancedShell";
-import { loadProduct, buildFormStateFromProduct, ProductFormState } from "@/services/productEditService";
+import { AdvancedShell, AdvancedTabKey } from "@/components/product-edit/AdvancedShell";
+import { BasicInfoTab } from "@/components/product-edit/tabs/BasicInfoTab";
+import { PricingTaxTab } from "@/components/product-edit/tabs/PricingTaxTab";
+import { InventoryShippingTab } from "@/components/product-edit/tabs/InventoryShippingTab";
+import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
+import { emptyProductForm, updateProduct, fetchProductVariations, ProductFormState } from "@/services/productEditService";
 import { useToast } from "@/hooks/use-toast";
 import { useStores } from "@/hooks/queries/useStores";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 
 type Mode = "basic" | "advanced";
+
+type ProductRow = {
+  name: string | null;
+  slug: string | null;
+  description: string | null;
+  short_description: string | null;
+  status: string | null;
+  type: string | null;
+  regular_price: string | number | null;
+  sale_price: string | number | null;
+  tax_status: string | null;
+  tax_class: string | null;
+  manage_stock: boolean | null;
+  stock_quantity: number | null;
+  stock_status: string | null;
+  sold_individually: boolean | null;
+  weight: string | null;
+  dimensions: unknown;
+  sku: string | null;
+  categories: unknown;
+  tags: unknown;
+  images: unknown;
+  attributes: unknown;
+  meta_data?: unknown;
+};
+
+function buildFormFromRow(row: ProductRow, variations: ProductFormState["variations"]): ProductFormState {
+  const base = emptyProductForm();
+  const cats = Array.isArray(row.categories) ? (row.categories as { id: number; name?: string }[]) : [];
+  const tags = Array.isArray(row.tags) ? (row.tags as { id?: number; name: string }[]) : [];
+  const images = Array.isArray(row.images) ? (row.images as { id?: number; src: string; alt?: string }[]) : [];
+  const attrs = Array.isArray(row.attributes) ? (row.attributes as ProductFormState["attributes"]) : [];
+  const dims = row.dimensions && typeof row.dimensions === "object" ? row.dimensions as { length?: string; width?: string; height?: string } : {};
+  return {
+    ...base,
+    name: row.name || "",
+    slug: row.slug || "",
+    description: row.description || "",
+    short_description: row.short_description || "",
+    status: (row.status as ProductFormState["status"]) || "publish",
+    type: (row.type as ProductFormState["type"]) || "simple",
+    regular_price: row.regular_price != null ? String(row.regular_price) : "",
+    sale_price: row.sale_price != null ? String(row.sale_price) : "",
+    tax_status: (row.tax_status as ProductFormState["tax_status"]) || "taxable",
+    tax_class: row.tax_class || "",
+    manage_stock: !!row.manage_stock,
+    stock_quantity: row.stock_quantity ?? null,
+    stock_status: (row.stock_status as ProductFormState["stock_status"]) || "instock",
+    sold_individually: !!row.sold_individually,
+    weight: row.weight || "",
+    dimensions: { length: dims.length || "", width: dims.width || "", height: dims.height || "" },
+    sku: row.sku || "",
+    categories: cats,
+    tags,
+    images,
+    attributes: attrs,
+    variations,
+  };
+}
+
+async function fetchProductRow(storeId: string, productId: string): Promise<ProductRow> {
+  const res = await fetch(`/api/stores/${storeId}/products/${productId}`);
+  if (!res.ok) throw new Error(`Failed to load product (${res.status})`);
+  return res.json();
+}
 
 async function deleteProduct(storeId: string, productId: string): Promise<void> {
   const res = await fetch(`/api/stores/${storeId}/products/${productId}`, { method: "DELETE" });
@@ -30,17 +99,31 @@ export default function ProductEditPage() {
   const store = stores.find((s) => s.id === storeId);
   const { toast } = useToast();
   const [mode, setMode] = useState<Mode>("basic");
+  const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [form, setForm] = useState<ProductFormState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!storeId || !productId) return;
-    setLoading(true);
-    loadProduct(storeId, productId)
-      .then((p) => setForm(buildFormStateFromProduct(p)))
-      .catch((e) => toast({ title: "Failed to load", description: (e as Error).message, variant: "destructive" }))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const row = await fetchProductRow(storeId, productId);
+        let vars: ProductFormState["variations"] = [];
+        if ((row.type || "simple") === "variable") {
+          try { vars = await fetchProductVariations(storeId, productId); } catch { vars = []; }
+        }
+        if (!cancelled) setForm(buildFormFromRow(row, vars));
+      } catch (e) {
+        if (!cancelled) toast({ title: "Failed to load product", description: (e as Error).message, variant: "destructive" });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [storeId, productId, toast]);
 
   const del = useSiteMutation<void, void>({
@@ -53,6 +136,30 @@ export default function ProductEditPage() {
     },
   });
 
+  const onPublish = useCallback(async () => {
+    if (!form || !storeId || !productId) return;
+    setSaving(true);
+    try {
+      await updateProduct(storeId, productId, form);
+      toast({ title: "Saved", description: store?.name ? `Synced to ${store.name}` : "Synced to WooCommerce" });
+      router.push(`/sites/${storeId}/products`);
+    } catch (e) {
+      toast({ title: "Save failed", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }, [form, storeId, productId, store?.name, toast, router]);
+
+  const onCancel = useCallback(() => {
+    if (storeId) router.push(`/sites/${storeId}/products`);
+  }, [router, storeId]);
+
+  const canAdvance = useCallback((tab: AdvancedTabKey) => {
+    if (!form) return false;
+    if (tab === "basic") return form.name.trim().length > 0;
+    return true;
+  }, [form]);
+
   if (loading || !form) {
     return (
       <AppLayout title="Edit product">
@@ -62,6 +169,13 @@ export default function ProductEditPage() {
       </AppLayout>
     );
   }
+
+  const tabContent = {
+    basic: <BasicInfoTab storeId={storeId!} form={form} setForm={setForm} />,
+    pricing: <PricingTaxTab form={form} setForm={setForm} />,
+    inventory: <InventoryShippingTab form={form} setForm={setForm} />,
+    variants: <VariantsTab storeId={storeId!} productId={productId!} form={form} setForm={setForm} />,
+  };
 
   return (
     <AppLayout title={form.name || "Edit product"}>
@@ -92,11 +206,31 @@ export default function ProductEditPage() {
         </div>
       </div>
 
-      {mode === "basic" ? (
-        <BasicEditor storeId={storeId!} productId={productId!} form={form} setForm={setForm} />
-      ) : (
-        <AdvancedShell storeId={storeId!} productId={productId!} form={form} setForm={setForm} />
-      )}
+      <div className="p-4 lg:p-6">
+        {mode === "basic" ? (
+          <BasicEditor
+            storeId={storeId!}
+            form={form}
+            setForm={setForm}
+            saving={saving}
+            onCancel={onCancel}
+            onPublish={onPublish}
+            isEdit
+          />
+        ) : (
+          <AdvancedShell
+            form={form}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tabContent={tabContent}
+            canAdvance={canAdvance}
+            onCancel={onCancel}
+            onPublish={onPublish}
+            saving={saving}
+            isEdit
+          />
+        )}
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
