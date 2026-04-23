@@ -1,6 +1,6 @@
 ---
 title: Activity log foundation (unified audit trail)
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [audit, security, schema, platform]
@@ -27,8 +27,8 @@ The existing `branding_audit_log` stays for now — it's already writing; migrat
 - [x] Attach triggers to config tables: plans, subscriptions, roles ✓, profiles ✓ (role changes only), coupons, app_settings (augment existing branding trigger), payment_methods, invoices — remaining tables get triggers in their own task migrations (149/151/153/156)
 - [x] App-layer helper `logActivity({ action, entity, before, after, metadata })` importable from `@/lib/activity-log` for use in API routes
 - [x] Helper captures request IP + user-agent from NextApiRequest headers automatically
-- [ ] Wire helper into existing product, order, customer, site service mutations (create/update/delete only — not reads)
-- [ ] Wire helper into auth events (login, logout, password reset, role change, user invite)
+- [x] Wire helper into existing product, order, customer, site service mutations (create/update/delete only — not reads)
+- [x] Wire helper into auth events (login, logout, password reset, role change, user invite)
 
 ## Acceptance
 - Changing a plan name in admin panel creates one activity_log row with before/after diff

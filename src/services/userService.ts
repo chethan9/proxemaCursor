@@ -1,5 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 
+async function postAuthLog(action: string, metadata?: Record<string, unknown>) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch("/api/auth/log-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, metadata: metadata || {} }),
+    });
+  } catch {}
+}
+
 export interface UserProfile {
   id: string;
   email: string | null;
@@ -22,6 +35,7 @@ export async function listUsers(): Promise<UserProfile[]> {
 export async function updateUserRole(userId: string, role: string) {
   const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
   if (error) throw error;
+  void postAuthLog("auth.role_change", { user_id: userId, role });
 }
 
 export async function updateUserClient(userId: string, clientId: string | null) {

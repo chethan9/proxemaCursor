@@ -7,6 +7,19 @@ import { clearPersistedCache } from "@/lib/query-persistence";
 
 export const authCleanupCallbacks = new Set<() => void>();
 
+async function logAuthEvent(action: string, metadata?: Record<string, unknown>) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch("/api/auth/log-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, metadata: metadata || {} }),
+    });
+  } catch {}
+}
+
 export interface Profile {
   id: string;
   email: string | null;
@@ -117,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Silent background refresh — no loading flip
             setTimeout(() => { loadProfileAndRole(session.user.id); }, 0);
           }
+          void logAuthEvent("auth.login", { email: session.user.email });
         }
         return;
       }
@@ -136,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    void logAuthEvent("auth.logout");
     setUser(null);
     setProfile(null);
     setRole(null);
