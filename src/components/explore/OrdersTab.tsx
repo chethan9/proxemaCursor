@@ -100,7 +100,7 @@ const SORT_OPTIONS: { field: OrderSortField; direction: SortDirection; label: st
   { field: "synced_at", direction: "desc", label: "Recently synced" },
 ];
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000, 2500, 5000];
 const ORDER_STATUSES = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
 const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIcon }> = {
@@ -898,7 +898,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     const isSelected = selectedIds.has(o.id);
                     return (
                       <React.Fragment key={o.id}>
-                        <TableRow className={`hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
+                        <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
                           <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
                             <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(o.id)} />
                           </TableCell>

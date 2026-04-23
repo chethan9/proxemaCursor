@@ -1,6 +1,6 @@
 ---
 title: Expand rows-per-page dropdown to include 1000
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [ux, tables, pagination]
