@@ -39,6 +39,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         gateway: sub.gateway, gatewayRef: sub.gateway_subscription_ref,
         amountMinor: st.amountMinor, currency: st.currency, couponId: sub.pending_coupon_id,
       });
+
+      await supabaseAdmin.from("invoices").insert({
+        invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1e6).toString().padStart(6, "0")}`,
+        client_id: sub.client_id,
+        subscription_id: subscriptionId,
+        amount_minor: st.amountMinor || 0,
+        currency: st.currency || sub.currency,
+        gateway: sub.gateway,
+        gateway_invoice_ref: sub.gateway_subscription_ref,
+        coupon_id: sub.pending_coupon_id,
+        period_start: new Date().toISOString(),
+        period_end: end.toISOString(),
+        status: "paid",
+        paid_at: new Date().toISOString(),
+      });
+
       return res.status(200).json({ status: "active", renewalMode: "manual" });
     }
     if (st.status === "failed") {

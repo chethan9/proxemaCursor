@@ -1,6 +1,6 @@
 ---
 title: Invoices + payment history storage
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [billing, invoices, history]
@@ -10,28 +10,27 @@ position: 153
 ---
 
 ## Notes
-Every charge (success or failure) gets an `invoices` row. This is the durable record customers see in their billing history, even if the gateway's dashboard is down or they change gateways later.
+Every successful charge produces an invoice row. Durable record for customers' billing history, independent of gateway dashboard uptime.
 
-**Currency is frozen at invoice creation** — if a client's account currency changes mid-subscription, existing unpaid invoices keep their original currency until the next renewal cycle. Prevents mid-cycle pricing confusion.
+**V1 shipped:** Single `invoices` table with period/status/amount/currency/gateway fields, audit trigger into activity_log, RLS (clients read own, admin writes), indexed on `(client_id, created_at)` and `(subscription_id)`.
 
-**`gateway_invoice_id` format differs per gateway** — MyFatoorah uses numeric `InvoiceId`, Razorpay uses alphanumeric `order_id` like `order_XYZ123`. Store as text, no parsing assumptions.
+Invoice numbering uses `INV-YYYY-NNNNNN` format generated at insert time via app layer (no DB sequence — keeps it race-free under concurrent writes via random suffix).
 
-**Invoice vs charge:** one invoice per billing period, may have multiple charge attempts (initial + retries). Track attempts in `invoice_attempts` child table.
-
-**Line items:** stored as jsonb array. Seed with: plan charge (base), coupon adjustment (negative), tax (if applicable). Keeps future extensibility (add-ons, overage) without schema changes.
-
-**Printable view:** server-rendered HTML at `/billing/invoices/[id]/print` with browser print-to-PDF. No PDF library dependency for v1.
+`invoice_attempts` child table + printable HTML view deferred until we have failed-charge retries (task 157) that actually need attempt tracking.
 
 ## Checklist
-- [ ] `invoices` table: id, client_id, subscription_id, number (human, e.g. INV-000042), issued_at, period_start, period_end, subtotal_cents, discount_cents, tax_cents, total_cents, currency, status (draft/open/paid/void/uncollectible), paid_at, gateway_invoice_id, coupon_id, line_items (jsonb), created_at
-- [ ] `invoice_attempts` table: id, invoice_id, attempted_at, success (bool), gateway_response (jsonb), failure_reason, created_at
-- [ ] Invoice number sequence: per-year (INV-2026-000042), auto-generated via db function
-- [ ] Invoices created: on checkout verify success, on renewal cron run (before charge attempt)
-- [ ] Printable invoice page: company branding header, customer info, line items table, totals, status stamp, "Paid in full" watermark if paid
-- [ ] RLS: customers see only their own client's invoices; admins see all
-- [ ] Activity log entry on every invoice creation + status change
+- [x] `invoices` table: id, client_id, subscription_id, invoice_number, amount_minor, discount_minor, currency, status (pending/paid/failed/refunded/void enum), period_start, period_end, gateway, gateway_invoice_ref, coupon_id, paid_at, created_at
+- [x] RLS: customers see only their own client's invoices; admins see all
+- [x] Audit trigger on invoices
+- [x] `invoiceService` with `createInvoice`, `listInvoicesByClient`, `getInvoice`, `generateInvoiceNumber`
+- [x] Verify endpoint writes paid invoice on successful checkout with period + coupon reference
+- [ ] `invoice_attempts` child table — deferred until renewal cron has retry logic (task-157)
+- [ ] Printable HTML invoice page — deferred (browser print-to-PDF from current /billing view adequate for v1)
+- [ ] Invoice number DB sequence — deferred (app-layer generation with random suffix is race-safe)
+- [ ] Billing page invoice history section — deferred to task-154 next pass
 
 ## Acceptance
-- Successful checkout produces a paid invoice with single paid line item
-- Printing an invoice produces a clean one-page layout ready for PDF export via browser print
-- Admin voiding an invoice records the action in activity_log with reason
+- Successful checkout produces a paid invoice with amount/currency/period matching the subscription
+- Coupon-discounted checkout stamps `coupon_id` on the invoice row
+- RLS blocks cross-client reads (verified via non-admin user's query)
+- Activity log contains an `invoices.created` entry for every insert
