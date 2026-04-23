@@ -43,7 +43,9 @@ CREATE OR REPLACE FUNCTION public.user_can_access_store(p_store_id uuid) RETURNS
 
 let body = "";
 for (const file of files) {
-  const content = fs.readFileSync(path.join(dir, file), "utf8");
+  let content = fs.readFileSync(path.join(dir, file), "utf8").trim();
+  if (!content) continue;
+  if (!content.endsWith(";")) content += ";";
   body += `\n-- ${file}\n${content}\n`;
 }
 

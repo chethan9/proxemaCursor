@@ -1251,3 +1251,642 @@ WHERE s.onboarding_completed_at IS NULL
        OR EXISTS (SELECT 1 FROM sync_runs WHERE store_id = s.id AND is_initial = true));
 
 CREATE INDEX IF NOT EXISTS idx_stores_onboarding_incomplete ON stores(client_id) WHERE onboarding_completed_at IS NULL;
+
+-- 20260421025407_migration_21915aa5.sql
+ALTER TABLE sync_runs
+  ADD COLUMN IF NOT EXISTS attempt INT NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS request_url TEXT,
+  ADD COLUMN IF NOT EXISTS request_method TEXT,
+  ADD COLUMN IF NOT EXISTS request_params JSONB,
+  ADD COLUMN IF NOT EXISTS response_status INT,
+  ADD COLUMN IF NOT EXISTS response_body TEXT,
+  ADD COLUMN IF NOT EXISTS response_headers JSONB;
+
+ALTER TABLE sync_runs DROP CONSTRAINT IF EXISTS sync_runs_status_check;
+ALTER TABLE sync_runs ADD CONSTRAINT sync_runs_status_check
+  CHECK (status IN ('pending', 'running', 'completed', 'failed', 'retrying'));
+
+CREATE INDEX IF NOT EXISTS idx_sync_runs_retry ON sync_runs (status, next_retry_at)
+  WHERE status = 'retrying';
+
+-- 20260421073142_migration_d2e0b315.sql
+-- webhook_events: drop public policies; keep scoped
+DROP POLICY IF EXISTS public_read_webhook_events ON webhook_events;
+DROP POLICY IF EXISTS public_insert_webhook_events ON webhook_events;
+DROP POLICY IF EXISTS public_update_webhook_events ON webhook_events;
+
+-- webhooks: drop public, add scoped
+DROP POLICY IF EXISTS public_select_webhooks ON webhooks;
+DROP POLICY IF EXISTS public_insert_webhooks ON webhooks;
+DROP POLICY IF EXISTS public_update_webhooks ON webhooks;
+DROP POLICY IF EXISTS public_delete_webhooks ON webhooks;
+CREATE POLICY webhooks_select_scoped ON webhooks FOR SELECT USING (user_can_access_store(store_id));
+CREATE POLICY webhooks_insert_scoped ON webhooks FOR INSERT WITH CHECK (user_can_access_store(store_id));
+CREATE POLICY webhooks_update_scoped ON webhooks FOR UPDATE USING (user_can_access_store(store_id));
+CREATE POLICY webhooks_delete_scoped ON webhooks FOR DELETE USING (user_can_access_store(store_id));
+
+-- entity_changes
+DROP POLICY IF EXISTS entity_changes_select ON entity_changes;
+DROP POLICY IF EXISTS entity_changes_insert ON entity_changes;
+CREATE POLICY entity_changes_select_scoped ON entity_changes FOR SELECT USING (user_can_access_store(store_id));
+CREATE POLICY entity_changes_insert_scoped ON entity_changes FOR INSERT WITH CHECK (user_can_access_store(store_id));
+
+-- deleted_records
+DROP POLICY IF EXISTS anon_select_deleted ON deleted_records;
+DROP POLICY IF EXISTS anon_insert_deleted ON deleted_records;
+CREATE POLICY deleted_records_select_scoped ON deleted_records FOR SELECT USING (user_can_access_store(store_id));
+CREATE POLICY deleted_records_insert_scoped ON deleted_records FOR INSERT WITH CHECK (user_can_access_store(store_id));
+
+-- cron_logs: scope by store when present
+DROP POLICY IF EXISTS public_select_cron_logs ON cron_logs;
+CREATE POLICY cron_logs_select_scoped ON cron_logs FOR SELECT USING (store_id IS NULL OR user_can_access_store(store_id));
+
+-- products / orders / customers: drop public shadow policies (scoped already exist)
+DROP POLICY IF EXISTS public_read_products ON products;
+DROP POLICY IF EXISTS public_insert_products ON products;
+DROP POLICY IF EXISTS public_update_products ON products;
+DROP POLICY IF EXISTS public_read_orders ON orders;
+DROP POLICY IF EXISTS public_insert_orders ON orders;
+DROP POLICY IF EXISTS public_update_orders ON orders;
+DROP POLICY IF EXISTS public_read_customers ON customers;
+DROP POLICY IF EXISTS public_insert_customers ON customers;
+DROP POLICY IF EXISTS public_update_customers ON customers;
+
+-- categories / tags / coupons: drop duplicated public
+DROP POLICY IF EXISTS categories_select ON categories;
+DROP POLICY IF EXISTS categories_insert ON categories;
+DROP POLICY IF EXISTS categories_update ON categories;
+DROP POLICY IF EXISTS categories_delete ON categories;
+DROP POLICY IF EXISTS tags_auth_write ON tags;
+DROP POLICY IF EXISTS tags_auth_update ON tags;
+DROP POLICY IF EXISTS tags_auth_delete ON tags;
+DROP POLICY IF EXISTS coupons_select ON coupons;
+DROP POLICY IF EXISTS coupons_insert ON coupons;
+DROP POLICY IF EXISTS coupons_update ON coupons;
+DROP POLICY IF EXISTS coupons_delete ON coupons;
+
+-- 20260421134713_migration_af6a7eb4.sql
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'KWD';
+
+-- 20260421194723_migration_4b932547.sql
+DROP TRIGGER IF EXISTS trg_orders_customer_agg ON public.orders; CREATE TRIGGER trg_orders_customer_agg AFTER INSERT OR UPDATE OR DELETE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.orders_aggregate_customer_trigger();
+
+-- 20260421235503_migration_6f8fe090.sql
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS timezone text;
+
+-- 20260421235623_migration_24b13bd0.sql
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS timezone text;
+
+-- 20260422030500_site_home_stats_rpc.sql
+-- Site home dashboard stats RPC
+-- Returns aggregated stats, daily trend (30d), status breakdown (30d),
+-- 10 most recent orders, and top 10 products by revenue (30d) for a given store.
+CREATE OR REPLACE FUNCTION public.get_site_home_stats(p_store_id uuid, p_tz text DEFAULT 'UTC'::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_today_start timestamptz;
+  v_week_start timestamptz;
+  v_month_start timestamptz;
+  v_result jsonb;
+  v_stats jsonb;
+  v_daily jsonb;
+  v_status jsonb;
+  v_recent jsonb;
+  v_top jsonb;
+  v_revenue_statuses text[] := ARRAY['completed','processing'];
+BEGIN
+  v_today_start := date_trunc('day', (now() AT TIME ZONE p_tz)) AT TIME ZONE p_tz;
+  v_week_start := v_today_start - interval '6 days';
+  v_month_start := v_today_start - interval '29 days';
+
+  SELECT jsonb_build_object(
+    'orders_today', COUNT(*) FILTER (WHERE date_created >= v_today_start AND status = ANY(v_revenue_statuses)),
+    'orders_in_progress', COUNT(*) FILTER (WHERE status IN ('pending','processing','on-hold')),
+    'sales_today', COALESCE(SUM(CASE WHEN date_created >= v_today_start AND status = ANY(v_revenue_statuses) THEN COALESCE(total::numeric, 0) - COALESCE(total_tax::numeric, 0) - COALESCE(shipping_total::numeric, 0) ELSE 0 END), 0),
+    'sales_week', COALESCE(SUM(CASE WHEN date_created >= v_week_start AND status = ANY(v_revenue_statuses) THEN COALESCE(total::numeric, 0) - COALESCE(total_tax::numeric, 0) - COALESCE(shipping_total::numeric, 0) ELSE 0 END), 0),
+    'sales_month', COALESCE(SUM(CASE WHEN date_created >= v_month_start AND status = ANY(v_revenue_statuses) THEN COALESCE(total::numeric, 0) - COALESCE(total_tax::numeric, 0) - COALESCE(shipping_total::numeric, 0) ELSE 0 END), 0),
+    'orders_month_count', COUNT(*) FILTER (WHERE date_created >= v_month_start AND status = ANY(v_revenue_statuses)),
+    'sales_prev_month', COALESCE(SUM(CASE WHEN date_created >= v_month_start - interval '30 days' AND date_created < v_month_start AND status = ANY(v_revenue_statuses) THEN COALESCE(total::numeric, 0) - COALESCE(total_tax::numeric, 0) - COALESCE(shipping_total::numeric, 0) ELSE 0 END), 0),
+    'orders_total', COUNT(*) FILTER (WHERE status = ANY(v_revenue_statuses))
+  ) INTO v_stats
+  FROM orders
+  WHERE store_id = p_store_id;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('day', day, 'orders', order_count, 'revenue', revenue) ORDER BY day), '[]'::jsonb)
+  INTO v_daily
+  FROM (
+    SELECT
+      to_char(d::date, 'YYYY-MM-DD') AS day,
+      COUNT(o.id) AS order_count,
+      COALESCE(SUM(COALESCE(o.total::numeric, 0) - COALESCE(o.total_tax::numeric, 0) - COALESCE(o.shipping_total::numeric, 0)), 0) AS revenue
+    FROM generate_series(v_month_start, v_today_start, interval '1 day') d
+    LEFT JOIN orders o ON o.store_id = p_store_id
+      AND o.date_created >= d AND o.date_created < d + interval '1 day'
+      AND o.status = ANY(v_revenue_statuses)
+    GROUP BY d
+  ) s;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('status', status, 'count', cnt) ORDER BY cnt DESC), '[]'::jsonb)
+  INTO v_status
+  FROM (
+    SELECT COALESCE(status, 'unknown') AS status, COUNT(*) AS cnt
+    FROM orders
+    WHERE store_id = p_store_id AND date_created >= v_month_start
+    GROUP BY status
+  ) s;
+
+  SELECT COALESCE(jsonb_agg(row_to_json(r) ORDER BY r.date_created DESC), '[]'::jsonb)
+  INTO v_recent
+  FROM (
+    SELECT id, woo_id, order_number, status, total, currency, date_created, line_items, billing
+    FROM orders
+    WHERE store_id = p_store_id
+    ORDER BY date_created DESC NULLS LAST
+    LIMIT 10
+  ) r;
+
+  WITH items AS (
+    SELECT
+      (li->>'product_id')::bigint AS product_id,
+      li->>'name' AS name,
+      COALESCE((li->>'quantity')::int, 0) AS qty,
+      COALESCE((li->>'total')::numeric, 0) AS revenue
+    FROM orders o, jsonb_array_elements(COALESCE(o.line_items, '[]'::jsonb)) li
+    WHERE o.store_id = p_store_id
+      AND o.date_created >= v_month_start
+      AND o.status = ANY(v_revenue_statuses)
+      AND li->>'product_id' IS NOT NULL
+  ),
+  agg AS (
+    SELECT product_id, MAX(name) AS name, SUM(qty) AS units, SUM(revenue) AS revenue
+    FROM items
+    GROUP BY product_id
+    ORDER BY revenue DESC NULLS LAST
+    LIMIT 10
+  )
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'product_id', a.product_id,
+    'name', a.name,
+    'units', a.units,
+    'revenue', a.revenue,
+    'image', (SELECT (p.images->0->>'src') FROM products p WHERE p.store_id = p_store_id AND p.woo_id = a.product_id LIMIT 1),
+    'local_id', (SELECT p.id::text FROM products p WHERE p.store_id = p_store_id AND p.woo_id = a.product_id LIMIT 1)
+  )), '[]'::jsonb)
+  INTO v_top
+  FROM agg a;
+
+  v_result := jsonb_build_object(
+    'stats', v_stats,
+    'daily', v_daily,
+    'status_breakdown', v_status,
+    'recent_orders', v_recent,
+    'top_products', v_top
+  );
+
+  RETURN v_result;
+END;
+$function$;
+
+-- 20260422201543_migration_064dfdb0.sql
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS screenshot_url text;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS screenshot_captured_at timestamptz;
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('site-screenshots', 'site-screenshots', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "site_screenshots_public_read" ON storage.objects;
+CREATE POLICY "site_screenshots_public_read" ON storage.objects FOR SELECT USING (bucket_id = 'site-screenshots');
+
+DROP POLICY IF EXISTS "site_screenshots_service_write" ON storage.objects;
+CREATE POLICY "site_screenshots_service_write" ON storage.objects FOR ALL TO service_role USING (bucket_id = 'site-screenshots') WITH CHECK (bucket_id = 'site-screenshots');
+
+-- 20260422204403_migration_2531d13f.sql
+DROP POLICY IF EXISTS public_update_settings ON public.app_settings;
+DROP POLICY IF EXISTS public_write_settings ON public.app_settings;
+
+CREATE POLICY app_settings_admin_insert ON public.app_settings
+  FOR INSERT WITH CHECK (public.is_super_admin());
+
+CREATE POLICY app_settings_admin_update ON public.app_settings
+  FOR UPDATE USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+CREATE TABLE IF NOT EXISTS public.branding_audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  changed_at timestamptz NOT NULL DEFAULT now(),
+  changed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  changed_by_email text,
+  previous_brand_name text,
+  new_brand_name text,
+  previous_logo_url text,
+  new_logo_url text,
+  previous_theme_preset text,
+  new_theme_preset text,
+  previous_primary_color text,
+  new_primary_color text
+);
+
+CREATE INDEX IF NOT EXISTS idx_branding_audit_changed_at ON public.branding_audit_log (changed_at DESC);
+
+ALTER TABLE public.branding_audit_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS branding_audit_admin_read ON public.branding_audit_log;
+CREATE POLICY branding_audit_admin_read ON public.branding_audit_log
+  FOR SELECT USING (public.is_super_admin());
+
+CREATE OR REPLACE FUNCTION public.log_branding_change()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  actor_email text;
+BEGIN
+  SELECT email INTO actor_email FROM public.profiles WHERE id = auth.uid();
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.branding_audit_log (
+      changed_by, changed_by_email,
+      new_brand_name, new_logo_url, new_theme_preset, new_primary_color
+    ) VALUES (
+      auth.uid(), actor_email,
+      NEW.brand_name, NEW.logo_url, NEW.theme_preset, NEW.primary_color
+    );
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD.brand_name IS DISTINCT FROM NEW.brand_name
+       OR OLD.logo_url IS DISTINCT FROM NEW.logo_url
+       OR OLD.theme_preset IS DISTINCT FROM NEW.theme_preset
+       OR OLD.primary_color IS DISTINCT FROM NEW.primary_color THEN
+      INSERT INTO public.branding_audit_log (
+        changed_by, changed_by_email,
+        previous_brand_name, new_brand_name,
+        previous_logo_url, new_logo_url,
+        previous_theme_preset, new_theme_preset,
+        previous_primary_color, new_primary_color
+      ) VALUES (
+        auth.uid(), actor_email,
+        OLD.brand_name, NEW.brand_name,
+        OLD.logo_url, NEW.logo_url,
+        OLD.theme_preset, NEW.theme_preset,
+        OLD.primary_color, NEW.primary_color
+      );
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_app_settings_change ON public.app_settings;
+CREATE TRIGGER on_app_settings_change
+  AFTER INSERT OR UPDATE ON public.app_settings
+  FOR EACH ROW EXECUTE FUNCTION public.log_branding_change();
+
+-- 20260422211957_migration_217b9de8.sql
+CREATE TABLE IF NOT EXISTS public.activity_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  actor_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  actor_email text,
+  actor_type text NOT NULL DEFAULT 'user' CHECK (actor_type IN ('user', 'admin', 'system', 'api')),
+  action text NOT NULL,
+  entity_type text NOT NULL,
+  entity_id text,
+  client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
+  diff jsonb,
+  metadata jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON public.activity_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON public.activity_log (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_actor ON public.activity_log (actor_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_log_client ON public.activity_log (client_id, created_at DESC);
+
+ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS activity_log_admin_read ON public.activity_log;
+CREATE POLICY activity_log_admin_read ON public.activity_log
+  FOR SELECT TO authenticated USING (public.is_super_admin());
+
+DROP POLICY IF EXISTS activity_log_self_read ON public.activity_log;
+CREATE POLICY activity_log_self_read ON public.activity_log
+  FOR SELECT TO authenticated USING (actor_user_id = auth.uid());
+
+DROP POLICY IF EXISTS activity_log_client_scoped_read ON public.activity_log;
+CREATE POLICY activity_log_client_scoped_read ON public.activity_log
+  FOR SELECT TO authenticated USING (
+    client_id IS NOT NULL AND client_id = public.current_user_client_id()
+  );
+
+-- 20260422212034_migration_5bebd89c.sql
+CREATE OR REPLACE FUNCTION public.log_change_generic()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $func$
+DECLARE
+  v_actor_email text;
+  v_entity_id text;
+  v_before jsonb;
+  v_after jsonb;
+  v_diff jsonb;
+BEGIN
+  SELECT email INTO v_actor_email FROM public.profiles WHERE id = auth.uid();
+
+  IF TG_OP = 'INSERT' THEN
+    v_entity_id := to_jsonb(NEW) ->> 'id';
+    v_diff := jsonb_build_object('after', to_jsonb(NEW));
+  ELSIF TG_OP = 'UPDATE' THEN
+    v_entity_id := to_jsonb(NEW) ->> 'id';
+    SELECT jsonb_object_agg(key, value) INTO v_before
+      FROM jsonb_each(to_jsonb(OLD))
+      WHERE value IS DISTINCT FROM (to_jsonb(NEW) -> key);
+    SELECT jsonb_object_agg(key, value) INTO v_after
+      FROM jsonb_each(to_jsonb(NEW))
+      WHERE value IS DISTINCT FROM (to_jsonb(OLD) -> key);
+    IF v_before IS NULL OR v_before = '{}'::jsonb THEN
+      RETURN NEW;
+    END IF;
+    v_diff := jsonb_build_object('before', v_before, 'after', v_after);
+  ELSIF TG_OP = 'DELETE' THEN
+    v_entity_id := to_jsonb(OLD) ->> 'id';
+    v_diff := jsonb_build_object('before', to_jsonb(OLD));
+  END IF;
+
+  INSERT INTO public.activity_log (
+    actor_user_id, actor_email, actor_type,
+    action, entity_type, entity_id, diff
+  ) VALUES (
+    auth.uid(), v_actor_email,
+    CASE WHEN auth.uid() IS NULL THEN 'system' ELSE 'user' END,
+    TG_TABLE_NAME || '.' || lower(TG_OP),
+    TG_TABLE_NAME, v_entity_id, v_diff
+  );
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$func$;
+
+CREATE OR REPLACE FUNCTION public.log_profile_role_change()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $func$
+DECLARE
+  v_actor_email text;
+BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.role IS NOT DISTINCT FROM NEW.role THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT email INTO v_actor_email FROM public.profiles WHERE id = auth.uid();
+
+  INSERT INTO public.activity_log (
+    actor_user_id, actor_email, actor_type,
+    action, entity_type, entity_id, diff
+  ) VALUES (
+    auth.uid(), v_actor_email,
+    CASE WHEN auth.uid() IS NULL THEN 'system' ELSE 'user' END,
+    CASE WHEN TG_OP = 'INSERT' THEN 'profile.created' ELSE 'profile.role_changed' END,
+    'profile', NEW.id::text,
+    jsonb_build_object(
+      'before', CASE WHEN TG_OP = 'UPDATE' THEN jsonb_build_object('role', OLD.role) ELSE NULL END,
+      'after', jsonb_build_object('role', NEW.role)
+    )
+  );
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS on_profile_role_change ON public.profiles;
+CREATE TRIGGER on_profile_role_change
+  AFTER INSERT OR UPDATE OF role ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.log_profile_role_change();
+
+DROP TRIGGER IF EXISTS on_role_change ON public.roles;
+CREATE TRIGGER on_role_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.roles
+  FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+-- 20260422212157_migration_0692fd35.sql
+CREATE TABLE IF NOT EXISTS public.plans (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text UNIQUE NOT NULL,
+  name text NOT NULL,
+  description text,
+  prices jsonb NOT NULL DEFAULT '{}'::jsonb,
+  billing_interval text NOT NULL DEFAULT 'month' CHECK (billing_interval IN ('month', 'year')),
+  max_sites int NOT NULL DEFAULT 1,
+  max_products_per_site int NOT NULL DEFAULT 100,
+  max_users int NOT NULL DEFAULT 1,
+  max_api_calls_per_month int NOT NULL DEFAULT 10000,
+  features jsonb NOT NULL DEFAULT '{}'::jsonb,
+  trial_days int NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  is_custom boolean NOT NULL DEFAULT false,
+  sort_order int NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_plans_sort ON public.plans (sort_order, is_active);
+
+ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS plans_public_read ON public.plans;
+CREATE POLICY plans_public_read ON public.plans
+  FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS plans_admin_all ON public.plans;
+CREATE POLICY plans_admin_all ON public.plans
+  FOR ALL TO authenticated
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
+
+DROP TRIGGER IF EXISTS on_plans_change ON public.plans;
+CREATE TRIGGER on_plans_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.plans
+  FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+CREATE OR REPLACE FUNCTION public.tg_touch_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $func$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS on_plans_touch ON public.plans;
+CREATE TRIGGER on_plans_touch
+  BEFORE UPDATE ON public.plans
+  FOR EACH ROW EXECUTE FUNCTION public.tg_touch_updated_at();
+
+INSERT INTO public.plans (slug, name, description, prices, max_sites, max_products_per_site, max_users, max_api_calls_per_month, features, trial_days, is_custom, sort_order) VALUES
+  ('starter', 'Starter', 'For solo makers testing the waters',
+    '{"USD":900,"INR":79900,"KWD":300,"SAR":3400,"AED":3300}'::jsonb,
+    1, 500, 1, 10000,
+    '{"priority_support":false,"custom_domain":false,"advanced_webhooks":false}'::jsonb,
+    14, false, 10),
+  ('growth', 'Growth', 'For growing teams with multiple stores',
+    '{"USD":2900,"INR":240000,"KWD":900,"SAR":11000,"AED":11000}'::jsonb,
+    3, 5000, 5, 100000,
+    '{"priority_support":false,"custom_domain":false,"advanced_webhooks":true}'::jsonb,
+    14, false, 20),
+  ('scale', 'Scale', 'For agencies running many stores at once',
+    '{"USD":9900,"INR":820000,"KWD":3000,"SAR":37000,"AED":36000}'::jsonb,
+    10, 25000, 20, 500000,
+    '{"priority_support":true,"custom_domain":true,"advanced_webhooks":true}'::jsonb,
+    14, false, 30),
+  ('enterprise', 'Enterprise', 'Custom pricing, dedicated support, SLA',
+    '{}'::jsonb,
+    999999, 999999, 999999, 999999,
+    '{"priority_support":true,"custom_domain":true,"advanced_webhooks":true,"sla":true,"dedicated_csm":true}'::jsonb,
+    0, true, 40)
+ON CONFLICT (slug) DO NOTHING;
+
+-- 20260422214005_migration_284135c5.sql
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS country char(2);
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS currency char(3) NOT NULL DEFAULT 'USD';
+COMMENT ON COLUMN public.clients.country IS 'ISO 3166-1 alpha-2; drives payment gateway selection (MyFatoorah for ME, Razorpay rest)';
+COMMENT ON COLUMN public.clients.currency IS 'ISO 4217; default from country at creation, overridable via profile';
+
+-- 20260422215658_migration_91962dfd.sql
+CREATE TYPE public.subscription_status AS ENUM ('pending_payment','trialing','active','past_due','locked','canceled');
+
+-- 20260422215704_migration_12999281.sql
+CREATE TYPE public.renewal_mode AS ENUM ('auto','manual');
+
+-- 20260422215710_migration_04102c56.sql
+CREATE TYPE public.billing_gateway AS ENUM ('myfatoorah','razorpay');
+
+-- 20260422215735_migration_a498cdc3.sql
+CREATE TABLE IF NOT EXISTS public.subscriptions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE, plan_id uuid NOT NULL REFERENCES public.plans(id), status subscription_status NOT NULL DEFAULT 'pending_payment', current_period_start timestamptz, current_period_end timestamptz, trial_end timestamptz, cancel_at_period_end boolean NOT NULL DEFAULT false, canceled_at timestamptz, gateway billing_gateway, gateway_subscription_ref text, payment_method_id uuid, currency char(3) NOT NULL DEFAULT 'USD', renewal_mode renewal_mode NOT NULL DEFAULT 'auto', auto_renew_disabled_reason text, last_charge_attempt_at timestamptz, last_charge_failed_at timestamptz, grace_period_days int NOT NULL DEFAULT 7, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+
+-- 20260422215740_migration_996f1725.sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_client_active ON public.subscriptions (client_id) WHERE status != 'canceled'; CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions (status); CREATE INDEX IF NOT EXISTS idx_subscriptions_period_end ON public.subscriptions (current_period_end) WHERE status IN ('active','past_due');
+
+-- 20260422215745_migration_dc37d137.sql
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY; CREATE POLICY subs_client_read ON public.subscriptions FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin()); CREATE POLICY subs_admin_all ON public.subscriptions FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin()); CREATE TRIGGER on_subscriptions_change AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+-- 20260422215755_migration_657a8d91.sql
+CREATE TABLE IF NOT EXISTS public.subscription_events (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), subscription_id uuid NOT NULL REFERENCES public.subscriptions(id) ON DELETE CASCADE, event_type text NOT NULL, from_status subscription_status, to_status subscription_status, actor_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL, metadata jsonb, created_at timestamptz NOT NULL DEFAULT now()); CREATE INDEX IF NOT EXISTS idx_sub_events_sub ON public.subscription_events (subscription_id, created_at DESC); ALTER TABLE public.subscription_events ENABLE ROW LEVEL SECURITY; CREATE POLICY sub_events_read ON public.subscription_events FOR SELECT TO authenticated USING (subscription_id IN (SELECT id FROM public.subscriptions WHERE client_id = public.current_user_client_id()) OR public.is_super_admin());
+
+-- 20260422220402_migration_de1cbd88.sql
+CREATE TABLE IF NOT EXISTS public.client_payment_methods (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE, gateway billing_gateway NOT NULL, gateway_token text NOT NULL, card_brand text, card_last4 text, card_expiry_month int, card_expiry_year int, recurring_eligible boolean NOT NULL DEFAULT false, is_default boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+
+-- 20260422220412_migration_987b7779.sql
+ALTER TABLE public.client_payment_methods ENABLE ROW LEVEL SECURITY;
+
+-- 20260422220418_migration_205ff14b.sql
+CREATE POLICY cpm_client_read ON public.client_payment_methods FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin());
+
+-- 20260422220423_migration_d4105673.sql
+CREATE POLICY cpm_admin_write ON public.client_payment_methods FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+-- 20260422220428_migration_c8c18545.sql
+CREATE TRIGGER on_cpm_change AFTER INSERT OR UPDATE OR DELETE ON public.client_payment_methods FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+-- 20260422220434_migration_cd4b29a8.sql
+CREATE INDEX IF NOT EXISTS idx_cpm_client_default ON public.client_payment_methods (client_id, is_default) WHERE is_default = true;
+
+-- 20260423020424_migration_f93ecca7.sql
+CREATE TYPE public.coupon_type AS ENUM ('percent','fixed','free_months');
+
+-- 20260423020434_migration_8d3bac8e.sql
+ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+
+-- 20260423020440_migration_aa535554.sql
+CREATE POLICY coupons_admin_all ON public.coupons FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+-- 20260423020445_migration_89b79789.sql
+CREATE TRIGGER on_coupons_change AFTER INSERT OR UPDATE OR DELETE ON public.coupons FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+-- 20260423020554_migration_30433ae5.sql
+DROP INDEX IF EXISTS public.coupons_code_unique;
+
+-- 20260423020559_migration_eea207c8.sql
+DROP POLICY IF EXISTS coupons_admin_all ON public.coupons;
+
+-- 20260423020604_migration_7dbf1be7.sql
+CREATE TABLE IF NOT EXISTS public.billing_coupons (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code text NOT NULL, type public.coupon_type NOT NULL, value numeric NOT NULL, currency char(3), plan_ids uuid[], max_redemptions int, redemptions_count int NOT NULL DEFAULT 0, expires_at timestamptz, description text, is_active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
+
+-- 20260423020614_migration_b5dcdbbf.sql
+ALTER TABLE public.billing_coupons ENABLE ROW LEVEL SECURITY;
+
+-- 20260423020618_migration_6475c9bb.sql
+CREATE POLICY bc_public_read ON public.billing_coupons FOR SELECT USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));
+
+-- 20260423020624_migration_2d9691fb.sql
+CREATE POLICY bc_admin_all ON public.billing_coupons FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+-- 20260423020629_migration_44dcd524.sql
+CREATE TRIGGER on_billing_coupons_change AFTER INSERT OR UPDATE OR DELETE ON public.billing_coupons FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+-- 20260423020732_migration_05c02f39.sql
+CREATE TABLE IF NOT EXISTS public.coupon_redemptions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), coupon_id uuid NOT NULL REFERENCES public.billing_coupons(id) ON DELETE CASCADE, client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE, subscription_id uuid REFERENCES public.subscriptions(id) ON DELETE SET NULL, discount_minor bigint NOT NULL, currency char(3) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());
+
+-- 20260423020742_migration_626d4740.sql
+ALTER TABLE public.coupon_redemptions ENABLE ROW LEVEL SECURITY;
+
+-- 20260423020748_migration_20ffb54e.sql
+CREATE POLICY cr_client_read ON public.coupon_redemptions FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin());
+
+-- 20260423020753_migration_5f802f59.sql
+CREATE POLICY cr_admin_write ON public.coupon_redemptions FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+-- 20260423020935_migration_f8207ffd.sql
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS pending_coupon_id uuid REFERENCES public.billing_coupons(id) ON DELETE SET NULL;
+
+-- 20260423052250_migration_3c2341c3.sql
+CREATE TYPE public.invoice_status AS ENUM ('pending','paid','failed','refunded','void');
+
+-- 20260423052322_migration_eff8cd76.sql
+CREATE TABLE IF NOT EXISTS public.invoices (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE, subscription_id uuid REFERENCES public.subscriptions(id) ON DELETE SET NULL, invoice_number text UNIQUE NOT NULL, amount_minor bigint NOT NULL, currency char(3) NOT NULL, status public.invoice_status NOT NULL DEFAULT 'pending', created_at timestamptz NOT NULL DEFAULT now());
+
+-- 20260423052328_migration_68692ae5.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS period_start timestamptz;
+
+-- 20260423052334_migration_0dde77ef.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS period_end timestamptz;
+
+-- 20260423052339_migration_8da7e940.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS gateway public.billing_gateway;
+
+-- 20260423052344_migration_2af69676.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS gateway_invoice_ref text;
+
+-- 20260423052349_migration_e433209f.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS coupon_id uuid REFERENCES public.billing_coupons(id) ON DELETE SET NULL;
+
+-- 20260423052354_migration_205075ce.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS discount_minor bigint NOT NULL DEFAULT 0;
+
+-- 20260423052359_migration_2c5f0c34.sql
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS paid_at timestamptz;
+
+-- 20260423052444_migration_80175ff2.sql
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+
+-- 20260423052448_migration_1ea37bb2.sql
+CREATE POLICY invoices_client_read ON public.invoices FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin());
+
+-- 20260423052453_migration_285efcef.sql
+CREATE POLICY invoices_admin_write ON public.invoices FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+-- 20260423052458_migration_305a418d.sql
+CREATE TRIGGER on_invoices_change AFTER INSERT OR UPDATE OR DELETE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.log_change_generic();
+
+-- 20260423052503_migration_c73b41c9.sql
+CREATE INDEX IF NOT EXISTS idx_invoices_client_created ON public.invoices (client_id, created_at DESC);
+
+-- 20260423052507_migration_f45a0302.sql
+CREATE INDEX IF NOT EXISTS idx_invoices_subscription ON public.invoices (subscription_id);
+
+-- 20260423090427_migration_7f19e57a.sql
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS api_calls_this_period integer NOT NULL DEFAULT 0;
+
+CREATE OR REPLACE FUNCTION increment_api_call_count(p_client_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE subscriptions
+  SET api_calls_this_period = api_calls_this_period + 1
+  WHERE client_id = p_client_id
+    AND status IN ('trialing', 'active', 'past_due');
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION increment_api_call_count(uuid) TO authenticated, service_role;
