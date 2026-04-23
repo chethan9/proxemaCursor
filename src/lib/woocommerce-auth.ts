@@ -44,10 +44,10 @@ export function buildWooCommerceAuthUrl({
   // Clean and normalize store URL
   const normalizedUrl = cleanStoreUrl(storeUrl);
 
-  // Get the base URL for callbacks
-  const baseUrl = typeof window !== "undefined" 
-    ? window.location.origin 
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Prefer env var so preview deploys still redirect users back to production
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
 
   // WooCommerce callback URL (receives credentials via POST)
   const callbackUrl = `${baseUrl}/api/woocommerce/callback`;
@@ -99,9 +99,9 @@ export function buildWpAppPasswordUrl({
   returnTo?: string;
 }): string {
   const normalizedUrl = cleanStoreUrl(storeUrl);
-  const baseUrl = typeof window !== "undefined"
-    ? window.location.origin
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
   const callbackPath = `${baseUrl}/api/wordpress/app-password-callback`;
   const state = returnTo ? `${storeId}|${encodeURIComponent(returnTo)}` : storeId;
   const successUrl = `${callbackPath}?state=${encodeURIComponent(state)}`;
