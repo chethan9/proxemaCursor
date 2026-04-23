@@ -269,7 +269,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (typeof window !== "undefined") localStorage.setItem("sidebar-locked", next ? "1" : "0");
   };
 
-  const isItemActive = (href: string) => router.pathname === href;
+  const isItemActive = (href: string) => {
+    if (href === "/settings/profile") return router.pathname.startsWith("/settings");
+    return router.pathname === href;
+  };
 
   const renderItem = (node: ResolvedMenuNode, indent = false) => {
     if (node.type !== "item" || !node.href) return null;
