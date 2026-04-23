@@ -1,6 +1,6 @@
 ---
 title: Compact Edit Site dialog
-status: todo
+status: done
 priority: high
 type: chore
 tags: [ui, density, dialog]
@@ -35,12 +35,12 @@ position: 2
 
 ## Checklist
 
-- [ ] Reduce Edit Site dialog total height by ≥40% — measure before/after on a 900px viewport
-- [ ] Store Timezone: input + "Use mine" button on one row, no wrap
-- [ ] WooCommerce API + WordPress Media cards: smaller icon (32px), tighter padding, h-9 inputs, reduced label spacing
-- [ ] Danger Zone: single compact row (icon + text + Delete button inline), not a full card block
-- [ ] Ensure Save / Cancel footer is always visible in viewport on a 900px-tall screen without scrolling
-- [ ] No functional changes: all fields, validation, handlers, and state behave identically
+- [x] Reduce Edit Site dialog total height by ≥40% — measure before/after on a 900px viewport
+- [x] Store Timezone: input + "Use mine" button on one row, no wrap
+- [x] WooCommerce API + WordPress Media cards: smaller icon (32px), tighter padding, h-9 inputs, reduced label spacing
+- [x] Danger Zone: single compact row (icon + text + Delete button inline), not a full card block
+- [x] Ensure Save / Cancel footer is always visible in viewport on a 900px-tall screen without scrolling
+- [x] No functional changes: all fields, validation, handlers, and state behave identically
 
 ## Acceptance
 
