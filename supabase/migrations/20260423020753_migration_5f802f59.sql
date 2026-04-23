@@ -1,0 +1,1 @@
+CREATE POLICY cr_admin_write ON public.coupon_redemptions FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin())

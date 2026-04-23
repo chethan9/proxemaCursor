@@ -1,0 +1,1 @@
+CREATE POLICY cr_client_read ON public.coupon_redemptions FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin())

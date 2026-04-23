@@ -596,6 +596,58 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_redemptions: {
+        Row: {
+          applied_at: string
+          client_id: string
+          coupon_id: string
+          currency: string
+          discount_minor: number
+          id: string
+          subscription_id: string | null
+        }
+        Insert: {
+          applied_at?: string
+          client_id: string
+          coupon_id: string
+          currency: string
+          discount_minor: number
+          id?: string
+          subscription_id?: string | null
+        }
+        Update: {
+          applied_at?: string
+          client_id?: string
+          coupon_id?: string
+          currency?: string
+          discount_minor?: number
+          id?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "billing_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           amount: number | null

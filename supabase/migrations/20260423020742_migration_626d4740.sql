@@ -1,0 +1,1 @@
+ALTER TABLE public.coupon_redemptions ENABLE ROW LEVEL SECURITY
