@@ -3,7 +3,6 @@ import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Palette, Save, RotateCcw, Check, Lock } from "lucide-react";
-import { PERMISSIONS } from "@/lib/permissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -26,8 +25,8 @@ export default function ThemePage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("app_settings").select("style_preset").eq("id", "global").maybeSingle();
-      const p = (data?.style_preset as Preset) || "classic";
+      const { data } = await supabase.from("app_settings").select("theme_preset").eq("id", "global").maybeSingle();
+      const p = ((data?.theme_preset as string) === "modern" ? "modern" : "classic") as Preset;
       setPreset(p);
       setInitial(p);
       setLoading(false);
@@ -39,7 +38,7 @@ export default function ThemePage() {
   async function save() {
     if (!isSuperAdmin) return;
     setSaving(true);
-    const { error } = await supabase.from("app_settings").upsert({ id: "global", style_preset: preset });
+    const { error } = await supabase.from("app_settings").update({ theme_preset: preset }).eq("id", "global");
     setSaving(false);
     if (error) {
       toast({ title: "Save failed", description: error.message, variant: "destructive" });
@@ -51,7 +50,7 @@ export default function ThemePage() {
   }
 
   return (
-    <SettingsLayout title="Theme" description="Visual style preset applied across the app">
+    <SettingsLayout title="Theme">
       <div className="space-y-6 max-w-4xl">
         <div className="flex items-center gap-2">
           <Palette className="h-5 w-5 text-primary" />
