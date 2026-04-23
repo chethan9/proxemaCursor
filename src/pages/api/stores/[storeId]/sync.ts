@@ -319,7 +319,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const storeUpdate: Record<string, unknown> = { status: "connected", last_sync_at: nowIso };
     // Stamp last_full_sync_at when this was a full (non-incremental) run
     if (!useIncremental) storeUpdate.last_full_sync_at = nowIso;
-    await supabase.from("stores").update(storeUpdate).eq("id", storeId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await supabase.from("stores").update(storeUpdate as any).eq("id", storeId);
 
     // Close the "all" placeholder row with aggregated totals (BEFORE variations — they run async)
     if (allRunId) {
