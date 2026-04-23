@@ -846,24 +846,47 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       />
                     </TableHead>
                     {visibleColList.map((c) => {
-                      if (!c.sortable) {
-                        return <TableHead key={c.key}>{c.label}</TableHead>;
-                      }
-                      const isActive = sort.field === c.sortable;
+                      const dragProps = {
+                        draggable: true,
+                        onDragStart: (e: React.DragEvent) => { setDragKey(c.key); e.dataTransfer.effectAllowed = "move"; },
+                        onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; },
+                        onDrop: (e: React.DragEvent) => {
+                          e.preventDefault();
+                          if (!dragKey || dragKey === c.key) return;
+                          setColumnOrder((prev) => {
+                            const next = prev.filter((k) => k !== dragKey);
+                            const targetIdx = next.indexOf(c.key);
+                            next.splice(targetIdx, 0, dragKey);
+                            return next;
+                          });
+                          setDragKey(null);
+                        },
+                        onDragEnd: () => setDragKey(null),
+                      };
+                      const isSortable = !!c.sortable;
+                      const isActive = isSortable && sort.field === c.sortable;
                       const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
                       return (
-                        <TableHead key={c.key}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
-                              setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
-                            }}
-                            className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
-                          >
-                            {c.label}
-                            <SortIcon className="h-3 w-3" />
-                          </button>
+                        <TableHead key={c.key} className={`cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
+                          <span className="inline-flex items-center gap-1">
+                            {isSortable ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
+                                  setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                }}
+                                className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                              >
+                                {c.label}
+                                <SortIcon className="h-3 w-3" />
+                              </button>
+                            ) : (
+                              <span className="text-xs font-medium">{c.label}</span>
+                            )}
+                            <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                          </span>
                         </TableHead>
                       );
                     })}
