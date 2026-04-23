@@ -74,6 +74,7 @@ export interface PagesConcurrentOptions {
   maxPages?: number;
   perPage?: number;
   onProgress?: (fetched: number, total?: number) => void;
+  onBatch?: (items: unknown[]) => Promise<void>;
 }
 
 /**
@@ -108,6 +109,9 @@ export async function fetchPagesConcurrent<T>(
   const totalPages = Math.min(wpTotalPages, maxPages);
 
   const all: T[] = [...firstPage];
+  if (firstPage.length > 0 && opts.onBatch) {
+    try { await opts.onBatch(firstPage); } catch (e) { console.warn("[sync-engine] onBatch p1 failed:", e); }
+  }
   opts.onProgress?.(all.length, wpTotal);
 
   if (totalPages <= 1 || firstPage.length < perPage) return all;
@@ -127,9 +131,17 @@ export async function fetchPagesConcurrent<T>(
         return (await res.json()) as T[];
       })
     );
+    const batchItems: T[] = [];
     for (const r of results) {
-      if (r.status === "fulfilled") all.push(...r.value);
-      else console.error(`[sync-engine] ${endpoint} page fetch failed:`, r.reason);
+      if (r.status === "fulfilled") {
+        batchItems.push(...r.value);
+        all.push(...r.value);
+      } else {
+        console.error(`[sync-engine] ${endpoint} page fetch failed:`, r.reason);
+      }
+    }
+    if (batchItems.length > 0 && opts.onBatch) {
+      try { await opts.onBatch(batchItems); } catch (e) { console.warn("[sync-engine] onBatch failed:", e); }
     }
     opts.onProgress?.(all.length, wpTotal);
   }
