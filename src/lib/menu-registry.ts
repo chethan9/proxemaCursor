@@ -68,7 +68,7 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "roles", defaultLabel: "Roles", defaultIcon: "Shield", href: "/settings/roles", defaultGroup: "Administration", defaultOrder: 1, permission: PERMISSIONS.ROLES_VIEW },
   { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings/profile", defaultGroup: "System", defaultOrder: 0 },
   { id: "theme", defaultLabel: "Theme", defaultIcon: "Palette", href: "/settings/theme", defaultGroup: "System", defaultOrder: 1 },
-  { id: "branding", defaultLabel: "Branding", defaultIcon: "Sparkles", href: "/settings/branding", defaultGroup: "System", defaultOrder: 2, superAdminOnly: true },
+  { id: "branding", defaultLabel: "Branding", defaultIcon: "Sparkles", href: "/settings/branding", defaultGroup: "System", defaultOrder: 2 },
 ];
 
 export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Developer", "Billing", "Administration", "System"];

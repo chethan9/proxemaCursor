@@ -102,7 +102,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const prefetchStore = (id: string) => {
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
-  const { profile, role, can, isSuperAdmin, signOut, permissions, loading: authLoading } = useAuth();
+  const { profile, role, can, isSuperAdmin, signOut, permissions, loading: authLoading, user } = useAuth();
   const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
@@ -127,6 +127,27 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     return buildInitialTree(can, isSuperAdmin);
   });
   const [menuReady, setMenuReady] = useState<boolean>(() => loadCachedMenu(currentRoleKey).length > 0);
+
+  // Clear cached menu/sites when signed-in user changes (prevents flash of previous user's menu)
+  useEffect(() => {
+    if (!user?.id) return;
+    const lastUserKey = "sidebar-last-user-id";
+    const lastUserId = typeof window !== "undefined" ? localStorage.getItem(lastUserKey) : null;
+    if (lastUserId && lastUserId !== user.id) {
+      cachedSites = null;
+      cachedMenuByRole.clear();
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("sidebar-sites-cache");
+          (["super_admin", "admin", "user"] as RoleKey[]).forEach((r) => localStorage.removeItem(menuStorageKey(r)));
+        } catch { /* ignore */ }
+      }
+      setSites([]);
+      setMenuTree([]);
+      setMenuReady(false);
+    }
+    if (typeof window !== "undefined") localStorage.setItem(lastUserKey, user.id);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!can(PERMISSIONS.SITES_VIEW)) return;
