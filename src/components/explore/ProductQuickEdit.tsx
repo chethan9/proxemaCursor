@@ -105,7 +105,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-white">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Quick edit</DialogTitle>
           <DialogDescription>Changes sync to WooCommerce immediately.</DialogDescription>

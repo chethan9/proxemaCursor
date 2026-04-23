@@ -59,7 +59,7 @@ function variationChanged(
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "PUT") {
+  if (req.method !== "PUT" && req.method !== "DELETE") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -79,11 +79,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(404).json({ error: "Product not found" });
   }
 
+  const beforeSnapshot = toJson(localProduct);
+
+  if (req.method === "DELETE") {
+    try {
+      const store = await getStoreCreds(storeId);
+      if (!store) throw new Error("Store not connected");
+      const force = req.query.force !== "false";
+      await wooRequest<WooProduct>(store, "DELETE", `products/${localProduct.woo_id}?force=${force}`);
+
+      const { error: delErr } = await supabaseAdmin
+        .from("products")
+        .delete()
+        .eq("id", productId)
+        .eq("store_id", storeId);
+      if (delErr) throw delErr;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      void (supabaseAdmin as any).from("entity_changes").insert({
+        store_id: storeId,
+        entity_type: "product",
+        entity_id: productId,
+        woo_id: localProduct.woo_id,
+        entity_name: localProduct.name,
+        change_type: "deleted",
+        changed_fields: null,
+        snapshot_before: beforeSnapshot,
+        snapshot_after: null,
+        source: "dashboard",
+        status: "success",
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error("[product delete] error:", err);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabaseAdmin as any).from("entity_changes").insert({
+        store_id: storeId,
+        entity_type: "product",
+        entity_id: productId,
+        woo_id: localProduct.woo_id,
+        entity_name: localProduct.name,
+        change_type: "delete_failed",
+        changed_fields: null,
+        snapshot_before: beforeSnapshot,
+        snapshot_after: null,
+        source: "dashboard",
+        status: "failed",
+        error_message: message,
+      });
+      return res.status(500).json({ error: "Failed to delete product", message });
+    }
+  }
+
   const body = req.body || {};
   const { variations, ...rest } = body as Record<string, unknown> & { variations?: Array<Record<string, unknown>> };
   const wooPayload: Record<string, unknown> = { ...rest };
-
-  const beforeSnapshot = toJson(localProduct);
 
   try {
     const store = await getStoreCreds(storeId);
