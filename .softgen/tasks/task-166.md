@@ -1,6 +1,6 @@
 ---
 title: Fix supabaseAdmin leaking into client bundle (billing services)
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [billing, supabase, bug]
@@ -40,12 +40,12 @@ Add `import "server-only"` at the top of `src/integrations/supabase/admin.ts` so
 
 ## Checklist
 
-- [ ] Split `subscriptionService.ts` into client-safe reads (`getSubscriptionByClient`, `getSubscriptionEvents`) and new `subscriptionService.server.ts` for writes (`createTrialSubscription`, `insertSubscriptionEvent`, plus any future renewal/state-change writes). Keep existing type exports (`Subscription`, `SubscriptionEvent`) in the client-safe file so callers don't churn.
-- [ ] Split `invoiceService.ts` into client-safe reads (`listInvoicesByClient`, `getInvoice`, `generateInvoiceNumber` if UI uses it) and new `invoiceService.server.ts` for anything that needs admin. Remove the `export { supabaseAdmin }` re-export entirely — it's the smoking gun.
-- [ ] Split `couponService.ts` into client-safe reads (`listCoupons`, `computeDiscount` — pure function, safe either side) and new `couponService.server.ts` with `validateCoupon` (does admin lookups against `billing_coupons` + `coupon_redemptions`). The `/api/billing/coupons/validate.ts` route calls the server version.
-- [ ] Update every API route + cron handler under `src/pages/api/billing/**` and `src/pages/api/cron/billing-renewals.ts` to import writes from the new `.server.ts` files. Client hooks, pages, and components import only from the client-safe files.
-- [ ] Add `import "server-only"` as the first line of `src/integrations/supabase/admin.ts`. Future regressions fail at build time with "You're importing a component that needs server-only" instead of a confusing runtime throw in the browser.
-- [ ] Sanity-grep after changes: `supabaseAdmin` only appears in `src/integrations/supabase/admin.ts`, `src/services/*.server.ts`, and `src/pages/api/**`. Zero matches in `src/hooks`, `src/components`, `src/contexts`, or any non-API page.
+- [x] Split `subscriptionService.ts` into client-safe reads (`getSubscriptionByClient`, `getSubscriptionEvents`) and new `subscriptionService.server.ts` for writes (`createTrialSubscription`, `insertSubscriptionEvent`, plus any future renewal/state-change writes). Keep existing type exports (`Subscription`, `SubscriptionEvent`) in the client-safe file so callers don't churn.
+- [x] Split `invoiceService.ts` into client-safe reads (`listInvoicesByClient`, `getInvoice`, `generateInvoiceNumber` if UI uses it) and new `invoiceService.server.ts` for anything that needs admin. Remove the `export { supabaseAdmin }` re-export entirely — it's the smoking gun.
+- [x] Split `couponService.ts` into client-safe reads (`listCoupons`, `computeDiscount` — pure function, safe either side) and new `couponService.server.ts` with `validateCoupon` (does admin lookups against `billing_coupons` + `coupon_redemptions`). The `/api/billing/coupons/validate.ts` route calls the server version.
+- [x] Update every API route + cron handler under `src/pages/api/billing/**` and `src/pages/api/cron/billing-renewals.ts` to import writes from the new `.server.ts` files. Client hooks, pages, and components import only from the client-safe files.
+- [x] Add `import "server-only"` as the first line of `src/integrations/supabase/admin.ts`. Future regressions fail at build time with "You're importing a component that needs server-only" instead of a confusing runtime throw in the browser.
+- [x] Sanity-grep after changes: `supabaseAdmin` only appears in `src/integrations/supabase/admin.ts`, `src/services/*.server.ts`, and `src/pages/api/**`. Zero matches in `src/hooks`, `src/components`, `src/contexts`, or any non-API page.
 
 ## Acceptance
 
