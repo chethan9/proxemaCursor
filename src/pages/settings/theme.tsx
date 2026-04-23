@@ -120,14 +120,14 @@ export default function ThemeSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await save({ brandName: form.brandName.trim() || "WooSync", logoUrl: form.logoUrl.trim() || null, themePreset: form.themePreset });
+      await save({ brandName: form.brandName.trim() || "Proxima", logoUrl: form.logoUrl.trim() || null, themePreset: form.themePreset });
       toast({ title: "Theme saved" });
     } catch {
       toast({ title: "Save failed", variant: "destructive" });
     } finally { setSaving(false); }
   };
 
-  const resetDefaults = () => setForm({ brandName: "WooSync", logoUrl: "", themePreset: "classic" });
+  const resetDefaults = () => setForm({ brandName: "Proxima", logoUrl: "", themePreset: "classic" });
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -204,7 +204,7 @@ export default function ThemeSettings() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="brand-name" className="text-xs">App Name</Label>
-                <Input id="brand-name" value={form.brandName} onChange={(e) => setForm({ ...form, brandName: e.target.value })} placeholder="WooSync" className="h-9" />
+                <Input id="brand-name" value={form.brandName} onChange={(e) => setForm({ ...form, brandName: e.target.value })} placeholder="Proxima" className="h-9" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="logo-url" className="text-xs">Logo URL</Label>

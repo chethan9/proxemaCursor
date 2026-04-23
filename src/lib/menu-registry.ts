@@ -3,7 +3,7 @@ import {
   Settings as SettingsIcon, Shield, UserCog, Package, ShoppingCart, Tag,
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
-  Layers, Code2, Terminal, Wrench,
+  Layers, Code2, Terminal, Wrench, Receipt, DollarSign,
   type LucideIcon,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
@@ -34,7 +34,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Settings: SettingsIcon, Shield, UserCog, Package, ShoppingCart, Tag,
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
-  Layers, Code2, Terminal, Wrench,
+  Layers, Code2, Terminal, Wrench, Receipt, DollarSign,
 };
 
 export function resolveIcon(name: string): LucideIcon {
@@ -48,6 +48,7 @@ export const GROUP_ICONS: Record<string, string> = {
   "Management": "Users",
   "Stores": "Store",
   "Developer": "Code2",
+  "Billing": "CreditCard",
   "Administration": "Shield",
   "System": "Settings",
 };
@@ -60,12 +61,15 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "webhooks", defaultLabel: "Webhooks", defaultIcon: "Webhook", href: "/webhooks", defaultGroup: "Developer", defaultOrder: 1, permission: PERMISSIONS.WEBHOOKS_VIEW },
   { id: "webhooks-activity", defaultLabel: "Activity", defaultIcon: "Activity", href: "/webhooks/activity", defaultGroup: "Developer", defaultOrder: 2, permission: PERMISSIONS.WEBHOOKS_VIEW },
   { id: "api", defaultLabel: "API", defaultIcon: "Key", href: "/api-management", defaultGroup: "Developer", defaultOrder: 3, permission: PERMISSIONS.API_VIEW },
+  { id: "billing", defaultLabel: "Billing", defaultIcon: "Receipt", href: "/billing", defaultGroup: "Billing", defaultOrder: 0 },
+  { id: "payment-methods", defaultLabel: "Payment Methods", defaultIcon: "CreditCard", href: "/billing/payment-methods", defaultGroup: "Billing", defaultOrder: 1 },
+  { id: "pricing", defaultLabel: "Plans", defaultIcon: "DollarSign", href: "/pricing", defaultGroup: "Billing", defaultOrder: 2 },
   { id: "users", defaultLabel: "Users", defaultIcon: "UserCog", href: "/settings/users", defaultGroup: "Administration", defaultOrder: 0, permission: PERMISSIONS.USERS_VIEW },
   { id: "roles", defaultLabel: "Roles", defaultIcon: "Shield", href: "/settings/roles", defaultGroup: "Administration", defaultOrder: 1, permission: PERMISSIONS.ROLES_VIEW },
   { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings/profile", defaultGroup: "System", defaultOrder: 0 },
 ];
 
-export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Developer", "Administration", "System"];
+export const DEFAULT_GROUPS = ["Stores", "Overview", "Management", "Developer", "Billing", "Administration", "System"];
 
 export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-home", defaultLabel: "Home", defaultIcon: "Home", path: "/home", defaultGroup: "Main", defaultOrder: 0 },
