@@ -187,7 +187,6 @@ function CustomersInner() {
     return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
   });
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
-  const [roleFilter, setRoleFilter] = useState<"all" | "customer" | "subscriber" | "guest">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -246,7 +245,6 @@ function CustomersInner() {
         if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
         if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
-        if (typeof remote.roleFilter === "string") setRoleFilter(remote.roleFilter as typeof roleFilter);
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
       prefsLoaded.current = true;
@@ -257,10 +255,10 @@ function CustomersInner() {
     if (!prefsLoaded.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      savePreferences("customers", { columnOrder, visibleCols, pageSize, roleFilter, sort }).catch(() => {});
+      savePreferences("customers", { columnOrder, visibleCols, pageSize, sort }).catch(() => {});
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [columnOrder, visibleCols, pageSize, roleFilter, sort]);
+  }, [columnOrder, visibleCols, pageSize, sort]);
 
   const visibleColList = useMemo(
     () => columnOrder
@@ -276,12 +274,11 @@ function CustomersInner() {
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
-    roleFilter,
   });
   const customers = result?.data ?? [];
   const count = result?.count ?? 0;
 
-  const hasActiveFilters = roleFilter !== "all" || !!search;
+  const hasActiveFilters = !!search;
 
   const handleExport = useCallback(() => {
     if (customers.length === 0) return;
@@ -318,29 +315,6 @@ function CustomersInner() {
       <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={roleFilter !== "all" ? "secondary" : "outline"}
-                  size="sm"
-                  className="h-9 text-xs gap-1.5 px-2.5"
-                >
-                  <Filter className="h-3.5 w-3.5" />
-                  <span className="capitalize">{roleFilter === "all" ? "Role" : roleFilter}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-52 p-1">
-                {(["all", "customer", "subscriber", "guest"] as const).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRoleFilter(r)}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted capitalize ${roleFilter === r ? "bg-accent" : ""}`}
-                  >
-                    {r === "all" ? "All roles" : r}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
@@ -357,7 +331,7 @@ function CustomersInner() {
               </DropdownMenuContent>
             </DropdownMenu>
             {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className="h-9 text-xs gap-1.5" onClick={() => { setRoleFilter("all"); setSearch(""); }}>
+              <Button variant="ghost" size="sm" className="h-9 text-xs gap-1.5" onClick={() => { setSearch(""); }}>
                 <FilterX className="h-3.5 w-3.5" />
                 Clear
               </Button>
