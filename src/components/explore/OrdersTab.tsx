@@ -57,6 +57,8 @@ import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { useStore } from "@/hooks/queries/useStores";
 import { formatStoreDateTime } from "@/lib/format-store-date";
 import { SyncPill } from "@/components/ui/sync-pill";
+import { EmptyState } from "@/components/EmptyState";
+import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/illustrations/EmptyIllustrations";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -723,13 +725,25 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               Loading orders…
             </div>
           ) : orders.length === 0 ? (
-            <div className="p-8 text-center">
-              <ShoppingCart className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
-              <div className="text-sm font-medium mb-1">No orders found</div>
-              <div className="text-xs text-muted-foreground">
-                {hasActiveFilters ? "Try clearing filters to see more results." : activeSync ? "Sync in progress — orders will appear here." : "Run a sync to pull orders from WooCommerce."}
+            hasActiveFilters ? (
+              <EmptyState
+                illustration={<NoSearchResultsIllustration className="w-full h-full" />}
+                title="No orders match your filters"
+                description="Try clearing your filters or adjusting them to see more results."
+              />
+            ) : activeSync ? (
+              <div className="p-8 text-center">
+                <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
+                <p className="text-sm font-medium">Syncing your orders…</p>
+                <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new orders will appear automatically</p>
               </div>
-            </div>
+            ) : (
+              <EmptyState
+                illustration={<NoOrdersIllustration className="w-full h-full" />}
+                title="No orders yet"
+                description="When customers place orders on your store, they'll appear here for you to manage."
+              />
+            )
           ) : (
             <div className="overflow-x-auto">
               <Table>

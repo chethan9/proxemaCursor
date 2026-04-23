@@ -43,6 +43,8 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { SyncPill } from "@/components/ui/sync-pill";
+import { EmptyState } from "@/components/EmptyState";
+import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -689,18 +691,19 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 }
                 if (products.length === 0) {
                   return (
-                    <div className="py-16 text-center">
+                    <div className="py-8">
                       {activeSync ? (
-                        <>
+                        <div className="py-16 text-center">
                           <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
                           <p className="text-sm font-medium">Syncing your products…</p>
                           <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new products will appear automatically</p>
-                        </>
+                        </div>
                       ) : (
-                        <>
-                          <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                          <p className="text-sm text-muted-foreground">No products found</p>
-                        </>
+                        <EmptyState
+                          illustration={<NoProductsIllustration className="w-full h-full" />}
+                          title="No products yet"
+                          description="Once your store has products, they'll appear here. Run a sync to pull existing products from WooCommerce."
+                        />
                       )}
                     </div>
                   );
@@ -897,18 +900,19 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     ))
                   ) : products.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={visibleColList.length + 1} className="text-center text-xs text-muted-foreground py-8">
+                      <TableCell colSpan={visibleColList.length + 1} className="py-8">
                         {activeSync ? (
-                          <>
+                          <div className="text-center">
                             <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
                             <p className="text-sm font-medium">Syncing your products…</p>
                             <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new products will appear automatically</p>
-                          </>
+                          </div>
                         ) : (
-                          <>
-                            <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                            <p className="text-sm text-muted-foreground">No products found</p>
-                          </>
+                          <EmptyState
+                            illustration={<NoProductsIllustration className="w-full h-full" />}
+                            title="No products yet"
+                            description="Once your store has products, they'll appear here. Run a sync to pull existing products from WooCommerce."
+                          />
                         )}
                       </TableCell>
                     </TableRow>

@@ -12,6 +12,8 @@ import { SparklineTile } from "@/components/site/home/SparklineTile";
 import { RecentOrdersCard } from "@/components/site/home/RecentOrdersCard";
 import { TopProductsCard } from "@/components/site/home/TopProductsCard";
 import { SiteBlockedBanner } from "@/components/site/SiteBlockedBanner";
+import { EmptyState } from "@/components/EmptyState";
+import { NoDataIllustration } from "@/components/illustrations/EmptyIllustrations";
 
 function fmtMoney(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
@@ -68,14 +70,13 @@ function HomeInner() {
         </Card>
       ) : showEmpty ? (
         <Card>
-          <CardContent className="py-16 text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-4">
-              <Sparkles className="h-7 w-7 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">No orders yet</h2>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Your dashboard will populate automatically once your first order arrives.
-            </p>
+          <CardContent className="py-8">
+            <EmptyState
+              size="lg"
+              illustration={<NoDataIllustration className="w-full h-full" />}
+              title="Your dashboard is waiting for its first order"
+              description="Once customers start placing orders on your store, sales trends, top products, and activity will all populate automatically right here."
+            />
           </CardContent>
         </Card>
       ) : (

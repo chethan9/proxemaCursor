@@ -50,6 +50,8 @@ import {
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { useToast } from "@/hooks/use-toast";
 import { SyncPill } from "@/components/ui/sync-pill";
+import { EmptyState } from "@/components/EmptyState";
+import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
 
 type ColumnKey =
   | "name"
@@ -506,9 +508,12 @@ function CustomersInner() {
                   ))
                 ) : customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={visibleColList.length} className="text-center py-16">
-                      <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                      <p className="text-sm text-muted-foreground">No customers found</p>
+                    <TableCell colSpan={visibleColList.length} className="py-8">
+                      <EmptyState
+                        illustration={<NoCustomersIllustration className="w-full h-full" />}
+                        title="No customers yet"
+                        description="When customers sign up or place orders on your store, they'll appear here."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
