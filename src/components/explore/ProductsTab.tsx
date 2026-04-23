@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -875,10 +875,28 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         },
                         onDragEnd: () => setDragKey(null),
                       };
+                      const isSortable = !!c.sortable;
+                      const isActive = isSortable && sort.field === c.sortable;
+                      const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
                       return (
                         <TableHead key={c.key} className={`${baseCls} ${alignCls} cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
                           <span className={`inline-flex items-center gap-1 ${isNumeric ? "justify-end w-full" : ""}`}>
-                            {c.label}
+                            {isSortable ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
+                                  setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                }}
+                                className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${isActive ? "text-foreground font-semibold" : ""}`}
+                              >
+                                {c.label}
+                                <SortIcon className="h-3 w-3" />
+                              </button>
+                            ) : (
+                              c.label
+                            )}
                             <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                           </span>
                         </TableHead>

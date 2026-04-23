@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, type LucideIcon } from "lucide-react";
 import { DateRangeFilter } from "./DateRangeFilter";
 import {
   getCustomerName,
@@ -62,14 +62,14 @@ import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
-const COLUMNS: { key: ColumnKey; label: string; group: string }[] = [
+const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: OrderSortField }[] = [
   { key: "id", label: "Internal ID", group: "Order" },
   { key: "woo_id", label: "Woo ID", group: "Order" },
-  { key: "order_number", label: "Order #", group: "Order" },
+  { key: "order_number", label: "Order #", group: "Order", sortable: "order_number" },
   { key: "status", label: "Status", group: "Order" },
-  { key: "date_created", label: "Date created", group: "Order" },
+  { key: "date_created", label: "Date created", group: "Order", sortable: "date_created" },
   { key: "date_modified", label: "Date modified", group: "Order" },
-  { key: "synced_at", label: "Last synced", group: "Order" },
+  { key: "synced_at", label: "Last synced", group: "Order", sortable: "synced_at" },
   { key: "source", label: "Source (UTM)", group: "Order" },
   { key: "created_via", label: "Created via", group: "Order" },
   { key: "customer_id", label: "Customer ID", group: "Customer" },
@@ -81,7 +81,7 @@ const COLUMNS: { key: ColumnKey; label: string; group: string }[] = [
   { key: "items", label: "Item count", group: "Customer" },
   { key: "line_items_summary", label: "Items (name × qty)", group: "Customer" },
   { key: "currency", label: "Currency", group: "Payment & Amounts" },
-  { key: "total", label: "Total", group: "Payment & Amounts" },
+  { key: "total", label: "Total", group: "Payment & Amounts", sortable: "total" },
   { key: "subtotal", label: "Subtotal", group: "Payment & Amounts" },
   { key: "tax", label: "Tax", group: "Payment & Amounts" },
   { key: "shipping", label: "Shipping", group: "Payment & Amounts" },
@@ -393,6 +393,40 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 setCustomTo(t);
               }}
             />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={totalMin || totalMax ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-9 text-xs gap-1.5 px-2.5"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>
+                    {totalMin || totalMax
+                      ? `${totalMin || "0"} – ${totalMax || "∞"}`
+                      : "Total"}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold">Filter by total</span>
+                  {(totalMin || totalMax) && (
+                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => { setTotalMin(""); setTotalMax(""); }}>Clear</Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase">Min</label>
+                    <Input type="number" value={totalMin} onChange={(e) => setTotalMin(e.target.value)} placeholder="0" className="h-8 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase">Max</label>
+                    <Input type="number" value={totalMax} onChange={(e) => setTotalMax(e.target.value)} placeholder="∞" className="h-8 text-xs" />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="flex-1 flex justify-center min-w-0">
             <div className="w-full max-w-[288px]">
@@ -447,15 +481,44 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                         <div key={group}>
                           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
                           <div className="flex flex-col gap-0.5">
-                            {cols.map((c) => (
-                              <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
-                                <Checkbox
-                                  checked={visibleCols[c.key]}
-                                  onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
-                                />
-                                <span className="truncate">{c.label}</span>
-                              </label>
-                            ))}
+                            {cols.map((c) => {
+                              if (!c.sortable) {
+                                return (
+                                  <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                    <Checkbox
+                                      checked={visibleCols[c.key]}
+                                      onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
+                                    />
+                                    <span className="truncate">{c.label}</span>
+                                  </label>
+                                );
+                              }
+                              const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
+                              const alignCls = isNumeric ? "text-right" : "text-left";
+                              const isActive = sort.field === c.sortable;
+                              const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+                              return (
+                                <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                  <Checkbox
+                                    checked={visibleCols[c.key]}
+                                    onCheckedChange={(v) =>
+                                      setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                    }
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
+                                      setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                    }}
+                                    className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                                  >
+                                    {c.label}
+                                    <SortIcon className="h-3 w-3" />
+                                  </button>
+                                </label>
+                              );
+                            })}
                           </div>
                         </div>
                       ));
@@ -609,8 +672,23 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                               <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
                               <div className="flex flex-col gap-0.5">
                                 {cols.map((c) => {
+                                  if (!c.sortable) {
+                                    return (
+                                      <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
+                                        <Checkbox
+                                          checked={visibleCols[c.key]}
+                                          onCheckedChange={(v) =>
+                                            setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
+                                          }
+                                        />
+                                        <span className="truncate">{c.label}</span>
+                                      </label>
+                                    );
+                                  }
                                   const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
                                   const alignCls = isNumeric ? "text-right" : "text-left";
+                                  const isActive = sort.field === c.sortable;
+                                  const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
                                   return (
                                     <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
                                       <Checkbox
@@ -619,8 +697,17 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                                           setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))
                                         }
                                       />
-                                      <span className="truncate">{c.label}</span>
-                                      <GripVertical className={`h-3 w-3 text-muted-foreground/30 ${isNumeric ? "ml-0.5" : ""}`} />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
+                                          setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                        }}
+                                        className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                                      >
+                                        {c.label}
+                                        <SortIcon className="h-3 w-3" />
+                                      </button>
                                     </label>
                                   );
                                 })}
@@ -758,9 +845,28 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                         }}
                       />
                     </TableHead>
-                    {visibleColList.map((c) => (
-                      <TableHead key={c.key}>{c.label}</TableHead>
-                    ))}
+                    {visibleColList.map((c) => {
+                      if (!c.sortable) {
+                        return <TableHead key={c.key}>{c.label}</TableHead>;
+                      }
+                      const isActive = sort.field === c.sortable;
+                      const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+                      return (
+                        <TableHead key={c.key}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
+                              setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                            }}
+                            className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                          >
+                            {c.label}
+                            <SortIcon className="h-3 w-3" />
+                          </button>
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
