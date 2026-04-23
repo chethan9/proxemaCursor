@@ -1,6 +1,6 @@
 ---
 title: Renewal cron + auto-lock + grace-period enforcement
-status: todo
+status: in_progress
 priority: urgent
 type: feature
 tags: [billing, cron, automation, enforcement]
