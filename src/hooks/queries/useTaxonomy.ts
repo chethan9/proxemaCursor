@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchCategories, fetchTags, fetchAllCategories, type TaxonomySortField, type TaxonomySortDirection } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
+import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 export function useTaxonomyRows(
   storeId: string,
@@ -11,6 +12,8 @@ export function useTaxonomyRows(
   sortField: TaxonomySortField = "name",
   sortDirection: TaxonomySortDirection = "asc",
 ) {
+  const { data: syncStatus } = useStoreSyncStatus(storeId);
+  const anySyncRunning = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
   return useQuery({
     queryKey: [...queryKeys.taxonomy(storeId, mode), "rows", search, page, pageSize, sortField, sortDirection] as const,
     queryFn: () => (mode === "categories"
@@ -19,6 +22,7 @@ export function useTaxonomyRows(
     ),
     enabled: !!storeId,
     staleTime: 60_000,
+    refetchInterval: anySyncRunning ? 5000 : false,
   });
 }
 

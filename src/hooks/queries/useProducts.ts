@@ -7,13 +7,12 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 export function useProducts(opts: FetchProductsOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
+  const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
     queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "hybrid" : "db"] as const,
     queryFn: async () => {
-      // Always try DB first — fastest and we already warm-write live data into it
       const dbRes = await fetchProducts({ ...opts, useLive: false });
       if (dbRes.data.length > 0 || !initialSyncRunning) return dbRes;
-      // DB empty and sync still running — try live API
       try {
         const live = await fetchProducts({ ...opts, useLive: true });
         return live;
@@ -25,6 +24,7 @@ export function useProducts(opts: FetchProductsOptions) {
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
+    refetchInterval: anySyncRunning ? 5000 : false,
     retry: 1,
   });
 }

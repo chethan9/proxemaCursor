@@ -17,35 +17,6 @@ function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
-async function batchUpsert(tableName: string, rows: Record<string, unknown>[], conflictColumns: string) {
-  if (rows.length === 0) return { created: 0, updated: 0 };
-  const BATCH_SIZE = 200;
-  let totalCreated = 0;
-  let totalUpdated = 0;
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existing } = await (supabase as any)
-      .from(tableName)
-      .select("store_id, woo_id")
-      .in("woo_id", batch.map((r) => r.woo_id as number))
-      .eq("store_id", batch[0].store_id as string);
-    const existingSet = new Set((existing || []).map((e: { store_id: string; woo_id: number }) => `${e.store_id}_${e.woo_id}`));
-    const newCount = batch.filter((r) => !existingSet.has(`${r.store_id}_${r.woo_id}`)).length;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from(tableName)
-      .upsert(batch, { onConflict: conflictColumns, ignoreDuplicates: false });
-    if (error) {
-      console.error(`[Sync] Batch upsert error on ${tableName}:`, error.message);
-      throw error;
-    }
-    totalCreated += newCount;
-    totalUpdated += batch.length - newCount;
-  }
-  return { created: totalCreated, updated: totalUpdated };
-}
-
 interface WooProduct { id: number; name: string; slug: string; sku: string; price: string; regular_price: string; sale_price: string; stock_quantity: number | null; stock_status: string; status: string; type: string; description: string; short_description: string; categories: unknown[]; images: unknown[]; attributes: unknown[]; date_created: string; date_modified: string; }
 interface WooOrder { id: number; number: string; status: string; currency: string; total: string; discount_total: string; shipping_total: string; customer_id: number; billing: Record<string, unknown>; shipping: Record<string, unknown>; line_items: unknown[]; shipping_lines: unknown[]; fee_lines: unknown[]; coupon_lines: unknown[]; payment_method: string; payment_method_title: string; date_created: string; date_modified: string; }
 interface WooCustomer { id: number; email: string; first_name: string; last_name: string; username: string; billing: Record<string, unknown>; shipping: Record<string, unknown>; avatar_url: string; is_paying_customer: boolean; orders_count: number; total_spent: string; date_created: string; date_modified: string; }
@@ -53,128 +24,179 @@ interface WooCategory { id: number; name: string; slug: string; parent: number; 
 interface WooCoupon { id: number; code: string; amount: string; discount_type: string; description: string; date_expires: string | null; usage_count: number; individual_use: boolean; product_ids: number[]; excluded_product_ids: number[]; usage_limit: number | null; usage_limit_per_user: number | null; free_shipping: boolean; minimum_amount: string; maximum_amount: string; date_created: string; date_modified: string; }
 interface WooTag { id: number; name: string; slug: string; description: string; count: number; }
 
-type AspectResult = { processed: number; created: number; updated: number };
+type Counters = { processed: number; created: number; updated: number };
+type AspectResult = Counters & { error?: string };
 
-async function updateSyncRunProgress(syncRunId: string, recordsProcessed: number) {
-  if (!syncRunId) return;
-  await supabase.from("sync_runs").update({ records_processed: recordsProcessed }).eq("id", syncRunId);
-}
-
-function progressCb(syncRunId: string) {
-  return (n: number) => { updateSyncRunProgress(syncRunId, n).catch(() => {}); };
+/**
+ * Persist one batch of rows to DB immediately, update sync_runs with running totals.
+ * Called once per concurrent page batch from fetchPagesConcurrent.
+ */
+async function persistBatch(
+  tableName: string,
+  rows: Record<string, unknown>[],
+  storeId: string,
+  syncRunId: string,
+  counters: Counters
+): Promise<void> {
+  if (rows.length === 0) return;
+  const ids = rows.map((r) => r.woo_id as number);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any)
+    .from(tableName)
+    .select("woo_id")
+    .eq("store_id", storeId)
+    .in("woo_id", ids);
+  const existingSet = new Set((existing || []).map((e: { woo_id: number }) => e.woo_id));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from(tableName)
+    .upsert(rows, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
+  if (error) throw new Error(`${tableName} upsert failed: ${error.message}`);
+  const newCount = rows.filter((r) => !existingSet.has(r.woo_id as number)).length;
+  counters.created += newCount;
+  counters.updated += rows.length - newCount;
+  counters.processed += rows.length;
+  if (syncRunId) {
+    await supabase.from("sync_runs").update({
+      records_processed: counters.processed,
+      records_created: counters.created,
+      records_updated: counters.updated,
+    }).eq("id", syncRunId);
+  }
 }
 
 async function syncProducts(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const counters: Counters = { processed: 0, created: 0, updated: 0 };
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
-  const items = await fetchPagesConcurrent<WooProduct>(store.url, store.auth, "products", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
-  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
-  const now = new Date().toISOString();
-  const rows = items.map((p) => ({
-    store_id: store.id, woo_id: p.id, name: p.name, slug: p.slug, sku: p.sku || null,
-    price: p.price ? parseFloat(p.price) : null, regular_price: p.regular_price ? parseFloat(p.regular_price) : null,
-    sale_price: p.sale_price ? parseFloat(p.sale_price) : null, stock_quantity: p.stock_quantity,
-    stock_status: p.stock_status, status: p.status, type: p.type, description: p.description,
-    short_description: p.short_description, categories: toJson(p.categories), images: toJson(p.images),
-    attributes: toJson(p.attributes || []), raw_data: toJson(p), synced_at: now,
-  }));
-  const result = await batchUpsert("products", rows, "store_id,woo_id");
-  return { processed: items.length, ...result };
+  await fetchPagesConcurrent<WooProduct>(store.url, store.auth, "products", params, {
+    concurrency: 2,
+    onBatch: async (items) => {
+      const now = new Date().toISOString();
+      const rows = items.map((p) => ({
+        store_id: store.id, woo_id: p.id, name: p.name, slug: p.slug, sku: p.sku || null,
+        price: p.price ? parseFloat(p.price) : null, regular_price: p.regular_price ? parseFloat(p.regular_price) : null,
+        sale_price: p.sale_price ? parseFloat(p.sale_price) : null, stock_quantity: p.stock_quantity,
+        stock_status: p.stock_status, status: p.status, type: p.type, description: p.description,
+        short_description: p.short_description, categories: toJson(p.categories), images: toJson(p.images),
+        attributes: toJson(p.attributes || []), raw_data: toJson(p), synced_at: now,
+      }));
+      await persistBatch("products", rows, store.id, syncRunId, counters);
+    },
+  });
+  return counters;
 }
 
 async function syncOrders(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const counters: Counters = { processed: 0, created: 0, updated: 0 };
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
-  const items = await fetchPagesConcurrent<WooOrder>(store.url, store.auth, "orders", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
-  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
-  const now = new Date().toISOString();
-  const rows = items.map((o) => ({
-    store_id: store.id, woo_id: o.id, order_number: o.number, status: o.status, currency: o.currency,
-    total: o.total ? parseFloat(o.total) : null, discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
-    shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null, customer_id: o.customer_id || null,
-    payment_method: o.payment_method || null, payment_method_title: o.payment_method_title || null,
-    billing: toJson(o.billing), shipping: toJson(o.shipping), line_items: toJson(o.line_items),
-    shipping_lines: toJson(o.shipping_lines || []), fee_lines: toJson(o.fee_lines || []),
-    coupon_lines: toJson(o.coupon_lines || []), raw_data: toJson(o),
-    date_created: o.date_created, date_modified: o.date_modified, synced_at: now,
-  }));
-  const result = await batchUpsert("orders", rows, "store_id,woo_id");
-  return { processed: items.length, ...result };
+  await fetchPagesConcurrent<WooOrder>(store.url, store.auth, "orders", params, {
+    concurrency: 2,
+    onBatch: async (items) => {
+      const now = new Date().toISOString();
+      const rows = items.map((o) => ({
+        store_id: store.id, woo_id: o.id, order_number: o.number, status: o.status, currency: o.currency,
+        total: o.total ? parseFloat(o.total) : null, discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
+        shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null, customer_id: o.customer_id || null,
+        payment_method: o.payment_method || null, payment_method_title: o.payment_method_title || null,
+        billing: toJson(o.billing), shipping: toJson(o.shipping), line_items: toJson(o.line_items),
+        shipping_lines: toJson(o.shipping_lines || []), fee_lines: toJson(o.fee_lines || []),
+        coupon_lines: toJson(o.coupon_lines || []), raw_data: toJson(o),
+        date_created: o.date_created, date_modified: o.date_modified, synced_at: now,
+      }));
+      await persistBatch("orders", rows, store.id, syncRunId, counters);
+    },
+  });
+  return counters;
 }
 
 async function syncCustomers(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const counters: Counters = { processed: 0, created: 0, updated: 0 };
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
-  const items = await fetchPagesConcurrent<WooCustomer>(store.url, store.auth, "customers", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
-  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
-  const now = new Date().toISOString();
-  const rows = items.map((c) => ({
-    store_id: store.id, woo_id: c.id, email: c.email, first_name: c.first_name, last_name: c.last_name,
-    username: c.username, role: null as string | null, billing: toJson(c.billing), shipping: toJson(c.shipping),
-    avatar_url: c.avatar_url || null, is_paying_customer: c.is_paying_customer || false,
-    orders_count: c.orders_count || 0, total_spent: c.total_spent ? parseFloat(c.total_spent) : null,
-    raw_data: toJson(c), date_created: c.date_created, synced_at: now,
-  }));
-  const result = await batchUpsert("customers", rows, "store_id,woo_id");
-  return { processed: items.length, ...result };
+  await fetchPagesConcurrent<WooCustomer>(store.url, store.auth, "customers", params, {
+    concurrency: 2,
+    onBatch: async (items) => {
+      const now = new Date().toISOString();
+      const rows = items.map((c) => ({
+        store_id: store.id, woo_id: c.id, email: c.email, first_name: c.first_name, last_name: c.last_name,
+        username: c.username, role: null as string | null, billing: toJson(c.billing), shipping: toJson(c.shipping),
+        avatar_url: c.avatar_url || null, is_paying_customer: c.is_paying_customer || false,
+        orders_count: c.orders_count || 0, total_spent: c.total_spent ? parseFloat(c.total_spent) : null,
+        raw_data: toJson(c), date_created: c.date_created, synced_at: now,
+      }));
+      await persistBatch("customers", rows, store.id, syncRunId, counters);
+    },
+  });
+  return counters;
 }
 
 async function syncCategories(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
-  const items = await fetchPagesConcurrent<WooCategory>(store.url, store.auth, "products/categories", {}, { concurrency: 2, onProgress: progressCb(syncRunId) });
-  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
-  const now = new Date().toISOString();
-  const rows = items.map((c) => ({
-    store_id: store.id, woo_id: c.id, name: c.name, slug: c.slug, parent_id: c.parent || null,
-    description: c.description, display: c.display, image: toJson(c.image),
-    menu_order: c.menu_order, count: c.count, raw_data: toJson(c), synced_at: now,
-  }));
-  const result = await batchUpsert("categories", rows, "store_id,woo_id");
-  return { processed: items.length, ...result };
+  const counters: Counters = { processed: 0, created: 0, updated: 0 };
+  await fetchPagesConcurrent<WooCategory>(store.url, store.auth, "products/categories", {}, {
+    concurrency: 2,
+    onBatch: async (items) => {
+      const now = new Date().toISOString();
+      const rows = items.map((c) => ({
+        store_id: store.id, woo_id: c.id, name: c.name, slug: c.slug, parent_id: c.parent || null,
+        description: c.description, display: c.display, image: toJson(c.image),
+        menu_order: c.menu_order, count: c.count, raw_data: toJson(c), synced_at: now,
+      }));
+      await persistBatch("categories", rows, store.id, syncRunId, counters);
+    },
+  });
+  return counters;
 }
 
 async function syncCoupons(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const counters: Counters = { processed: 0, created: 0, updated: 0 };
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
-  const items = await fetchPagesConcurrent<WooCoupon>(store.url, store.auth, "coupons", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
-  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
-  const now = new Date().toISOString();
-  const rows = items.map((c) => ({
-    store_id: store.id, woo_id: c.id, code: c.code,
-    amount: c.amount ? parseFloat(c.amount) : null, discount_type: c.discount_type,
-    description: c.description || "", date_expires: c.date_expires, usage_count: c.usage_count || 0,
-    individual_use: c.individual_use || false, product_ids: toJson(c.product_ids || []),
-    excluded_product_ids: toJson(c.excluded_product_ids || []), usage_limit: c.usage_limit,
-    usage_limit_per_user: c.usage_limit_per_user, free_shipping: c.free_shipping || false,
-    minimum_amount: c.minimum_amount ? parseFloat(c.minimum_amount) : null,
-    maximum_amount: c.maximum_amount ? parseFloat(c.maximum_amount) : null,
-    raw_data: toJson(c), date_created: c.date_created, synced_at: now,
-  }));
-  const result = await batchUpsert("coupons", rows, "store_id,woo_id");
-  return { processed: items.length, ...result };
+  await fetchPagesConcurrent<WooCoupon>(store.url, store.auth, "coupons", params, {
+    concurrency: 2,
+    onBatch: async (items) => {
+      const now = new Date().toISOString();
+      const rows = items.map((c) => ({
+        store_id: store.id, woo_id: c.id, code: c.code,
+        amount: c.amount ? parseFloat(c.amount) : null, discount_type: c.discount_type,
+        description: c.description || "", date_expires: c.date_expires, usage_count: c.usage_count || 0,
+        individual_use: c.individual_use || false, product_ids: toJson(c.product_ids || []),
+        excluded_product_ids: toJson(c.excluded_product_ids || []), usage_limit: c.usage_limit,
+        usage_limit_per_user: c.usage_limit_per_user, free_shipping: c.free_shipping || false,
+        minimum_amount: c.minimum_amount ? parseFloat(c.minimum_amount) : null,
+        maximum_amount: c.maximum_amount ? parseFloat(c.maximum_amount) : null,
+        raw_data: toJson(c), date_created: c.date_created, synced_at: now,
+      }));
+      await persistBatch("coupons", rows, store.id, syncRunId, counters);
+    },
+  });
+  return counters;
 }
 
 async function syncTags(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
-  const items = await fetchPagesConcurrent<WooTag>(store.url, store.auth, "products/tags", {}, { concurrency: 2, onProgress: progressCb(syncRunId) });
-  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
-  const now = new Date().toISOString();
-  const rows = items.map((t) => ({
-    store_id: store.id, woo_id: t.id, name: t.name, slug: t.slug,
-    description: t.description || "", count: t.count || 0, raw_data: toJson(t), synced_at: now,
-  }));
-  const result = await batchUpsert("tags", rows, "store_id,woo_id");
-  return { processed: items.length, ...result };
+  const counters: Counters = { processed: 0, created: 0, updated: 0 };
+  await fetchPagesConcurrent<WooTag>(store.url, store.auth, "products/tags", {}, {
+    concurrency: 2,
+    onBatch: async (items) => {
+      const now = new Date().toISOString();
+      const rows = items.map((t) => ({
+        store_id: store.id, woo_id: t.id, name: t.name, slug: t.slug,
+        description: t.description || "", count: t.count || 0, raw_data: toJson(t), synced_at: now,
+      }));
+      await persistBatch("tags", rows, store.id, syncRunId, counters);
+    },
+  });
+  return counters;
 }
 
-/**
- * Run one aspect with its own sync_runs row + benchmark logging.
- * Catches errors and returns them as part of result.
- */
+/** Run one aspect with its own sync_runs row + benchmark. Catches errors. */
 async function runAspect(
   storeId: string,
   aspectName: string,
   fn: (runId: string) => Promise<AspectResult>,
   isInitial: boolean
-): Promise<AspectResult & { error?: string }> {
+): Promise<AspectResult> {
   const { data: syncRun } = await supabase
     .from("sync_runs")
     .insert({ store_id: storeId, aspect: aspectName, status: "running", started_at: new Date().toISOString() })
@@ -235,7 +257,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
   try {
-    // Auto-fail stuck running syncs >10min
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     await supabase.from("sync_runs").update({
       status: "failed", error_message: "Auto-timeout: sync exceeded 10 minute limit",
@@ -253,7 +274,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
-    // Find the "all" placeholder row
     const { data: allRow } = await supabase
       .from("sync_runs")
       .select("id, started_at, is_initial")
@@ -262,14 +282,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const allRunId = allRow?.id || null;
     const isInitial = !!allRow?.is_initial;
 
-    // Determine incremental mode
-    // Full sync if: initial run, OR last_full_sync_at >7 days old, OR never had a full sync
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const lastFull = store.last_full_sync_at ? new Date(store.last_full_sync_at).getTime() : 0;
     const fullSyncDue = !lastFull || (Date.now() - lastFull) > SEVEN_DAYS_MS;
     const useIncremental = !isInitial && !fullSyncDue && !!store.last_sync_at;
 
-    // Use last_sync_at minus 1h safety buffer as modified_after
     let modifiedAfter: string | null = null;
     if (useIncremental && store.last_sync_at) {
       const t = new Date(store.last_sync_at).getTime() - 60 * 60 * 1000;
@@ -282,7 +299,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       auth: basicAuth(store.consumer_key, store.consumer_secret),
     };
 
-    // Supported single-aspect override
     if (aspect && aspect !== "all" && aspect !== "variations") {
       const fnMap: Record<string, (runId: string) => Promise<AspectResult>> = {
         products: (id) => syncProducts(storeForSync, id, modifiedAfter),
@@ -298,9 +314,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, store_id: storeId, results: { [aspect]: result } });
     }
 
-    // PHASE 2+3: Run all main aspects in parallel.
-    // Each aspect internally fetches pages with concurrency=2.
-    // Total in-flight ≈ 6 aspects × 2 pages = 12 (but reference aspects finish quickly, so average lower).
+    // All main aspects in parallel — each streams upserts as pages arrive
     const [products, orders, customers, categories, tags, coupons] = await Promise.all([
       runAspect(storeId, "products", (id) => syncProducts(storeForSync, id, modifiedAfter), isInitial),
       runAspect(storeId, "orders", (id) => syncOrders(storeForSync, id, modifiedAfter), isInitial),
@@ -317,12 +331,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const nowIso = new Date().toISOString();
     const storeUpdate: Record<string, unknown> = { status: "connected", last_sync_at: nowIso };
-    // Stamp last_full_sync_at when this was a full (non-incremental) run
     if (!useIncremental) storeUpdate.last_full_sync_at = nowIso;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await supabase.from("stores").update(storeUpdate as any).eq("id", storeId);
 
-    // Close the "all" placeholder row with aggregated totals (BEFORE variations — they run async)
     if (allRunId) {
       const allStart = allRow?.started_at ? new Date(allRow.started_at).getTime() : Date.now();
       const overallDuration = (Date.now() - allStart) / 1000;
@@ -332,7 +344,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         records_processed: totalProcessed, records_created: totalCreated, records_updated: totalUpdated,
       }).eq("id", allRunId);
 
-      // Stamp initial_sync_completed_at + celebration notification (only once per store)
       if (isInitial || !store.initial_sync_completed_at) {
         await supabase.from("stores").update({ initial_sync_completed_at: nowIso }).eq("id", storeId).is("initial_sync_completed_at", null);
 
@@ -368,7 +379,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // PHASE 4: Variations — fire-and-forget to dedicated endpoint (never blocks main completion)
+    // Variations fire-and-forget
     const base = getAppUrl(req);
     fetch(`${base}/api/stores/${storeId}/sync-variations`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",

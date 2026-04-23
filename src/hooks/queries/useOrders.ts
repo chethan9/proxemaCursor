@@ -7,6 +7,7 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 export function useOrders(opts: FetchOrdersOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
+  const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
     queryKey: [...queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "hybrid" : "db"] as const,
     queryFn: async () => {
@@ -23,6 +24,7 @@ export function useOrders(opts: FetchOrdersOptions) {
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
+    refetchInterval: anySyncRunning ? 5000 : false,
     retry: 1,
   });
 }
