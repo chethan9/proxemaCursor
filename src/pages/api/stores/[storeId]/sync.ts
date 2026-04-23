@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
-import { WOO_USER_AGENT, detectBlockingService } from "@/lib/sync-error";
+import { fetchPagesConcurrent, basicAuth } from "@/lib/sync-engine";
+import { getAppUrl } from "@/lib/app-url";
 
 interface StoreToSync {
   id: string;
@@ -9,100 +10,39 @@ interface StoreToSync {
   url: string;
   consumer_key: string;
   consumer_secret: string;
+  auth: string;
 }
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
-async function fetchAllFromWooCommerce<T>(
-  storeUrl: string,
-  consumerKey: string,
-  consumerSecret: string,
-  endpoint: string,
-  params: Record<string, string> = {}
-): Promise<T[]> {
-  const allItems: T[] = [];
-  let page = 1;
-  const perPage = 100;
-  const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
-
-  while (true) {
-    const url = new URL(`${storeUrl}/wp-json/wc/v3/${endpoint}`);
-    url.searchParams.set("per_page", perPage.toString());
-    url.searchParams.set("page", page.toString());
-    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    let response: Response;
-    try {
-      response = await fetch(url.toString(), {
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": WOO_USER_AGENT },
-        signal: controller.signal,
-      });
-    } catch (err) {
-      clearTimeout(timeout);
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`WooCommerce API timeout (30s) on ${endpoint} page ${page}`);
-      }
-      throw err;
-    }
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      if (response.status === 400 || response.status === 404) break;
-      const text = await response.text().catch(() => "");
-      const detection = detectBlockingService(response.status, text.slice(0, 2000), response.headers);
-      const suffix = detection ? ` [blocked by ${detection.service}: ${detection.hint}]` : "";
-      throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}${suffix}`);
-    }
-
-    const items: T[] = await response.json();
-    if (items.length === 0) break;
-    allItems.push(...items);
-    if (items.length < perPage || page >= 50) break;
-    page++;
-  }
-
-  return allItems;
-}
-
 async function batchUpsert(tableName: string, rows: Record<string, unknown>[], conflictColumns: string) {
   if (rows.length === 0) return { created: 0, updated: 0 };
-
   const BATCH_SIZE = 200;
   let totalCreated = 0;
   let totalUpdated = 0;
-
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await (supabase as any)
       .from(tableName)
       .select("store_id, woo_id")
-      .in("woo_id", batch.map(r => r.woo_id as number))
+      .in("woo_id", batch.map((r) => r.woo_id as number))
       .eq("store_id", batch[0].store_id as string);
-
     const existingSet = new Set((existing || []).map((e: { store_id: string; woo_id: number }) => `${e.store_id}_${e.woo_id}`));
-    const newCount = batch.filter(r => !existingSet.has(`${r.store_id}_${r.woo_id}`)).length;
-
+    const newCount = batch.filter((r) => !existingSet.has(`${r.store_id}_${r.woo_id}`)).length;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from(tableName)
       .upsert(batch, { onConflict: conflictColumns, ignoreDuplicates: false });
-
     if (error) {
       console.error(`[Sync] Batch upsert error on ${tableName}:`, error.message);
       throw error;
     }
-
     totalCreated += newCount;
     totalUpdated += batch.length - newCount;
   }
-
   return { created: totalCreated, updated: totalUpdated };
 }
 
@@ -113,37 +53,24 @@ interface WooCategory { id: number; name: string; slug: string; parent: number; 
 interface WooCoupon { id: number; code: string; amount: string; discount_type: string; description: string; date_expires: string | null; usage_count: number; individual_use: boolean; product_ids: number[]; excluded_product_ids: number[]; usage_limit: number | null; usage_limit_per_user: number | null; free_shipping: boolean; minimum_amount: string; maximum_amount: string; date_created: string; date_modified: string; }
 interface WooTag { id: number; name: string; slug: string; description: string; count: number; }
 
-interface WooVariation {
-  id: number;
-  sku: string;
-  regular_price: string;
-  sale_price: string;
-  price: string;
-  stock_quantity: number | null;
-  stock_status: string;
-  manage_stock: boolean;
-  status: string;
-  virtual: boolean;
-  downloadable: boolean;
-  tax_class: string;
-  weight: string;
-  dimensions: { length: string; width: string; height: string };
-  description: string;
-  attributes: { name: string; option: string }[];
-  image: { id: number; src: string; alt: string } | null;
-  menu_order: number;
-  meta_data?: { key: string; value: unknown }[];
-}
+type AspectResult = { processed: number; created: number; updated: number };
 
 async function updateSyncRunProgress(syncRunId: string, recordsProcessed: number) {
+  if (!syncRunId) return;
   await supabase.from("sync_runs").update({ records_processed: recordsProcessed }).eq("id", syncRunId);
 }
 
-async function syncProducts(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const items = await fetchAllFromWooCommerce<WooProduct>(store.url, store.consumer_key, store.consumer_secret, "products");
-  await updateSyncRunProgress(syncRunId, items.length);
+function progressCb(syncRunId: string) {
+  return (n: number) => { updateSyncRunProgress(syncRunId, n).catch(() => {}); };
+}
+
+async function syncProducts(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const params: Record<string, string> = {};
+  if (modifiedAfter) params.modified_after = modifiedAfter;
+  const items = await fetchPagesConcurrent<WooProduct>(store.url, store.auth, "products", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
+  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
   const now = new Date().toISOString();
-  const rows = items.map(p => ({
+  const rows = items.map((p) => ({
     store_id: store.id, woo_id: p.id, name: p.name, slug: p.slug, sku: p.sku || null,
     price: p.price ? parseFloat(p.price) : null, regular_price: p.regular_price ? parseFloat(p.regular_price) : null,
     sale_price: p.sale_price ? parseFloat(p.sale_price) : null, stock_quantity: p.stock_quantity,
@@ -155,11 +82,13 @@ async function syncProducts(store: StoreToSync, syncRunId: string): Promise<{ pr
   return { processed: items.length, ...result };
 }
 
-async function syncOrders(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const items = await fetchAllFromWooCommerce<WooOrder>(store.url, store.consumer_key, store.consumer_secret, "orders");
-  await updateSyncRunProgress(syncRunId, items.length);
+async function syncOrders(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const params: Record<string, string> = {};
+  if (modifiedAfter) params.modified_after = modifiedAfter;
+  const items = await fetchPagesConcurrent<WooOrder>(store.url, store.auth, "orders", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
+  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
   const now = new Date().toISOString();
-  const rows = items.map(o => ({
+  const rows = items.map((o) => ({
     store_id: store.id, woo_id: o.id, order_number: o.number, status: o.status, currency: o.currency,
     total: o.total ? parseFloat(o.total) : null, discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
     shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null, customer_id: o.customer_id || null,
@@ -173,11 +102,13 @@ async function syncOrders(store: StoreToSync, syncRunId: string): Promise<{ proc
   return { processed: items.length, ...result };
 }
 
-async function syncCustomers(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const items = await fetchAllFromWooCommerce<WooCustomer>(store.url, store.consumer_key, store.consumer_secret, "customers");
-  await updateSyncRunProgress(syncRunId, items.length);
+async function syncCustomers(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const params: Record<string, string> = {};
+  if (modifiedAfter) params.modified_after = modifiedAfter;
+  const items = await fetchPagesConcurrent<WooCustomer>(store.url, store.auth, "customers", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
+  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
   const now = new Date().toISOString();
-  const rows = items.map(c => ({
+  const rows = items.map((c) => ({
     store_id: store.id, woo_id: c.id, email: c.email, first_name: c.first_name, last_name: c.last_name,
     username: c.username, role: null as string | null, billing: toJson(c.billing), shipping: toJson(c.shipping),
     avatar_url: c.avatar_url || null, is_paying_customer: c.is_paying_customer || false,
@@ -188,11 +119,11 @@ async function syncCustomers(store: StoreToSync, syncRunId: string): Promise<{ p
   return { processed: items.length, ...result };
 }
 
-async function syncCategories(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const items = await fetchAllFromWooCommerce<WooCategory>(store.url, store.consumer_key, store.consumer_secret, "products/categories");
-  await updateSyncRunProgress(syncRunId, items.length);
+async function syncCategories(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
+  const items = await fetchPagesConcurrent<WooCategory>(store.url, store.auth, "products/categories", {}, { concurrency: 2, onProgress: progressCb(syncRunId) });
+  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
   const now = new Date().toISOString();
-  const rows = items.map(c => ({
+  const rows = items.map((c) => ({
     store_id: store.id, woo_id: c.id, name: c.name, slug: c.slug, parent_id: c.parent || null,
     description: c.description, display: c.display, image: toJson(c.image),
     menu_order: c.menu_order, count: c.count, raw_data: toJson(c), synced_at: now,
@@ -201,11 +132,13 @@ async function syncCategories(store: StoreToSync, syncRunId: string): Promise<{ 
   return { processed: items.length, ...result };
 }
 
-async function syncCoupons(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const items = await fetchAllFromWooCommerce<WooCoupon>(store.url, store.consumer_key, store.consumer_secret, "coupons");
-  await updateSyncRunProgress(syncRunId, items.length);
+async function syncCoupons(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
+  const params: Record<string, string> = {};
+  if (modifiedAfter) params.modified_after = modifiedAfter;
+  const items = await fetchPagesConcurrent<WooCoupon>(store.url, store.auth, "coupons", params, { concurrency: 2, onProgress: progressCb(syncRunId) });
+  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
   const now = new Date().toISOString();
-  const rows = items.map(c => ({
+  const rows = items.map((c) => ({
     store_id: store.id, woo_id: c.id, code: c.code,
     amount: c.amount ? parseFloat(c.amount) : null, discount_type: c.discount_type,
     description: c.description || "", date_expires: c.date_expires, usage_count: c.usage_count || 0,
@@ -220,11 +153,11 @@ async function syncCoupons(store: StoreToSync, syncRunId: string): Promise<{ pro
   return { processed: items.length, ...result };
 }
 
-async function syncTags(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const items = await fetchAllFromWooCommerce<WooTag>(store.url, store.consumer_key, store.consumer_secret, "products/tags");
-  await updateSyncRunProgress(syncRunId, items.length);
+async function syncTags(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
+  const items = await fetchPagesConcurrent<WooTag>(store.url, store.auth, "products/tags", {}, { concurrency: 2, onProgress: progressCb(syncRunId) });
+  if (items.length === 0) return { processed: 0, created: 0, updated: 0 };
   const now = new Date().toISOString();
-  const rows = items.map(t => ({
+  const rows = items.map((t) => ({
     store_id: store.id, woo_id: t.id, name: t.name, slug: t.slug,
     description: t.description || "", count: t.count || 0, raw_data: toJson(t), synced_at: now,
   }));
@@ -232,327 +165,193 @@ async function syncTags(store: StoreToSync, syncRunId: string): Promise<{ proces
   return { processed: items.length, ...result };
 }
 
-async function syncVariations(store: StoreToSync, syncRunId: string): Promise<{ processed: number; created: number; updated: number }> {
-  const { data: variableProducts } = await supabase
-    .from("products")
-    .select("id, woo_id")
-    .eq("store_id", store.id)
-    .eq("type", "variable");
-
-  const parents = (variableProducts || []) as { id: string; woo_id: number }[];
-  let totalProcessed = 0;
-  let totalCreated = 0;
-  let totalUpdated = 0;
-  const now = new Date().toISOString();
-
-  for (const parent of parents) {
-    try {
-      const items = await fetchAllFromWooCommerce<WooVariation>(
-        store.url, store.consumer_key, store.consumer_secret,
-        `products/${parent.woo_id}/variations`
-      );
-      if (items.length === 0) continue;
-      const rows = items.map(v => {
-        const galleryMeta = (v.meta_data || []).find(m => m.key === "_wc_additional_variation_images");
-        const galleryIds = Array.isArray(galleryMeta?.value) ? (galleryMeta!.value as number[]) : [];
-        return {
-          store_id: store.id,
-          product_id: parent.id,
-          woo_parent_id: parent.woo_id,
-          woo_id: v.id,
-          sku: v.sku || null,
-          regular_price: v.regular_price ? parseFloat(v.regular_price) : null,
-          sale_price: v.sale_price ? parseFloat(v.sale_price) : null,
-          price: v.price ? parseFloat(v.price) : null,
-          stock_quantity: v.stock_quantity,
-          stock_status: v.stock_status || null,
-          manage_stock: !!v.manage_stock,
-          status: v.status || "publish",
-          virtual: !!v.virtual,
-          downloadable: !!v.downloadable,
-          tax_class: v.tax_class || null,
-          weight: v.weight || null,
-          dimensions: toJson(v.dimensions || {}),
-          description: v.description || null,
-          attributes: toJson(v.attributes || []),
-          image: v.image ? toJson(v.image) : null,
-          gallery: toJson(galleryIds.map(id => ({ id, src: "" }))),
-          menu_order: v.menu_order || 0,
-          raw_data: toJson(v),
-          synced_at: now,
-        };
-      });
-      const result = await batchUpsert("product_variations", rows, "store_id,woo_id");
-      totalProcessed += items.length;
-      totalCreated += result.created;
-      totalUpdated += result.updated;
-      await updateSyncRunProgress(syncRunId, totalProcessed);
-    } catch (e) {
-      console.error(`[syncVariations] parent ${parent.woo_id}:`, e);
+/**
+ * Run one aspect with its own sync_runs row + benchmark logging.
+ * Catches errors and returns them as part of result.
+ */
+async function runAspect(
+  storeId: string,
+  aspectName: string,
+  fn: (runId: string) => Promise<AspectResult>,
+  isInitial: boolean
+): Promise<AspectResult & { error?: string }> {
+  const { data: syncRun } = await supabase
+    .from("sync_runs")
+    .insert({ store_id: storeId, aspect: aspectName, status: "running", started_at: new Date().toISOString() })
+    .select()
+    .single();
+  const start = Date.now();
+  try {
+    const result = await fn(syncRun?.id || "");
+    const duration = (Date.now() - start) / 1000;
+    if (syncRun?.id) {
+      await supabase.from("sync_runs").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        records_processed: result.processed,
+        records_created: result.created,
+        records_updated: result.updated,
+      }).eq("id", syncRun.id);
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("sync_benchmarks").insert({
+      store_id: storeId, aspect: aspectName, record_count: result.processed,
+      duration_seconds: duration, is_initial: isInitial,
+    });
+    return result;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[Sync] Aspect ${aspectName} failed:`, msg);
+    if (syncRun?.id) {
+      await supabase.from("sync_runs").update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        error_message: msg,
+      }).eq("id", syncRun.id);
+    }
+    return { processed: 0, created: 0, updated: 0, error: msg };
   }
-  return { processed: totalProcessed, created: totalCreated, updated: totalUpdated };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "PATCH") {
     const { storeId } = req.query;
-    if (!storeId || typeof storeId !== "string") {
-      return res.status(400).json({ error: "Store ID required" });
-    }
-
-    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data: staleRuns } = await supabase
-      .from("sync_runs")
-      .select("id")
-      .eq("store_id", storeId)
-      .eq("status", "running")
-      .lt("started_at", tenMinAgo);
-
-    const runningIds = (staleRuns || []).map(r => r.id);
-
-    const { data: allRunning } = await supabase
-      .from("sync_runs")
-      .select("id")
-      .eq("store_id", storeId)
-      .eq("status", "running");
-
-    const cancelIds = (allRunning || []).map(r => r.id);
-
+    if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
+    const { data: allRunning } = await supabase.from("sync_runs").select("id").eq("store_id", storeId).eq("status", "running");
+    const cancelIds = (allRunning || []).map((r) => r.id);
     if (cancelIds.length > 0) {
-      await supabase
-        .from("sync_runs")
-        .update({
-          status: "failed",
-          error_message: "Manually cancelled",
-          completed_at: new Date().toISOString(),
-        })
-        .in("id", cancelIds);
+      await supabase.from("sync_runs").update({
+        status: "failed", error_message: "Manually cancelled", completed_at: new Date().toISOString(),
+      }).in("id", cancelIds);
     }
-
     await supabase.from("stores").update({ status: "connected" }).eq("id", storeId);
-
     return res.status(200).json({ cancelled: cancelIds.length });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { storeId } = req.query;
   const { aspect } = req.body || {};
-
-  if (!storeId || typeof storeId !== "string") {
-    return res.status(400).json({ error: "Store ID required" });
-  }
+  if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
   try {
-    // Auto-timeout: mark stuck running syncs (>10 min) as failed
+    // Auto-fail stuck running syncs >10min
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    await supabase
-      .from("sync_runs")
-      .update({
-        status: "failed",
-        error_message: "Auto-timeout: sync exceeded 10 minute limit",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("store_id", storeId)
-      .eq("status", "running")
-      .lt("started_at", tenMinAgo);
-
-    // Also reset store status if it was stuck in "syncing"
-    const { data: stuckStore } = await supabase
-      .from("stores")
-      .select("status, last_sync_at")
-      .eq("id", storeId)
-      .single();
-
-    if (stuckStore?.status === "syncing") {
-      const noRunning = await supabase
-        .from("sync_runs")
-        .select("id")
-        .eq("store_id", storeId)
-        .eq("status", "running")
-        .limit(1);
-      if (!noRunning.data?.length) {
-        await supabase.from("stores").update({ status: "connected" }).eq("id", storeId);
-      }
-    }
+    await supabase.from("sync_runs").update({
+      status: "failed", error_message: "Auto-timeout: sync exceeded 10 minute limit",
+      completed_at: new Date().toISOString(),
+    }).eq("store_id", storeId).eq("status", "running").lt("started_at", tenMinAgo);
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
-      .select("id, name, url, consumer_key, consumer_secret")
+      .select("id, name, url, consumer_key, consumer_secret, last_sync_at, last_full_sync_at, initial_sync_completed_at, client_id, logo_url")
       .eq("id", storeId)
       .single();
 
-    if (storeError || !store) {
-      return res.status(404).json({ error: "Store not found" });
-    }
-
-    if (!store.consumer_key || !store.consumer_secret) {
-      return res.status(400).json({ error: "Store not connected - missing API credentials" });
-    }
+    if (storeError || !store) return res.status(404).json({ error: "Store not found" });
+    if (!store.consumer_key || !store.consumer_secret) return res.status(400).json({ error: "Store not connected - missing API credentials" });
 
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
-    // Track the "all" placeholder row (created by sync-start) so we can close it
+    // Find the "all" placeholder row
     const { data: allRow } = await supabase
       .from("sync_runs")
-      .select("id")
-      .eq("store_id", storeId)
-      .eq("aspect", "all")
-      .eq("status", "running")
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .select("id, started_at, is_initial")
+      .eq("store_id", storeId).eq("aspect", "all").eq("status", "running")
+      .order("started_at", { ascending: false }).limit(1).maybeSingle();
     const allRunId = allRow?.id || null;
+    const isInitial = !!allRow?.is_initial;
 
-    const syncFunctions: Record<string, (s: StoreToSync, runId: string) => Promise<{ processed: number; created: number; updated: number }>> = {
-      products: syncProducts,
-      orders: syncOrders,
-      categories: syncCategories,
-      tags: syncTags,
-      customers: syncCustomers,
-      coupons: syncCoupons,
-      variations: syncVariations,
-    };
+    // Determine incremental mode
+    // Full sync if: initial run, OR last_full_sync_at >7 days old, OR never had a full sync
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const lastFull = store.last_full_sync_at ? new Date(store.last_full_sync_at).getTime() : 0;
+    const fullSyncDue = !lastFull || (Date.now() - lastFull) > SEVEN_DAYS_MS;
+    const useIncremental = !isInitial && !fullSyncDue && !!store.last_sync_at;
 
-    const aspectsToSync = aspect && syncFunctions[aspect]
-      ? [aspect]
-      : Object.keys(syncFunctions);
-
-    const results: Record<string, { processed: number; created: number; updated: number; error?: string }> = {};
-    let totalProcessed = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-
-    for (const asp of aspectsToSync) {
-      const { data: syncRun } = await supabase
-        .from("sync_runs")
-        .insert({
-          store_id: storeId,
-          aspect: asp,
-          status: "running",
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      const aspectStart = Date.now();
-      try {
-        const result = await syncFunctions[asp](store as StoreToSync, syncRun?.id || "");
-        const durationSec = (Date.now() - aspectStart) / 1000;
-        results[asp] = result;
-        totalProcessed += result.processed;
-        totalCreated += result.created;
-        totalUpdated += result.updated;
-
-        if (syncRun) {
-          await supabase.from("sync_runs").update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            records_processed: result.processed,
-            records_created: result.created,
-            records_updated: result.updated,
-          }).eq("id", syncRun.id);
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from("sync_benchmarks").insert({
-          store_id: storeId,
-          aspect: asp,
-          record_count: result.processed,
-          duration_seconds: durationSec,
-          is_initial: !!allRunId,
-        });
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
-        results[asp] = { processed: 0, created: 0, updated: 0, error: errorMsg };
-
-        if (syncRun) {
-          await supabase.from("sync_runs").update({
-            status: "failed",
-            completed_at: new Date().toISOString(),
-            error_message: errorMsg,
-          }).eq("id", syncRun.id);
-        }
-      }
+    // Use last_sync_at minus 1h safety buffer as modified_after
+    let modifiedAfter: string | null = null;
+    if (useIncremental && store.last_sync_at) {
+      const t = new Date(store.last_sync_at).getTime() - 60 * 60 * 1000;
+      modifiedAfter = new Date(t).toISOString();
     }
 
-    await supabase.from("stores").update({
-      status: "connected",
-      last_sync_at: new Date().toISOString(),
-    }).eq("id", storeId);
+    const storeForSync: StoreToSync = {
+      id: store.id, name: store.name || "", url: store.url,
+      consumer_key: store.consumer_key, consumer_secret: store.consumer_secret,
+      auth: basicAuth(store.consumer_key, store.consumer_secret),
+    };
 
-    // Close the "all" placeholder row with aggregated totals
+    // Supported single-aspect override
+    if (aspect && aspect !== "all" && aspect !== "variations") {
+      const fnMap: Record<string, (runId: string) => Promise<AspectResult>> = {
+        products: (id) => syncProducts(storeForSync, id, modifiedAfter),
+        orders: (id) => syncOrders(storeForSync, id, modifiedAfter),
+        customers: (id) => syncCustomers(storeForSync, id, modifiedAfter),
+        categories: (id) => syncCategories(storeForSync, id),
+        tags: (id) => syncTags(storeForSync, id),
+        coupons: (id) => syncCoupons(storeForSync, id, modifiedAfter),
+      };
+      if (!fnMap[aspect]) return res.status(400).json({ error: `Unknown aspect: ${aspect}` });
+      const result = await runAspect(storeId, aspect, fnMap[aspect], false);
+      await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
+      return res.status(200).json({ success: true, store_id: storeId, results: { [aspect]: result } });
+    }
+
+    // PHASE 2+3: Run all main aspects in parallel.
+    // Each aspect internally fetches pages with concurrency=2.
+    // Total in-flight ≈ 6 aspects × 2 pages = 12 (but reference aspects finish quickly, so average lower).
+    const [products, orders, customers, categories, tags, coupons] = await Promise.all([
+      runAspect(storeId, "products", (id) => syncProducts(storeForSync, id, modifiedAfter), isInitial),
+      runAspect(storeId, "orders", (id) => syncOrders(storeForSync, id, modifiedAfter), isInitial),
+      runAspect(storeId, "customers", (id) => syncCustomers(storeForSync, id, modifiedAfter), isInitial),
+      runAspect(storeId, "categories", (id) => syncCategories(storeForSync, id), isInitial),
+      runAspect(storeId, "tags", (id) => syncTags(storeForSync, id), isInitial),
+      runAspect(storeId, "coupons", (id) => syncCoupons(storeForSync, id, modifiedAfter), isInitial),
+    ]);
+
+    const results = { products, orders, customers, categories, tags, coupons };
+    const totalProcessed = Object.values(results).reduce((a, r) => a + r.processed, 0);
+    const totalCreated = Object.values(results).reduce((a, r) => a + r.created, 0);
+    const totalUpdated = Object.values(results).reduce((a, r) => a + r.updated, 0);
+
+    const nowIso = new Date().toISOString();
+    const storeUpdate: Record<string, unknown> = { status: "connected", last_sync_at: nowIso };
+    // Stamp last_full_sync_at when this was a full (non-incremental) run
+    if (!useIncremental) storeUpdate.last_full_sync_at = nowIso;
+    await supabase.from("stores").update(storeUpdate).eq("id", storeId);
+
+    // Close the "all" placeholder row with aggregated totals (BEFORE variations — they run async)
     if (allRunId) {
-      const allStart = allRow?.id ? new Date((await supabase.from("sync_runs").select("started_at").eq("id", allRunId).single()).data?.started_at || Date.now()).getTime() : Date.now();
+      const allStart = allRow?.started_at ? new Date(allRow.started_at).getTime() : Date.now();
       const overallDuration = (Date.now() - allStart) / 1000;
 
       await supabase.from("sync_runs").update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        records_processed: totalProcessed,
-        records_created: totalCreated,
-        records_updated: totalUpdated,
+        status: "completed", completed_at: nowIso,
+        records_processed: totalProcessed, records_created: totalCreated, records_updated: totalUpdated,
       }).eq("id", allRunId);
 
-      // Check if this was the initial sync — stamp stores.initial_sync_completed_at (only if not already set)
-      const { data: allRunRow } = await supabase
-        .from("sync_runs")
-        .select("is_initial")
-        .eq("id", allRunId)
-        .maybeSingle();
-      // Safety net: stamp if flagged initial OR if store has never completed before
-      const { data: storeRow } = await supabase
-        .from("stores")
-        .select("initial_sync_completed_at")
-        .eq("id", storeId)
-        .maybeSingle();
-      if (allRunRow?.is_initial || !storeRow?.initial_sync_completed_at) {
-        await supabase
-          .from("stores")
-          .update({ initial_sync_completed_at: new Date().toISOString() })
-          .eq("id", storeId)
-          .is("initial_sync_completed_at", null);
+      // Stamp initial_sync_completed_at + celebration notification (only once per store)
+      if (isInitial || !store.initial_sync_completed_at) {
+        await supabase.from("stores").update({ initial_sync_completed_at: nowIso }).eq("id", storeId).is("initial_sync_completed_at", null);
 
-        // Create a celebration notification for every user who can see this store
-        const { data: storeFull } = await supabase
-          .from("stores")
-          .select("name, url, logo_url, client_id")
-          .eq("id", storeId)
-          .maybeSingle();
+        const { data: storeFull } = await supabase.from("stores").select("name, url, logo_url, client_id").eq("id", storeId).maybeSingle();
         if (storeFull) {
           let userIds: string[] = [];
           if (storeFull.client_id) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: members } = await (supabase as any)
-              .from("client_members")
-              .select("user_id")
-              .eq("client_id", storeFull.client_id);
+            const { data: members } = await (supabase as any).from("client_members").select("user_id").eq("client_id", storeFull.client_id);
             userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
           }
           if (userIds.length === 0) {
-            const { data: allUsers } = await supabase
-              .from("profiles")
-              .select("id")
-              .limit(50);
+            const { data: allUsers } = await supabase.from("profiles").select("id").limit(50);
             userIds = (allUsers || []).map((u: { id: string }) => u.id);
           }
           const rows = userIds.map((uid) => ({
-            user_id: uid,
-            type: "celebration",
-            title: `${storeFull.name} is ready!`,
-            body: "Welcome aboard. To infinity and beyond 🚀",
-            cta_label: "Let's go",
-            lottie_url: "/confetti.json",
-            priority: 90,
-            metadata: {
-              store_id: storeId,
-              store_name: storeFull.name,
-              store_url: storeFull.url,
-              logo_url: storeFull.logo_url,
-            },
+            user_id: uid, type: "celebration",
+            title: `${storeFull.name} is ready!`, body: "Welcome aboard. To infinity and beyond 🚀",
+            cta_label: "Let's go", lottie_url: "/confetti.json", priority: 90,
+            metadata: { store_id: storeId, store_name: storeFull.name, store_url: storeFull.url, logo_url: storeFull.logo_url },
           }));
           if (rows.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -563,17 +362,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("sync_benchmarks").insert({
-        store_id: storeId,
-        aspect: "all",
-        record_count: totalProcessed,
-        duration_seconds: overallDuration,
-        is_initial: true,
+        store_id: storeId, aspect: "all", record_count: totalProcessed,
+        duration_seconds: overallDuration, is_initial: isInitial,
       });
     }
+
+    // PHASE 4: Variations — fire-and-forget to dedicated endpoint (never blocks main completion)
+    const base = getAppUrl(req);
+    fetch(`${base}/api/stores/${storeId}/sync-variations`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+    }).catch((e) => console.error("[Sync] variations trigger:", e));
 
     return res.status(200).json({
       success: true,
       store_id: storeId,
+      mode: useIncremental ? "incremental" : "full",
       results,
       totals: { processed: totalProcessed, created: totalCreated, updated: totalUpdated },
     });
@@ -581,17 +384,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error("[Sync API] Error:", error);
     await supabase.from("stores").update({ status: "error" }).eq("id", storeId);
-    // Fail the "all" row too so banner unmounts
-    await supabase
-      .from("sync_runs")
-      .update({
-        status: "failed",
-        completed_at: new Date().toISOString(),
-        error_message: error instanceof Error ? error.message : "Unknown error",
-      })
-      .eq("store_id", storeId)
-      .eq("aspect", "all")
-      .eq("status", "running");
+    await supabase.from("sync_runs").update({
+      status: "failed", completed_at: new Date().toISOString(),
+      error_message: error instanceof Error ? error.message : "Unknown error",
+    }).eq("store_id", storeId).eq("aspect", "all").eq("status", "running");
     return res.status(500).json({
       error: "Sync failed",
       message: error instanceof Error ? error.message : "Unknown error",

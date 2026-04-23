@@ -9,6 +9,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { is_initial = false } = req.body || {};
 
+  // Dedup: if a sync is already running for this store within last 5 minutes, return that run.
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: existing } = await supabaseAdmin
+    .from("sync_runs")
+    .select("id")
+    .eq("store_id", storeId)
+    .eq("aspect", "all")
+    .eq("status", "running")
+    .gte("started_at", fiveMinAgo)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.id) {
+    return res.status(200).json({ sync_run_id: existing.id, queued: false, deduped: true });
+  }
+
   const { data: run } = await supabaseAdmin
     .from("sync_runs")
     .insert({
