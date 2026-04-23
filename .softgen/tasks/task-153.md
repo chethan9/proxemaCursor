@@ -1,6 +1,6 @@
 ---
 title: Invoices + payment history storage
-status: todo
+status: in_progress
 priority: high
 type: feature
 tags: [billing, invoices, history]

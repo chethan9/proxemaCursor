@@ -1,0 +1,1 @@
+CREATE TYPE public.invoice_status AS ENUM ('pending','paid','failed','refunded','void')

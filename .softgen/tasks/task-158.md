@@ -1,7 +1,7 @@
 <![CDATA[
 ---
 title: Public pricing page + country/currency detection + Subscribe flow
-status: in_progress
+status: done
 priority: medium
 type: feature
 tags: [billing, marketing, pricing, currency]
