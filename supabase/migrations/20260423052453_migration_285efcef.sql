@@ -1,0 +1,1 @@
+CREATE POLICY invoices_admin_write ON public.invoices FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin())

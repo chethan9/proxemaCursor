@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS discount_minor bigint NOT NULL DEFAULT 0

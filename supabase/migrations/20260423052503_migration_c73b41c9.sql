@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_invoices_client_created ON public.invoices (client_id, created_at DESC)

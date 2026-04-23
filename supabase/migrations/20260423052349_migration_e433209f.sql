@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS coupon_id uuid REFERENCES public.billing_coupons(id) ON DELETE SET NULL

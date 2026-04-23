@@ -1,0 +1,1 @@
+CREATE POLICY invoices_client_read ON public.invoices FOR SELECT TO authenticated USING (client_id = public.current_user_client_id() OR public.is_super_admin())

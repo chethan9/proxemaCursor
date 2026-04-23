@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_invoices_subscription ON public.invoices (subscription_id)

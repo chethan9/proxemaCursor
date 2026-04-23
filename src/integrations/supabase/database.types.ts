@@ -952,6 +952,82 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount_minor: number
+          client_id: string
+          coupon_id: string | null
+          created_at: string
+          currency: string
+          discount_minor: number
+          gateway: Database["public"]["Enums"]["billing_gateway"] | null
+          gateway_invoice_ref: string | null
+          id: string
+          invoice_number: string
+          paid_at: string | null
+          period_end: string | null
+          period_start: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subscription_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          client_id: string
+          coupon_id?: string | null
+          created_at?: string
+          currency: string
+          discount_minor?: number
+          gateway?: Database["public"]["Enums"]["billing_gateway"] | null
+          gateway_invoice_ref?: string | null
+          id?: string
+          invoice_number: string
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subscription_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          client_id?: string
+          coupon_id?: string | null
+          created_at?: string
+          currency?: string
+          discount_minor?: number
+          gateway?: Database["public"]["Enums"]["billing_gateway"] | null
+          gateway_invoice_ref?: string | null
+          id?: string
+          invoice_number?: string
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "billing_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_configs: {
         Row: {
           config: Json
