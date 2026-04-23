@@ -1,6 +1,7 @@
 import Head from "next/head";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
+import { SubscriptionStatusBanner } from "@/components/billing/SubscriptionStatusBanner";
 import type { Permission } from "@/lib/permissions";
 
 interface AppLayoutProps {
@@ -18,6 +19,7 @@ export function AppLayout({ children, title, requirePermission, requireSuperAdmi
       <Head>
         <title>{fullTitle}</title>
       </Head>
+      <SubscriptionStatusBanner />
       <div className="mx-auto w-full max-w-[1600px]">{children}</div>
     </AuthGuard>
   );
