@@ -80,3 +80,45 @@ export async function createTag(storeId: string, payload: { name: string; slug?:
     throw new Error(err.error || "Create failed");
   }
 }
+
+export async function updateCategory(storeId: string, categoryId: string, patch: { name?: string; slug?: string; description?: string }) {
+  const res = await fetch(`/api/stores/${storeId}/categories/${categoryId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Update failed" }));
+    throw new Error(err.message || err.error || "Update failed");
+  }
+  return res.json();
+}
+
+export async function deleteCategory(storeId: string, categoryId: string) {
+  const res = await fetch(`/api/stores/${storeId}/categories/${categoryId}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Delete failed" }));
+    throw new Error(err.message || err.error || "Delete failed");
+  }
+}
+
+export async function updateTag(storeId: string, tagId: string, patch: { name?: string; slug?: string; description?: string }) {
+  const res = await fetch(`/api/stores/${storeId}/tags/${tagId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Update failed" }));
+    throw new Error(err.message || err.error || "Update failed");
+  }
+  return res.json();
+}
+
+export async function deleteTag(storeId: string, tagId: string) {
+  const res = await fetch(`/api/stores/${storeId}/tags/${tagId}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Delete failed" }));
+    throw new Error(err.message || err.error || "Delete failed");
+  }
+}

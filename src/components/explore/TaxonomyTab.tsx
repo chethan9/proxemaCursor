@@ -222,7 +222,12 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
                             <TableCell colSpan={6} className="p-0">
                               <div onClick={(e) => e.stopPropagation()}>
-                                <TaxonomyRowExpanded taxon={t} mode={mode} allTaxons={parentPool} storeUrl={storeUrl} />
+                                <TaxonomyRowExpanded
+                                  item={t}
+                                  mode={mode}
+                                  storeId={storeId}
+                                  onClose={() => setExpanded(null)}
+                                />
                               </div>
                             </TableCell>
                           </TableRow>

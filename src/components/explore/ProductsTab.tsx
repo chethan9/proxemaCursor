@@ -1083,11 +1083,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       <ProductQuickEdit
         product={quickEditProduct}
         open={!!quickEditProduct}
-        onClose={() => setQuickEditProduct(null)}
-        onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-          setQuickEditProduct(null);
-        }}
+        onOpenChange={(o) => { if (!o) setQuickEditProduct(null); }}
+        siteName={storeName}
       />
 
       <Dialog open={!!bulkDialog} onOpenChange={(v) => !v && setBulkDialog(null)}>

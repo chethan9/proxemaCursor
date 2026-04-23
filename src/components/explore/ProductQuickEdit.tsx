@@ -6,9 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
-import { updateProduct } from "@/services/productEditService";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
+
+async function patchProduct(storeId: string, productId: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || `Update failed (${res.status})`);
+  }
+  return res.json();
+}
 
 type Product = {
   id: string;
@@ -54,8 +66,8 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
     }
   }, [product]);
 
-  const mutation = useSiteMutation<Product, Record<string, unknown>>({
-    mutationFn: (patch) => updateProduct(product!.id, patch) as Promise<Product>,
+  const mutation = useSiteMutation<Record<string, unknown>, Record<string, unknown>>({
+    mutationFn: (patch) => patchProduct(product!.store_id, product!.id, patch),
     invalidateKeys: product ? [queryKeys.products(product.store_id), ["product", product.id]] : [],
     optimisticUpdates: product
       ? [
