@@ -172,8 +172,13 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const lastUserId = typeof window !== "undefined" ? localStorage.getItem("sidebar-last-user-id") : null;
     const sameUser = lastUserId === user.id;
     const exactCache = sameUser ? loadCachedMenu(roleKey) : [];
-    if (exactCache.length > 0 && serialize(exactCache) !== serialize(menuTree)) {
-      setMenuTree(exactCache);
+    if (exactCache.length > 0) {
+      if (serialize(exactCache) !== serialize(menuTree)) setMenuTree(exactCache);
+      setMenuReady(true);
+    } else {
+      // No cache — build initial tree synchronously so user sees something immediately
+      const initial = buildInitialTree(can, isSuperAdmin);
+      setMenuTree(initial);
       setMenuReady(true);
     }
     getMenuConfig(roleKey).then((cfg) => {
@@ -186,6 +191,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     }).catch(() => { setMenuReady(true); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin, user?.id]);
+
+  // Safety net: never let the skeleton stay visible for more than 2s
+  useEffect(() => {
+    const t = setTimeout(() => setMenuReady(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
