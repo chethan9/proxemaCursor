@@ -1,5 +1,28 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-const CS = ["USD","INR","KWD","SAR","AED","EUR","GBP"];
-export function CurrencySwitcher({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (<Select value={value} onValueChange={onChange}><SelectTrigger className="w-24 h-8"><SelectValue /></SelectTrigger><SelectContent>{CS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>);
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getSupportedCountries, getDefaultCurrencyForCountry } from "@/lib/payments/routing";
+import { Globe } from "lucide-react";
+
+export function CurrencySwitcher({ country, onChange }: { country: string; onChange: (country: string, currency: string) => void }) {
+  const countries = getSupportedCountries();
+  const regions = Array.from(new Set(countries.map((c) => c.region)));
+  return (
+    <Select value={country} onValueChange={(c) => onChange(c, getDefaultCurrencyForCountry(c))}>
+      <SelectTrigger className="w-[200px] h-9 gap-2">
+        <Globe className="h-4 w-4 text-muted-foreground" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-[360px]">
+        {regions.map((region) => (
+          <SelectGroup key={region}>
+            <SelectLabel>{region}</SelectLabel>
+            {countries.filter((c) => c.region === region).map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.name} · {c.currency}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }

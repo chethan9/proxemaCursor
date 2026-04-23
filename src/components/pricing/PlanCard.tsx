@@ -1,25 +1,98 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/services/planService";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice, getPlanPrice } from "@/services/planService";
 import type { Tables } from "@/integrations/supabase/types";
+import { Check, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function PlanCard({ plan, currency, onSubscribe, loading }: { plan: Tables<"plans">; currency: string; onSubscribe: () => void; loading: boolean }) {
-  const p = (plan.prices as Record<string, number>)[currency];
+type Plan = Tables<"plans">;
+
+interface Props {
+  plan: Plan;
+  currency: string;
+  billingInterval: "month" | "year";
+  isCurrent?: boolean;
+  isPopular?: boolean;
+  action: "subscribe" | "upgrade" | "downgrade" | "current" | "contact";
+  onAction: () => void;
+  loading?: boolean;
+}
+
+function featuresFor(plan: Plan): string[] {
+  const base = [
+    `Up to ${plan.max_sites.toLocaleString()} ${plan.max_sites === 1 ? "site" : "sites"}`,
+    `${plan.max_products_per_site.toLocaleString()} products per site`,
+    `${plan.max_users.toLocaleString()} team ${plan.max_users === 1 ? "member" : "members"}`,
+    `${plan.max_api_calls_per_month.toLocaleString()} API calls/mo`,
+  ];
+  const flags = (plan.feature_flags as Record<string, boolean>) || {};
+  if (flags.webhooks) base.push("Real-time webhook sync");
+  if (flags.bulk_operations) base.push("Bulk edit & jobs");
+  if (flags.advanced_analytics) base.push("Advanced analytics");
+  if (flags.priority_support) base.push("Priority support");
+  if (flags.sla) base.push("99.9% uptime SLA");
+  if (flags.custom_integrations) base.push("Custom integrations");
+  return base;
+}
+
+export function PlanCard({ plan, currency, billingInterval, isCurrent, isPopular, action, onAction, loading }: Props) {
+  const priceMinor = getPlanPrice(plan, currency);
+  const effective = billingInterval === "year" && priceMinor != null ? Math.round(priceMinor * 12 * 0.83) : priceMinor;
+  const features = featuresFor(plan);
+
+  const cta = () => {
+    if (action === "current") return "Current plan";
+    if (action === "contact") return "Contact sales";
+    if (action === "upgrade") return "Upgrade";
+    if (action === "downgrade") return "Downgrade";
+    if (plan.trial_days > 0) return `Start ${plan.trial_days}-day trial`;
+    return "Get started";
+  };
+
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <h3 className="text-lg font-semibold">{plan.name}</h3>
-        <p className="text-sm text-muted-foreground">{plan.description}</p>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4">
-        {p ? (
-          <div className="text-3xl font-semibold">{formatPrice(p, currency)}<span className="text-sm text-muted-foreground"> /{plan.billing_interval}</span></div>
+    <Card className={cn("relative flex flex-col p-6 gap-5 transition-all", isPopular && "border-primary shadow-lg ring-1 ring-primary/20 scale-[1.02]", isCurrent && "border-success")}>
+      {isPopular && (
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground gap-1">
+          <Sparkles className="h-3 w-3" /> Most popular
+        </Badge>
+      )}
+      {isCurrent && (
+        <Badge className="absolute -top-3 right-4 bg-success text-white">Your plan</Badge>
+      )}
+      <div>
+        <h3 className="text-xl font-semibold">{plan.name}</h3>
+        {plan.description && <p className="text-sm text-muted-foreground mt-1 min-h-[2.5rem]">{plan.description}</p>}
+      </div>
+      <div className="min-h-[4rem]">
+        {effective != null ? (
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl font-bold tracking-tight">{formatPrice(effective, currency)}</span>
+            <span className="text-sm text-muted-foreground">/{billingInterval === "year" ? "year" : "month"}</span>
+          </div>
         ) : (
-          <p className="text-lg">Contact sales</p>
+          <div className="text-lg font-medium">Contact us for pricing</div>
         )}
-        <p className="text-sm flex-1">{plan.max_sites} sites · {plan.max_products_per_site.toLocaleString()} products · {plan.max_users} users</p>
-        <Button onClick={onSubscribe} disabled={loading || !p} className="w-full">{!p ? "Contact us" : loading ? "Processing..." : plan.trial_days > 0 ? `Start ${plan.trial_days}-day trial` : "Subscribe"}</Button>
-      </CardContent>
+        {billingInterval === "year" && effective != null && (
+          <p className="text-xs text-success mt-1">Save 17% billed annually</p>
+        )}
+      </div>
+      <Button
+        onClick={onAction}
+        disabled={loading || isCurrent || (action !== "contact" && priceMinor == null)}
+        variant={isPopular ? "default" : action === "current" ? "outline" : action === "downgrade" ? "outline" : "default"}
+        className="w-full"
+      >
+        {loading ? "Processing..." : cta()}
+      </Button>
+      <ul className="space-y-2.5 text-sm">
+        {features.map((f) => (
+          <li key={f} className="flex gap-2">
+            <Check className="h-4 w-4 text-success shrink-0 mt-0.5" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
