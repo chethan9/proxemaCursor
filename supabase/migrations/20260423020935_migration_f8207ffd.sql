@@ -1,0 +1,1 @@
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS pending_coupon_id uuid REFERENCES public.billing_coupons(id) ON DELETE SET NULL

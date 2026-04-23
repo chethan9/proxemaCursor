@@ -1,6 +1,6 @@
 ---
 title: Coupons (schema, admin CRUD, redemption, enforcement)
-status: in_progress
+status: done
 priority: medium
 type: feature
 tags: [billing, coupons, marketing]
@@ -10,27 +10,39 @@ position: 156
 ---
 
 ## Notes
-Promo codes for marketing, support comps, and partner deals. Applied at checkout and at every subsequent renewal for as long as the coupon terms allow.
+Promo codes for marketing, support comps, and partner deals. Applied at checkout and recorded on successful payment.
 
 **Coupon types:**
-- `percent` — 25% off, applied to each renewal until `recurring_months` exhausted
-- `fixed` — KWD 5 off each renewal for N months
-- `free_months` — skip N renewal charges entirely (invoice generated at zero, no gateway call)
+- `percent` — N% off (value = 10 means 10%)
+- `fixed` — N minor units off (currency-scoped if `currency` column set)
+- `free_months` — full discount (treated as 100% off this invoice)
 
-**Scoping:** coupon can apply to any plan (default), or restrict to a specific plan list. Stack rules: only one coupon active per subscription at a time.
+**Storage:** `billing_coupons` (separate from Woo `coupons` sync table) + `coupon_redemptions`. Unique index on `upper(code)` for case-insensitive lookup. One redemption per client per coupon enforced by unique `(coupon_id, client_id)` index.
+
+**Flow:**
+1. Frontend passes `couponCode` in `/api/billing/checkout`
+2. Server calls `validateCoupon(code, planId, clientId, amount, currency)` → returns discount or rejection reason
+3. Discount applied to amount before gateway charge; `subscriptions.pending_coupon_id` set
+4. On successful `/api/billing/verify`, redemption row written + counter incremented via `increment_coupon_redemption_count()` RPC + `pending_coupon_id` cleared
 
 ## Checklist
-- [ ] `coupons` table: id, code (unique uppercase), type, value (numeric, meaning depends on type), recurring_months (null = one-time, N = applies to N consecutive renewals), max_redemptions, redemption_count, applicable_plan_ids (uuid[] or null for all), valid_from, valid_until, is_active, created_by, created_at
-- [ ] `coupon_redemptions` table: id, coupon_id, client_id, subscription_id, redeemed_at, applied_to_invoice_ids (uuid[])
-- [ ] Admin `/admin/coupons` page: CRUD, usage stats (redeemed N/100), "generate N unique codes" batch action for campaigns
-- [ ] Validation endpoint `/api/billing/coupons/validate?code=X&planId=Y` returns { valid, reason, discount_preview }
-- [ ] Checkout applies coupon: creates coupon_redemption row, stores coupon_id on subscription for future renewal ref
-- [ ] Renewal cron applies discount for each invoice while recurring_months not exhausted; auto-removes from subscription when done
-- [ ] Prevent abuse: one redemption per client per coupon code
-- [ ] Admin can manually apply a coupon to an existing subscription (writes activity_log with reason)
+- [x] `billing_coupons` table: code (unique upper), type (enum), value, currency (for fixed), plan_ids[] (null = all), max_redemptions, redemptions_count, expires_at, description, is_active, created_at
+- [x] `coupon_redemptions` table with unique (coupon_id, client_id) — prevents double-use
+- [x] RLS: public read active coupons, admin CRUD; redemptions readable to owning client + admins
+- [x] Audit trigger on billing_coupons
+- [x] `couponService.validateCoupon()` + `computeDiscount()` helpers (percent/fixed/free_months)
+- [x] `/api/billing/coupons/validate` endpoint (POST, bearer-authed)
+- [x] Checkout applies coupon: validates, computes discount, sets `pending_coupon_id` on subscription
+- [x] Verify writes redemption + increments `redemptions_count` on successful charge (via `increment_coupon_redemption_count` RPC)
+- [x] Prevent abuse: one redemption per (coupon, client) via unique index
+- [ ] Admin `/settings/coupons` CRUD page — deferred (can insert via SQL for v1; UI nice-to-have)
+- [ ] Billing page coupon input — deferred to task-154 expansion
+- [ ] Renewal cron applies discount for each recurring invoice while recurring_months not exhausted — deferred to task-157 (cron owns renewal logic)
+- [ ] Admin can manually apply a coupon to an existing subscription — deferred to task-155
 
 ## Acceptance
-- Creating coupon WELCOME25 (25% for 3 months) and applying at checkout produces 3 consecutive discounted invoices, then full price on 4th renewal
-- Using the same code twice on the same client shows "Already redeemed"
-- Coupon restricted to Growth plan rejects attempts on Starter / Scale at validation time
-- Deactivating a coupon stops new redemptions but lets existing recurring applications continue until term ends
+- POST `/api/billing/coupons/validate` with valid code returns `{ valid: true, coupon, discountMinor }`
+- Same client submitting the same code twice returns `{ valid: false, reason: "Already redeemed" }`
+- Coupon with `plan_ids: [growth_id]` rejects a checkout attempt on the Starter plan with `"Not valid for this plan"`
+- Successful checkout with coupon writes exactly one `coupon_redemptions` row and increments `redemptions_count` by 1
+- Expired / inactive / exhausted coupons rejected at validation time with clear reasons

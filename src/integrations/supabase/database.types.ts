@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -1597,6 +1597,7 @@ export type Database = {
           last_charge_attempt_at: string | null
           last_charge_failed_at: string | null
           payment_method_id: string | null
+          pending_coupon_id: string | null
           plan_id: string
           renewal_mode: Database["public"]["Enums"]["renewal_mode"]
           status: Database["public"]["Enums"]["subscription_status"]
@@ -1619,6 +1620,7 @@ export type Database = {
           last_charge_attempt_at?: string | null
           last_charge_failed_at?: string | null
           payment_method_id?: string | null
+          pending_coupon_id?: string | null
           plan_id: string
           renewal_mode?: Database["public"]["Enums"]["renewal_mode"]
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -1641,6 +1643,7 @@ export type Database = {
           last_charge_attempt_at?: string | null
           last_charge_failed_at?: string | null
           payment_method_id?: string | null
+          pending_coupon_id?: string | null
           plan_id?: string
           renewal_mode?: Database["public"]["Enums"]["renewal_mode"]
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -1653,6 +1656,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_pending_coupon_id_fkey"
+            columns: ["pending_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "billing_coupons"
             referencedColumns: ["id"]
           },
           {
@@ -2086,6 +2096,10 @@ export type Database = {
         Returns: Json
       }
       has_permission: { Args: { perm: string }; Returns: boolean }
+      increment_coupon_redemption_count: {
+        Args: { coupon_id_in: string }
+        Returns: undefined
+      }
       is_super_admin: { Args: never; Returns: boolean }
       recalc_customer_aggregates: {
         Args: { p_customer_woo_id: number; p_store_id: string }
