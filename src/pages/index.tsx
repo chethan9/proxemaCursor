@@ -4,11 +4,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Store, RefreshCw, ArrowRight, Clock, TrendingUp, TrendingDown, Activity, Heart, AlertTriangle, Plus, Sparkles } from "lucide-react";
+import { Store, RefreshCw, ArrowRight, Clock, TrendingUp, TrendingDown, Activity, Heart, AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useStores } from "@/hooks/queries/useStores";
 import { useSyncRuns } from "@/hooks/queries/useSyncRuns";
+import { BrandLogo } from "@/components/BrandLogo";
 import {
   PieChart,
   Pie,
@@ -73,11 +74,9 @@ export default function Dashboard() {
       <AppLayout title="Dashboard">
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
           <div className="max-w-lg text-center space-y-6">
-            <div className="mx-auto h-20 w-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Sparkles className="h-10 w-10 text-primary" strokeWidth={1.5} />
-            </div>
+            <BrandLogo size="xl" className="mx-auto" />
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight">Welcome to Proxima</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">Welcome to {useAuth as never && ""}Proxima</h1>
               <p className="text-base text-muted-foreground">
                 Add your first site to start monitoring sync health, activity, and fleet-wide insights.
               </p>
