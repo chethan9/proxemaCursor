@@ -28,8 +28,8 @@ type Product = {
   woo_id: number | null;
   name: string | null;
   sku: string | null;
-  regular_price: string | null;
-  sale_price: string | null;
+  regular_price: string | number | null;
+  sale_price: string | number | null;
   stock_quantity: number | null;
   stock_status: string | null;
   status: string | null;
@@ -57,8 +57,8 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
     if (product) {
       setName(product.name || "");
       setSku(product.sku || "");
-      setRegular(product.regular_price || "");
-      setSale(product.sale_price || "");
+      setRegular(product.regular_price != null ? String(product.regular_price) : "");
+      setSale(product.sale_price != null ? String(product.sale_price) : "");
       setStockStatus(product.stock_status || "instock");
       setStockQty(product.stock_quantity != null ? String(product.stock_quantity) : "");
       setStatus(product.status || "publish");
