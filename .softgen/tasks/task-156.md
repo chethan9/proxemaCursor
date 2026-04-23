@@ -1,6 +1,6 @@
 ---
-title: Coupons (CRUD + redemption + checkout integration)
-status: todo
+title: Coupons (schema, admin CRUD, redemption, enforcement)
+status: in_progress
 priority: medium
 type: feature
 tags: [billing, coupons, marketing]

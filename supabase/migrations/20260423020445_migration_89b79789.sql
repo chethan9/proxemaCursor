@@ -1,0 +1,1 @@
+CREATE TRIGGER on_coupons_change AFTER INSERT OR UPDATE OR DELETE ON public.coupons FOR EACH ROW EXECUTE FUNCTION public.log_change_generic()

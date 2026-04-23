@@ -1,0 +1,1 @@
+CREATE POLICY coupons_admin_all ON public.coupons FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin())

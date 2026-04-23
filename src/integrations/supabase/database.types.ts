@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1998,6 +1998,7 @@ export type Database = {
     }
     Enums: {
       billing_gateway: "myfatoorah" | "razorpay"
+      coupon_type: "percent" | "fixed" | "free_months"
       renewal_mode: "auto" | "manual"
       subscription_status:
         | "pending_payment"
@@ -2134,6 +2135,7 @@ export const Constants = {
   public: {
     Enums: {
       billing_gateway: ["myfatoorah", "razorpay"],
+      coupon_type: ["percent", "fixed", "free_months"],
       renewal_mode: ["auto", "manual"],
       subscription_status: [
         "pending_payment",

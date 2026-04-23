@@ -1,0 +1,1 @@
+CREATE TYPE public.coupon_type AS ENUM ('percent','fixed','free_months');
