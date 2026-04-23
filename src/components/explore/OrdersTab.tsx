@@ -696,6 +696,59 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       {s}
                     </DropdownMenuItem>
                   ))}
+                  <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setBulkAction({ type: "delete" })} disabled={overLimit}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => setSelectedIds(new Set())}>
+                    <X className="h-3.5 w-3.5" />
+                    Clear
+                  </Button>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setBulkAction({ type: "delete" })} disabled={overLimit}>
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => setSelectedIds(new Set())}>
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+            </div>
+          )}
+          {loading && orders.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+              Loading orders…
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="p-8 text-center">
+              <ShoppingCart className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+              <div className="text-sm font-medium mb-1">No orders found</div>
+              <div className="text-xs text-muted-foreground">
+                {hasActiveFilters ? "Try clearing filters to see more results." : activeSync ? "Sync in progress — orders will appear here." : "Run a sync to pull orders from WooCommerce."}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8 pl-3 pr-0">
+                      <Checkbox
+                        checked={orders.length > 0 && orders.every((o) => selectedIds.has(o.id))}
+                        onCheckedChange={(v) => {
+                          if (v) setSelectedIds(new Set(orders.map((o) => o.id)));
+                          else setSelectedIds(new Set());
+                        }}
+                      />
+                    </TableHead>
+                    {visibleColList.map((c) => (
+                      <TableHead key={c.key}>{c.label}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {orders.map((o) => {
                     const isExpanded = expandedRowId === o.id;
                     const isSelected = selectedIds.has(o.id);
@@ -835,10 +888,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       </React.Fragment>
                     );
                   })}
-                </div>
-              </div>
+                </TableBody>
+              </Table>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
