@@ -1,11 +1,11 @@
 ---
 title: Standardized save feedback toasts across all mutations
-status: todo
+status: done
 priority: high
-type: chore
-tags: [ux, toast, consistency]
+type: feature
+tags: [ux, toasts]
 created_by: agent
-created_at: 2026-04-23T05:50:15Z
+created_at: 2026-04-23
 position: 4
 ---
 

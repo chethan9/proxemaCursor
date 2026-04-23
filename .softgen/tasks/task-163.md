@@ -1,11 +1,11 @@
 ---
 title: Standardized mutation hook with auto-invalidation and optimistic updates
-status: todo
+status: done
 priority: urgent
 type: feature
-tags: [react-query, cache, frontend, data-freshness]
+tags: [ux, mutations, react-query]
 created_by: agent
-created_at: 2026-04-23T05:50:05Z
+created_at: 2026-04-23
 position: 2
 ---
 
