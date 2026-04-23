@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
+import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
@@ -233,6 +234,7 @@ export default function OrderDetailsPage() {
                 {statusStyle.label}
               </Badge>
             )}
+            {order && <ActivityHistoryDrawer entityType="order" entityId={order.id} />}
           </div>
 
           {isLoading || !order ? (

@@ -20,6 +20,7 @@ import { SiteIcon } from "@/components/site/SiteIcon";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useActiveSync } from "@/hooks/queries/useActiveSync";
+import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
 const SYNC_INTERVALS = [
   { value: "0", label: "Manual only" },
@@ -224,9 +225,12 @@ function SettingsInner() {
 
   return (
     <div className="p-6 max-w-6xl">
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold">Configuration</h1>
-        <p className="text-xs text-muted-foreground">{store.name} · {store.url.replace(/^https?:\/\//, "")}</p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Configuration</h1>
+          <p className="text-xs text-muted-foreground">{store.name} · {store.url.replace(/^https?:\/\//, "")}</p>
+        </div>
+        <ActivityHistoryDrawer entityType="store" entityId={store.id} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

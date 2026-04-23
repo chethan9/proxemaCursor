@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SUPPORTED_CURRENCIES, CURRENCY_LABELS, formatPrice } from "@/services/planService";
 import type { Plan } from "@/services/planService";
 import { Trash2, Plus } from "lucide-react";
+import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
 interface PlanDialogProps {
   open: boolean;
@@ -223,6 +224,7 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
         </div>
 
         <DialogFooter className="gap-2">
+          {plan && <ActivityHistoryDrawer entityType="plan" entityId={plan.id} />}
           {plan && onDelete && (
             <Button variant="outline" size="sm" className="mr-auto text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => { if (confirm(`Delete ${plan.name}?`)) onDelete(plan.id); }} disabled={saving}>
               <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete plan

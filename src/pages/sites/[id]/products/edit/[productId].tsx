@@ -16,6 +16,7 @@ import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
 type ProductRow = Record<string, unknown>;
 
@@ -134,6 +135,7 @@ function Inner() {
             <button onClick={() => setMode("basic")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "basic" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Basic</button>
             <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Advanced</button>
           </div>
+          <ActivityHistoryDrawer entityType="product" entityId={productId} />
           <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
             <Trash2 className="h-4 w-4 mr-1.5" />Delete
           </Button>

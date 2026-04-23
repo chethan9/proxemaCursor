@@ -11,6 +11,7 @@ import { ArrowLeft, Edit3, Save, X, Loader2, Copy, Mail, Phone, Trash2, User, Pa
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
+import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
 type LineItem = {
   name?: string;
@@ -187,6 +188,7 @@ function CustomerDetailsInner() {
         <div className="flex gap-2">
           {!editing ? (
             <>
+              <ActivityHistoryDrawer entityType="customer" entityId={customer.id} />
               <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:text-destructive">
                 {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />} Delete
               </Button>

@@ -1,6 +1,6 @@
 ---
 title: Activity log UI (admin viewer + per-entity history)
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [audit, ui, admin, transparency]
@@ -18,13 +18,15 @@ Makes the accountability layer visible. Admins see everything; users see their o
 
 Also absorbs the legacy `branding_audit_log` data: UI reads from unified `activity_log` (which already catches branding via task-148 trigger) plus a one-time COPY migration moves old branding entries into activity_log.
 
+Subscription detail and coupon editor pages don't exist yet — drawer will be added to those when the pages are built (tracked as part of task-155 and future coupon admin work).
+
 ## Checklist
 - [x] `/admin/activity` page (super-admin only): reverse-chronological feed of activity_log
 - [x] Filters: actor email, action, entity type, entity id, date range
 - [x] Row layout: timestamp, actor avatar + email + role badge, action, entity, click to expand diff
 - [x] Expanded row shows before/after for diffed fields
 - [x] Per-entity history drawer component `<ActivityHistoryDrawer entityType entityId />` — reusable
-- [ ] Wire drawer into: product detail page, order detail page, customer detail page, site settings, subscription detail (admin), plan editor, coupon editor
+- [x] Wire drawer into: product edit, order detail, customer detail, site settings, plan editor (subscription + coupon pages deferred — don't exist yet)
 - [x] "My Activity" page for regular users at `/settings/my-activity` — filtered to actor_user_id = me
 - [x] Export filtered activity log as CSV (admin only)
 - [x] One-time migration: COPY existing branding_audit_log rows into activity_log with entity_type='app_settings', action='updated_branding'
