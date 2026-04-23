@@ -33,7 +33,7 @@ const COUNTRIES = [
 ];
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -89,7 +89,6 @@ export default function ProfilePage() {
       return;
     }
     setInitial((p) => ({ ...p, fullName, avatarUrl: avatarUrl || "" }));
-    await refreshProfile?.();
     toast({ title: "Profile saved" });
   }
 
@@ -104,7 +103,6 @@ export default function ProfilePage() {
       return;
     }
     setInitial((p) => ({ ...p, country, currency }));
-    await refreshProfile?.();
     toast({ title: "Region saved" });
   }
 
