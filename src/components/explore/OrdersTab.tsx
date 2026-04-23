@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
 import { DateRangeFilter } from "./DateRangeFilter";
 import {
   getCustomerName,
@@ -100,14 +100,14 @@ const SORT_OPTIONS: { field: OrderSortField; direction: SortDirection; label: st
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500];
 const ORDER_STATUSES = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
-const STATUS_COLORS: Record<string, { wrap: string; dot: string }> = {
-  completed: { wrap: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900", dot: "bg-emerald-500" },
-  processing: { wrap: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900", dot: "bg-blue-500" },
-  "on-hold": { wrap: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900", dot: "bg-amber-500" },
-  pending: { wrap: "bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700", dot: "bg-slate-400" },
-  cancelled: { wrap: "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900", dot: "bg-rose-500" },
-  refunded: { wrap: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900", dot: "bg-violet-500" },
-  failed: { wrap: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900", dot: "bg-red-500" },
+const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIcon }> = {
+  completed: { wrap: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900", dot: "bg-emerald-500", Icon: CheckCircle2 },
+  processing: { wrap: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900", dot: "bg-blue-500", Icon: CircleDashed },
+  "on-hold": { wrap: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900", dot: "bg-amber-500", Icon: PauseCircle },
+  pending: { wrap: "bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700", dot: "bg-slate-400", Icon: Hourglass },
+  cancelled: { wrap: "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900", dot: "bg-rose-500", Icon: XCircle },
+  refunded: { wrap: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900", dot: "bg-violet-500", Icon: RotateCcw },
+  failed: { wrap: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900", dot: "bg-red-500", Icon: AlertCircle },
 };
 
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
@@ -844,10 +844,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                             }
                             if (c.key === "status") {
                               const s = STATUS_COLORS[o.status || ""] || STATUS_COLORS.pending;
+                              const SIcon = s.Icon;
                               return (
                                 <TableCell key={c.key}>
                                   <span className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset ${s.wrap}`}>
-                                    <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                                    <SIcon className="h-3 w-3" />
                                     {o.status || "—"}
                                   </span>
                                 </TableCell>

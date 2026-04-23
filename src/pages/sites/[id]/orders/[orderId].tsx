@@ -28,6 +28,11 @@ import {
   XCircle,
   Ban,
   RotateCcw,
+  Hourglass,
+  PauseCircle,
+  AlertCircle,
+  CircleDashed,
+  type LucideIcon,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,14 +43,14 @@ import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string }> = {
-  processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing" },
-  "on-hold": { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500", ring: "ring-amber-200 dark:ring-amber-900", label: "On Hold" },
-  completed: { bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500", ring: "ring-emerald-200 dark:ring-emerald-900", label: "Completed" },
-  cancelled: { bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300", dot: "bg-rose-500", ring: "ring-rose-200 dark:ring-rose-900", label: "Cancelled" },
-  refunded: { bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-700 dark:text-violet-300", dot: "bg-violet-500", ring: "ring-violet-200 dark:ring-violet-900", label: "Refunded" },
-  failed: { bg: "bg-slate-100 dark:bg-slate-800/50", text: "text-slate-700 dark:text-slate-300", dot: "bg-slate-500", ring: "ring-slate-200 dark:ring-slate-700", label: "Failed" },
-  pending: { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500", ring: "ring-amber-200 dark:ring-amber-900", label: "Pending" },
+const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
+  processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
+  "on-hold": { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500", ring: "ring-amber-200 dark:ring-amber-900", label: "On Hold", Icon: PauseCircle },
+  completed: { bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500", ring: "ring-emerald-200 dark:ring-emerald-900", label: "Completed", Icon: CheckCircle2 },
+  cancelled: { bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300", dot: "bg-rose-500", ring: "ring-rose-200 dark:ring-rose-900", label: "Cancelled", Icon: XCircle },
+  refunded: { bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-700 dark:text-violet-300", dot: "bg-violet-500", ring: "ring-violet-200 dark:ring-violet-900", label: "Refunded", Icon: RotateCcw },
+  failed: { bg: "bg-slate-100 dark:bg-slate-800/50", text: "text-slate-700 dark:text-slate-300", dot: "bg-slate-500", ring: "ring-slate-200 dark:ring-slate-700", label: "Failed", Icon: AlertCircle },
+  pending: { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500", ring: "ring-amber-200 dark:ring-amber-900", label: "Pending", Icon: Hourglass },
 };
 
 const STATUS_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
@@ -223,8 +228,8 @@ export default function OrderDetailsPage() {
               </h1>
             </div>
             {order && (
-              <Badge className={cn("h-7 px-3 text-xs font-medium ring-1 border-0 capitalize", statusStyle.bg, statusStyle.text, statusStyle.ring)}>
-                <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusStyle.dot)} />
+              <Badge className={cn("h-7 px-3 text-xs font-medium ring-1 border-0 capitalize gap-1.5", statusStyle.bg, statusStyle.text, statusStyle.ring)}>
+                <statusStyle.Icon className="h-3.5 w-3.5" />
                 {statusStyle.label}
               </Badge>
             )}
@@ -386,9 +391,10 @@ export default function OrderDetailsPage() {
                       {STATUS_OPTIONS.filter((s) => s !== order.status).map((s) => {
                         const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
                         const isSaving = savingStatus === s;
+                        const Icon = style.Icon;
                         return (
                           <button key={s} disabled={!!savingStatus} onClick={() => handleStatusChange(s)} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs capitalize font-medium transition-all ring-1 hover:ring-2 disabled:opacity-50 disabled:cursor-not-allowed", style.bg, style.text, style.ring)}>
-                            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />}
+                            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
                             <span>{style.label}</span>
                             {isSaving && <Check className="h-3 w-3 ml-auto" />}
                           </button>
