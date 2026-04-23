@@ -11,6 +11,7 @@ export type UseSiteMutationOptions<TData, TVars> = {
   invalidateKeys?: QueryKey[];
   optimisticUpdates?: OptimisticPatch<TVars>[];
   onSuccessExtra?: (data: TData, vars: TVars) => void;
+  onErrorExtra?: (err: unknown, vars: TVars) => void;
   successToast?: string | ((data: TData, vars: TVars) => string);
   errorToast?: string | ((err: unknown) => string);
   siteName?: string;
@@ -24,6 +25,7 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
     invalidateKeys = [],
     optimisticUpdates = [],
     onSuccessExtra,
+    onErrorExtra,
     successToast,
     errorToast,
     siteName,
@@ -43,7 +45,7 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
       }
       return { snapshots };
     },
-    onError: (err, _vars, ctx) => {
+    onError: (err, vars, ctx) => {
       if (ctx?.snapshots) {
         for (const [key, prev] of ctx.snapshots) {
           qc.setQueryData(key, prev);
@@ -53,6 +55,7 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
         ? errorToast(err)
         : errorToast ?? (err instanceof Error ? err.message : "Something went wrong");
       toast({ title: "Save failed", description: msg, variant: "destructive" });
+      onErrorExtra?.(err, vars);
     },
     onSuccess: (data, vars) => {
       if (successToast) {
