@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { canAddSiteServer, quotaErrorPayload } from "@/lib/quota";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -52,6 +53,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: "Cannot create store for another client" });
     }
     finalClientId = profile.client_id;
+  }
+
+  if (finalClientId) {
+    const quota = await canAddSiteServer(finalClientId);
+    if (!quota.ok) {
+      return res.status(402).json(quotaErrorPayload("site", quota));
+    }
   }
 
   const { data, error } = await supabaseAdmin

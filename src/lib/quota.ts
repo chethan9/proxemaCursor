@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Plan } from "@/services/planService";
 
 export interface QuotaSnapshot {
@@ -18,24 +19,27 @@ export interface UsageSnapshot {
   apiCallsThisMonth: number;
 }
 
+export interface QuotaCheck {
+  ok: boolean;
+  limit: number;
+  current: number;
+  planName: string;
+  planSlug: string;
+}
+
 export async function getClientPlan(clientId: string): Promise<Plan | null> {
   const { data: sub } = await supabase
-    .from("subscriptions" as never)
+    .from("subscriptions")
     .select("plan_id")
     .eq("client_id", clientId)
     .in("status", ["trialing", "active", "past_due"])
     .maybeSingle();
 
-  let planId: string | null = null;
-  if (sub && typeof sub === "object" && "plan_id" in sub) {
-    planId = (sub as { plan_id: string }).plan_id;
-  }
-
+  const planId = (sub as { plan_id?: string } | null)?.plan_id ?? null;
   if (!planId) {
     const { data } = await supabase.from("plans").select("*").eq("slug", "starter").maybeSingle();
     return (data as Plan) || null;
   }
-
   const { data } = await supabase.from("plans").select("*").eq("id", planId).maybeSingle();
   return (data as Plan) || null;
 }
@@ -68,26 +72,87 @@ export async function getCurrentUsage(clientId: string): Promise<UsageSnapshot> 
   };
 }
 
-export async function canAddSite(clientId: string): Promise<{ ok: boolean; limit: number; current: number; planName: string }> {
+export async function canAddSite(clientId: string): Promise<QuotaCheck> {
   const quota = await getClientQuota(clientId);
   const usage = await getCurrentUsage(clientId);
-  if (!quota) return { ok: true, limit: 0, current: usage.sites, planName: "" };
+  if (!quota) return { ok: true, limit: 0, current: usage.sites, planName: "", planSlug: "" };
   return {
     ok: usage.sites < quota.max_sites,
     limit: quota.max_sites,
     current: usage.sites,
     planName: quota.planName,
+    planSlug: quota.planSlug,
   };
 }
 
-export async function canAddProduct(clientId: string): Promise<{ ok: boolean; limit: number; current: number; planName: string }> {
+export async function canAddProduct(clientId: string): Promise<QuotaCheck> {
   const quota = await getClientQuota(clientId);
   const usage = await getCurrentUsage(clientId);
-  if (!quota) return { ok: true, limit: 0, current: usage.products, planName: "" };
+  if (!quota) return { ok: true, limit: 0, current: usage.products, planName: "", planSlug: "" };
   return {
     ok: usage.products < quota.max_products_per_site,
     limit: quota.max_products_per_site,
     current: usage.products,
     planName: quota.planName,
+    planSlug: quota.planSlug,
+  };
+}
+
+async function getClientPlanServer(clientId: string): Promise<Plan | null> {
+  const { data: sub } = await supabaseAdmin
+    .from("subscriptions")
+    .select("plan_id")
+    .eq("client_id", clientId)
+    .in("status", ["trialing", "active", "past_due"])
+    .maybeSingle();
+
+  const planId = (sub as { plan_id?: string } | null)?.plan_id ?? null;
+  if (!planId) {
+    const { data } = await supabaseAdmin.from("plans").select("*").eq("slug", "starter").maybeSingle();
+    return (data as Plan) || null;
+  }
+  const { data } = await supabaseAdmin.from("plans").select("*").eq("id", planId).maybeSingle();
+  return (data as Plan) || null;
+}
+
+export async function canAddSiteServer(clientId: string): Promise<QuotaCheck> {
+  const plan = await getClientPlanServer(clientId);
+  if (!plan) return { ok: true, limit: 999999, current: 0, planName: "", planSlug: "" };
+  const { count } = await supabaseAdmin.from("stores").select("id", { count: "exact", head: true }).eq("client_id", clientId);
+  const current = count || 0;
+  return {
+    ok: current < plan.max_sites,
+    limit: plan.max_sites,
+    current,
+    planName: plan.name,
+    planSlug: plan.slug,
+  };
+}
+
+export async function canAddProductServer(clientId: string, storeId: string): Promise<QuotaCheck> {
+  const plan = await getClientPlanServer(clientId);
+  if (!plan) return { ok: true, limit: 999999, current: 0, planName: "", planSlug: "" };
+  const { count } = await supabaseAdmin.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId);
+  const current = count || 0;
+  return {
+    ok: current < plan.max_products_per_site,
+    limit: plan.max_products_per_site,
+    current,
+    planName: plan.name,
+    planSlug: plan.slug,
+  };
+}
+
+export function quotaErrorPayload(entity: string, quota: QuotaCheck) {
+  const noun = entity === "site" ? (quota.limit === 1 ? "site" : "sites") : "products";
+  return {
+    error: `Your ${quota.planName} plan allows ${quota.limit} ${noun} — upgrade to add more.`,
+    quotaExceeded: true,
+    entity,
+    currentUsage: quota.current,
+    limit: quota.limit,
+    planName: quota.planName,
+    planSlug: quota.planSlug,
+    upgradeUrl: "/pricing",
   };
 }

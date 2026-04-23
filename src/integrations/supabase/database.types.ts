@@ -1658,6 +1658,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          api_calls_this_period: number
           auto_renew_disabled_reason: string | null
           cancel_at_period_end: boolean
           canceled_at: string | null
@@ -1681,6 +1682,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          api_calls_this_period?: number
           auto_renew_disabled_reason?: string | null
           cancel_at_period_end?: boolean
           canceled_at?: string | null
@@ -1704,6 +1706,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          api_calls_this_period?: number
           auto_renew_disabled_reason?: string | null
           cancel_at_period_end?: boolean
           canceled_at?: string | null
@@ -2172,6 +2175,10 @@ export type Database = {
         Returns: Json
       }
       has_permission: { Args: { perm: string }; Returns: boolean }
+      increment_api_call_count: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
       increment_coupon_redemption_count: {
         Args: { coupon_id_in: string }
         Returns: undefined

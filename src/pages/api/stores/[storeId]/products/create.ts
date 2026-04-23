@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import type { Json } from "@/integrations/supabase/database.types";
 import { logActivity } from "@/lib/activity-log";
+import { canAddProductServer, quotaErrorPayload } from "@/lib/quota";
 
 type WooVariationInput = {
   id?: number;
@@ -27,6 +28,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const creds = await getStoreCreds(storeId);
     if (!creds) return res.status(400).json({ error: "Store credentials missing" });
+
+    const { data: storeRow } = await supabaseAdmin.from("stores").select("client_id").eq("id", storeId).maybeSingle();
+    if (storeRow?.client_id) {
+      const quota = await canAddProductServer(storeRow.client_id, storeId);
+      if (!quota.ok) {
+        return res.status(402).json(quotaErrorPayload("product", quota));
+      }
+    }
+
     const body = req.body || {};
     const variations: WooVariationInput[] = Array.isArray(body.variations) ? body.variations : [];
     const parentPayload = { ...body };
