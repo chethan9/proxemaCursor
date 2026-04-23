@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers } from "lucide-react";
+import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -18,8 +18,6 @@ export function SettingsLayout({ children, title = "Settings", requirePermission
   const router = useRouter();
   const { can, isSuperAdmin } = useAuth();
 
-  const canManageSettings = isSuperAdmin || can(PERMISSIONS.SETTINGS_MANAGE);
-
   const groups = [
     {
       label: "Account",
@@ -30,7 +28,8 @@ export function SettingsLayout({ children, title = "Settings", requirePermission
     {
       label: "Appearance",
       items: [
-        { href: "/settings/theme", icon: Palette, label: "Theme", show: canManageSettings },
+        { href: "/settings/theme", icon: Palette, label: "Theme", show: true },
+        { href: "/settings/branding", icon: Sparkles, label: "Branding", show: isSuperAdmin },
       ],
     },
     {
