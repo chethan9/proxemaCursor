@@ -29,7 +29,7 @@ export default function Pricing({ plans, dc }: P) {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="font-semibold">WooSync</Link>
+          <Link href="/" className="font-semibold">Proxima</Link>
           <div className="flex gap-4 items-center"><CurrencySwitcher value={cur} onChange={setCur} />{user ? <Link href="/billing" className="text-sm">Billing</Link> : <Link href="/auth/login" className="text-sm">Log in</Link>}</div>
         </div>
       </header>

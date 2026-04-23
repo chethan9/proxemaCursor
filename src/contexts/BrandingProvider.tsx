@@ -19,7 +19,7 @@ interface BrandingContextValue extends BrandingSettings {
 }
 
 const DEFAULTS: BrandingSettings = {
-  brandName: "WooSync",
+  brandName: "Proxima",
   logoUrl: null,
   primaryColor: "#008060",
   sidebarColor: "#1a1a1a",
