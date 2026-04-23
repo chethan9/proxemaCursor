@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS coupons_admin_all ON public.coupons

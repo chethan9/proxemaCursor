@@ -1,0 +1,1 @@
+CREATE POLICY bc_public_read ON public.billing_coupons FOR SELECT USING (is_active = true AND (expires_at IS NULL OR expires_at > now()))

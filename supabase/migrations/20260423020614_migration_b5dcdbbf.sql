@@ -1,0 +1,1 @@
+ALTER TABLE public.billing_coupons ENABLE ROW LEVEL SECURITY

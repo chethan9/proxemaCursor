@@ -302,6 +302,51 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_redemptions: number | null
+          plan_ids: string[] | null
+          redemptions_count: number
+          type: Database["public"]["Enums"]["coupon_type"]
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          plan_ids?: string[] | null
+          redemptions_count?: number
+          type: Database["public"]["Enums"]["coupon_type"]
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          plan_ids?: string[] | null
+          redemptions_count?: number
+          type?: Database["public"]["Enums"]["coupon_type"]
+          value?: number
+        }
+        Relationships: []
+      }
       branding_audit_log: {
         Row: {
           changed_at: string

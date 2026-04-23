@@ -1,0 +1,1 @@
+CREATE POLICY bc_admin_all ON public.billing_coupons FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin())
