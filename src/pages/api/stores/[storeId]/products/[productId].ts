@@ -294,7 +294,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const validation = await validateUpdatePayload(storeId, productId, wooPayload, variations);
     if (!validation.ok) {
-      return res.status(400).json({ error: "Validation failed", errors: validation.errors });
+      const errs = validation.errors;
+      return res.status(400).json({ error: "Validation failed", errors: errs });
     }
 
     const updated = await wooRequest<WooProduct>(

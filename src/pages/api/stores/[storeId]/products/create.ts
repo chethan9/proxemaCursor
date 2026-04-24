@@ -189,7 +189,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const validation = await validateCreatePayload(storeId, parentPayload, variations);
     if (!validation.ok) {
-      return res.status(400).json({ error: "Validation failed", errors: validation.errors });
+      const errs = validation.errors;
+      return res.status(400).json({ error: "Validation failed", errors: errs });
     }
 
     const created = await wooRequest<Record<string, unknown>>(creds, "POST", "products", parentPayload);
