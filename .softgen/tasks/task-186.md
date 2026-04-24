@@ -1,6 +1,6 @@
 ---
 title: Product Advanced section data retention & UX
-status: todo
+status: done
 priority: high
 type: bug
 tags: [product, advanced-editor]

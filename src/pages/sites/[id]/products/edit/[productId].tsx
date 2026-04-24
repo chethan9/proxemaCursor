@@ -51,6 +51,16 @@ function Inner() {
         const categories = Array.isArray(p.categories) ? (p.categories as { id: number; name?: string }[]) : [];
         const tags = Array.isArray(p.tags) ? (p.tags as { id?: number; name: string }[]) : [];
         const attributes = Array.isArray(p.attributes) ? (p.attributes as ProductFormState["attributes"]) : [];
+        const raw = (p.raw_data as Record<string, unknown> | null) || {};
+        const rawBrands = Array.isArray(raw.brands) ? (raw.brands as { id: number; name?: string }[]) : [];
+        const brandsSrc = Array.isArray((p as ProductRow).brands)
+          ? ((p as ProductRow).brands as { id: number; name?: string }[])
+          : rawBrands;
+        const soldIndividually = typeof p.sold_individually === "boolean"
+          ? (p.sold_individually as boolean)
+          : !!raw.sold_individually;
+        const rawWeight = p.weight != null ? String(p.weight) : (raw.weight != null ? String(raw.weight) : "");
+        const rawDims = (raw.dimensions as { length?: string; width?: string; height?: string } | undefined) || {};
 
         setForm({
           ...base,
@@ -67,11 +77,17 @@ function Inner() {
           manage_stock: !!p.manage_stock,
           stock_quantity: (p.stock_quantity as number | null) ?? null,
           stock_status: ((p.stock_status as ProductFormState["stock_status"]) || "instock"),
+          sold_individually: soldIndividually,
           sku: (p.sku as string) || "",
-          weight: toNumStr(p.weight),
-          dimensions: { length: dims.length || "", width: dims.width || "", height: dims.height || "" },
+          weight: rawWeight,
+          dimensions: {
+            length: dims.length || rawDims.length || "",
+            width: dims.width || rawDims.width || "",
+            height: dims.height || rawDims.height || "",
+          },
           images,
           categories,
+          brands: brandsSrc.map((b) => ({ id: b.id, name: b.name || "" })),
           tags,
           attributes,
         });
@@ -147,6 +163,7 @@ function Inner() {
       ) : (
         <AdvancedShell
           form={form}
+          setForm={(u) => setForm((p) => (p ? u(p) : p))}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           canAdvance={canAdvance}
