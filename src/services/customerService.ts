@@ -123,7 +123,11 @@ export async function updateCustomer(id: string, patch: {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Update failed (${res.status})`);
+    const raw = String(err.message || err.error || "");
+    const friendly = /woocommerce\s+PUT.*failed:\s*400/i.test(raw) || res.status === 400
+      ? "Couldn't update the customer. Please check that email, billing, and shipping details are valid."
+      : raw || `Update failed (${res.status})`;
+    throw new Error(friendly);
   }
   return (await res.json()) as CustomerRow;
 }

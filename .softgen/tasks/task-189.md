@@ -1,6 +1,6 @@
 ---
 title: Customer module fixes
-status: todo
+status: done
 priority: medium
 type: bug
 tags: [customers]

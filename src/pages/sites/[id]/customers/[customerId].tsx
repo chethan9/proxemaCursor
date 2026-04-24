@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type LineItem = {
   name?: string;
@@ -83,6 +84,7 @@ function CustomerDetailsInner() {
   const [ordersPage, setOrdersPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", username: "",
@@ -155,9 +157,10 @@ function CustomerDetailsInner() {
   });
 
   const handleSave = () => { if (!customer) return; save.mutate(); };
-  const handleDelete = () => {
+  const handleDelete = () => setDeleteOpen(true);
+  const confirmDelete = () => {
     if (!customer) return;
-    if (!confirm(`Delete ${getCustomerName(customer)}? This will remove them from WooCommerce.`)) return;
+    setDeleteOpen(false);
     remove.mutate();
   };
 
@@ -177,6 +180,22 @@ function CustomerDetailsInner() {
 
   return (
     <div className="p-6 space-y-5 max-w-[1400px] mx-auto">
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {customer ? getCustomerName(customer) : "customer"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the customer from WooCommerce and your panel. This action can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete customer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-3">
           <Link href={`/sites/${siteId}/customers`} className="mt-1 h-8 w-8 rounded-md border border-border hover:bg-muted flex items-center justify-center"><ArrowLeft className="h-4 w-4" /></Link>
