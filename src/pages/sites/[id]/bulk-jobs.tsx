@@ -45,13 +45,19 @@ import { cancelBulkJob, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobS
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string; badge: string }> = {
-  pending: { icon: Clock, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
-  running: { icon: Loader2, cls: "text-primary animate-spin", badge: "bg-primary/10 text-primary border-primary/20" },
-  completed: { icon: CheckCircle2, cls: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  failed: { icon: XCircle, cls: "text-destructive", badge: "bg-destructive/10 text-destructive border-destructive/20" },
-  cancelled: { icon: Ban, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
+const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string; badge: string; label: string }> = {
+  pending: { icon: Clock, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground", label: "pending" },
+  running: { icon: Loader2, cls: "text-primary animate-spin", badge: "bg-primary/10 text-primary border-primary/20", label: "running" },
+  completed: { icon: CheckCircle2, cls: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "completed" },
+  partial: { icon: AlertCircle, cls: "text-amber-600", badge: "bg-amber-50 text-amber-700 border-amber-200", label: "partial" },
+  failed: { icon: XCircle, cls: "text-destructive", badge: "bg-destructive/10 text-destructive border-destructive/20", label: "failed" },
+  cancelled: { icon: Ban, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground", label: "cancelled" },
 };
+
+function effectiveStatus(job: BulkJob): string {
+  if (job.status === "completed" && (job.failed ?? 0) > 0) return "partial";
+  return job.status;
+}
 
 function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
@@ -273,7 +279,8 @@ function BulkJobsInner() {
                 </TableCell></TableRow>
               ) : (
                 filteredJobs.map((j) => {
-                  const meta = STATUS_META[j.status] ?? STATUS_META.pending;
+                  const eff = effectiveStatus(j);
+                  const meta = STATUS_META[eff] ?? STATUS_META.pending;
                   const Icon = meta.icon;
                   const pct = j.total > 0 ? Math.round((j.processed / j.total) * 100) : 0;
                   const running = j.status === "running" || j.status === "pending";
@@ -285,7 +292,7 @@ function BulkJobsInner() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
-                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{j.status}</Badge>
+                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{meta.label}</Badge>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -336,7 +343,8 @@ function BulkJobsInner() {
 
 function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () => void }) {
   if (!job) return null;
-  const meta = STATUS_META[job.status] ?? STATUS_META.pending;
+  const eff = effectiveStatus(job);
+  const meta = STATUS_META[eff] ?? STATUS_META.pending;
   const Icon = meta.icon;
   const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
   const errors = Array.isArray(job.errors) ? (job.errors as Array<{ id: number | string; error: string }>) : [];
@@ -358,7 +366,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
           <DialogTitle className="flex items-center gap-2">
             <Icon className={`h-5 w-5 ${meta.cls}`} />
             {JOB_TYPE_LABEL[job.job_type as keyof typeof JOB_TYPE_LABEL] || job.job_type}
-            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{job.status}</Badge>
+            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{meta.label}</Badge>
           </DialogTitle>
           <DialogDescription>Job ID: <code className="text-xs">{job.id}</code></DialogDescription>
         </DialogHeader>

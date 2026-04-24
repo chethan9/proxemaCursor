@@ -310,13 +310,18 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
   }
 
   // Completed all items
+  const finalStatus = succeeded === 0 && failed > 0 ? "failed" : "completed";
+  const errorMessage = succeeded === 0 && failed > 0
+    ? `All ${failed} item${failed === 1 ? "" : "s"} failed${errors[0]?.error ? `: ${errors[0].error}` : ""}`
+    : null;
   const completedPayload: BulkJobUpdate = {
-    status: "completed",
+    status: finalStatus,
     completed_at: new Date().toISOString(),
     processed,
     succeeded,
     failed,
     errors: toJson(errors),
+    error_message: errorMessage,
   };
   await supabaseAdmin.from("bulk_jobs").update(completedPayload).eq("id", job.id);
 
