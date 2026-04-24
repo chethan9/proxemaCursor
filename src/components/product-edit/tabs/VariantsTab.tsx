@@ -104,6 +104,23 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
 
   const hasVariableAttrs = form.attributes.some((a) => a.variation && a.options.length > 0);
 
+  const duplicateCombos = (() => {
+    if (productMode !== "variable") return [] as number[];
+    const seen = new Map<string, number>();
+    const dupes: number[] = [];
+    form.variations.forEach((v, idx) => {
+      if (v.enabled === false) return;
+      const key = [...v.attributes].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${a.name.toLowerCase()}:${a.option.toLowerCase()}`).join("|");
+      if (seen.has(key)) dupes.push(idx);
+      else seen.set(key, idx);
+    });
+    return dupes;
+  })();
+
+  const missingPriceCount = productMode === "variable"
+    ? form.variations.filter((v) => v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0)).length
+    : 0;
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-0 rounded-full bg-muted/50 p-1">
@@ -140,6 +157,17 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={!hasVariableAttrs}>Regenerate from attributes</Button>
             </div>
           </div>
+
+          {(duplicateCombos.length > 0 || missingPriceCount > 0) && !loading && form.variations.length > 0 && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs space-y-1">
+              {missingPriceCount > 0 && (
+                <div className="text-destructive">{missingPriceCount} variation{missingPriceCount === 1 ? "" : "s"} missing price — must be greater than 0 to publish.</div>
+              )}
+              {duplicateCombos.length > 0 && (
+                <div className="text-destructive">Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}.</div>
+              )}
+            </div>
+          )}
 
           {loading && form.variations.length === 0 ? (
             <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-6 flex items-center gap-3">

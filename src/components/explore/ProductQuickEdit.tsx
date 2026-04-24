@@ -138,6 +138,17 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
     mutation.mutate(patch);
   }
 
+  const setQtyRaw = (v: string) => {
+    const clean = clampNonNeg(v);
+    setStockQty(clean);
+    if (clean === "") return;
+    const n = Number(clean);
+    if (Number.isNaN(n)) return;
+    setManageStock(true);
+    if (n === 0) setStockStatus("outofstock");
+    else if (stockStatus !== "onbackorder") setStockStatus("instock");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-white p-5 gap-3">
@@ -147,12 +158,12 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Name</Label>
+            <Label className="text-[11px] text-muted-foreground" required>Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">SKU</Label>
+              <Label className="text-[11px] text-muted-foreground" required={status === "publish"}>SKU</Label>
               <Input value={sku} onChange={(e) => setSku(e.target.value)} className="h-8 font-mono text-xs" />
             </div>
             <div className="space-y-1">
@@ -170,7 +181,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">Regular price</Label>
+              <Label className="text-[11px] text-muted-foreground" required={status === "publish"}>Regular price</Label>
               <Input type="number" min="0.01" step="0.01" value={regular} onChange={(e) => setRegular(clampNonNeg(e.target.value))} className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
@@ -197,8 +208,8 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
               </div>
               {manageStock && (
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Qty</Label>
-                  <Input type="number" min="0" value={stockQty} onChange={(e) => setStockQty(clampNonNeg(e.target.value))} className="h-8 text-sm" />
+                  <Label className="text-[11px] text-muted-foreground" required>Qty</Label>
+                  <Input type="number" min="0" value={stockQty} onChange={(e) => setQtyRaw(e.target.value)} className="h-8 text-sm" />
                 </div>
               )}
             </div>

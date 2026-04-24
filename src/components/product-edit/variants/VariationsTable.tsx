@@ -85,24 +85,41 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
           <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} />
           <div>Options</div>
           <div>SKU</div>
-          <div>Price</div>
+          <div>Price <span className="text-destructive">*</span></div>
           <div>Sale Price</div>
           <div>Stock</div>
           <div></div>
         </div>
         {variations.map((v, i) => {
           const isDisabled = v.enabled === false;
+          const priceMissing = v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0);
           return (
-            <div key={v.key} className={`grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""}`}>
+            <div key={v.key} className={`grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""}`}>
               <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} />
               <div className="truncate flex items-center gap-2 font-medium">
                 <span className="truncate">{variationLabel(v)}</span>
                 {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal shrink-0">off</span>}
+                {priceMissing && <span className="text-[9px] uppercase bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-medium shrink-0">no price</span>}
               </div>
               <Input className={cellInput} value={v.sku} onChange={(e) => onUpdate(i, { sku: e.target.value })} placeholder="—" />
-              <Input className={cellInput} value={v.regular_price} onChange={(e) => onUpdate(i, { regular_price: e.target.value })} placeholder="—" />
+              <Input className={`${cellInput} ${priceMissing ? "ring-1 ring-destructive/30" : ""}`} value={v.regular_price} onChange={(e) => onUpdate(i, { regular_price: e.target.value })} placeholder="—" />
               <Input className={cellInput} value={v.sale_price} onChange={(e) => onUpdate(i, { sale_price: e.target.value })} placeholder="—" />
-              <Input className={cellInput} type="number" value={v.stock_quantity ?? ""} onChange={(e) => onUpdate(i, { stock_quantity: e.target.value ? Number(e.target.value) : null, manage_stock: true })} placeholder="—" />
+              <Input
+                className={cellInput}
+                type="number"
+                min="0"
+                value={v.stock_quantity ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") { onUpdate(i, { stock_quantity: null }); return; }
+                  const n = Number(raw);
+                  if (Number.isNaN(n)) return;
+                  const qty = Math.max(0, n);
+                  const nextStatus: Variation["stock_status"] = qty === 0 ? "outofstock" : (v.stock_status === "onbackorder" ? "onbackorder" : "instock");
+                  onUpdate(i, { stock_quantity: qty, manage_stock: true, stock_status: nextStatus });
+                }}
+                placeholder="—"
+              />
               <button type="button" onClick={() => onEdit(i)} className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
                 <Edit2 className="h-3.5 w-3.5" />
               </button>
