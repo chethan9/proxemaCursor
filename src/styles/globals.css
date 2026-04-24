@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css');
 
 @tailwind base;
 @tailwind components;
@@ -417,4 +418,84 @@
   .ProseMirror a { color: hsl(var(--primary)); text-decoration: underline; }
   .ProseMirror code { background: hsl(var(--muted)); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
   .ProseMirror strong { font-weight: 600; }
+
+  .quill-wrapper .ql-toolbar.ql-snow {
+    border: none;
+    border-bottom: 1px solid hsl(var(--border));
+    background: hsl(var(--muted) / 0.3);
+    padding: 6px 8px;
+  }
+  .quill-wrapper .ql-container.ql-snow {
+    border: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    color: hsl(var(--foreground));
+  }
+  .quill-wrapper .ql-editor {
+    min-height: inherit;
+    padding: 10px 12px;
+    line-height: 1.55;
+  }
+  .quill-wrapper .ql-editor.ql-blank::before {
+    color: hsl(var(--muted-foreground));
+    font-style: normal;
+    left: 12px;
+    right: 12px;
+  }
+  .quill-wrapper .ql-snow .ql-stroke { stroke: hsl(var(--muted-foreground)); }
+  .quill-wrapper .ql-snow .ql-fill { fill: hsl(var(--muted-foreground)); }
+  .quill-wrapper .ql-snow .ql-picker { color: hsl(var(--muted-foreground)); }
+  .quill-wrapper .ql-snow button:hover .ql-stroke,
+  .quill-wrapper .ql-snow button.ql-active .ql-stroke,
+  .quill-wrapper .ql-snow .ql-picker-label:hover .ql-stroke,
+  .quill-wrapper .ql-snow .ql-picker-label.ql-active .ql-stroke {
+    stroke: hsl(var(--foreground));
+  }
+  .quill-wrapper .ql-snow button:hover .ql-fill,
+  .quill-wrapper .ql-snow button.ql-active .ql-fill,
+  .quill-wrapper .ql-snow .ql-picker-label:hover .ql-fill,
+  .quill-wrapper .ql-snow .ql-picker-label.ql-active .ql-fill {
+    fill: hsl(var(--foreground));
+  }
+  .quill-wrapper .ql-snow .ql-picker-options {
+    background: hsl(var(--popover));
+    border-color: hsl(var(--border));
+    color: hsl(var(--popover-foreground));
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .quill-wrapper .ql-snow a {
+    color: hsl(var(--primary));
+  }
+  .quill-wrapper .ql-editor h2 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+  .quill-wrapper .ql-editor h3 { font-size: 1.05rem; font-weight: 600; margin: 0.5rem 0 0.375rem; }
+  .quill-wrapper .ql-editor ul { list-style: disc; padding-left: 1.5rem; }
+  .quill-wrapper .ql-editor ol { list-style: decimal; padding-left: 1.5rem; }
+  .quill-wrapper .ql-editor blockquote {
+    border-left: 3px solid hsl(var(--border));
+    padding-left: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    margin: 0.5rem 0;
+  }
+  .quill-wrapper .ql-editor pre.ql-syntax,
+  .quill-wrapper .ql-editor pre {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+  .quill-wrapper .ql-snow .ql-tooltip {
+    background: hsl(var(--popover));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--popover-foreground));
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-radius: 6px;
+  }
+  .quill-wrapper .ql-snow .ql-tooltip input[type=text] {
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    border-radius: 4px;
+  }
 }
