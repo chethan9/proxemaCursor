@@ -279,6 +279,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       price: updated.price ? parseFloat(updated.price) : null,
       regular_price: updated.regular_price ? parseFloat(updated.regular_price) : null,
       sale_price: updated.sale_price ? parseFloat(updated.sale_price) : null,
+      manage_stock: (updated as unknown as { manage_stock?: boolean }).manage_stock ?? null,
       stock_quantity: updated.stock_quantity,
       stock_status: updated.stock_status,
       status: updated.status,

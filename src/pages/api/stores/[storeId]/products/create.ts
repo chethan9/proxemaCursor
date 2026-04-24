@@ -133,6 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       price: (created.price as string) ?? null,
       regular_price: (created.regular_price as string) ?? null,
       sale_price: (created.sale_price as string) ?? null,
+      manage_stock: (created.manage_stock as boolean | null) ?? null,
       stock_quantity: (created.stock_quantity as number) ?? null,
       stock_status: (created.stock_status as string) ?? null,
       status: (created.status as string) ?? null,

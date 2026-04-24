@@ -1,6 +1,6 @@
 ---
 title: Product stock toggle persistence
-status: todo
+status: done
 priority: high
 type: bug
 tags: [product, stock]

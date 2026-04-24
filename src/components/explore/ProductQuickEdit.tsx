@@ -31,6 +31,7 @@ type Product = {
   sku: string | null;
   regular_price: string | number | null;
   sale_price: string | number | null;
+  manage_stock?: boolean | null;
   stock_quantity: number | null;
   stock_status: string | null;
   status: string | null;
@@ -63,7 +64,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
       setStockStatus(product.stock_status || "instock");
       setStockQty(product.stock_quantity != null ? String(product.stock_quantity) : "");
       setStatus(product.status || "publish");
-      setManageStock(product.stock_quantity != null);
+      setManageStock(!!product.manage_stock);
     }
   }, [product]);
 
