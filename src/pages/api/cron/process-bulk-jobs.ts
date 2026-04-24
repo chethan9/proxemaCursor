@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest, type WooStoreCreds } from "@/lib/woo-client";
 import type { Json } from "@/integrations/supabase/database.types";
 import type { TablesUpdate } from "@/integrations/supabase/helpers";
+import { WooApiError } from "@/lib/sync-error";
 
 // Budget per invocation: leave headroom under Vercel's function timeout.
 const MAX_RUNTIME_MS = 50_000;
@@ -87,7 +88,11 @@ async function updateOrderStatus(
 }
 
 async function deleteOrder(store: WooStoreCreds, orderId: number, force = false) {
-  await wooRequest(store, "DELETE", `orders/${orderId}${force ? "?force=true" : ""}`);
+  try {
+    await wooRequest(store, "DELETE", `orders/${orderId}${force ? "?force=true" : ""}`);
+  } catch (e) {
+    if (!(e instanceof WooApiError) || e.details.status !== 404) throw e;
+  }
   await supabaseAdmin
     .from("orders")
     .delete()
@@ -204,7 +209,11 @@ async function assignProductCategories(
 }
 
 async function deleteProduct(store: WooStoreCreds, productId: number, force = false) {
-  await wooRequest(store, "DELETE", `products/${productId}${force ? "?force=true" : ""}`);
+  try {
+    await wooRequest(store, "DELETE", `products/${productId}${force ? "?force=true" : ""}`);
+  } catch (e) {
+    if (!(e instanceof WooApiError) || e.details.status !== 404) throw e;
+  }
   await supabaseAdmin.from("products").delete().eq("store_id", store.id).eq("woo_id", productId);
 }
 
