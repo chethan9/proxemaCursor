@@ -126,7 +126,7 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
   const actorId = auth.user?.id ?? null;
 
   await supabase.from("activity_log").insert({
-    actor_id: actorId,
+    actor_user_id: actorId,
     action: "client.created",
     entity_type: "client",
     entity_id: client.id,
@@ -142,7 +142,7 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
   try {
     const subscription = await createTrialSubscription(client.id, plan);
     await supabase.from("activity_log").insert({
-      actor_id: actorId,
+      actor_user_id: actorId,
       action: "subscription.trial_started",
       entity_type: "subscription",
       entity_id: subscription.id,
