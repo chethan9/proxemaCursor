@@ -58,39 +58,20 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
       <Card>
         <CardContent className="p-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 border-b pb-2">
-            <div className="flex items-center gap-6 overflow-x-auto">
-              {TABS.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setActiveTab(t.key)}
-                  className={cn(
-                    "pb-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-[1px] transition-colors",
-                    activeTab === t.key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            {setForm && (
-              <div className="flex items-center gap-1 shrink-0">
-                {STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setForm((p) => ({ ...p, status: s.value }))}
-                    className={cn(
-                      "px-2.5 py-1 text-xs rounded-md border transition-colors",
-                      form.status === s.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-6 overflow-x-auto border-b">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                className={cn(
+                  "pb-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-[1px] transition-colors",
+                  activeTab === t.key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
           <div>{tabContent[activeTab]}</div>
@@ -118,7 +99,29 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
         </CardContent>
       </Card>
 
-      <div className="lg:sticky lg:top-4 h-fit">
+      <div className="lg:sticky lg:top-4 h-fit space-y-4">
+        {setForm && (
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Status</div>
+              <div className="grid grid-cols-4 gap-1">
+                {STATUS_OPTIONS.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, status: s.value }))}
+                    className={cn(
+                      "px-2 py-1.5 text-xs rounded-md border transition-colors",
+                      form.status === s.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <LivePreviewCard form={form} />
       </div>
     </div>
