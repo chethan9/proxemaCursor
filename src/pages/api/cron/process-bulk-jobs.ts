@@ -91,7 +91,7 @@ async function deleteOrder(store: WooStoreCreds, orderId: number, force = false)
   try {
     await wooRequest(store, "DELETE", `orders/${orderId}${force ? "?force=true" : ""}`);
   } catch (e) {
-    if (!(e instanceof WooApiError) || e.details.status !== 404) throw e;
+    if (!(e instanceof WooApiError) || e.context.status !== 404) throw e;
   }
   await supabaseAdmin
     .from("orders")
@@ -212,7 +212,7 @@ async function deleteProduct(store: WooStoreCreds, productId: number, force = fa
   try {
     await wooRequest(store, "DELETE", `products/${productId}${force ? "?force=true" : ""}`);
   } catch (e) {
-    if (!(e instanceof WooApiError) || e.details.status !== 404) throw e;
+    if (!(e instanceof WooApiError) || e.context.status !== 404) throw e;
   }
   await supabaseAdmin.from("products").delete().eq("store_id", store.id).eq("woo_id", productId);
 }
