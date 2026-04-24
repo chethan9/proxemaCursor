@@ -1158,6 +1158,51 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_settings: {
+        Row: {
+          country_overrides: string[] | null
+          created_at: string
+          enabled: boolean
+          extra_config: Json | null
+          gateway_name: string
+          id: string
+          mode: string
+          publishable_key: string | null
+          secret_key: string | null
+          updated_at: string
+          updated_by: string | null
+          webhook_secret: string | null
+        }
+        Insert: {
+          country_overrides?: string[] | null
+          created_at?: string
+          enabled?: boolean
+          extra_config?: Json | null
+          gateway_name: string
+          id?: string
+          mode?: string
+          publishable_key?: string | null
+          secret_key?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          webhook_secret?: string | null
+        }
+        Update: {
+          country_overrides?: string[] | null
+          created_at?: string
+          enabled?: boolean
+          extra_config?: Json | null
+          gateway_name?: string
+          id?: string
+          mode?: string
+          publishable_key?: string | null
+          secret_key?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           created_at: string | null
