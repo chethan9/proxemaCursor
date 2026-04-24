@@ -50,9 +50,10 @@ export function getSupportedCountries() {
   return ALL_COUNTRIES;
 }
 
-export function getGatewayForCountry(country: string | null | undefined): GatewayName {
+export function getGatewayForCountry(country: string | null | undefined, overrides?: Record<string, GatewayName>): GatewayName {
   if (!country) return "razorpay";
   const upper = country.toUpperCase();
+  if (overrides && overrides[upper]) return overrides[upper];
   if ((MYFATOORAH_COUNTRIES as readonly string[]).includes(upper)) return "myfatoorah";
   return "razorpay";
 }

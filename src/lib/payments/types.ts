@@ -1,4 +1,4 @@
-export type GatewayName = "myfatoorah" | "razorpay";
+export type GatewayName = "myfatoorah" | "razorpay" | "tap";
 
 export interface ChargeRequest {
   amountMinor: number;
@@ -10,6 +10,7 @@ export interface ChargeRequest {
   clientReference: string;
   returnUrl: string;
   metadata?: Record<string, string>;
+  sourceToken?: string;
 }
 
 export interface MyFatoorahInitPayload {
@@ -26,10 +27,23 @@ export interface RazorpayInitPayload {
   prefill: { email: string; name?: string; contact?: string };
 }
 
+export interface TapInitPayload {
+  type: "tap-inline";
+  publishableKey: string;
+  amountMinor: number;
+  currency: string;
+  prefill: { email: string; name?: string; phone?: string };
+}
+
+export interface TapChargeRedirectPayload {
+  type: "tap-redirect";
+  transactionUrl: string;
+}
+
 export interface ChargeInitiated {
   gateway: GatewayName;
   gatewayRef: string;
-  payload: MyFatoorahInitPayload | RazorpayInitPayload;
+  payload: MyFatoorahInitPayload | RazorpayInitPayload | TapInitPayload | TapChargeRedirectPayload;
 }
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "canceled";
