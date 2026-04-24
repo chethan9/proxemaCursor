@@ -1,6 +1,6 @@
 ---
 title: Replace Tiptap with Quill 2 in RichTextEditor
-status: in_progress
+status: done
 priority: high
 type: chore
 tags: [editor, ui, product-edit]
@@ -88,21 +88,21 @@ Undo/redo handled by Quill natively (Cmd+Z / Ctrl+Z).
 
 ## Checklist
 
-- [ ] Install `quill@^2.0.0` and `react-quill-new`; uninstall Tiptap packages (`@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`)
-- [ ] Rewrite `src/components/product-edit/RichTextEditor.tsx` using `react-quill-new` (Quill 2.0), preserving the existing `{value, onChange, rows, placeholder}` prop contract exactly
-- [ ] Load editor via `next/dynamic({ ssr: false })` with matching pulse skeleton fallback
-- [ ] Configure toolbar: headings H2/H3, bold/italic/underline/strike, ordered/bullet lists, blockquote, code block, link, clean-format
-- [ ] Use `editor.getSemanticHTML()` for onChange output (Quill 2.0 clean HTML API), NOT `innerHTML`
-- [ ] Normalize empty output: strip `<p><br></p>` / whitespace-only paragraphs → return `""`
-- [ ] Fix cursor-jump: only resync editor content when external `value` differs from current output AND editor is not focused
-- [ ] Retain Visual / HTML tab toggle; HTML tab uses a plain textarea; round-trip content cleanly on switch via `clipboard.dangerouslyPasteHTML` and `getSemanticHTML()`
-- [ ] Override Quill's link sanitizer so inserted links get `target="_blank"` + `rel="noopener noreferrer"`
-- [ ] Add clipboard matchers to strip `style`, `class`, `id` attributes from pasted HTML
-- [ ] Import `quill/dist/quill.snow.css` globally; override Snow CSS variables in `globals.css` to track our design tokens for light and dark mode (toolbar bg, border, text, focus ring)
-- [ ] Preserve `richtext-content` class wrapper so `LivePreviewCard` typography stays intact
-- [ ] Wire `placeholder` prop via Quill config
-- [ ] Smoke-test all three call sites: BasicEditor description, BasicInfoTab description, BasicInfoTab short_description — content loads, edits save, no cursor jumps, HTML output is clean semantic HTML
-- [ ] Confirm production bundle builds clean with no leftover Tiptap references
+- [x] Install `quill@^2.0.0` and `react-quill-new`; uninstall Tiptap packages (`@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`)
+- [x] Rewrite `src/components/product-edit/RichTextEditor.tsx` using `react-quill-new` (Quill 2.0), preserving the existing `{value, onChange, rows, placeholder}` prop contract exactly
+- [x] Load editor via `next/dynamic({ ssr: false })` with matching pulse skeleton fallback
+- [x] Configure toolbar: headings H2/H3, bold/italic/underline/strike, ordered/bullet lists, blockquote, code block, link, clean-format
+- [x] Use `editor.getSemanticHTML()` for onChange output (Quill 2.0 clean HTML API), NOT `innerHTML`
+- [x] Normalize empty output: strip `<p><br></p>` / whitespace-only paragraphs → return `""`
+- [x] Fix cursor-jump: only resync editor content when external `value` differs from current output AND editor is not focused
+- [x] Retain Visual / HTML tab toggle; HTML tab uses a plain textarea; round-trip content cleanly on switch via `clipboard.dangerouslyPasteHTML` and `getSemanticHTML()`
+- [x] Override Quill's link sanitizer so inserted links get `target="_blank"` + `rel="noopener noreferrer"`
+- [x] Add clipboard matchers to strip `style`, `class`, `id` attributes from pasted HTML
+- [x] Import `quill/dist/quill.snow.css` globally; override Snow CSS variables in `globals.css` to track our design tokens for light and dark mode (toolbar bg, border, text, focus ring)
+- [x] Preserve `richtext-content` class wrapper so `LivePreviewCard` typography stays intact
+- [x] Wire `placeholder` prop via Quill config
+- [x] Smoke-test all three call sites: BasicEditor description, BasicInfoTab description, BasicInfoTab short_description — content loads, edits save, no cursor jumps, HTML output is clean semantic HTML
+- [x] Confirm production bundle builds clean with no leftover Tiptap references
 
 ## Acceptance
 
