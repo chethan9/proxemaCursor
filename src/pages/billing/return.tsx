@@ -10,6 +10,7 @@ export default function BillingReturn() {
 
   useEffect(() => {
     const subId = router.query.sub;
+    const tapChargeId = router.query.tap_id;
     if (typeof subId !== "string") return;
     let tries = 0, cancelled = false;
     const poll = async () => {
@@ -17,7 +18,7 @@ export default function BillingReturn() {
       const r = await fetch("/api/billing/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: subId }),
+        body: JSON.stringify({ subscriptionId: subId, tapChargeId: typeof tapChargeId === "string" ? tapChargeId : undefined }),
       });
       const d = await r.json();
       if (d.status === "active" || d.status === "already_active") return setS({ state: "active" });
@@ -27,7 +28,7 @@ export default function BillingReturn() {
     };
     poll();
     return () => { cancelled = true; };
-  }, [router.query.sub]);
+  }, [router.query.sub, router.query.tap_id]);
 
   const title: Record<string, string> = { loading: "Verifying payment", active: "Payment successful", failed: "Payment failed", pending: "Payment pending" };
   const desc: Record<string, string> = {
