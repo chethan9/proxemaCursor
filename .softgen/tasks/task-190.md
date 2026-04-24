@@ -1,6 +1,6 @@
 ---
 title: Order & customer history activity display
-status: todo
+status: done
 priority: high
 type: bug
 tags: [orders, customers, activity]

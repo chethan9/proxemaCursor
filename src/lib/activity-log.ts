@@ -79,6 +79,19 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
       ...(input.metadata || {}),
     };
 
+    let clientId: string | null = input.clientId || null;
+    if (!clientId && typeof window === "undefined") {
+      const storeId = (input.metadata?.store_id as string | undefined) || null;
+      if (storeId) {
+        const { data: store } = await supabaseAdmin
+          .from("stores")
+          .select("client_id")
+          .eq("id", storeId)
+          .maybeSingle();
+        clientId = (store?.client_id as string | null) || null;
+      }
+    }
+
     const row = {
       actor_user_id: actorUserId,
       actor_email: actorEmail,
@@ -86,7 +99,7 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
       action: input.action,
       entity_type: input.entityType,
       entity_id: input.entityId != null ? String(input.entityId) : null,
-      client_id: input.clientId || null,
+      client_id: clientId,
       diff,
       metadata: Object.keys(metadata).length > 0 ? metadata : null,
     };
