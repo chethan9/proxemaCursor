@@ -1,40 +1,32 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { tapGateway } from "@/lib/payments/tap";
+import { logActivity } from "@/lib/activity-log";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const auth = req.headers.authorization;
-  if (!auth?.startsWith("Bearer ")) return res.status(401).json({ error: "Unauthorized" });
+  if (req.method !== "POST") return res.status(405).end();
 
-  const supa = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: auth } } }
-  );
-  const { data: ud } = await supa.auth.getUser();
-  if (!ud?.user) return res.status(401).json({ error: "Unauthorized" });
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return res.status(401).json({ error: "Unauthorized" });
+  const token = authHeader.slice(7);
+  const { data: ud, error: ue } = await supabaseAdmin.auth.getUser(token);
+  if (ue || !ud.user) return res.status(401).json({ error: "Unauthorized" });
 
-  const { subscriptionId, tokenId } = req.body as { subscriptionId: string; tokenId: string };
-  if (!subscriptionId || !tokenId) return res.status(400).json({ error: "Missing subscriptionId or tokenId" });
+  const { subscriptionId, tokenId } = req.body as { subscriptionId?: string; tokenId?: string };
+  if (!subscriptionId || !tokenId) return res.status(400).json({ error: "subscriptionId and tokenId required" });
 
-  const { data: sub } = await supabaseAdmin
+  const { data: sub, error: se } = await supabaseAdmin
     .from("subscriptions")
-    .select("*, plans(*), clients(country,currency)")
+    .select("id, client_id, currency, gateway, plans!subscriptions_plan_id_fkey(name, prices)")
     .eq("id", subscriptionId)
     .single();
-  if (!sub) return res.status(404).json({ error: "Subscription not found" });
-  if (sub.status === "active") return res.status(400).json({ error: "Already active" });
+  if (se || !sub) return res.status(404).json({ error: "Subscription not found" });
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("id,email,full_name")
+    .select("id, email, full_name")
     .eq("id", ud.user.id)
     .single();
-  if (!profile || profile.id !== sub.client_id && !sub.client_id) {
-    // permissive: allow the authed user if they belong to the subscription's client (checked via client members table in prod)
-  }
 
   const plan = sub.plans as { name?: string; prices?: Record<string, number> } | null;
   const currency = sub.currency || "USD";
@@ -59,25 +51,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await supabaseAdmin
       .from("subscriptions")
       .update({
-        gateway: "tap" as unknown as "myfatoorah" | "razorpay",
+        gateway: "tap",
         gateway_subscription_ref: init.gatewayRef,
         last_charge_attempt_at: new Date().toISOString(),
       })
       .eq("id", subscriptionId);
 
+    await logActivity({
+      action: "tap.charge.initiated",
+      entityType: "payment_gateway",
+      entityId: init.gatewayRef,
+      clientId: sub.client_id,
+      metadata: { subscription_id: subscriptionId, gateway: "tap", amount_minor: amountMinor, currency, status: "pending" },
+      actorType: "user",
+      req,
+    });
+
     const payload = init.payload as { type: string; transactionUrl?: string };
     return res.status(200).json({
-      subscriptionId,
-      gateway: "tap",
       gatewayRef: init.gatewayRef,
-      transactionUrl: payload.transactionUrl || null,
+      status: init.status,
+      transactionUrl: payload?.transactionUrl || null,
     });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Tap charge failed";
-    await supabaseAdmin
-      .from("subscriptions")
-      .update({ last_charge_failed_at: new Date().toISOString() })
-      .eq("id", subscriptionId);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Tap charge failed";
+    await logActivity({
+      action: "tap.charge.failed",
+      entityType: "payment_gateway",
+      clientId: sub.client_id,
+      metadata: { subscription_id: subscriptionId, gateway: "tap", error: msg },
+      actorType: "user",
+      req,
+    });
     return res.status(502).json({ error: msg });
   }
 }

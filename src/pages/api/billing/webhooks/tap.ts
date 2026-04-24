@@ -1,12 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { tapGateway } from "@/lib/payments/tap";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { tapGateway } from "@/lib/payments/tap";
+import { logActivity } from "@/lib/activity-log";
 
-export const config = {
-  api: { bodyParser: false },
-};
+export const config = { api: { bodyParser: false } };
 
-async function readRawBody(req: NextApiRequest): Promise<string> {
+async function getRawBody(req: NextApiRequest): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", (chunk) => { data += chunk; });
@@ -16,35 +15,65 @@ async function readRawBody(req: NextApiRequest): Promise<string> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).end();
 
-  let rawBody = "";
+  const rawBody = await getRawBody(req);
+  let body: Record<string, unknown>;
+  try { body = JSON.parse(rawBody); } catch { return res.status(400).json({ error: "Invalid JSON" }); }
+
   try {
-    rawBody = await readRawBody(req);
     const event = await tapGateway.parseWebhook({
       headers: req.headers as Record<string, string | string[] | undefined>,
       rawBody,
+      body,
     });
 
-    await supabaseAdmin.from("activity_log" as never).insert({
-      actor_type: "system",
-      action: `webhook.${event.type}`,
-      entity_type: "gateway_webhook",
-      entity_id: event.gatewayRef,
+    let clientId: string | null = null;
+    if (event.gatewayRef) {
+      const { data: sub } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id, client_id")
+        .eq("gateway_subscription_ref", event.gatewayRef)
+        .maybeSingle();
+      if (sub) {
+        clientId = sub.client_id;
+        const updates: Record<string, unknown> = {};
+        if (event.status === "paid") {
+          updates.status = "active";
+          updates.last_payment_at = new Date().toISOString();
+        } else if (event.status === "failed" || event.status === "canceled") {
+          updates.status = "past_due";
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabaseAdmin.from("subscriptions").update(updates).eq("id", sub.id);
+        }
+      }
+    }
+
+    await logActivity({
+      action: `tap.webhook.${event.status}`,
+      entityType: "payment_gateway",
+      entityId: event.gatewayRef,
+      clientId,
       metadata: {
         gateway: "tap",
-        event_id: event.id,
-        payment_status: event.paymentStatus,
+        status: event.status,
+        event_id: event.eventId,
         amount_minor: event.amountMinor,
         currency: event.currency,
       },
-    } as never);
+      actorType: "system",
+    });
 
-    return res.status(200).json({ received: true, eventId: event.id });
+    return res.status(200).json({ ok: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Webhook processing failed";
-    if (msg.includes("signature")) return res.status(401).json({ error: msg });
-    console.error("[tap webhook]", msg, { rawBody: rawBody.slice(0, 500) });
+    const msg = err instanceof Error ? err.message : "Webhook error";
+    await logActivity({
+      action: "tap.webhook.invalid",
+      entityType: "payment_gateway",
+      metadata: { gateway: "tap", error: msg, raw_body_length: rawBody.length },
+      actorType: "system",
+    });
     return res.status(400).json({ error: msg });
   }
 }

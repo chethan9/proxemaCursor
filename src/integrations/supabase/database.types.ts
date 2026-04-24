@@ -2208,7 +2208,7 @@ export type Database = {
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {
-      billing_gateway: "myfatoorah" | "razorpay"
+      billing_gateway: "myfatoorah" | "razorpay" | "tap"
       coupon_type: "percent" | "fixed" | "free_months"
       invoice_status: "pending" | "paid" | "failed" | "refunded" | "void"
       renewal_mode: "auto" | "manual"
@@ -2346,7 +2346,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      billing_gateway: ["myfatoorah", "razorpay"],
+      billing_gateway: ["myfatoorah", "razorpay", "tap"],
       coupon_type: ["percent", "fixed", "free_months"],
       invoice_status: ["pending", "paid", "failed", "refunded", "void"],
       renewal_mode: ["auto", "manual"],
