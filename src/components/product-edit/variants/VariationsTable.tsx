@@ -105,10 +105,12 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
               <Input className={`${cellInput} ${priceMissing ? "ring-1 ring-destructive/30" : ""}`} value={v.regular_price} onChange={(e) => onUpdate(i, { regular_price: e.target.value })} placeholder="—" />
               <Input className={cellInput} value={v.sale_price} onChange={(e) => onUpdate(i, { sale_price: e.target.value })} placeholder="—" />
               <Input
-                className={cellInput}
+                className={`${cellInput} ${!v.manage_stock ? "bg-muted/30 text-muted-foreground cursor-not-allowed" : ""}`}
                 type="number"
                 min="0"
-                value={v.stock_quantity ?? ""}
+                value={v.manage_stock ? (v.stock_quantity ?? "") : ""}
+                disabled={!v.manage_stock}
+                title={!v.manage_stock ? "Enable Manage Stock to set quantity" : undefined}
                 onChange={(e) => {
                   const raw = e.target.value;
                   if (raw === "") { onUpdate(i, { stock_quantity: null }); return; }

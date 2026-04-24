@@ -155,7 +155,16 @@ export function VariationEditDialog({ open, onOpenChange, variation, onUpdate, o
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-[11px] font-medium text-muted-foreground">Quantity</Label>
-                <Input className="h-9" type="number" min="0" value={variation.stock_quantity ?? ""} onChange={(e) => setQty(e.target.value)} placeholder="—" />
+                <Input
+                  className={`h-9 ${!variation.manage_stock ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                  type="number"
+                  min="0"
+                  value={variation.manage_stock ? (variation.stock_quantity ?? "") : ""}
+                  onChange={(e) => setQty(e.target.value)}
+                  placeholder={variation.manage_stock ? "—" : "Enable Manage Stock"}
+                  disabled={!variation.manage_stock}
+                  title={!variation.manage_stock ? "Tick Manage Stock to track quantity" : undefined}
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px] font-medium text-muted-foreground">Stock</Label>
