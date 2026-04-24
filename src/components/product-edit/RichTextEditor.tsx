@@ -1,7 +1,6 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type ReactQuillType from "react-quill-new";
 
 const ReactQuill = dynamic(
   async () => {
@@ -56,7 +55,6 @@ const TOOLBAR = [
 
 export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props) {
   const [mode, setMode] = useState<"visual" | "html">("visual");
-  const quillRef = useRef<ReactQuillType | null>(null);
   const lastEmittedRef = useRef<string>(value || "");
   const minHeight = rows * 24;
 
@@ -128,7 +126,6 @@ export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props
       {mode === "visual" ? (
         <div style={{ minHeight }} className="quill-visual-wrapper">
           <ReactQuill
-            ref={quillRef as unknown as React.Ref<ReactQuillType>}
             theme="snow"
             value={value || ""}
             onChange={handleChange}
