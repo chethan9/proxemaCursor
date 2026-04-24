@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1197,6 +1197,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_custom: boolean
+          is_default_trial: boolean
           max_api_calls_per_month: number
           max_products_per_site: number
           max_sites: number
@@ -1216,6 +1217,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_custom?: boolean
+          is_default_trial?: boolean
           max_api_calls_per_month?: number
           max_products_per_site?: number
           max_sites?: number
@@ -1235,6 +1237,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_custom?: boolean
+          is_default_trial?: boolean
           max_api_calls_per_month?: number
           max_products_per_site?: number
           max_sites?: number
@@ -1516,21 +1519,6 @@ export type Database = {
           name?: string
           permissions?: Json
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      schema_dump: {
-        Row: {
-          ddl: string | null
-          sort: number | null
-        }
-        Insert: {
-          ddl?: string | null
-          sort?: number | null
-        }
-        Update: {
-          ddl?: string | null
-          sort?: number | null
         }
         Relationships: []
       }

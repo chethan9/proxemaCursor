@@ -1,0 +1,1 @@
+CREATE TRIGGER plans_unmark_other_defaults BEFORE INSERT OR UPDATE OF is_default_trial ON plans FOR EACH ROW EXECUTE FUNCTION unmark_other_default_trials();

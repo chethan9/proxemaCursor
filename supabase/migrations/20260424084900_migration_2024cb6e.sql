@@ -1,0 +1,1 @@
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS is_default_trial boolean NOT NULL DEFAULT false;

@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS plans_unmark_other_defaults ON plans;
