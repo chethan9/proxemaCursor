@@ -170,10 +170,11 @@ export async function fetchProductVariations(storeId: string, productId: string)
 }
 
 export async function createProduct(storeId: string, form: ProductFormState) {
+  const { buildWooPayload } = await import("@/services/productValidation");
   const res = await fetch(`/api/stores/${storeId}/products/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formToWooPayload(form)),
+    body: JSON.stringify(buildWooPayload(form)),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -183,10 +184,11 @@ export async function createProduct(storeId: string, form: ProductFormState) {
 }
 
 export async function updateProduct(storeId: string, productId: string, form: ProductFormState) {
+  const { buildWooPayload } = await import("@/services/productValidation");
   const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formToWooPayload(form)),
+    body: JSON.stringify(buildWooPayload(form)),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
