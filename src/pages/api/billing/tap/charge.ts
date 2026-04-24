@@ -70,7 +70,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const payload = init.payload as { type: string; transactionUrl?: string };
     return res.status(200).json({
       gatewayRef: init.gatewayRef,
-      status: init.status,
       transactionUrl: payload?.transactionUrl || null,
     });
   } catch (err) {

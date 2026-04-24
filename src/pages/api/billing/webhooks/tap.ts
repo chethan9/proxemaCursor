@@ -25,7 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const event = await tapGateway.parseWebhook({
       headers: req.headers as Record<string, string | string[] | undefined>,
       rawBody,
-      body,
     });
 
     let clientId: string | null = null;
@@ -37,28 +36,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .maybeSingle();
       if (sub) {
         clientId = sub.client_id;
-        const updates: Record<string, unknown> = {};
-        if (event.status === "paid") {
+        const updates: { status?: string; last_payment_at?: string } = {};
+        if (event.paymentStatus === "paid") {
           updates.status = "active";
           updates.last_payment_at = new Date().toISOString();
-        } else if (event.status === "failed" || event.status === "canceled") {
+        } else if (event.paymentStatus === "failed" || event.paymentStatus === "canceled") {
           updates.status = "past_due";
         }
         if (Object.keys(updates).length > 0) {
-          await supabaseAdmin.from("subscriptions").update(updates).eq("id", sub.id);
+          await supabaseAdmin.from("subscriptions").update(updates as never).eq("id", sub.id);
         }
       }
     }
 
     await logActivity({
-      action: `tap.webhook.${event.status}`,
+      action: `tap.webhook.${event.paymentStatus || event.type}`,
       entityType: "payment_gateway",
       entityId: event.gatewayRef,
       clientId,
       metadata: {
         gateway: "tap",
-        status: event.status,
-        event_id: event.eventId,
+        status: event.paymentStatus,
+        event_id: event.id,
         amount_minor: event.amountMinor,
         currency: event.currency,
       },
