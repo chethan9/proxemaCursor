@@ -415,11 +415,6 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-muted-foreground"><Package className="h-3 w-3" /></div>
                 )}
-                {(li.quantity || 0) > 1 && (
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3.5 min-w-[14px] px-0.5 rounded-full bg-foreground text-background text-[9px] font-bold flex items-center justify-center leading-none">
-                    {li.quantity}
-                  </span>
-                )}
               </div>
             ))}
             {items.length > 4 && (
