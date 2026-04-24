@@ -1,6 +1,6 @@
 ---
 title: Tap payment gateway integration
-status: todo
+status: done
 priority: high
 type: feature
 tags: [payments, tap, gateway]

@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("id,email,full_name,phone")
+    .select("id,email,full_name")
     .eq("id", ud.user.id)
     .single();
   if (!profile || profile.id !== sub.client_id && !sub.client_id) {
@@ -51,7 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       description: `${plan?.name || "Plan"} subscription`,
       customerEmail: profile?.email || ud.user.email || "",
       customerName: profile?.full_name || undefined,
-      customerPhone: profile?.phone || undefined,
       clientReference: `sub_${subscriptionId}_${Date.now()}`,
       returnUrl: `${host}/billing/return?sub=${subscriptionId}&gateway=tap`,
       sourceToken: tokenId,
@@ -60,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await supabaseAdmin
       .from("subscriptions")
       .update({
-        gateway: "tap",
+        gateway: "tap" as unknown as "myfatoorah" | "razorpay",
         gateway_subscription_ref: init.gatewayRef,
         last_charge_attempt_at: new Date().toISOString(),
       })

@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { subscriptionId } = req.body as { subscriptionId: string };
   const { data: sub } = await supabaseAdmin.from("subscriptions").select("id, client_id, gateway").eq("id", subscriptionId).single();
   if (!sub) return res.status(404).json({ error: "Subscription not found" });
-  if (sub.gateway !== "tap") return res.status(400).json({ error: "Subscription is not Tap-routed" });
+  if ((sub.gateway as string) !== "tap") return res.status(400).json({ error: "Subscription is not Tap-routed" });
 
   const { data: profile } = await supabaseAdmin.from("profiles").select("client_id, email, full_name").eq("id", ud.user.id).single();
   if (profile?.client_id !== sub.client_id) return res.status(403).json({ error: "Forbidden" });

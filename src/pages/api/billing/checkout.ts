@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getGateway } from "@/lib/payments";
-import { consumeCoupon } from "@/services/couponService.server";
+import { validateCoupon } from "@/services/couponService.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -26,14 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let amt = baseAmt;
   if (couponCode) {
-    const c = await consumeCoupon(couponCode, sub.plan_id, sub.client_id);
-    if (c.ok && c.discountMinor) amt = Math.max(0, baseAmt - c.discountMinor);
+    const c = await validateCoupon(couponCode, sub.plan_id, sub.client_id, baseAmt, currency);
+    if (c.valid && c.discountMinor) amt = Math.max(0, baseAmt - c.discountMinor);
   }
 
   const gatewayName = (sub.gateway || "razorpay") as "myfatoorah" | "razorpay" | "tap";
 
   if (gatewayName === "tap") {
-    await supabaseAdmin.from("subscriptions").update({ gateway: "tap" }).eq("id", subscriptionId);
+    await supabaseAdmin.from("subscriptions").update({ gateway: "tap" as unknown as "myfatoorah" | "razorpay" }).eq("id", subscriptionId);
     return res.status(200).json({
       subscriptionId: sub.id,
       gateway: "tap",
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const gw = getGateway(gatewayName);
+  const gw = getGateway(gatewayName as "myfatoorah" | "razorpay");
   const host = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.host}`;
   const init = await gw.initiateCharge({
     amountMinor: amt,
@@ -52,6 +52,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     clientReference: `sub_${sub.id}_${Date.now()}`,
     returnUrl: `${host}/billing/return?sub=${sub.id}`,
   });
-  await supabaseAdmin.from("subscriptions").update({ gateway: init.gateway, gateway_subscription_ref: init.gatewayRef }).eq("id", sub.id);
+  await supabaseAdmin.from("subscriptions").update({ gateway: init.gateway as unknown as "myfatoorah" | "razorpay", gateway_subscription_ref: init.gatewayRef }).eq("id", sub.id);
   return res.status(200).json({ subscriptionId: sub.id, gateway: init.gateway, payload: init.payload, discount: baseAmt - amt });
 }
