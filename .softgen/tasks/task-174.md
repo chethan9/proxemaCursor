@@ -34,3 +34,14 @@ Status values follow `src/lib/subscription-state.ts`: trialing, active, past_due
 - Super admin navigates to Settings → Subscriptions, sees every client's subscription state in one table
 - Assigning a plan to a client without a subscription lifts the `/pricing` redirect for that client immediately
 - Switching a client from plan A to plan B, canceling, and reactivating all show up in the activity history for that subscription
+
+## Follow-ups (post-MVP, optional)
+
+Items folded in from now-deleted task-155 (broader admin billing scope). Tackle once the MVP above is shipped and there's real demand:
+
+- [ ] `/admin/invoices` page: fleet-wide invoice table with filters (status, date range, client, amount), CSV export, mark-as-paid for external/bank-transfer payments (requires reason + reference number)
+- [ ] Manual refund action in subscription drawer: calls `gateway.refund`, creates negative invoice, logs gateway refund_id
+- [ ] Comp-plan action: assign a plan for N months without charge (creates $0 invoices dated forward)
+- [ ] Force plan change outside the normal upgrade flow (separate from quick "switch plan" — bypasses proration rules)
+- [ ] Bulk action: mark selected invoices as uncollectible with reason
+- [ ] Require reason input on every destructive admin action (validation error if missing) and persist reason in `activity_log.metadata`
