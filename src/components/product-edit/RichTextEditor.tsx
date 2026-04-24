@@ -1,17 +1,11 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const ReactQuill = dynamic(
   async () => {
     const { default: RQ } = await import("react-quill-new");
     const { default: Quill } = await import("quill");
-    const Link = Quill.import("formats/link") as { sanitize: (url: string) => string };
-    const originalSanitize = Link.sanitize;
-    Link.sanitize = function (url: string) {
-      const sanitized = originalSanitize.call(this, url);
-      return sanitized;
-    };
     const LinkClass = Quill.import("formats/link") as unknown as {
       create: (value: string) => HTMLAnchorElement;
     };
@@ -56,7 +50,7 @@ const TOOLBAR = [
 export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props) {
   const [mode, setMode] = useState<"visual" | "html">("visual");
   const lastEmittedRef = useRef<string>(value || "");
-  const minHeight = rows * 24;
+  const minHeight = Math.max(rows * 24, 120);
 
   const modules = useMemo(
     () => ({
@@ -102,29 +96,31 @@ export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props
   }, [value, mode]);
 
   return (
-    <div className="rounded-md border border-border bg-background overflow-hidden quill-wrapper">
-      <div className="flex items-center justify-end border-b border-border bg-muted/30 px-1.5 py-1 gap-0.5">
-        <Button
+    <div className="rounded-md border border-border bg-background overflow-hidden quill-wrapper relative">
+      <div className="absolute top-1.5 right-2 z-10 flex items-center gap-0.5 rounded-md bg-background/95 backdrop-blur-sm border border-border shadow-sm p-0.5">
+        <button
           type="button"
-          variant={mode === "visual" ? "secondary" : "ghost"}
-          size="sm"
-          className="h-6 px-2 text-[10px]"
           onClick={() => setMode("visual")}
+          className={cn(
+            "h-6 px-2 text-[10px] font-medium rounded transition-colors",
+            mode === "visual" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+          )}
         >
           Visual
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          variant={mode === "html" ? "secondary" : "ghost"}
-          size="sm"
-          className="h-6 px-2 text-[10px]"
           onClick={() => setMode("html")}
+          className={cn(
+            "h-6 px-2 text-[10px] font-medium rounded transition-colors",
+            mode === "html" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+          )}
         >
           HTML
-        </Button>
+        </button>
       </div>
       {mode === "visual" ? (
-        <div style={{ minHeight }} className="quill-visual-wrapper">
+        <div className="quill-resize-wrapper" style={{ minHeight: minHeight + 42 }}>
           <ReactQuill
             theme="snow"
             value={value || ""}
@@ -138,8 +134,8 @@ export function RichTextEditor({ value, onChange, rows = 6, placeholder }: Props
         <textarea
           value={value}
           onChange={(e) => handleHtmlChange(e.target.value)}
-          className="w-full font-mono text-xs px-3 py-2.5 bg-background outline-none resize-y block"
-          style={{ minHeight }}
+          className="w-full font-mono text-xs px-3 py-2.5 pt-10 bg-background outline-none resize-y block"
+          style={{ minHeight: minHeight + 42 }}
           placeholder={placeholder}
         />
       )}

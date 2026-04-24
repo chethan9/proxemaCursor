@@ -424,23 +424,40 @@
     border-bottom: 1px solid hsl(var(--border));
     background: hsl(var(--muted) / 0.3);
     padding: 6px 8px;
+    padding-right: 96px;
   }
   .quill-wrapper .ql-container.ql-snow {
     border: none;
     font-family: inherit;
     font-size: 0.875rem;
     color: hsl(var(--foreground));
+    resize: vertical;
+    overflow: auto;
+    min-height: 120px;
   }
   .quill-wrapper .ql-editor {
     min-height: inherit;
     padding: 10px 12px;
     line-height: 1.55;
+    outline: none !important;
+  }
+  .quill-wrapper .ql-editor:focus,
+  .quill-wrapper .ql-editor:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
   }
   .quill-wrapper .ql-editor.ql-blank::before {
     color: hsl(var(--muted-foreground));
     font-style: normal;
     left: 12px;
     right: 12px;
+  }
+  .quill-resize-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+  .quill-resize-wrapper > .ql-container {
+    flex: 1;
   }
   .quill-wrapper .ql-snow .ql-stroke { stroke: hsl(var(--muted-foreground)); }
   .quill-wrapper .ql-snow .ql-fill { fill: hsl(var(--muted-foreground)); }
