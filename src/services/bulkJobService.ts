@@ -132,3 +132,27 @@ export const JOB_TYPE_LABEL: Record<BulkJobType, string> = {
 };
 
 export const ORDER_STATUS_OPTIONS = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"] as const;
+
+export async function retryFailedBulkJobItems(jobId: string, opts?: { force?: boolean }): Promise<BulkJob> {
+  const orig = await getBulkJob(jobId);
+  if (!orig) throw new Error("Original job not found");
+  const errors = Array.isArray(orig.errors) ? (orig.errors as unknown as BulkJobError[]) : [];
+  const failedIds = errors.map((e) => (typeof e.id === "string" ? Number(e.id) : e.id)).filter((n) => Number.isFinite(n)) as number[];
+  if (failedIds.length === 0) throw new Error("No failed items to retry");
+
+  const origPayload = (orig.payload ?? {}) as Record<string, unknown>;
+  const jobType = orig.job_type as BulkJobType;
+  const idKey = jobType === "update_order_status" || jobType === "delete_orders" ? "order_ids" : "product_ids";
+
+  const newPayload: Record<string, unknown> = { ...origPayload, [idKey]: failedIds };
+  if (opts?.force !== undefined && (jobType === "delete_products" || jobType === "delete_orders")) {
+    newPayload.force = opts.force;
+  }
+
+  return createBulkJob({
+    store_id: orig.store_id,
+    job_type: jobType,
+    payload: newPayload as unknown as BulkJobPayload,
+    total: failedIds.length,
+  });
+}

@@ -39,9 +39,10 @@ import {
   Search,
   Filter,
   RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
-import { cancelBulkJob, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
+import { cancelBulkJob, retryFailedBulkJobItems, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -342,6 +343,9 @@ function BulkJobsInner() {
 }
 
 function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [retrying, setRetrying] = useState(false);
   if (!job) return null;
   const eff = effectiveStatus(job);
   const meta = STATUS_META[eff] ?? STATUS_META.pending;
@@ -349,6 +353,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
   const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
   const errors = Array.isArray(job.errors) ? (job.errors as Array<{ id: number | string; error: string }>) : [];
   const payload = job.payload as Record<string, unknown> | null;
+  const isDeleteJob = job.job_type === "delete_products" || job.job_type === "delete_orders";
   const fmt = (d: string | null) => d ? new Date(d).toLocaleString() : "—";
   const dur = (() => {
     if (!job.started_at) return "—";
@@ -358,6 +363,21 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
     return `${(ms / 60000).toFixed(1)}m`;
   })();
+
+  const handleRetry = async (force?: boolean) => {
+    if (!job) return;
+    setRetrying(true);
+    try {
+      const next = await retryFailedBulkJobItems(job.id, force !== undefined ? { force } : undefined);
+      qc.invalidateQueries({ queryKey: ["bulk-jobs"] });
+      toast({ title: "Retry job queued", description: `Re-running ${next.total} failed item${next.total === 1 ? "" : "s"}` });
+      onClose();
+    } catch (e) {
+      toast({ title: "Retry failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   return (
     <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>
@@ -439,9 +459,48 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
 
             {errors.length > 0 && (
               <div>
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1.5">
-                  Per-item Errors ({errors.length})
-                </p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] uppercase text-muted-foreground tracking-wide">
+                    Per-item Errors ({errors.length})
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {isDeleteJob ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => handleRetry(false)}
+                          disabled={retrying}
+                        >
+                          <RotateCcw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
+                          Retry (trash)
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => handleRetry(true)}
+                          disabled={retrying}
+                        >
+                          <RotateCcw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
+                          Retry (force delete)
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={() => handleRetry()}
+                        disabled={retrying}
+                      >
+                        <RotateCcw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
+                        Retry failed items
+                      </Button>
+                    )}
+                  </div>
+                </div>
                 <div className="rounded-lg border divide-y max-h-72 overflow-y-auto">
                   {errors.map((e, i) => (
                     <div key={i} className="px-3 py-2 text-xs">
