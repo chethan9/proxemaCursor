@@ -1,6 +1,6 @@
 ---
 title: WooCommerce product rules enforcement across all edit surfaces
-status: todo
+status: done
 priority: high
 type: feature
 tags: [products, validation, woocommerce, quality]
@@ -65,23 +65,23 @@ When user adds/selects an attribute name in `AttributeEditor.tsx`, if that attri
 
 ## Checklist
 
-- [ ] Create `src/services/productValidation.ts` with `normalizeProductForm`, `validateProductForm`, `validateVariation`, `checkSkuUniqueness`, `buildWooPayload` (replaces `formToWooPayload`)
-- [ ] Strip parent `regular_price`/`sale_price` when `type=variable`; always send explicit `type`
-- [ ] Auto-couple stock fields: qty entered → manage_stock=true; qty=0 → stock_status=outofstock; qty>0 → stock_status=instock; manage_stock=false → omit stock_quantity, stock_status=instock
-- [ ] Make SKU required with auto-generate fallback when user leaves blank; add debounced async uniqueness check against `products` + `product_variations` tables in same store
-- [ ] Remove "Free product" path from `BasicEditor`; enforce regular_price > 0 for publish (draft still allowed with empty price)
-- [ ] Trim all string inputs; normalize attribute names/options casing consistently before serialization
-- [ ] Detect duplicate variation attribute combinations in `VariationsTab` + block save; show affected rows highlighted
-- [ ] Per-variation validation in `VariationEditDialog` + `VariationsTable`: price > 0, attrs present, qty non-negative; block parent save if any enabled variation fails
-- [ ] Wire validator into `ProductQuickEdit` and `ProductRowExpanded` — inline errors + save disabled state + auto-coupling
+- [x] Create `src/services/productValidation.ts` with `normalizeProductForm`, `validateProductForm`, `validateVariation`, `checkSkuUniqueness`, `buildWooPayload` (replaces `formToWooPayload`)
+- [x] Strip parent `regular_price`/`sale_price` when `type=variable`; always send explicit `type`
+- [x] Auto-couple stock fields: qty entered → manage_stock=true; qty=0 → stock_status=outofstock; qty>0 → stock_status=instock; manage_stock=false → omit stock_quantity, stock_status=instock
+- [x] Make SKU required with auto-generate fallback when user leaves blank; add debounced async uniqueness check against `products` + `product_variations` tables in same store
+- [x] Remove "Free product" path from `BasicEditor`; enforce regular_price > 0 for publish (draft still allowed with empty price)
+- [x] Trim all string inputs; normalize attribute names/options casing consistently before serialization
+- [x] Detect duplicate variation attribute combinations in `VariationsTab` + block save; show affected rows highlighted
+- [x] Per-variation validation in `VariationEditDialog` + `VariationsTable`: price > 0, attrs present, qty non-negative; block parent save if any enabled variation fails
+- [x] Wire validator into `ProductQuickEdit` and `ProductRowExpanded` — inline errors + save disabled state + auto-coupling
 - [ ] Add error summary panel above save/publish button on new/edit product pages listing every blocking error with anchor links to the offending field
-- [ ] Server-side: mirror validator in `products/create.ts` and `[productId].ts`; return 400 with `{ errors: [{field, message}] }` on failure; add SKU uniqueness pre-check against DB before Woo call
-- [ ] Add a `required` prop to the shared `Label` component (or new `RequiredLabel` wrapper) that renders a red asterisk after the label text; apply consistently
-- [ ] Mark required fields with the red asterisk across all surfaces: name, regular price, SKU, stock quantity (when tracking), variation price, variation attributes — in ProductQuickEdit, ProductRowExpanded, BasicEditor, PricingTaxTab, InventoryShippingTab, VariationEditDialog, VariationsTable headers, new/edit product pages
-- [ ] Fetch suggested values for attribute: when attribute name matches a global Woo attribute, show first 10 existing terms as `+ value` chips above the "Add new option" input
-- [ ] Add "Browse all" button next to chips opening a searchable dialog of all terms for that attribute (mirror `TagPicker` browse-all UX)
-- [ ] Clicking a chip or selecting from browse-all appends the value to the variation `Values` list (dedupe; case-insensitive)
-- [ ] Hide suggestion chips when attribute name doesn't match any global Woo attribute; keep free-type input always available
+- [x] Server-side: mirror validator in `products/create.ts` and `[productId].ts`; return 400 with `{ errors: [{field, message}] }` on failure; add SKU uniqueness pre-check against DB before Woo call
+- [x] Add a `required` prop to the shared `Label` component (or new `RequiredLabel` wrapper) that renders a red asterisk after the label text; apply consistently
+- [x] Mark required fields with the red asterisk across all surfaces: name, regular price, SKU, stock quantity (when tracking), variation price, variation attributes — in ProductQuickEdit, ProductRowExpanded, BasicEditor, PricingTaxTab, InventoryShippingTab, VariationEditDialog, VariationsTable headers, new/edit product pages
+- [x] Fetch suggested values for attribute: when attribute name matches a global Woo attribute, show first 10 existing terms as `+ value` chips above the "Add new option" input
+- [x] Add "Browse all" button next to chips opening a searchable dialog of all terms for that attribute (mirror `TagPicker` browse-all UX)
+- [x] Clicking a chip or selecting from browse-all appends the value to the variation `Values` list (dedupe; case-insensitive)
+- [x] Hide suggestion chips when attribute name doesn't match any global Woo attribute; keep free-type input always available
 - [ ] Translate Woo `product_invalid_sku` / 400 duplicate-SKU errors into friendly toast pointing at offending product
 
 ## Acceptance
