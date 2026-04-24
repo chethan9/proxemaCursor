@@ -58,7 +58,7 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
       <Card>
         <CardContent className="p-6 space-y-5">
-          <div className="flex items-start justify-between gap-4 border-b pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 border-b pb-2">
             <div className="flex items-center gap-6 overflow-x-auto">
               {TABS.map((t) => (
                 <button
