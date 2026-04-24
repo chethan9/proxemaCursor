@@ -1,5 +1,7 @@
 import { ProductAttribute, Variation, compositeVariationKey } from "@/services/productEditService";
 
+export type { Variation };
+
 export function generateMatrix(attrs: ProductAttribute[]): Variation[] {
   const forVar = attrs.filter((a) => a.variation && a.options.length > 0);
   if (forVar.length === 0) return [];

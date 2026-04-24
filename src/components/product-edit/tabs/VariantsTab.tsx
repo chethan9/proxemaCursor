@@ -193,11 +193,11 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
       {editIdx !== null && form.variations[editIdx] && (
         <VariationEditDialog
           storeId={storeId}
+          open={editIdx !== null}
+          onOpenChange={(o) => { if (!o) setEditIdx(null); }}
           variation={form.variations[editIdx]}
-          index={editIdx}
-          total={form.variations.length}
-          onClose={() => setEditIdx(null)}
-          onSaveNext={() => setEditIdx((i) => (i !== null && i < form.variations.length - 1 ? i + 1 : null))}
+          hasNext={editIdx < form.variations.length - 1}
+          onSaveAndNext={() => setEditIdx((i) => (i !== null && i < form.variations.length - 1 ? i + 1 : null))}
           onUpdate={(patch) => updateVariation(editIdx, patch)}
           onRemove={() => removeVariation(editIdx)}
         />
