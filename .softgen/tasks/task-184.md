@@ -1,6 +1,6 @@
 ---
 title: Rich text editor list & heading styles
-status: todo
+status: done
 priority: medium
 type: bug
 tags: [product, editor, ui]
