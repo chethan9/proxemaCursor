@@ -77,7 +77,7 @@ async function validateCreatePayload(
   storeId: string,
   payload: Record<string, unknown>,
   variations: WooVariationInput[]
-): Promise<{ ok: true } | { ok: false; errors: ValidationIssue[] }> {
+): Promise<{ errors: ValidationIssue[] }> {
   const errors: ValidationIssue[] = [];
   const type = trim(payload.type) || "simple";
   payload.type = type;
@@ -161,8 +161,7 @@ async function validateCreatePayload(
     if (conflict) errors.push({ field: "sku", message: conflict });
   }
 
-  if (errors.length > 0) return { ok: false, errors };
-  return { ok: true };
+  return { errors };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -188,9 +187,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     delete parentPayload.variations;
 
     const validation = await validateCreatePayload(storeId, parentPayload, variations);
-    if (!validation.ok) {
-      const errs = validation.errors;
-      return res.status(400).json({ error: "Validation failed", errors: errs });
+    if (validation.errors.length > 0) {
+      return res.status(400).json({ error: "Validation failed", errors: validation.errors });
     }
 
     const created = await wooRequest<Record<string, unknown>>(creds, "POST", "products", parentPayload);

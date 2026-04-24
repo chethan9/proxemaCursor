@@ -67,7 +67,7 @@ async function validateUpdatePayload(
   productId: string,
   payload: Record<string, unknown>,
   variations: Array<Record<string, unknown>> | undefined
-): Promise<{ ok: true } | { ok: false; errors: ValidationIssue[] }> {
+): Promise<{ errors: ValidationIssue[] }> {
   const errors: ValidationIssue[] = [];
   const type = trimStr(payload.type) || "simple";
   payload.type = type;
@@ -141,8 +141,7 @@ async function validateUpdatePayload(
     if (conflict) errors.push({ field: "sku", message: conflict });
   }
 
-  if (errors.length > 0) return { ok: false, errors };
-  return { ok: true };
+  return { errors };
 }
 
 interface WooProduct {
@@ -293,9 +292,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!store) throw new Error("Store not connected");
 
     const validation = await validateUpdatePayload(storeId, productId, wooPayload, variations);
-    if (!validation.ok) {
-      const errs = validation.errors;
-      return res.status(400).json({ error: "Validation failed", errors: errs });
+    if (validation.errors.length > 0) {
+      return res.status(400).json({ error: "Validation failed", errors: validation.errors });
     }
 
     const updated = await wooRequest<WooProduct>(
