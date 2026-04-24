@@ -37,13 +37,22 @@ export function InventoryShippingTab({ form, setForm }: Props) {
     setForm((p) => ({ ...p, sku: `${base}${rand}` }));
   };
 
+  const setQty = (raw: string) => {
+    setForm((p) => {
+      const qty = clampNonNegNum(raw);
+      if (qty == null) return { ...p, stock_quantity: null };
+      const nextStatus: typeof p.stock_status = qty === 0 ? "outofstock" : (p.stock_status === "onbackorder" ? "onbackorder" : "instock");
+      return { ...p, stock_quantity: qty, manage_stock: true, stock_status: nextStatus };
+    });
+  };
+
   return (
     <div className="space-y-5">
       <div>
         <div className="text-sm font-medium text-primary mb-2">Inventory</div>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">SKU</Label>
+            <Label className="text-xs" required>SKU</Label>
             <div className="flex gap-2">
               <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} />
               <Button type="button" variant="outline" onClick={autoSku} className="gap-1.5 shrink-0">
@@ -57,8 +66,8 @@ export function InventoryShippingTab({ form, setForm }: Props) {
           </label>
           {form.manage_stock && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Quantity</Label>
-              <Input type="number" min="0" value={form.stock_quantity ?? ""} onChange={(e) => setForm((p) => ({ ...p, stock_quantity: clampNonNegNum(e.target.value) }))} />
+              <Label className="text-xs" required>Quantity</Label>
+              <Input type="number" min="0" value={form.stock_quantity ?? ""} onChange={(e) => setQty(e.target.value)} />
             </div>
           )}
           <div className="space-y-1.5">

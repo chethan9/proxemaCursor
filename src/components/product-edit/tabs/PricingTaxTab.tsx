@@ -26,8 +26,11 @@ export function PricingTaxTab({ form, setForm }: Props) {
         <div className="text-sm font-medium text-primary mb-2">Price</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Regular Price</Label>
-            <Input type="number" min="0" step="0.01" value={form.regular_price} onChange={(e) => setForm((p) => ({ ...p, regular_price: clampNonNegative(e.target.value) }))} />
+            <Label className="text-xs" required>Regular Price</Label>
+            <Input type="number" min="0.01" step="0.01" value={form.regular_price} onChange={(e) => setForm((p) => ({ ...p, regular_price: clampNonNegative(e.target.value) }))} />
+            {form.regular_price !== "" && (parseFloat(form.regular_price) || 0) <= 0 && (
+              <div className="text-[11px] text-destructive">Must be greater than 0.</div>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Offer Price</Label>

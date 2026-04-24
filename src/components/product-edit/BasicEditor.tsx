@@ -61,9 +61,10 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
 
   const regularNum = parseFloat(form.regular_price) || 0;
   const saleNum = parseFloat(form.sale_price) || 0;
-  const isFree = regularNum === 0 && form.regular_price === "0";
   const discountPct = regularNum > 0 && saleNum > 0 && saleNum < regularNum ? Math.round(((regularNum - saleNum) / regularNum) * 100) : 0;
-  const publishBlocked = !isFree && (form.status === "publish" ? regularNum <= 0 : regularNum < 0);
+  const publishing = form.status === "publish";
+  const priceInvalid = publishing && regularNum <= 0;
+  const publishBlocked = priceInvalid;
 
   // Clamp negative numeric string to 0 (defensive: spinner arrows can bypass min="0" in some browsers)
   const clampNonNegative = (v: string): string => {
@@ -106,12 +107,15 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
     setTagInput("");
   };
 
-  const toggleFree = (v: boolean) => {
-    if (v) {
-      setForm((p) => ({ ...p, regular_price: "0", sale_price: "" }));
-    } else {
-      setForm((p) => ({ ...p, regular_price: "" }));
-    }
+  const setStockQty = (raw: string) => {
+    setForm((p) => {
+      if (raw === "") return { ...p, stock_quantity: null };
+      const n = Number(raw);
+      if (Number.isNaN(n)) return p;
+      const qty = Math.max(0, n);
+      const nextStatus: typeof p.stock_status = qty === 0 ? "outofstock" : (p.stock_status === "onbackorder" ? "onbackorder" : "instock");
+      return { ...p, stock_quantity: qty, manage_stock: true, stock_status: nextStatus };
+    });
   };
 
   const generateSku = () => {
@@ -161,7 +165,7 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
           <Card>
             <CardContent className="p-4 space-y-3">
               <div className="space-y-1.5">
-                <Label>Product name</Label>
+                <Label required>Product name</Label>
                 <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
               </div>
               <div className="space-y-1.5">
@@ -311,33 +315,6 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
 
           <Card>
             <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">Price</div>
-                {discountPct > 0 && (
-                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px]">
-                    {discountPct}% off
-                  </Badge>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Regular</Label>
-                  <Input type="number" min="0" step="0.01" disabled={isFree} value={form.regular_price} onChange={(e) => setForm((p) => ({ ...p, regular_price: clampNonNegative(e.target.value) }))} placeholder="0.00" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Sale</Label>
-                  <Input type="number" min="0" step="0.01" disabled={isFree} value={form.sale_price} onChange={(e) => setForm((p) => ({ ...p, sale_price: clampNonNegative(e.target.value) }))} placeholder="0.00" />
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
-                <Checkbox checked={isFree} onCheckedChange={(v) => toggleFree(!!v)} />
-                Free product
-              </label>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 space-y-3">
               <div className="text-sm font-medium">Inventory</div>
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox checked={form.manage_stock} onCheckedChange={(v) => setForm((p) => ({ ...p, manage_stock: !!v }))} />
@@ -345,13 +322,8 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
               </label>
               {form.manage_stock && (
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Stock quantity</Label>
-                  <Input type="number" min="0" value={form.stock_quantity ?? ""} onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "") { setForm((p) => ({ ...p, stock_quantity: null })); return; }
-                    const n = Number(v);
-                    setForm((p) => ({ ...p, stock_quantity: Number.isNaN(n) ? null : Math.max(0, n) }));
-                  }} placeholder="0" />
+                  <Label className="text-[11px] text-muted-foreground" required>Stock quantity</Label>
+                  <Input type="number" min="0" value={form.stock_quantity ?? ""} onChange={(e) => setStockQty(e.target.value)} placeholder="0" />
                 </div>
               )}
               <div className="space-y-1.5">
@@ -373,9 +345,9 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">SKU</Label>
+                <Label className="text-[11px] text-muted-foreground" required={publishing}>SKU</Label>
                 <div className="flex gap-1.5">
-                  <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Optional" className="flex-1" />
+                  <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Required" className={`flex-1 ${publishing && !form.sku.trim() ? "border-destructive" : ""}`} />
                   <Button
                     type="button"
                     variant="outline"
@@ -402,9 +374,9 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
           </Card>
 
           {publishBlocked && (
-            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-              <AlertCircle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
-              <span className="text-foreground/80">Add a price or mark as <span className="font-medium">Free product</span> to publish. Save as Draft to skip pricing for now.</span>
+            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
+              <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+              <span className="text-foreground/80">Regular price must be greater than 0 to publish. Save as Draft instead to skip pricing for now.</span>
             </div>
           )}
 

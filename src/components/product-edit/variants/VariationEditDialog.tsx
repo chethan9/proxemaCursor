@@ -26,6 +26,13 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
   const label = variationLabel(variation);
   const gallery = variation.gallery || [];
 
+  const value = (s: string) => {
+    const t = (s || "").trim();
+    if (!t) return false;
+    const n = parseFloat(t);
+    return !Number.isNaN(n) && n > 0;
+  };
+
   const priceInput = (value: string, onChange: (v: string) => void) => (
     <div className="relative">
       <Input type="number" min="0" step="0.01" value={value} onChange={(e) => {
@@ -37,6 +44,18 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
       <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground">KWD</span>
     </div>
   );
+
+  const invalidPrice = !value(variation.regular_price);
+  const hasAttrs = variation.attributes.length > 0;
+
+  const setQty = (raw: string) => {
+    if (raw === "") { onUpdate({ stock_quantity: null, manage_stock: true }); return; }
+    const n = Number(raw);
+    if (Number.isNaN(n)) return;
+    const qty = Math.max(0, n);
+    const nextStatus = qty === 0 ? "outofstock" : (variation.stock_status === "onbackorder" ? "onbackorder" : "instock");
+    onUpdate({ stock_quantity: qty, manage_stock: true, stock_status: nextStatus as Variation["stock_status"] });
+  };
 
   const Flag = ({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: (v: boolean) => void }) => (
     <button type="button" onClick={() => onToggle(!checked)} className="flex items-center gap-1.5 text-xs cursor-pointer">
@@ -94,8 +113,11 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[11px] font-medium text-muted-foreground">Regular Price</Label>
+                  <Label className="text-[11px] font-medium text-muted-foreground" required>Regular Price</Label>
                   {priceInput(variation.regular_price, (v) => onUpdate({ regular_price: v }))}
+                  {variation.enabled !== false && !value(variation.regular_price) && (
+                    <div className="text-[10px] text-destructive">Required &gt; 0</div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px] font-medium text-muted-foreground">Sale Price</Label>
@@ -109,12 +131,7 @@ export function VariationEditDialog({ storeId, variation, index, total, onClose,
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-[11px] font-medium text-muted-foreground">Quantity</Label>
-                  <Input className="h-9" type="number" min="0" value={variation.stock_quantity ?? ""} onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "") { onUpdate({ stock_quantity: null, manage_stock: true }); return; }
-                    const n = Number(v);
-                    onUpdate({ stock_quantity: Number.isNaN(n) ? null : Math.max(0, n), manage_stock: true });
-                  }} placeholder="—" />
+                  <Input className="h-9" type="number" min="0" value={variation.stock_quantity ?? ""} onChange={(e) => setQty(e.target.value)} placeholder="—" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px] font-medium text-muted-foreground">Stock</Label>
