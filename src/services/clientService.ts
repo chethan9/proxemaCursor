@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/helpers";
-import { logActivity } from "@/lib/activity-log";
 
 export type Client = Tables<"clients">;
 export type ClientInsert = TablesInsert<"clients">;
@@ -123,12 +122,16 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
     .single();
   if (error) throw error;
 
-  await logActivity({
+  const { data: auth } = await supabase.auth.getUser();
+  const actorId = auth.user?.id ?? null;
+
+  await supabase.from("activity_log").insert({
+    actor_id: actorId,
     action: "client.created",
-    entityType: "client",
-    entityId: client.id,
-    clientId: client.id,
-    after: { name: client.name },
+    entity_type: "client",
+    entity_id: client.id,
+    client_id: client.id,
+    metadata: { name: client.name } as never,
   });
 
   const plan = await findDefaultTrialPlan();
@@ -138,12 +141,13 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
 
   try {
     const subscription = await createTrialSubscription(client.id, plan);
-    await logActivity({
+    await supabase.from("activity_log").insert({
+      actor_id: actorId,
       action: "subscription.trial_started",
-      entityType: "subscription",
-      entityId: subscription.id,
-      clientId: client.id,
-      metadata: { plan_slug: plan.slug, plan_id: plan.id, trial_days: plan.trial_days ?? 14 },
+      entity_type: "subscription",
+      entity_id: subscription.id,
+      client_id: client.id,
+      metadata: { plan_slug: plan.slug, plan_id: plan.id, trial_days: plan.trial_days ?? 14 } as never,
     });
     return { client, subscription, trialStarted: true, noPlanAvailable: false };
   } catch (subErr) {
