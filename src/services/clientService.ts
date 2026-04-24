@@ -8,6 +8,15 @@ export type ClientUpdate = TablesUpdate<"clients">;
 export type Plan = Tables<"plans">;
 export type Subscription = Tables<"subscriptions">;
 
+export interface ClientWithStats extends Client {
+  stores_count?: number;
+  api_keys_count?: number;
+  calls_30d?: number;
+}
+
+export const getClients = fetchClients;
+export const getClient = getClientById;
+
 export async function fetchClients(): Promise<Client[]> {
   const { data, error } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
   if (error) throw error;
