@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1519,6 +1519,21 @@ export type Database = {
         }
         Relationships: []
       }
+      schema_dump: {
+        Row: {
+          ddl: string | null
+          sort: number | null
+        }
+        Insert: {
+          ddl?: string | null
+          sort?: number | null
+        }
+        Update: {
+          ddl?: string | null
+          sort?: number | null
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           celebration_shown_at: string | null
@@ -2179,10 +2194,12 @@ export type Database = {
       can_bootstrap_super_admin: { Args: never; Returns: boolean }
       current_user_client_id: { Args: never; Returns: string }
       current_user_role: { Args: never; Returns: string }
-      get_site_home_stats: {
-        Args: { p_store_id: string; p_tz?: string }
-        Returns: Json
-      }
+      get_site_home_stats:
+        | { Args: { p_store_id: string; p_tz?: string }; Returns: Json }
+        | {
+            Args: { p_currency?: string; p_store_id: string; p_tz?: string }
+            Returns: Json
+          }
       has_permission: { Args: { perm: string }; Returns: boolean }
       increment_api_call_count: {
         Args: { p_client_id: string }

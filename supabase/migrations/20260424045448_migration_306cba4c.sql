@@ -1,0 +1,1 @@
+SELECT format('CREATE POLICY %I ON public.%I FOR %s TO %s%s%s;', policyname, tablename, cmd, array_to_string(roles,','), CASE WHEN qual IS NOT NULL THEN ' USING ('||qual||')' ELSE '' END, CASE WHEN with_check IS NOT NULL THEN ' WITH CHECK ('||with_check||')' ELSE '' END) AS ddl FROM pg_policies WHERE schemaname='public' ORDER BY tablename, policyname;

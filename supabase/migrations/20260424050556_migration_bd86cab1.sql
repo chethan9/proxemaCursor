@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public.schema_dump; CREATE TABLE public.schema_dump (sort int, ddl text);
