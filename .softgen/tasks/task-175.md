@@ -1,6 +1,6 @@
 ---
 title: Auto-trial on client creation
-status: todo
+status: done
 priority: urgent
 type: feature
 tags: [billing, onboarding, subscriptions]
@@ -19,11 +19,11 @@ If no plan has `is_default_trial=true`, fall back to the cheapest active non-cus
 
 ## Checklist
 
-- [ ] Add `is_default_trial` boolean column to `plans` table (default false, unique partial index so only one plan can be marked default)
-- [ ] Extend `PlanDialog` in `src/components/plans/PlanDialog.tsx` with an "Default trial plan" switch in the Basics card; toggling on auto-unmarks any other plan
-- [ ] Update `createClient` in `src/services/clientService.ts`: after inserting the client, look up the default trial plan (or fallback), create a `trialing` subscription row with correct period dates and grace period, log to `activity_log`
-- [ ] If no plan exists at all, still allow client creation but show a banner on the client detail page (`src/pages/clients/[id].tsx`) telling super_admin to create a plan first — deep link to `/settings/plans`
-- [ ] Client detail page shows a compact subscription card (plan name, status pill, days remaining in trial, "Manage" link to new `/settings/subscriptions` page)
+- [x] Add `is_default_trial` boolean column to `plans` table (default false, unique partial index so only one plan can be marked default)
+- [x] Extend `PlanDialog` in `src/components/plans/PlanDialog.tsx` with an "Default trial plan" switch in the Basics card; toggling on auto-unmarks any other plan
+- [x] Update `createClient` in `src/services/clientService.ts`: after inserting the client, look up the default trial plan (or fallback), create a `trialing` subscription row with correct period dates and grace period, log to `activity_log`
+- [x] If no plan exists at all, still allow client creation but show a banner on the client detail page (`src/pages/clients/[id].tsx`) telling super_admin to create a plan first — deep link to `/settings/plans`
+- [x] Client detail page shows a compact subscription card (plan name, status pill, days remaining in trial, "Manage" link to new `/settings/subscriptions` page)
 
 ## Acceptance
 

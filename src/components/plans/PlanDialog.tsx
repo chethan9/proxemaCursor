@@ -147,6 +147,10 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
                   <Switch checked={form.is_custom ?? false} onCheckedChange={(v) => setField("is_custom", v)} />
                   Contact sales (hide prices)
                 </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer" title="When a new client is created, automatically start a trial on this plan. Only one plan can be marked as default.">
+                  <Switch checked={(form as { is_default_trial?: boolean }).is_default_trial ?? false} onCheckedChange={(v) => setField("is_default_trial" as keyof typeof form, v as never)} />
+                  Default trial plan
+                </label>
               </div>
             </CardContent>
           </Card>
