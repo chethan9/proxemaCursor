@@ -1097,7 +1097,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           setTimeout(() => { if (typeof document !== "undefined") document.body.style.pointerEvents = ""; }, 0);
         }
       }}>
-        <DialogContent>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>
               {bulkAction?.type === "delete"
