@@ -74,7 +74,7 @@ When user adds/selects an attribute name in `AttributeEditor.tsx`, if that attri
 - [x] Detect duplicate variation attribute combinations in `VariationsTab` + block save; show affected rows highlighted
 - [x] Per-variation validation in `VariationEditDialog` + `VariationsTable`: price > 0, attrs present, qty non-negative; block parent save if any enabled variation fails
 - [x] Wire validator into `ProductQuickEdit` and `ProductRowExpanded` — inline errors + save disabled state + auto-coupling
-- [ ] Add error summary panel above save/publish button on new/edit product pages listing every blocking error with anchor links to the offending field
+- [x] Add error summary panel above save/publish button on new/edit product pages listing every blocking error with anchor links to the offending field
 - [x] Server-side: mirror validator in `products/create.ts` and `[productId].ts`; return 400 with `{ errors: [{field, message}] }` on failure; add SKU uniqueness pre-check against DB before Woo call
 - [x] Add a `required` prop to the shared `Label` component (or new `RequiredLabel` wrapper) that renders a red asterisk after the label text; apply consistently
 - [x] Mark required fields with the red asterisk across all surfaces: name, regular price, SKU, stock quantity (when tracking), variation price, variation attributes — in ProductQuickEdit, ProductRowExpanded, BasicEditor, PricingTaxTab, InventoryShippingTab, VariationEditDialog, VariationsTable headers, new/edit product pages
@@ -82,7 +82,7 @@ When user adds/selects an attribute name in `AttributeEditor.tsx`, if that attri
 - [x] Add "Browse all" button next to chips opening a searchable dialog of all terms for that attribute (mirror `TagPicker` browse-all UX)
 - [x] Clicking a chip or selecting from browse-all appends the value to the variation `Values` list (dedupe; case-insensitive)
 - [x] Hide suggestion chips when attribute name doesn't match any global Woo attribute; keep free-type input always available
-- [ ] Translate Woo `product_invalid_sku` / 400 duplicate-SKU errors into friendly toast pointing at offending product
+- [x] Translate Woo `product_invalid_sku` / 400 duplicate-SKU errors into friendly toast pointing at offending product
 
 ## Acceptance
 

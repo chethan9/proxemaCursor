@@ -8,9 +8,9 @@ import { BasicInfoTab } from "@/components/product-edit/tabs/BasicInfoTab";
 import { PricingTaxTab } from "@/components/product-edit/tabs/PricingTaxTab";
 import { InventoryShippingTab } from "@/components/product-edit/tabs/InventoryShippingTab";
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
-import { emptyProductForm, createProduct, ProductFormState } from "@/services/productEditService";
+import { emptyProductForm, createProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle, X } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ function Inner() {
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const [form, setForm] = useState<ProductFormState>(emptyProductForm());
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
+  const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
 
   const create = useSiteMutation<{ id?: string }, void>({
     mutationFn: () => createProduct(id, form),
@@ -32,8 +33,12 @@ function Inner() {
       ["woo", "taxonomy", id, "tags"],
     ],
     siteName: store?.name,
-    successToast: (r) => `Product created${r && typeof r === "object" && "name" in r ? "" : ""}`,
+    successToast: () => `Product created`,
     onSuccessExtra: () => router.push(`/sites/${id}/products`),
+    onErrorExtra: (err) => {
+      const e = err as Error & { validationErrors?: ProductValidationIssue[] };
+      setServerErrors(e.validationErrors || []);
+    },
   });
 
   if (loading) return <SiteLoadingSkeleton />;
@@ -43,6 +48,8 @@ function Inner() {
     if (tab === "basic") return form.name.trim().length > 0;
     return true;
   };
+
+  const submit = () => { setServerErrors([]); create.mutate(); };
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
@@ -56,8 +63,28 @@ function Inner() {
           <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Advanced</button>
         </div>
       </div>
+
+      {serverErrors.length > 0 && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-destructive mb-1">Couldn't save — {serverErrors.length} issue{serverErrors.length === 1 ? "" : "s"} to fix:</div>
+              <ul className="space-y-0.5 text-xs text-foreground/80">
+                {serverErrors.map((e, i) => (
+                  <li key={i}><span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive mr-1.5">{e.field}</span>{e.message}</li>
+                ))}
+              </ul>
+            </div>
+            <button onClick={() => setServerErrors([])} className="text-muted-foreground hover:text-foreground shrink-0">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {mode === "basic" ? (
-        <BasicEditor storeId={id} form={form} setForm={setForm} saving={create.isPending} onCancel={() => router.push(`/sites/${id}/products`)} onPublish={() => create.mutate()} isEdit={false} />
+        <BasicEditor storeId={id} form={form} setForm={setForm} saving={create.isPending} onCancel={() => router.push(`/sites/${id}/products`)} onPublish={submit} isEdit={false} />
       ) : (
         <AdvancedShell
           form={form}
@@ -65,7 +92,7 @@ function Inner() {
           setActiveTab={setActiveTab}
           canAdvance={canAdvance}
           onCancel={() => router.push(`/sites/${id}/products`)}
-          onPublish={() => create.mutate()}
+          onPublish={submit}
           saving={create.isPending}
           isEdit={false}
           tabContent={{

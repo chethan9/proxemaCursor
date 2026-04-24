@@ -178,7 +178,8 @@ export async function createProduct(storeId: string, form: ProductFormState) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Create failed (${res.status})`);
+    const e = makeProductError(err, res.status);
+    throw e;
   }
   return res.json();
 }
@@ -192,7 +193,28 @@ export async function updateProduct(storeId: string, productId: string, form: Pr
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Update failed (${res.status})`);
+    const e = makeProductError(err, res.status);
+    throw e;
   }
   return res.json();
+}
+
+export type ProductValidationIssue = { field: string; message: string };
+export type ProductError = Error & { validationErrors?: ProductValidationIssue[]; status?: number };
+
+function makeProductError(body: Record<string, unknown>, status: number): ProductError {
+  const errors = Array.isArray(body.errors) ? (body.errors as ProductValidationIssue[]) : undefined;
+  let message = (body.message as string) || (body.error as string) || `Request failed (${status})`;
+  const code = body.code as string | undefined;
+  if (code === "product_invalid_sku" || /sku/i.test(message) && /duplicat|invalid|exists|taken/i.test(message)) {
+    message = `SKU already in use. Pick a different SKU or auto-generate one.`;
+  }
+  if (errors && errors.length > 0 && !body.message) {
+    message = errors.map((e) => e.message).slice(0, 3).join(" • ");
+    if (errors.length > 3) message += ` (+${errors.length - 3} more)`;
+  }
+  const e = new Error(message) as ProductError;
+  e.validationErrors = errors;
+  e.status = status;
+  return e;
 }

@@ -8,13 +8,13 @@ import { BasicInfoTab } from "@/components/product-edit/tabs/BasicInfoTab";
 import { PricingTaxTab } from "@/components/product-edit/tabs/PricingTaxTab";
 import { InventoryShippingTab } from "@/components/product-edit/tabs/InventoryShippingTab";
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
-import { emptyProductForm, updateProduct, ProductFormState } from "@/services/productEditService";
+import { emptyProductForm, updateProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
@@ -31,6 +31,7 @@ function Inner() {
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
 
   useEffect(() => {
     if (!storeId || !productId) return;
@@ -107,6 +108,10 @@ function Inner() {
     siteName: store?.name,
     successToast: "Saved",
     onSuccessExtra: () => router.push(`/sites/${storeId}/products`),
+    onErrorExtra: (err) => {
+      const e = err as Error & { validationErrors?: ProductValidationIssue[] };
+      setServerErrors(e.validationErrors || []);
+    },
   });
 
   const remove = useSiteMutation<unknown, void>({
@@ -127,6 +132,7 @@ function Inner() {
 
   const onPublish = useCallback(() => {
     if (!form) return;
+    setServerErrors([]);
     save.mutate();
   }, [form, save]);
 
@@ -157,6 +163,25 @@ function Inner() {
           </Button>
         </div>
       </div>
+
+      {serverErrors.length > 0 && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-destructive mb-1">Couldn't save — {serverErrors.length} issue{serverErrors.length === 1 ? "" : "s"} to fix:</div>
+              <ul className="space-y-0.5 text-xs text-foreground/80">
+                {serverErrors.map((e, i) => (
+                  <li key={i}><span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive mr-1.5">{e.field}</span>{e.message}</li>
+                ))}
+              </ul>
+            </div>
+            <button onClick={() => setServerErrors([])} className="text-muted-foreground hover:text-foreground shrink-0">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {mode === "basic" ? (
         <BasicEditor storeId={storeId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} saving={save.isPending} onCancel={() => router.push(`/sites/${storeId}/products`)} onPublish={onPublish} isEdit={true} />
