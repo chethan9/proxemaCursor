@@ -1,6 +1,6 @@
 ---
 title: Multi-currency dashboard fix for site home
-status: todo
+status: done
 priority: high
 type: bug
 tags: [dashboard, currency, rpc, site-home]
@@ -37,17 +37,17 @@ position: 183
 
 ## Checklist
 
-- [ ] Update `get_site_home_stats` RPC to accept optional currency filter and return list of currencies detected in last 30d plus the effective currency used
-- [ ] RPC: default selected currency to most-used in last 30d, falling back to the store's configured currency when there are no orders
-- [ ] RPC: apply currency filter to all monetary aggregations (today/week/month sales, previous-month sales, daily trend revenue, top products revenue) while leaving order-count stats currency-agnostic
-- [ ] Extend stats service response shape with `currencies: string[]` and `currency: string` (effective)
-- [ ] Extend stats hook + service call signature to pass a selected currency; include it in the query cache key so switching refetches
-- [ ] Add compact currency switcher UI on the site home page, shown only when more than one currency is detected; default to the effective currency returned by the RPC
-- [ ] Persist selected currency in a `?currency=` URL query param so refresh/share preserves the view
-- [ ] Show an inline empty-state inside monetary cards when the selected currency has zero orders in the period (keep order-count cards populated)
-- [ ] Update the stat strip to display the effective currency label consistently across all monetary tiles and the sparkline revenue tile
-- [ ] Verify recent orders card continues to display per-order currency (no regression — it already renders each order's own currency)
-- [ ] Smoke-test single-currency store (no switcher shown, numbers unchanged) and multi-currency store (switcher appears, switching recomputes all monetary values)
+- [x] Update `get_site_home_stats` RPC to accept optional currency filter and return list of currencies detected in last 30d plus the effective currency used
+- [x] RPC: default selected currency to most-used in last 30d, falling back to the store's configured currency when there are no orders
+- [x] RPC: apply currency filter to all monetary aggregations (today/week/month sales, previous-month sales, daily trend revenue, top products revenue) while leaving order-count stats currency-agnostic
+- [x] Extend stats service response shape with `currencies: string[]` and `currency: string` (effective)
+- [x] Extend stats hook + service call signature to pass a selected currency; include it in the query cache key so switching refetches
+- [x] Add compact currency switcher UI on the site home page, shown only when more than one currency is detected; default to the effective currency returned by the RPC
+- [x] Persist selected currency in a `?currency=` URL query param so refresh/share preserves the view
+- [x] Show an inline empty-state inside monetary cards when the selected currency has zero orders in the period (keep order-count cards populated)
+- [x] Update the stat strip to display the effective currency label consistently across all monetary tiles and the sparkline revenue tile
+- [x] Verify recent orders card continues to display per-order currency (no regression — it already renders each order's own currency)
+- [x] Smoke-test single-currency store (no switcher shown, numbers unchanged) and multi-currency store (switcher appears, switching recomputes all monetary values)
 
 ## Acceptance
 

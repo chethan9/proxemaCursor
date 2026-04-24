@@ -32,13 +32,19 @@ export interface SiteStatsResponse {
     image: string | null;
     local_id: string | null;
   }[];
+  currencies: { code: string; count: number }[];
+  currency: string;
 }
 
-export async function fetchSiteHomeStats(storeId: string): Promise<SiteStatsResponse> {
+export async function fetchSiteHomeStats(
+  storeId: string,
+  currency?: string | null
+): Promise<SiteStatsResponse> {
   const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
   const { data, error } = await supabase.rpc("get_site_home_stats", {
     p_store_id: storeId,
     p_tz: tz || "UTC",
+    p_currency: currency || null,
   });
   if (error) throw error;
   return data as unknown as SiteStatsResponse;

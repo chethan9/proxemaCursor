@@ -1,8 +1,9 @@
 import { useMemo } from "react";
+import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RefreshCw, Sparkles, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { useSiteHomeStats } from "@/hooks/queries/useSiteStats";
 import { StatStrip } from "@/components/site/home/StatStrip";
@@ -11,6 +12,7 @@ import { OrderStatusDonut } from "@/components/site/home/OrderStatusDonut";
 import { SparklineTile } from "@/components/site/home/SparklineTile";
 import { RecentOrdersCard } from "@/components/site/home/RecentOrdersCard";
 import { TopProductsCard } from "@/components/site/home/TopProductsCard";
+import { CurrencySwitcher } from "@/components/site/home/CurrencySwitcher";
 import { SiteBlockedBanner } from "@/components/site/SiteBlockedBanner";
 import { EmptyState } from "@/components/EmptyState";
 import { NoDataIllustration } from "@/components/illustrations/EmptyIllustrations";
@@ -21,12 +23,17 @@ function fmtMoney(n: number): string {
 
 function HomeInner() {
   const { store, loading: storeLoading } = useSiteFromRoute();
+  const router = useRouter();
   const qc = useQueryClient();
   const storeId = store?.id;
-  const currency = (store as { currency?: string } | null)?.currency || "KWD";
-  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId);
+  const urlCurrency = typeof router.query.currency === "string" ? router.query.currency : null;
+  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId, urlCurrency);
 
   const s = data?.stats;
+  const currencies = data?.currencies || [];
+  const currency = data?.currency || urlCurrency || (store as { currency?: string } | null)?.currency || "USD";
+  const multiCurrency = currencies.length > 1;
+
   const aov = s && s.orders_month_count > 0 ? s.sales_month / s.orders_month_count : 0;
   const deltaPct = s && s.sales_prev_month > 0 ? ((s.sales_month - s.sales_prev_month) / s.sales_prev_month) * 100 : null;
 
@@ -36,6 +43,15 @@ function HomeInner() {
   const hasError = !!error;
   const querySucceeded = !storeLoading && !isLoading && !hasError && !!data;
   const showEmpty = querySucceeded && (!s || s.orders_total === 0);
+  const hasCurrencySales = !!s && s.sales_month > 0;
+
+  const handleCurrencyChange = (code: string) => {
+    router.replace(
+      { pathname: router.pathname, query: { ...router.query, currency: code } },
+      undefined,
+      { shallow: true, scroll: false }
+    );
+  };
 
   return (
     <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
@@ -81,6 +97,30 @@ function HomeInner() {
         </Card>
       ) : (
         <>
+          {multiCurrency && (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Multi-currency store</span>
+                <span>·</span>
+                <span>Viewing sales in</span>
+                <span className="font-mono font-semibold text-foreground">{currency}</span>
+              </div>
+              <CurrencySwitcher
+                currencies={currencies}
+                selected={currency}
+                onChange={handleCurrencyChange}
+              />
+            </div>
+          )}
+
+          {multiCurrency && !hasCurrencySales && (
+            <Card className="border-amber-200 bg-amber-50/40">
+              <CardContent className="py-4 text-sm text-amber-900">
+                No sales in <span className="font-mono font-semibold">{currency}</span> in the last 30 days. Try another currency above.
+              </CardContent>
+            </Card>
+          )}
+
           <StatStrip
             loading={isLoading}
             items={[
@@ -101,7 +141,7 @@ function HomeInner() {
               <SparklineTile
                 label="Sales"
                 value={String(s?.orders_month_count ?? 0)}
-                subtext="orders last 30d"
+                subtext={multiCurrency ? `orders in ${currency} (30d)` : "orders last 30d"}
                 data={ordersSpark}
                 color="hsl(var(--primary))"
                 loading={isLoading}
