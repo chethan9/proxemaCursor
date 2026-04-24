@@ -58,14 +58,14 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
       <Card>
         <CardContent className="p-6 space-y-5">
-          <div className="flex items-center gap-6 overflow-x-auto border-b">
+          <div className="flex items-center gap-6 border-b flex-wrap">
             {TABS.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => setActiveTab(t.key)}
                 className={cn(
-                  "pb-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-[1px] transition-colors",
+                  "pb-3 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors",
                   activeTab === t.key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
                 )}
               >
