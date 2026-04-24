@@ -59,6 +59,7 @@ import { formatStoreDateTime } from "@/lib/format-store-date";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/illustrations/EmptyIllustrations";
+import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -281,6 +282,50 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
 
   const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
+
+  const handleExportCsv = useCallback(() => {
+    if (orders.length === 0) return;
+    const colMap: Record<ColumnKey, (o: OrderRow) => unknown> = {
+      id: (o) => o.id,
+      woo_id: (o) => o.woo_id,
+      order_number: (o) => o.order_number || o.woo_id,
+      status: (o) => o.status || "",
+      date_created: (o) => (o.date_created ? formatStoreDateTime(o.date_created, storeTz) : ""),
+      date_modified: (o) => (o.date_modified ? formatStoreDateTime(o.date_modified, storeTz) : ""),
+      synced_at: (o) => (o.synced_at ? formatStoreDateTime(o.synced_at, storeTz) : ""),
+      source: (o) => getOrderSource(o) || "",
+      created_via: (o) => (o.raw_data as { created_via?: string } | null)?.created_via || "",
+      customer_id: (o) => o.customer_id ?? "",
+      customer: (o) => getCustomerName(o.billing),
+      first_name: (o) => getBillingFirstName(o.billing) || "",
+      last_name: (o) => getBillingLastName(o.billing) || "",
+      email: (o) => getCustomerEmail(o.billing) || "",
+      phone: (o) => getCustomerPhone(o.billing) || "",
+      items: (o) => getItemCount(o.line_items),
+      line_items_summary: (o) => getLineItemsSummary(o.line_items),
+      currency: (o) => o.currency || "",
+      total: (o) => o.total || "",
+      subtotal: (o) => o.subtotal || "",
+      tax: (o) => o.total_tax || "",
+      shipping: (o) => o.shipping_total || "",
+      discount: (o) => o.discount_total || "",
+      payment: (o) => {
+        const pm = o.payment_method ? pmRegistry[o.payment_method] : null;
+        return pm?.label || o.payment_method_title || o.payment_method || "";
+      },
+      payment_method: (o) => o.payment_method || "",
+    };
+    const selected = selectedIds.size > 0 ? orders.filter((o) => selectedIds.has(o.id)) : orders;
+    const columns: CsvColumn<OrderRow>[] = visibleColList.map((c) => ({
+      key: c.key,
+      label: c.label,
+      accessor: colMap[c.key],
+    }));
+    const suffix = selected.length !== orders.length ? `-${selected.length}-selected` : `-page-${page + 1}`;
+    const filename = `orders-${storeName?.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || storeId.slice(0, 8)}${suffix}`;
+    exportCsv(selected, columns, filename);
+    toast({ title: "Export ready", description: `Exported ${selected.length} orders to CSV` });
+  }, [orders, selectedIds, visibleColList, pmRegistry, storeTz, storeName, storeId, page, toast]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
@@ -527,7 +572,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0} title="Export CSV">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0} title="Export CSV" onClick={handleExportCsv}>
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
             </Button>
