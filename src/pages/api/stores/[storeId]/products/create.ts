@@ -21,6 +21,150 @@ type WooVariationInput = {
   attributes: { name: string; option: string }[];
 };
 
+type ValidationIssue = { field: string; message: string };
+
+function trim(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function priceIsPositive(s: unknown): boolean {
+  const t = trim(s);
+  if (!t) return false;
+  const n = parseFloat(t);
+  return !Number.isNaN(n) && n > 0;
+}
+
+async function checkSkuConflict(storeId: string, sku: string): Promise<string | null> {
+  const t = trim(sku);
+  if (!t) return null;
+  const { data: prods } = await supabaseAdmin
+    .from("products")
+    .select("id,name,sku")
+    .eq("store_id", storeId)
+    .eq("sku", t)
+    .limit(1);
+  if (prods && prods.length > 0) return `SKU already used by product "${prods[0].name || t}"`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: vars } = await (supabaseAdmin as any)
+    .from("product_variations")
+    .select("id,sku")
+    .eq("store_id", storeId)
+    .eq("sku", t)
+    .limit(1);
+  if (vars && vars.length > 0) return `SKU already used by a product variation`;
+  return null;
+}
+
+function normalizeStockFields(payload: Record<string, unknown>): void {
+  const qty = payload.stock_quantity;
+  if (qty != null) {
+    payload.manage_stock = true;
+    const n = Number(qty);
+    payload.stock_quantity = Number.isFinite(n) ? Math.max(0, n) : 0;
+    if ((payload.stock_quantity as number) === 0) payload.stock_status = "outofstock";
+    else if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
+  }
+  if (payload.manage_stock === false) {
+    delete payload.stock_quantity;
+    if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
+  }
+  if (typeof payload.stock_quantity === "number" && (payload.stock_quantity as number) < 0) {
+    payload.stock_quantity = 0;
+  }
+}
+
+async function validateCreatePayload(
+  storeId: string,
+  payload: Record<string, unknown>,
+  variations: WooVariationInput[]
+): Promise<{ ok: true } | { ok: false; errors: ValidationIssue[] }> {
+  const errors: ValidationIssue[] = [];
+  const type = trim(payload.type) || "simple";
+  payload.type = type;
+
+  payload.name = trim(payload.name);
+  if (!payload.name) errors.push({ field: "name", message: "Product name is required" });
+
+  payload.sku = trim(payload.sku);
+
+  const publishing = (payload.status as string) === "publish" || !payload.status;
+
+  if (type === "simple") {
+    if (publishing && !priceIsPositive(payload.regular_price)) {
+      errors.push({ field: "regular_price", message: "Regular price is required and must be greater than 0" });
+    }
+    normalizeStockFields(payload);
+  } else if (type === "variable") {
+    // Strip parent price — rule: variable parent must not carry price
+    delete payload.regular_price;
+    delete payload.sale_price;
+    delete payload.price;
+    delete payload.stock_quantity;
+    const parentAttrs = Array.isArray(payload.attributes) ? payload.attributes as Record<string, unknown>[] : [];
+    const variationAttrs = parentAttrs.filter((a) => a.variation === true && Array.isArray(a.options) && (a.options as unknown[]).length > 0);
+    if (variationAttrs.length === 0) {
+      errors.push({ field: "attributes", message: "Variable product needs at least one attribute marked for variations" });
+    }
+    if (variations.length === 0) {
+      errors.push({ field: "variations", message: "Variable product needs at least one variation" });
+    }
+    const parentNames = new Set(variationAttrs.map((a) => trim(a.name).toLowerCase()));
+    const comboSeen = new Map<string, number>();
+    const skuSeen = new Set<string>();
+    variations.forEach((v, idx) => {
+      if (!priceIsPositive(v.regular_price)) {
+        errors.push({ field: `variation[${idx}].regular_price`, message: `Variation ${idx + 1}: price required (> 0)` });
+      }
+      if (!v.attributes || v.attributes.length === 0) {
+        errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: must have at least one attribute` });
+      } else {
+        v.attributes = v.attributes.map((va) => ({ name: trim(va.name), option: trim(va.option) }));
+        for (const va of v.attributes) {
+          if (!parentNames.has(va.name.toLowerCase())) {
+            errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: attribute "${va.name}" not defined on parent` });
+          }
+        }
+        const key = [...v.attributes].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${a.name.toLowerCase()}:${a.option.toLowerCase()}`).join("|");
+        if (comboSeen.has(key)) {
+          errors.push({ field: `variation[${idx}]`, message: `Variation ${idx + 1}: duplicate attribute combination with variation ${comboSeen.get(key)! + 1}` });
+        } else {
+          comboSeen.set(key, idx);
+        }
+      }
+      if (v.manage_stock && v.stock_quantity != null && v.stock_quantity < 0) {
+        errors.push({ field: `variation[${idx}].stock_quantity`, message: `Variation ${idx + 1}: stock cannot be negative` });
+      }
+      const vsku = trim(v.sku);
+      if (vsku) {
+        const k = vsku.toLowerCase();
+        if (skuSeen.has(k)) errors.push({ field: `variation[${idx}].sku`, message: `Variation ${idx + 1}: duplicate SKU within product` });
+        else skuSeen.add(k);
+      }
+    });
+  } else {
+    errors.push({ field: "type", message: `Unsupported product type: ${type}` });
+  }
+
+  // Image validation
+  if (Array.isArray(payload.images)) {
+    for (const img of payload.images as Record<string, unknown>[]) {
+      if (!img.id && !trim(img.src)) {
+        errors.push({ field: "images", message: "Image requires a media ID or valid src URL" });
+        break;
+      }
+    }
+  }
+
+  // Server-side SKU uniqueness (parent)
+  if (payload.sku) {
+    const conflict = await checkSkuConflict(storeId, payload.sku as string);
+    if (conflict) errors.push({ field: "sku", message: conflict });
+  }
+
+  if (errors.length > 0) return { ok: false, errors };
+  return { ok: true };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const storeId = Array.isArray(req.query.storeId) ? req.query.storeId[0] : req.query.storeId;
@@ -42,6 +186,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const variations: WooVariationInput[] = Array.isArray(body.variations) ? body.variations : [];
     const parentPayload = { ...body };
     delete parentPayload.variations;
+
+    const validation = await validateCreatePayload(storeId, parentPayload, variations);
+    if (!validation.ok) {
+      return res.status(400).json({ error: "Validation failed", errors: validation.errors });
+    }
 
     const created = await wooRequest<Record<string, unknown>>(creds, "POST", "products", parentPayload);
     const wooId = created.id as number;

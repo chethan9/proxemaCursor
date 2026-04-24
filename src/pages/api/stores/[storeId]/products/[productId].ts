@@ -8,6 +8,143 @@ function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
+type ValidationIssue = { field: string; message: string };
+
+function trimStr(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function pricePositive(s: unknown): boolean {
+  const t = trimStr(s);
+  if (!t) return false;
+  const n = parseFloat(t);
+  return !Number.isNaN(n) && n > 0;
+}
+
+async function checkSkuConflictUpdate(storeId: string, sku: string, excludeProductId: string): Promise<string | null> {
+  const t = trimStr(sku);
+  if (!t) return null;
+  const { data: prods } = await supabaseAdmin
+    .from("products")
+    .select("id,name,sku")
+    .eq("store_id", storeId)
+    .eq("sku", t)
+    .neq("id", excludeProductId)
+    .limit(1);
+  if (prods && prods.length > 0) return `SKU already used by product "${prods[0].name || t}"`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: vars } = await (supabaseAdmin as any)
+    .from("product_variations")
+    .select("id,sku,product_id")
+    .eq("store_id", storeId)
+    .eq("sku", t)
+    .neq("product_id", excludeProductId)
+    .limit(1);
+  if (vars && vars.length > 0) return `SKU already used by a product variation`;
+  return null;
+}
+
+function couplePayloadStock(payload: Record<string, unknown>): void {
+  const qty = payload.stock_quantity;
+  if (qty != null) {
+    payload.manage_stock = true;
+    const n = Number(qty);
+    payload.stock_quantity = Number.isFinite(n) ? Math.max(0, n) : 0;
+    if ((payload.stock_quantity as number) === 0) payload.stock_status = "outofstock";
+    else if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
+  }
+  if (payload.manage_stock === false) {
+    delete payload.stock_quantity;
+    if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
+  }
+  if (typeof payload.stock_quantity === "number" && (payload.stock_quantity as number) < 0) {
+    payload.stock_quantity = 0;
+  }
+}
+
+async function validateUpdatePayload(
+  storeId: string,
+  productId: string,
+  payload: Record<string, unknown>,
+  variations: Array<Record<string, unknown>> | undefined
+): Promise<{ ok: true } | { ok: false; errors: ValidationIssue[] }> {
+  const errors: ValidationIssue[] = [];
+  const type = trimStr(payload.type) || "simple";
+  payload.type = type;
+  if (payload.name !== undefined) payload.name = trimStr(payload.name);
+  if (payload.sku !== undefined) payload.sku = trimStr(payload.sku);
+  const publishing = payload.status === undefined || payload.status === "publish";
+
+  if (type === "simple") {
+    if (publishing && payload.regular_price !== undefined && !pricePositive(payload.regular_price)) {
+      errors.push({ field: "regular_price", message: "Regular price must be greater than 0" });
+    }
+    couplePayloadStock(payload);
+  } else if (type === "variable") {
+    delete payload.regular_price;
+    delete payload.sale_price;
+    delete payload.price;
+    delete payload.stock_quantity;
+    if (Array.isArray(variations)) {
+      const parentAttrs = Array.isArray(payload.attributes) ? (payload.attributes as Record<string, unknown>[]) : [];
+      const variationAttrs = parentAttrs.filter((a) => a.variation === true && Array.isArray(a.options));
+      const parentNames = new Set(variationAttrs.map((a) => trimStr(a.name).toLowerCase()));
+      const comboSeen = new Map<string, number>();
+      const skuSeen = new Set<string>();
+      variations.forEach((v, idx) => {
+        const enabled = v.enabled !== false;
+        if (enabled && v.regular_price !== undefined && !pricePositive(v.regular_price)) {
+          errors.push({ field: `variation[${idx}].regular_price`, message: `Variation ${idx + 1}: price required (> 0)` });
+        }
+        const vAttrs = Array.isArray(v.attributes) ? (v.attributes as Record<string, string>[]) : [];
+        if (enabled && vAttrs.length === 0) {
+          errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: must have at least one attribute` });
+        }
+        for (const va of vAttrs) {
+          const name = trimStr(va.name);
+          if (parentNames.size && !parentNames.has(name.toLowerCase())) {
+            errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: attribute "${name}" not defined on parent` });
+          }
+        }
+        if (vAttrs.length) {
+          const key = [...vAttrs].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${trimStr(a.name).toLowerCase()}:${trimStr(a.option).toLowerCase()}`).join("|");
+          if (comboSeen.has(key)) {
+            errors.push({ field: `variation[${idx}]`, message: `Variation ${idx + 1}: duplicate combination with variation ${comboSeen.get(key)! + 1}` });
+          } else {
+            comboSeen.set(key, idx);
+          }
+        }
+        if (v.manage_stock && typeof v.stock_quantity === "number" && (v.stock_quantity as number) < 0) {
+          errors.push({ field: `variation[${idx}].stock_quantity`, message: `Variation ${idx + 1}: stock cannot be negative` });
+        }
+        const vsku = trimStr(v.sku);
+        if (vsku) {
+          const k = vsku.toLowerCase();
+          if (skuSeen.has(k)) errors.push({ field: `variation[${idx}].sku`, message: `Variation ${idx + 1}: duplicate SKU within product` });
+          else skuSeen.add(k);
+        }
+      });
+    }
+  }
+
+  if (Array.isArray(payload.images)) {
+    for (const img of payload.images as Record<string, unknown>[]) {
+      if (!img.id && !trimStr(img.src)) {
+        errors.push({ field: "images", message: "Image requires a media ID or valid src URL" });
+        break;
+      }
+    }
+  }
+
+  if (payload.sku) {
+    const conflict = await checkSkuConflictUpdate(storeId, payload.sku as string, productId);
+    if (conflict) errors.push({ field: "sku", message: conflict });
+  }
+
+  if (errors.length > 0) return { ok: false, errors };
+  return { ok: true };
+}
+
 interface WooProduct {
   id: number;
   name: string;
@@ -154,6 +291,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const store = await getStoreCreds(storeId);
     if (!store) throw new Error("Store not connected");
+
+    const validation = await validateUpdatePayload(storeId, productId, wooPayload, variations);
+    if (!validation.ok) {
+      return res.status(400).json({ error: "Validation failed", errors: validation.errors });
+    }
 
     const updated = await wooRequest<WooProduct>(
       store,
