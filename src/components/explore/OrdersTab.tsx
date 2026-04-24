@@ -827,11 +827,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   <DropdownMenuLabel>Change status to…</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {ORDER_STATUS_OPTIONS.map((s) => (
-                    <DropdownMenuItem key={s} onClick={() => setBulkAction({ type: "update_status", status: s })} className="capitalize text-xs">
+                    <DropdownMenuItem key={s} onClick={() => setTimeout(() => setBulkAction({ type: "update_status", status: s }), 0)} className="capitalize text-xs">
                       {s}
                     </DropdownMenuItem>
                   ))}
-                  <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setBulkAction({ type: "delete" })} disabled={overLimit}>
+                  <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setTimeout(() => setBulkAction({ type: "delete" }), 0)} disabled={overLimit}>
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete
                   </Button>
@@ -841,7 +841,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   </Button>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setBulkAction({ type: "delete" })} disabled={overLimit}>
+              <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setTimeout(() => setBulkAction({ type: "delete" }), 0)} disabled={overLimit}>
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete
               </Button>
@@ -1091,7 +1091,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         </CardContent>
       </Card>
 
-      <Dialog open={!!bulkAction} onOpenChange={(v) => !v && setBulkAction(null)}>
+      <Dialog open={!!bulkAction} onOpenChange={(v) => {
+        if (!v) {
+          setBulkAction(null);
+          setTimeout(() => { if (typeof document !== "undefined") document.body.style.pointerEvents = ""; }, 0);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
