@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data, error } = await supabaseAdmin
       .from("payment_gateway_settings")
-      .update(update)
+      .update(update as never)
       .eq("gateway_name", gateway_name)
       .select()
       .single();
