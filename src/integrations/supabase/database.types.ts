@@ -1364,6 +1364,7 @@ export type Database = {
           description: string | null
           id: string
           images: Json | null
+          manage_stock: boolean | null
           name: string
           price: number | null
           raw_data: Json | null
@@ -1388,6 +1389,7 @@ export type Database = {
           description?: string | null
           id?: string
           images?: Json | null
+          manage_stock?: boolean | null
           name: string
           price?: number | null
           raw_data?: Json | null
@@ -1412,6 +1414,7 @@ export type Database = {
           description?: string | null
           id?: string
           images?: Json | null
+          manage_stock?: boolean | null
           name?: string
           price?: number | null
           raw_data?: Json | null

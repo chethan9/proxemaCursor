@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Pencil } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
+import { useToast } from "@/hooks/use-toast";
 
 async function patchProduct(storeId: string, productId: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
   const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
@@ -46,6 +47,7 @@ type Props = {
 };
 
 export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Props) {
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [regular, setRegular] = useState("");
@@ -92,7 +94,37 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
 
   if (!product) return null;
 
+  const clampNonNeg = (v: string): string => {
+    if (v === "" || v === "-") return "";
+    const n = parseFloat(v);
+    if (Number.isNaN(n)) return v;
+    return n < 0 ? "0" : v;
+  };
+
   function handleSave() {
+    const regNum = parseFloat(regular);
+    if (!regular || Number.isNaN(regNum) || regNum <= 0) {
+      toast({ title: "Invalid price", description: "Regular price must be greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (sale) {
+      const saleNum = parseFloat(sale);
+      if (Number.isNaN(saleNum) || saleNum <= 0) {
+        toast({ title: "Invalid sale price", description: "Sale price must be greater than 0.", variant: "destructive" });
+        return;
+      }
+      if (saleNum >= regNum) {
+        toast({ title: "Invalid sale price", description: "Sale price must be less than regular price.", variant: "destructive" });
+        return;
+      }
+    }
+    if (manageStock && stockQty !== "") {
+      const qtyNum = Number(stockQty);
+      if (Number.isNaN(qtyNum) || qtyNum < 0) {
+        toast({ title: "Invalid quantity", description: "Stock quantity cannot be negative.", variant: "destructive" });
+        return;
+      }
+    }
     const patch: Record<string, unknown> = {
       name,
       sku,
@@ -139,11 +171,11 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <Label className="text-[11px] text-muted-foreground">Regular price</Label>
-              <Input type="number" value={regular} onChange={(e) => setRegular(e.target.value)} className="h-8 text-sm" />
+              <Input type="number" min="0.01" step="0.01" value={regular} onChange={(e) => setRegular(clampNonNeg(e.target.value))} className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-[11px] text-muted-foreground">Sale price</Label>
-              <Input type="number" value={sale} onChange={(e) => setSale(e.target.value)} className="h-8 text-sm" />
+              <Input type="number" min="0.01" step="0.01" value={sale} onChange={(e) => setSale(clampNonNeg(e.target.value))} className="h-8 text-sm" />
             </div>
           </div>
           <div className="space-y-2 rounded-md border bg-muted/30 p-2.5">
@@ -166,7 +198,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
               {manageStock && (
                 <div className="space-y-1">
                   <Label className="text-[11px] text-muted-foreground">Qty</Label>
-                  <Input type="number" value={stockQty} onChange={(e) => setStockQty(e.target.value)} className="h-8 text-sm" />
+                  <Input type="number" min="0" value={stockQty} onChange={(e) => setStockQty(clampNonNeg(e.target.value))} className="h-8 text-sm" />
                 </div>
               )}
             </div>

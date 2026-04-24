@@ -63,7 +63,7 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
   const saleNum = parseFloat(form.sale_price) || 0;
   const isFree = regularNum === 0 && form.regular_price === "0";
   const discountPct = regularNum > 0 && saleNum > 0 && saleNum < regularNum ? Math.round(((regularNum - saleNum) / regularNum) * 100) : 0;
-  const publishBlocked = form.status === "publish" && !isFree && regularNum <= 0;
+  const publishBlocked = !isFree && (form.status === "publish" ? regularNum <= 0 : regularNum < 0);
 
   // Clamp negative numeric string to 0 (defensive: spinner arrows can bypass min="0" in some browsers)
   const clampNonNegative = (v: string): string => {

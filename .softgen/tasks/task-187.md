@@ -1,6 +1,6 @@
 ---
 title: Product price & quantity validation
-status: todo
+status: done
 priority: medium
 type: bug
 tags: [product, validation]
