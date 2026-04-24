@@ -25,7 +25,8 @@ export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ dat
   const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter } = opts;
   let q = supabase.from("customers").select("*", { count: "exact" }).eq("store_id", storeId);
   if (search && search.trim()) {
-    const s = search.trim();
+    const raw = search.trim();
+    const s = raw.startsWith("@") ? raw.slice(1) : raw;
     q = q.or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,username.ilike.%${s}%,billing->>phone.ilike.%${s}%,billing->>city.ilike.%${s}%`);
   }
   if (roleFilter && roleFilter !== "all") {

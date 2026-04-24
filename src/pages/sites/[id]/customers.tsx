@@ -340,7 +340,7 @@ function CustomersInner() {
             <div className="w-full max-w-[320px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input placeholder="Search name, email, username, phone, city…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+                <Input placeholder="Search customers…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
               </div>
             </div>
           </div>
@@ -360,6 +360,7 @@ function CustomersInner() {
                     const def: Record<string, boolean> = {};
                     COLUMNS.forEach((c) => { def[c.key] = c.key !== "registered" && c.key !== "last_active"; });
                     setVisibleCols(def as Record<ColumnKey, boolean>);
+                    setColumnOrder(COLUMNS.map((c) => c.key));
                   }}>Reset</Button>
                 </div>
                 <div className="max-h-[380px] overflow-y-auto p-4">
