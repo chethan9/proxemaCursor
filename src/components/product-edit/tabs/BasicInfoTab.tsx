@@ -81,7 +81,7 @@ export function BasicInfoTab({ storeId, form, setForm }: Props) {
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <Label>Product Name</Label>
+        <Label>Product Name <span className="text-destructive">*</span></Label>
         <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
       </div>
       <div className="space-y-1.5">

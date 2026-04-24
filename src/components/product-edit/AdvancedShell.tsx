@@ -15,8 +15,16 @@ const TABS: { key: AdvancedTabKey; label: string }[] = [
   { key: "variants", label: "Variants" },
 ];
 
+const STATUS_OPTIONS: { value: ProductFormState["status"]; label: string }[] = [
+  { value: "publish", label: "Active" },
+  { value: "draft", label: "Draft" },
+  { value: "pending", label: "Pending" },
+  { value: "private", label: "Private" },
+];
+
 type Props = {
   form: ProductFormState;
+  setForm?: (updater: (prev: ProductFormState) => ProductFormState) => void;
   activeTab: AdvancedTabKey;
   setActiveTab: (k: AdvancedTabKey) => void;
   tabContent: Record<AdvancedTabKey, ReactNode>;
@@ -27,7 +35,7 @@ type Props = {
   isEdit: boolean;
 };
 
-export function AdvancedShell({ form, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit }: Props) {
+export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit }: Props) {
   const [errors, setErrors] = useState<string | null>(null);
   const currentIdx = TABS.findIndex((t) => t.key === activeTab);
   const isLast = currentIdx === TABS.length - 1;
@@ -50,20 +58,39 @@ export function AdvancedShell({ form, activeTab, setActiveTab, tabContent, canAd
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
       <Card>
         <CardContent className="p-6 space-y-5">
-          <div className="flex items-center gap-6 border-b pb-2 overflow-x-auto">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setActiveTab(t.key)}
-                className={cn(
-                  "pb-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-[1px] transition-colors",
-                  activeTab === t.key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="flex items-start justify-between gap-4 border-b pb-2">
+            <div className="flex items-center gap-6 overflow-x-auto">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setActiveTab(t.key)}
+                  className={cn(
+                    "pb-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-[1px] transition-colors",
+                    activeTab === t.key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {setForm && (
+              <div className="flex items-center gap-1 shrink-0">
+                {STATUS_OPTIONS.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, status: s.value }))}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-md border transition-colors",
+                      form.status === s.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>{tabContent[activeTab]}</div>
