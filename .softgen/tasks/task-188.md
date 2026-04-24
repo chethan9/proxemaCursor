@@ -1,6 +1,6 @@
 ---
 title: Free product appears in list immediately after publish
-status: todo
+status: done
 priority: high
 type: bug
 tags: [product, list, sync]
