@@ -504,7 +504,7 @@ function CustomersInner() {
                     return (
                       <Fragment key={c.id}>
                         <TableRow
-                          className={`bg-white hover:bg-slate-50 cursor-pointer ${isExpanded ? "bg-slate-50 border-b-0 hover:bg-slate-50" : ""}`}
+                          className={`bg-card hover:bg-muted/50 cursor-pointer ${isExpanded ? "bg-muted/50 border-b-0 hover:bg-muted/50" : ""}`}
                           onClick={() => setExpandedId((cur) => cur === c.id ? null : c.id)}
                         >
                           {visibleColList.map((col) => {
@@ -540,7 +540,7 @@ function CustomersInner() {
                           })}
                         </TableRow>
                         {isExpanded && (
-                          <TableRow className="bg-slate-50 hover:bg-slate-50" data-expanded-row={c.id}>
+                          <TableRow className="bg-muted/50 hover:bg-muted/50" data-expanded-row={c.id}>
                             <TableCell colSpan={visibleColList.length} className="p-0">
                               <div onClick={(e) => e.stopPropagation()}>
                                 <CustomerRowExpanded
