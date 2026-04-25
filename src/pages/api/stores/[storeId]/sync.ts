@@ -1,12 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
-import { fetchPagesConcurrent, basicAuth } from "@/lib/sync-engine";
+import { fetchPagesChunked, basicAuth } from "@/lib/sync-engine";
 import { getAppUrl } from "@/lib/app-url";
 import { waitUntil } from "@vercel/functions";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
+
+const MAX_PAGES_PER_INVOCATION = 10;
+const PER_PAGE = 100;
 
 interface StoreToSync {
   id: string;
@@ -17,229 +20,365 @@ interface StoreToSync {
   auth: string;
 }
 
+interface SyncRunRow {
+  id: string;
+  store_id: string;
+  aspect: string;
+  status: string;
+  started_at: string;
+  cursor_page: number | null;
+  total_pages: number | null;
+  records_processed: number | null;
+  records_created: number | null;
+  records_updated: number | null;
+  last_heartbeat_at: string | null;
+  is_initial: boolean | null;
+}
+
+type Counters = { processed: number; created: number; updated: number };
+
+interface AspectConfig {
+  endpoint: string;
+  table: string;
+  supportsModifiedAfter: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  toRow: (item: any, store: StoreToSync, now: string) => Record<string, unknown>;
+}
+
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
-interface WooProduct { id: number; name: string; slug: string; sku: string; price: string; regular_price: string; sale_price: string; stock_quantity: number | null; stock_status: string; status: string; type: string; description: string; short_description: string; categories: unknown[]; images: unknown[]; attributes: unknown[]; date_created: string; date_modified: string; }
-interface WooOrder { id: number; number: string; status: string; currency: string; total: string; discount_total: string; shipping_total: string; customer_id: number; billing: Record<string, unknown>; shipping: Record<string, unknown>; line_items: unknown[]; shipping_lines: unknown[]; fee_lines: unknown[]; coupon_lines: unknown[]; payment_method: string; payment_method_title: string; date_created: string; date_modified: string; }
-interface WooCustomer { id: number; email: string; first_name: string; last_name: string; username: string; billing: Record<string, unknown>; shipping: Record<string, unknown>; avatar_url: string; is_paying_customer: boolean; orders_count: number; total_spent: string; date_created: string; date_modified: string; }
-interface WooCategory { id: number; name: string; slug: string; parent: number; description: string; display: string; image: unknown; menu_order: number; count: number; }
-interface WooCoupon { id: number; code: string; amount: string; discount_type: string; description: string; date_expires: string | null; usage_count: number; individual_use: boolean; product_ids: number[]; excluded_product_ids: number[]; usage_limit: number | null; usage_limit_per_user: number | null; free_shipping: boolean; minimum_amount: string; maximum_amount: string; date_created: string; date_modified: string; }
-interface WooTag { id: number; name: string; slug: string; description: string; count: number; }
+const ASPECTS: Record<string, AspectConfig> = {
+  products: {
+    endpoint: "products",
+    table: "products",
+    supportsModifiedAfter: true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (p: any, store, now) => ({
+      store_id: store.id, woo_id: p.id, name: p.name, slug: p.slug, sku: p.sku || null,
+      price: p.price ? parseFloat(p.price) : null,
+      regular_price: p.regular_price ? parseFloat(p.regular_price) : null,
+      sale_price: p.sale_price ? parseFloat(p.sale_price) : null,
+      stock_quantity: p.stock_quantity, stock_status: p.stock_status,
+      status: p.status, type: p.type, description: p.description,
+      short_description: p.short_description,
+      categories: toJson(p.categories), images: toJson(p.images),
+      attributes: toJson(p.attributes || []), raw_data: toJson(p), synced_at: now,
+    }),
+  },
+  orders: {
+    endpoint: "orders",
+    table: "orders",
+    supportsModifiedAfter: true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (o: any, store, now) => ({
+      store_id: store.id, woo_id: o.id, order_number: o.number,
+      status: o.status, currency: o.currency,
+      total: o.total ? parseFloat(o.total) : null,
+      discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
+      shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null,
+      customer_id: o.customer_id || null,
+      payment_method: o.payment_method || null,
+      payment_method_title: o.payment_method_title || null,
+      billing: toJson(o.billing), shipping: toJson(o.shipping),
+      line_items: toJson(o.line_items),
+      shipping_lines: toJson(o.shipping_lines || []),
+      fee_lines: toJson(o.fee_lines || []),
+      coupon_lines: toJson(o.coupon_lines || []),
+      raw_data: toJson(o),
+      date_created: o.date_created, date_modified: o.date_modified, synced_at: now,
+    }),
+  },
+  customers: {
+    endpoint: "customers",
+    table: "customers",
+    supportsModifiedAfter: true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (c: any, store, now) => ({
+      store_id: store.id, woo_id: c.id, email: c.email,
+      first_name: c.first_name, last_name: c.last_name, username: c.username,
+      role: null as string | null,
+      billing: toJson(c.billing), shipping: toJson(c.shipping),
+      avatar_url: c.avatar_url || null,
+      is_paying_customer: c.is_paying_customer || false,
+      orders_count: c.orders_count || 0,
+      total_spent: c.total_spent ? parseFloat(c.total_spent) : null,
+      raw_data: toJson(c), date_created: c.date_created, synced_at: now,
+    }),
+  },
+  categories: {
+    endpoint: "products/categories",
+    table: "categories",
+    supportsModifiedAfter: false,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (c: any, store, now) => ({
+      store_id: store.id, woo_id: c.id, name: c.name, slug: c.slug,
+      parent_id: c.parent || null, description: c.description, display: c.display,
+      image: toJson(c.image), menu_order: c.menu_order, count: c.count,
+      raw_data: toJson(c), synced_at: now,
+    }),
+  },
+  tags: {
+    endpoint: "products/tags",
+    table: "tags",
+    supportsModifiedAfter: false,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (t: any, store, now) => ({
+      store_id: store.id, woo_id: t.id, name: t.name, slug: t.slug,
+      description: t.description || "", count: t.count || 0,
+      raw_data: toJson(t), synced_at: now,
+    }),
+  },
+  coupons: {
+    endpoint: "coupons",
+    table: "coupons",
+    supportsModifiedAfter: true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (c: any, store, now) => ({
+      store_id: store.id, woo_id: c.id, code: c.code,
+      amount: c.amount ? parseFloat(c.amount) : null,
+      discount_type: c.discount_type, description: c.description || "",
+      date_expires: c.date_expires, usage_count: c.usage_count || 0,
+      individual_use: c.individual_use || false,
+      product_ids: toJson(c.product_ids || []),
+      excluded_product_ids: toJson(c.excluded_product_ids || []),
+      usage_limit: c.usage_limit, usage_limit_per_user: c.usage_limit_per_user,
+      free_shipping: c.free_shipping || false,
+      minimum_amount: c.minimum_amount ? parseFloat(c.minimum_amount) : null,
+      maximum_amount: c.maximum_amount ? parseFloat(c.maximum_amount) : null,
+      raw_data: toJson(c), date_created: c.date_created, synced_at: now,
+    }),
+  },
+};
 
-type Counters = { processed: number; created: number; updated: number };
-type AspectResult = Counters & { error?: string };
-
-/**
- * Persist one batch of rows to DB immediately, update sync_runs with running totals.
- * Called once per concurrent page batch from fetchPagesConcurrent.
- */
-async function persistBatch(
-  tableName: string,
+async function persistAndCheckpoint(
+  table: string,
   rows: Record<string, unknown>[],
   storeId: string,
-  syncRunId: string,
+  runId: string,
+  page: number,
   counters: Counters
 ): Promise<void> {
   if (rows.length === 0) return;
   const ids = rows.map((r) => r.woo_id as number);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existing } = await (supabase as any)
-    .from(tableName)
+    .from(table)
     .select("woo_id")
     .eq("store_id", storeId)
     .in("woo_id", ids);
   const existingSet = new Set((existing || []).map((e: { woo_id: number }) => e.woo_id));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
-    .from(tableName)
+    .from(table)
     .upsert(rows, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
-  if (error) throw new Error(`${tableName} upsert failed: ${error.message}`);
+  if (error) throw new Error(`${table} upsert failed: ${error.message}`);
   const newCount = rows.filter((r) => !existingSet.has(r.woo_id as number)).length;
   counters.created += newCount;
   counters.updated += rows.length - newCount;
   counters.processed += rows.length;
-  if (syncRunId) {
-    await supabase.from("sync_runs").update({
-      records_processed: counters.processed,
-      records_created: counters.created,
-      records_updated: counters.updated,
-    }).eq("id", syncRunId);
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from("sync_runs").update({
+    cursor_page: page,
+    last_heartbeat_at: new Date().toISOString(),
+    records_processed: counters.processed,
+    records_created: counters.created,
+    records_updated: counters.updated,
+  }).eq("id", runId);
 }
 
-async function syncProducts(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
-  const counters: Counters = { processed: 0, created: 0, updated: 0 };
-  const params: Record<string, string> = {};
-  if (modifiedAfter) params.modified_after = modifiedAfter;
-  await fetchPagesConcurrent<WooProduct>(store.url, store.auth, "products", params, {
-    concurrency: 4,
-    onBatch: async (items) => {
-      const now = new Date().toISOString();
-      const rows = items.map((p) => ({
-        store_id: store.id, woo_id: p.id, name: p.name, slug: p.slug, sku: p.sku || null,
-        price: p.price ? parseFloat(p.price) : null, regular_price: p.regular_price ? parseFloat(p.regular_price) : null,
-        sale_price: p.sale_price ? parseFloat(p.sale_price) : null, stock_quantity: p.stock_quantity,
-        stock_status: p.stock_status, status: p.status, type: p.type, description: p.description,
-        short_description: p.short_description, categories: toJson(p.categories), images: toJson(p.images),
-        attributes: toJson(p.attributes || []), raw_data: toJson(p), synced_at: now,
-      }));
-      await persistBatch("products", rows, store.id, syncRunId, counters);
-    },
-  });
-  return counters;
+interface AspectResult extends Counters {
+  hasMore: boolean;
+  runId: string;
+  error?: string;
+  aspect: string;
 }
 
-async function syncOrders(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
-  const counters: Counters = { processed: 0, created: 0, updated: 0 };
-  const params: Record<string, string> = {};
-  if (modifiedAfter) params.modified_after = modifiedAfter;
-  await fetchPagesConcurrent<WooOrder>(store.url, store.auth, "orders", params, {
-    concurrency: 4,
-    onBatch: async (items) => {
-      const now = new Date().toISOString();
-      const rows = items.map((o) => ({
-        store_id: store.id, woo_id: o.id, order_number: o.number, status: o.status, currency: o.currency,
-        total: o.total ? parseFloat(o.total) : null, discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
-        shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null, customer_id: o.customer_id || null,
-        payment_method: o.payment_method || null, payment_method_title: o.payment_method_title || null,
-        billing: toJson(o.billing), shipping: toJson(o.shipping), line_items: toJson(o.line_items),
-        shipping_lines: toJson(o.shipping_lines || []), fee_lines: toJson(o.fee_lines || []),
-        coupon_lines: toJson(o.coupon_lines || []), raw_data: toJson(o),
-        date_created: o.date_created, date_modified: o.date_modified, synced_at: now,
-      }));
-      await persistBatch("orders", rows, store.id, syncRunId, counters);
-    },
-  });
-  return counters;
-}
-
-async function syncCustomers(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
-  const counters: Counters = { processed: 0, created: 0, updated: 0 };
-  const params: Record<string, string> = {};
-  if (modifiedAfter) params.modified_after = modifiedAfter;
-  await fetchPagesConcurrent<WooCustomer>(store.url, store.auth, "customers", params, {
-    concurrency: 4,
-    onBatch: async (items) => {
-      const now = new Date().toISOString();
-      const rows = items.map((c) => ({
-        store_id: store.id, woo_id: c.id, email: c.email, first_name: c.first_name, last_name: c.last_name,
-        username: c.username, role: null as string | null, billing: toJson(c.billing), shipping: toJson(c.shipping),
-        avatar_url: c.avatar_url || null, is_paying_customer: c.is_paying_customer || false,
-        orders_count: c.orders_count || 0, total_spent: c.total_spent ? parseFloat(c.total_spent) : null,
-        raw_data: toJson(c), date_created: c.date_created, synced_at: now,
-      }));
-      await persistBatch("customers", rows, store.id, syncRunId, counters);
-    },
-  });
-  return counters;
-}
-
-async function syncCategories(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
-  const counters: Counters = { processed: 0, created: 0, updated: 0 };
-  await fetchPagesConcurrent<WooCategory>(store.url, store.auth, "products/categories", {}, {
-    concurrency: 4,
-    onBatch: async (items) => {
-      const now = new Date().toISOString();
-      const rows = items.map((c) => ({
-        store_id: store.id, woo_id: c.id, name: c.name, slug: c.slug, parent_id: c.parent || null,
-        description: c.description, display: c.display, image: toJson(c.image),
-        menu_order: c.menu_order, count: c.count, raw_data: toJson(c), synced_at: now,
-      }));
-      await persistBatch("categories", rows, store.id, syncRunId, counters);
-    },
-  });
-  return counters;
-}
-
-async function syncCoupons(store: StoreToSync, syncRunId: string, modifiedAfter: string | null): Promise<AspectResult> {
-  const counters: Counters = { processed: 0, created: 0, updated: 0 };
-  const params: Record<string, string> = {};
-  if (modifiedAfter) params.modified_after = modifiedAfter;
-  await fetchPagesConcurrent<WooCoupon>(store.url, store.auth, "coupons", params, {
-    concurrency: 4,
-    onBatch: async (items) => {
-      const now = new Date().toISOString();
-      const rows = items.map((c) => ({
-        store_id: store.id, woo_id: c.id, code: c.code,
-        amount: c.amount ? parseFloat(c.amount) : null, discount_type: c.discount_type,
-        description: c.description || "", date_expires: c.date_expires, usage_count: c.usage_count || 0,
-        individual_use: c.individual_use || false, product_ids: toJson(c.product_ids || []),
-        excluded_product_ids: toJson(c.excluded_product_ids || []), usage_limit: c.usage_limit,
-        usage_limit_per_user: c.usage_limit_per_user, free_shipping: c.free_shipping || false,
-        minimum_amount: c.minimum_amount ? parseFloat(c.minimum_amount) : null,
-        maximum_amount: c.maximum_amount ? parseFloat(c.maximum_amount) : null,
-        raw_data: toJson(c), date_created: c.date_created, synced_at: now,
-      }));
-      await persistBatch("coupons", rows, store.id, syncRunId, counters);
-    },
-  });
-  return counters;
-}
-
-async function syncTags(store: StoreToSync, syncRunId: string): Promise<AspectResult> {
-  const counters: Counters = { processed: 0, created: 0, updated: 0 };
-  await fetchPagesConcurrent<WooTag>(store.url, store.auth, "products/tags", {}, {
-    concurrency: 4,
-    onBatch: async (items) => {
-      const now = new Date().toISOString();
-      const rows = items.map((t) => ({
-        store_id: store.id, woo_id: t.id, name: t.name, slug: t.slug,
-        description: t.description || "", count: t.count || 0, raw_data: toJson(t), synced_at: now,
-      }));
-      await persistBatch("tags", rows, store.id, syncRunId, counters);
-    },
-  });
-  return counters;
-}
-
-/** Run one aspect with its own sync_runs row + benchmark. Catches errors. */
-async function runAspect(
-  storeId: string,
+async function runAspectChunk(
+  store: StoreToSync,
   aspectName: string,
-  fn: (runId: string) => Promise<AspectResult>,
-  isInitial: boolean
+  modifiedAfter: string | null,
+  isInitial: boolean,
+  resumeRun: SyncRunRow | null
 ): Promise<AspectResult> {
-  const { data: syncRun } = await supabase
-    .from("sync_runs")
-    .insert({ store_id: storeId, aspect: aspectName, status: "running", started_at: new Date().toISOString() })
-    .select()
-    .single();
-  const start = Date.now();
+  const cfg = ASPECTS[aspectName];
+  const nowIso = new Date().toISOString();
+
+  let run = resumeRun;
+  if (!run) {
+    const { data, error } = await supabase
+      .from("sync_runs")
+      .insert({
+        store_id: store.id,
+        aspect: aspectName,
+        status: "running",
+        started_at: nowIso,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cursor_page: 0 as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        last_heartbeat_at: nowIso as any,
+        is_initial: isInitial,
+      })
+      .select()
+      .single();
+    if (error || !data) {
+      return { processed: 0, created: 0, updated: 0, hasMore: false, runId: "", aspect: aspectName, error: error?.message || "Failed to create run" };
+    }
+    run = data as unknown as SyncRunRow;
+  }
+
+  const counters: Counters = {
+    processed: run.records_processed || 0,
+    created: run.records_created || 0,
+    updated: run.records_updated || 0,
+  };
+  const startPage = (run.cursor_page || 0) + 1;
+  const params: Record<string, string> = {};
+  if (cfg.supportsModifiedAfter && modifiedAfter) params.modified_after = modifiedAfter;
+
   try {
-    const result = await fn(syncRun?.id || "");
-    const duration = (Date.now() - start) / 1000;
-    if (syncRun?.id) {
-      await supabase.from("sync_runs").update({
+    const result = await fetchPagesChunked(store.url, store.auth, cfg.endpoint, params, {
+      startPage,
+      maxPages: MAX_PAGES_PER_INVOCATION,
+      perPage: PER_PAGE,
+      concurrency: 4,
+      onBatch: async (items, page) => {
+        const batchNow = new Date().toISOString();
+        const rows = items.map((item) => cfg.toRow(item, store, batchNow));
+        await persistAndCheckpoint(cfg.table, rows, store.id, run!.id, page, counters);
+      },
+    });
+
+    if (result.hasMore) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("sync_runs").update({
+        cursor_page: result.lastPage,
+        total_pages: result.totalPages,
+        last_heartbeat_at: new Date().toISOString(),
+        records_processed: counters.processed,
+        records_created: counters.created,
+        records_updated: counters.updated,
+      }).eq("id", run.id);
+      return { ...counters, hasMore: true, runId: run.id, aspect: aspectName };
+    } else {
+      const startedAtMs = run.started_at ? new Date(run.started_at).getTime() : Date.now();
+      const duration = (Date.now() - startedAtMs) / 1000;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("sync_runs").update({
         status: "completed",
         completed_at: new Date().toISOString(),
-        records_processed: result.processed,
-        records_created: result.created,
-        records_updated: result.updated,
-      }).eq("id", syncRun.id);
+        cursor_page: result.lastPage,
+        total_pages: result.totalPages,
+        last_heartbeat_at: new Date().toISOString(),
+        records_processed: counters.processed,
+        records_created: counters.created,
+        records_updated: counters.updated,
+      }).eq("id", run.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("sync_benchmarks").insert({
+        store_id: store.id,
+        aspect: aspectName,
+        record_count: counters.processed,
+        duration_seconds: duration,
+        is_initial: isInitial,
+      });
+      return { ...counters, hasMore: false, runId: run.id, aspect: aspectName };
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from("sync_benchmarks").insert({
-      store_id: storeId, aspect: aspectName, record_count: result.processed,
-      duration_seconds: duration, is_initial: isInitial,
-    });
-    return result;
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error(`[Sync] Aspect ${aspectName} failed:`, msg);
-    if (syncRun?.id) {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[Sync] ${aspectName} chunk failed:`, msg);
+    if (run) {
       await supabase.from("sync_runs").update({
         status: "failed",
         completed_at: new Date().toISOString(),
         error_message: msg,
-      }).eq("id", syncRun.id);
+      }).eq("id", run.id);
     }
-    return { processed: 0, created: 0, updated: 0, error: msg };
+    return { ...counters, hasMore: false, runId: run?.id || "", aspect: aspectName, error: msg };
   }
 }
 
+async function fetchStoreForSync(storeId: string): Promise<{ store: StoreToSync; isInitial: boolean; modifiedAfter: string | null; allRunId: string | null; allStartedAt: string | null; rawStore: { last_full_sync_at: string | null; last_sync_at: string | null; initial_sync_completed_at: string | null; client_id: string | null; logo_url: string | null; name: string | null; url: string } } | { error: string; status: number }> {
+  const { data: store, error: storeError } = await supabase
+    .from("stores")
+    .select("id, name, url, consumer_key, consumer_secret, last_sync_at, last_full_sync_at, initial_sync_completed_at, client_id, logo_url")
+    .eq("id", storeId)
+    .single();
+
+  if (storeError || !store) return { error: "Store not found", status: 404 };
+  if (!store.consumer_key || !store.consumer_secret) return { error: "Store not connected - missing API credentials", status: 400 };
+
+  const { data: allRow } = await supabase
+    .from("sync_runs")
+    .select("id, started_at, is_initial")
+    .eq("store_id", storeId).eq("aspect", "all").eq("status", "running")
+    .order("started_at", { ascending: false }).limit(1).maybeSingle();
+
+  const isInitial = !!allRow?.is_initial;
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  const lastFull = store.last_full_sync_at ? new Date(store.last_full_sync_at).getTime() : 0;
+  const fullSyncDue = !lastFull || (Date.now() - lastFull) > SEVEN_DAYS_MS;
+  const useIncremental = !isInitial && !fullSyncDue && !!store.last_sync_at;
+
+  let modifiedAfter: string | null = null;
+  if (useIncremental && store.last_sync_at) {
+    const t = new Date(store.last_sync_at).getTime() - 60 * 60 * 1000;
+    modifiedAfter = new Date(t).toISOString();
+  }
+
+  return {
+    store: {
+      id: store.id, name: store.name || "", url: store.url,
+      consumer_key: store.consumer_key, consumer_secret: store.consumer_secret,
+      auth: basicAuth(store.consumer_key, store.consumer_secret),
+    },
+    isInitial,
+    modifiedAfter,
+    allRunId: allRow?.id || null,
+    allStartedAt: allRow?.started_at || null,
+    rawStore: store,
+  };
+}
+
+async function maybeFireCelebrationAndVariations(
+  storeId: string,
+  rawStore: { client_id: string | null; logo_url: string | null; name: string | null; url: string; initial_sync_completed_at: string | null },
+  isInitial: boolean,
+  baseUrl: string
+): Promise<void> {
+  if (isInitial && !rawStore.initial_sync_completed_at) {
+    await supabase.from("stores").update({ initial_sync_completed_at: new Date().toISOString() }).eq("id", storeId).is("initial_sync_completed_at", null);
+    let userIds: string[] = [];
+    if (rawStore.client_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: members } = await (supabase as any).from("client_members").select("user_id").eq("client_id", rawStore.client_id);
+      userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
+    }
+    if (userIds.length === 0) {
+      const { data: allUsers } = await supabase.from("profiles").select("id").limit(50);
+      userIds = (allUsers || []).map((u: { id: string }) => u.id);
+    }
+    const rows = userIds.map((uid) => ({
+      user_id: uid, type: "celebration",
+      title: `${rawStore.name} is ready!`, body: "Welcome aboard. To infinity and beyond 🚀",
+      cta_label: "Let's go", lottie_url: "/confetti.json", priority: 90,
+      metadata: { store_id: storeId, store_name: rawStore.name, store_url: rawStore.url, logo_url: rawStore.logo_url },
+    }));
+    if (rows.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("user_notifications").insert(rows);
+    }
+  }
+  // Variations sync
+  const variationsPromise = fetch(`${baseUrl}/api/stores/${storeId}/sync-variations`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+  }).catch((e) => console.error("[Sync] variations trigger:", e));
+  waitUntil(variationsPromise);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // PATCH = manual cancel
   if (req.method === "PATCH") {
     const { storeId } = req.query;
     if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
@@ -257,154 +396,152 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { storeId } = req.query;
-  const { aspect } = req.body || {};
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
+  const queryAspect = typeof req.query.aspect === "string" ? req.query.aspect : null;
+  const queryResume = req.query.resume === "true" || req.query.resume === "1";
+  const bodyAspect = (req.body && typeof req.body.aspect === "string") ? req.body.aspect : null;
+  const bodyResume = req.body && (req.body.resume === true || req.body.resume === "true");
+  const targetAspect = queryAspect || bodyAspect;
+  const isResume = queryResume || bodyResume;
+
   try {
-    const tenMinAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString();
-    await supabase.from("sync_runs").update({
-      status: "failed", error_message: "Auto-timeout: sync exceeded 90 minute limit",
-      completed_at: new Date().toISOString(),
-    }).eq("store_id", storeId).eq("status", "running").lt("started_at", tenMinAgo);
+    const ctx = await fetchStoreForSync(storeId);
+    if ("error" in ctx) return res.status(ctx.status).json({ error: ctx.error });
 
-    const { data: store, error: storeError } = await supabase
-      .from("stores")
-      .select("id, name, url, consumer_key, consumer_secret, last_sync_at, last_full_sync_at, initial_sync_completed_at, client_id, logo_url")
-      .eq("id", storeId)
-      .single();
-
-    if (storeError || !store) return res.status(404).json({ error: "Store not found" });
-    if (!store.consumer_key || !store.consumer_secret) return res.status(400).json({ error: "Store not connected - missing API credentials" });
+    const { store, isInitial, modifiedAfter, allRunId, allStartedAt, rawStore } = ctx;
 
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
-    const { data: allRow } = await supabase
-      .from("sync_runs")
-      .select("id, started_at, is_initial")
-      .eq("store_id", storeId).eq("aspect", "all").eq("status", "running")
-      .order("started_at", { ascending: false }).limit(1).maybeSingle();
-    const allRunId = allRow?.id || null;
-    const isInitial = !!allRow?.is_initial;
+    // ---------- RESUME single aspect ----------
+    if (isResume && targetAspect && targetAspect !== "all") {
+      if (!ASPECTS[targetAspect]) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
+      const { data: runRow } = await supabase
+        .from("sync_runs")
+        .select("id, store_id, aspect, status, started_at, cursor_page, total_pages, records_processed, records_created, records_updated, last_heartbeat_at, is_initial")
+        .eq("store_id", storeId).eq("aspect", targetAspect).eq("status", "running")
+        .order("started_at", { ascending: false }).limit(1).maybeSingle();
+      if (!runRow) {
+        return res.status(404).json({ error: "No running run to resume", aspect: targetAspect });
+      }
+      const result = await runAspectChunk(store, targetAspect, modifiedAfter, !!runRow.is_initial, runRow as unknown as SyncRunRow);
 
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-    const lastFull = store.last_full_sync_at ? new Date(store.last_full_sync_at).getTime() : 0;
-    const fullSyncDue = !lastFull || (Date.now() - lastFull) > SEVEN_DAYS_MS;
-    const useIncremental = !isInitial && !fullSyncDue && !!store.last_sync_at;
-
-    let modifiedAfter: string | null = null;
-    if (useIncremental && store.last_sync_at) {
-      const t = new Date(store.last_sync_at).getTime() - 60 * 60 * 1000;
-      modifiedAfter = new Date(t).toISOString();
-    }
-
-    const storeForSync: StoreToSync = {
-      id: store.id, name: store.name || "", url: store.url,
-      consumer_key: store.consumer_key, consumer_secret: store.consumer_secret,
-      auth: basicAuth(store.consumer_key, store.consumer_secret),
-    };
-
-    if (aspect && aspect !== "all" && aspect !== "variations") {
-      const fnMap: Record<string, (runId: string) => Promise<AspectResult>> = {
-        products: (id) => syncProducts(storeForSync, id, modifiedAfter),
-        orders: (id) => syncOrders(storeForSync, id, modifiedAfter),
-        customers: (id) => syncCustomers(storeForSync, id, modifiedAfter),
-        categories: (id) => syncCategories(storeForSync, id),
-        tags: (id) => syncTags(storeForSync, id),
-        coupons: (id) => syncCoupons(storeForSync, id, modifiedAfter),
-      };
-      if (!fnMap[aspect]) return res.status(400).json({ error: `Unknown aspect: ${aspect}` });
-      const result = await runAspect(storeId, aspect, fnMap[aspect], false);
-      await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
-      return res.status(200).json({ success: true, store_id: storeId, results: { [aspect]: result } });
-    }
-
-    // All main aspects in parallel — each streams upserts as pages arrive
-    const [products, orders, customers, categories, tags, coupons] = await Promise.all([
-      runAspect(storeId, "products", (id) => syncProducts(storeForSync, id, modifiedAfter), isInitial),
-      runAspect(storeId, "orders", (id) => syncOrders(storeForSync, id, modifiedAfter), isInitial),
-      runAspect(storeId, "customers", (id) => syncCustomers(storeForSync, id, modifiedAfter), isInitial),
-      runAspect(storeId, "categories", (id) => syncCategories(storeForSync, id), isInitial),
-      runAspect(storeId, "tags", (id) => syncTags(storeForSync, id), isInitial),
-      runAspect(storeId, "coupons", (id) => syncCoupons(storeForSync, id, modifiedAfter), isInitial),
-    ]);
-
-    const results = { products, orders, customers, categories, tags, coupons };
-    const totalProcessed = Object.values(results).reduce((a, r) => a + r.processed, 0);
-    const totalCreated = Object.values(results).reduce((a, r) => a + r.created, 0);
-    const totalUpdated = Object.values(results).reduce((a, r) => a + r.updated, 0);
-
-    const nowIso = new Date().toISOString();
-    const storeUpdate: Record<string, unknown> = { status: "connected", last_sync_at: nowIso };
-    if (!useIncremental) storeUpdate.last_full_sync_at = nowIso;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await supabase.from("stores").update(storeUpdate as any).eq("id", storeId);
-
-    if (allRunId) {
-      const allStart = allRow?.started_at ? new Date(allRow.started_at).getTime() : Date.now();
-      const overallDuration = (Date.now() - allStart) / 1000;
-
-      await supabase.from("sync_runs").update({
-        status: "completed", completed_at: nowIso,
-        records_processed: totalProcessed, records_created: totalCreated, records_updated: totalUpdated,
-      }).eq("id", allRunId);
-
-      if (isInitial || !store.initial_sync_completed_at) {
-        await supabase.from("stores").update({ initial_sync_completed_at: nowIso }).eq("id", storeId).is("initial_sync_completed_at", null);
-
-        const { data: storeFull } = await supabase.from("stores").select("name, url, logo_url, client_id").eq("id", storeId).maybeSingle();
-        if (storeFull) {
-          let userIds: string[] = [];
-          if (storeFull.client_id) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: members } = await (supabase as any).from("client_members").select("user_id").eq("client_id", storeFull.client_id);
-            userIds = ((members || []) as { user_id: string }[]).map((m) => m.user_id);
-          }
-          if (userIds.length === 0) {
-            const { data: allUsers } = await supabase.from("profiles").select("id").limit(50);
-            userIds = (allUsers || []).map((u: { id: string }) => u.id);
-          }
-          const rows = userIds.map((uid) => ({
-            user_id: uid, type: "celebration",
-            title: `${storeFull.name} is ready!`, body: "Welcome aboard. To infinity and beyond 🚀",
-            cta_label: "Let's go", lottie_url: "/confetti.json", priority: 90,
-            metadata: { store_id: storeId, store_name: storeFull.name, store_url: storeFull.url, logo_url: storeFull.logo_url },
-          }));
-          if (rows.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase as any).from("user_notifications").insert(rows);
-          }
+      // After this chunk, check whether the whole "all" run is now complete
+      if (allRunId) {
+        const { data: stillRunning } = await supabase
+          .from("sync_runs").select("id").eq("store_id", storeId).eq("status", "running").neq("aspect", "all");
+        const allDone = !stillRunning || stillRunning.length === 0;
+        if (allDone) {
+          const allStartMs = allStartedAt ? new Date(allStartedAt).getTime() : Date.now();
+          const overallDuration = (Date.now() - allStartMs) / 1000;
+          // sum totals from all aspect runs in this initial sync session
+          const { data: aspectRuns } = await supabase
+            .from("sync_runs").select("records_processed, records_created, records_updated")
+            .eq("store_id", storeId).eq("status", "completed").gte("started_at", allStartedAt || new Date(0).toISOString()).neq("aspect", "all");
+          const totals = (aspectRuns || []).reduce((a, r) => ({
+            processed: a.processed + (r.records_processed || 0),
+            created: a.created + (r.records_created || 0),
+            updated: a.updated + (r.records_updated || 0),
+          }), { processed: 0, created: 0, updated: 0 });
+          const nowIso = new Date().toISOString();
+          await supabase.from("sync_runs").update({
+            status: "completed", completed_at: nowIso,
+            records_processed: totals.processed, records_created: totals.created, records_updated: totals.updated,
+          }).eq("id", allRunId);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any).from("sync_benchmarks").insert({
+            store_id: storeId, aspect: "all", record_count: totals.processed,
+            duration_seconds: overallDuration, is_initial: isInitial,
+          });
+          await supabase.from("stores").update({ status: "connected", last_sync_at: nowIso }).eq("id", storeId);
+          await maybeFireCelebrationAndVariations(storeId, rawStore, isInitial, getAppUrl(req));
+        } else {
+          // still running — keep store status "syncing"
+          await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
+        }
+      } else {
+        // ad-hoc single-aspect resume: update store back when done
+        if (!result.hasMore) {
+          await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
         }
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from("sync_benchmarks").insert({
-        store_id: storeId, aspect: "all", record_count: totalProcessed,
-        duration_seconds: overallDuration, is_initial: isInitial,
-      });
+      return res.status(200).json({ success: true, store_id: storeId, resumed: true, result });
     }
 
-    // Variations fire-and-forget — waitUntil keeps function alive on Vercel
-    const base = getAppUrl(req);
-    const variationsPromise = fetch(`${base}/api/stores/${storeId}/sync-variations`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
-    }).catch((e) => console.error("[Sync] variations trigger:", e));
-    waitUntil(variationsPromise);
+    // ---------- Fresh single aspect ----------
+    if (targetAspect && targetAspect !== "all" && targetAspect !== "variations") {
+      if (!ASPECTS[targetAspect]) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
+      const result = await runAspectChunk(store, targetAspect, modifiedAfter, false, null);
+      if (!result.hasMore) {
+        await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
+      }
+      return res.status(200).json({ success: true, store_id: storeId, results: { [targetAspect]: result } });
+    }
+
+    // ---------- Fresh "all" sync — first chunk for each aspect in parallel ----------
+    const aspectNames = Object.keys(ASPECTS);
+    const results = await Promise.all(
+      aspectNames.map((name) => runAspectChunk(store, name, modifiedAfter, isInitial, null))
+    );
+
+    const totals = results.reduce((a, r) => ({
+      processed: a.processed + r.processed,
+      created: a.created + r.created,
+      updated: a.updated + r.updated,
+    }), { processed: 0, created: 0, updated: 0 });
+
+    const allDone = results.every((r) => !r.hasMore);
+    const nowIso = new Date().toISOString();
+
+    if (allDone) {
+      const allStartMs = allStartedAt ? new Date(allStartedAt).getTime() : Date.now();
+      const overallDuration = (Date.now() - allStartMs) / 1000;
+      const storeUpdate: Record<string, unknown> = { status: "connected", last_sync_at: nowIso };
+      if (isInitial || !rawStore.last_full_sync_at) storeUpdate.last_full_sync_at = nowIso;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await supabase.from("stores").update(storeUpdate as any).eq("id", storeId);
+
+      if (allRunId) {
+        await supabase.from("sync_runs").update({
+          status: "completed", completed_at: nowIso,
+          records_processed: totals.processed, records_created: totals.created, records_updated: totals.updated,
+        }).eq("id", allRunId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("sync_benchmarks").insert({
+          store_id: storeId, aspect: "all", record_count: totals.processed,
+          duration_seconds: overallDuration, is_initial: isInitial,
+        });
+      }
+      await maybeFireCelebrationAndVariations(storeId, rawStore, isInitial, getAppUrl(req));
+    } else {
+      // chunks remaining — update "all" run heartbeat with running totals; cron will resume
+      if (allRunId) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("sync_runs").update({
+          last_heartbeat_at: nowIso,
+          records_processed: totals.processed,
+          records_created: totals.created,
+          records_updated: totals.updated,
+        }).eq("id", allRunId);
+      }
+      // store stays in "syncing" status until cron finishes the rest
+    }
+
+    const resultsByAspect: Record<string, AspectResult> = {};
+    aspectNames.forEach((name, i) => { resultsByAspect[name] = results[i]; });
 
     return res.status(200).json({
       success: true,
       store_id: storeId,
-      mode: useIncremental ? "incremental" : "full",
-      results,
-      totals: { processed: totalProcessed, created: totalCreated, updated: totalUpdated },
+      all_done: allDone,
+      results: resultsByAspect,
+      totals,
     });
 
   } catch (error) {
     console.error("[Sync API] Error:", error);
     await supabase.from("stores").update({ status: "error" }).eq("id", storeId);
-    await supabase.from("sync_runs").update({
-      status: "failed", completed_at: new Date().toISOString(),
-      error_message: error instanceof Error ? error.message : "Unknown error",
-    }).eq("store_id", storeId).eq("aspect", "all").eq("status", "running");
     return res.status(500).json({
       error: "Sync failed",
       message: error instanceof Error ? error.message : "Unknown error",
