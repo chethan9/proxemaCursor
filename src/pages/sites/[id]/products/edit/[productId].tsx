@@ -16,6 +16,7 @@ import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, Trash2, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 
 type ProductRow = Record<string, unknown>;
@@ -142,7 +143,7 @@ function Inner() {
     return true;
   };
 
-  if (storeLoading || loading) return <SiteLoadingSkeleton />;
+  if (storeLoading || loading) return <ProductEditSkeleton />;
   if (!store || !form) return <div className="p-6">Product not found</div>;
 
   return (
@@ -225,4 +226,71 @@ function Inner() {
 
 export default function EditProductPage() {
   return <SitePageShell><Inner /></SitePageShell>;
+}
+
+function ProductEditSkeleton() {
+  return (
+    <div className="p-6 space-y-4 max-w-[1400px] mx-auto animate-in fade-in duration-200">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-7 w-32" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-44 rounded-full" />
+          <Skeleton className="h-9 w-9" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+        <div className="space-y-4 min-w-0">
+          <div className="rounded-lg border border-border bg-white p-5 space-y-3">
+            <Skeleton className="h-4 w-32" />
+            <div className="grid grid-cols-4 gap-2.5">
+              <Skeleton className="aspect-square rounded-md col-span-2 row-span-2" />
+              <Skeleton className="aspect-square rounded-md" />
+              <Skeleton className="aspect-square rounded-md" />
+              <Skeleton className="aspect-square rounded-md" />
+              <Skeleton className="aspect-square rounded-md" />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-white p-5 space-y-4">
+            <Skeleton className="h-4 w-28" />
+            <div className="space-y-3">
+              <div><Skeleton className="h-3 w-16 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Skeleton className="h-3 w-12 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
+                <div><Skeleton className="h-3 w-14 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
+              </div>
+              <div><Skeleton className="h-3 w-20 mb-1.5" /><Skeleton className="h-24 w-full" /></div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-white p-5 space-y-3">
+            <Skeleton className="h-4 w-24" />
+            <div className="grid grid-cols-2 gap-3">
+              <div><Skeleton className="h-3 w-20 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
+              <div><Skeleton className="h-3 w-16 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-white p-4 space-y-2.5">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+          <div className="rounded-lg border border-border bg-white p-4 space-y-2.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

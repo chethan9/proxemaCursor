@@ -169,11 +169,25 @@ async function persistAndCheckpoint(
     .eq("store_id", storeId)
     .in("woo_id", ids);
   const existingSet = new Set((existing || []).map((e: { woo_id: number }) => e.woo_id));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from(table)
-    .upsert(rows, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
-  if (error) throw new Error(`${table} upsert failed: ${error.message}`);
+
+  // Upsert with deadlock retry: PG can deadlock when concurrent chunks touch overlapping (store_id, woo_id) keys.
+  let lastErr: { message: string; code?: string } | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from(table)
+      .upsert(rows, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
+    if (!error) { lastErr = null; break; }
+    lastErr = error;
+    const isDeadlock = error.code === "40P01" || /deadlock/i.test(error.message || "");
+    const isSerialization = error.code === "40001";
+    if (!isDeadlock && !isSerialization) break;
+    const backoffMs = 200 * Math.pow(2, attempt) + Math.floor(Math.random() * 100);
+    console.warn(`[Sync] ${table} upsert ${error.code} (attempt ${attempt + 1}/3) — retrying in ${backoffMs}ms`);
+    await new Promise((r) => setTimeout(r, backoffMs));
+  }
+  if (lastErr) throw new Error(`${table} upsert failed: ${lastErr.message}`);
+
   const newCount = rows.filter((r) => !existingSet.has(r.woo_id as number)).length;
   counters.created += newCount;
   counters.updated += rows.length - newCount;

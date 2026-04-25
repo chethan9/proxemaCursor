@@ -1,12 +1,13 @@
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
-import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
+import { SitePageShell, useSiteFromRoute, CustomerDetailSkeleton } from "@/components/site/shared";
 import { useCustomer, useCustomerAllOrders } from "@/hooks/queries/useCustomers";
 import { getCustomerName, getCustomerInitials, getCustomerBilling, getCustomerShipping, getAOV, updateCustomer, deleteCustomer } from "@/services/customerService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Edit3, Save, X, Loader2, Copy, Mail, Phone, Trash2, User, Package, ChevronDown, ChevronRight, ShoppingBag, CheckCircle2, XCircle, Wallet, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -167,7 +168,7 @@ function CustomerDetailsInner() {
   const saving = save.isPending;
   const deleting = remove.isPending;
 
-  if (siteLoading || isLoading) return <SiteLoadingSkeleton />;
+  if (siteLoading || isLoading) return <CustomerDetailSkeleton />;
   if (!store) return <div className="p-6">Store not found</div>;
   if (!customer) return <div className="p-6">Customer not found</div>;
 

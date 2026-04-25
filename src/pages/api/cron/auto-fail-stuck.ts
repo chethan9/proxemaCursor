@@ -70,11 +70,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       failedBulkCount = stuckBulk.length;
     }
 
+    // Recover orphan "all" parent runs: child aspects all settled but parent still running
+    const { data: allRunning } = await supabase
+      .from("sync_runs")
+      .select("id, store_id, started_at")
+      .eq("status", "running")
+      .eq("aspect", "all");
+
+    let recoveredAllCount = 0;
+    const recoveredStoreIds = new Set<string>();
+    for (const parent of (allRunning || [])) {
+      const { data: stillRunningChildren } = await supabase
+        .from("sync_runs")
+        .select("id")
+        .eq("store_id", parent.store_id)
+        .eq("status", "running")
+        .neq("aspect", "all")
+        .gte("started_at", parent.started_at)
+        .limit(1);
+
+      if (!stillRunningChildren || stillRunningChildren.length === 0) {
+        await supabase
+          .from("sync_runs")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            error_message: "Auto-recovered: child aspects all settled",
+          })
+          .eq("id", parent.id);
+        recoveredStoreIds.add(parent.store_id);
+        recoveredAllCount++;
+      }
+    }
+
+    // Unlock stores stuck in "syncing" with no remaining running runs
+    for (const sid of recoveredStoreIds) {
+      const { data: anyRunning } = await supabase
+        .from("sync_runs")
+        .select("id")
+        .eq("store_id", sid)
+        .eq("status", "running")
+        .limit(1);
+      if (!anyRunning || anyRunning.length === 0) {
+        await supabase
+          .from("stores")
+          .update({ status: "connected", last_sync_at: new Date().toISOString() })
+          .eq("id", sid)
+          .eq("status", "syncing");
+      }
+    }
+
     return res.status(200).json({
       success: true,
       stuck_sync_count: failedSyncCount,
       stuck_bulk_count: failedBulkCount,
-      message: `Auto-failed ${failedSyncCount} sync(s) and ${failedBulkCount} bulk job(s)`,
+      recovered_all_runs: recoveredAllCount,
+      message: `Auto-failed ${failedSyncCount} sync(s), ${failedBulkCount} bulk job(s); recovered ${recoveredAllCount} orphan parent run(s)`,
     });
   } catch (error) {
     console.error("[auto-fail-stuck] Error:", error);

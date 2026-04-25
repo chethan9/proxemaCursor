@@ -172,7 +172,7 @@ export async function fetchPagesChunked<T>(
   }
 ): Promise<{ lastPage: number; hasMore: boolean; totalPages: number }> {
   const perPage = opts.perPage ?? 100;
-  const concurrency = opts.concurrency ?? 4;
+  const concurrency = opts.concurrency ?? 2;
   const startPage = Math.max(1, opts.startPage || 1);
   const maxPages = Math.max(1, opts.maxPages);
 
