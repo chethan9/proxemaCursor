@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers, Sparkles } from "lucide-react";
+import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers, Sparkles, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ export function SettingsLayout({ children, title = "Settings", requirePermission
       label: "Account",
       items: [
         { href: "/settings/profile", icon: User, label: "My Profile", show: true },
+        { href: "/settings/my-activity", icon: Activity, label: "My Activity", show: true },
       ],
     },
     {
