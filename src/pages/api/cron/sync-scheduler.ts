@@ -354,20 +354,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const now = new Date().toISOString();
 
-    // Auto-timeout: mark stuck running syncs (>10 min) as failed across all stores
-    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    // Auto-timeout: mark stuck running syncs (>30 min) as failed across all stores
+    const stuckThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data: stuckRuns } = await supabase
       .from("sync_runs")
       .select("id, store_id")
       .eq("status", "running")
-      .lt("started_at", tenMinAgo);
+      .lt("started_at", stuckThreshold);
 
     if (stuckRuns && stuckRuns.length > 0) {
       await supabase
         .from("sync_runs")
         .update({
           status: "failed",
-          error_message: "Auto-timeout: sync exceeded 10 minute limit",
+          error_message: "Auto-timeout: sync exceeded 30 minute limit",
           completed_at: new Date().toISOString(),
         })
         .in("id", stuckRuns.map(r => r.id));
