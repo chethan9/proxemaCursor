@@ -47,6 +47,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
+import { TopProgressBar } from "@/components/ui/top-progress-bar";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -204,7 +205,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   }, [pageSize]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    const t = setTimeout(() => setDebouncedSearch(search), 200);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -415,7 +416,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             <div className="w-full max-w-[360px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input placeholder="Search products by name or SKU..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 h-9" />
+                <Input placeholder="Search products by name or SKU..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-9 h-9" />
+                {isFetching && search && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />
+                )}
               </div>
             </div>
           </div>
@@ -640,8 +644,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       {loading && productCount === 0 ? "Loading…" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, productCount)} of ${productCount.toLocaleString()}`}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || loading}><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount || loading}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ArrowLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount || isFetching}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
                     </div>
                   </div>
                 )}
@@ -652,6 +656,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       </div>
 
       <Card className="relative">
+        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
           {selectedIds.size > 0 && (
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
@@ -670,7 +675,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </div>
           )}
           {viewMode !== "table" ? (
-            <div className="p-4">
+            <div className={cn("p-4 transition-opacity duration-150", showRefetchOverlay && "opacity-70")}>
               {(() => {
                 const isCompact = viewMode === "compact";
                 const gridCls = isCompact
@@ -872,7 +877,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               })()}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className={cn("overflow-x-auto transition-opacity duration-150", showRefetchOverlay && "opacity-70")}>
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
