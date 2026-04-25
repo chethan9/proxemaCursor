@@ -63,6 +63,7 @@ import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
@@ -248,6 +249,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const orderCount = ordersResult?.count ?? 0;
   void isPlaceholderData;
   const showRefetchOverlay = isFetching && !loading && orders.length > 0;
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useExplorerKeyboard({
+    searchRef: searchInputRef,
+    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if ((page + 1) * pageSize < orderCount && !isFetching) setPage((p) => p + 1); },
+  });
 
   const submitBulk = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0 || overLimit) return;
@@ -489,7 +496,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             <div className="w-full max-w-[288px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-9 h-9" />
+                <Input ref={searchInputRef} placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-12 h-9" />
+                {!search && (
+                  <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground pointer-events-none">⌘K</kbd>
+                )}
                 {isFetching && search && (
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />
                 )}

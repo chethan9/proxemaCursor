@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Loader2 } from "lucide-react";
@@ -22,6 +22,7 @@ import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -66,6 +67,12 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   const parentPool = mode === "categories"
     ? (allCats || []).map((t) => ({ ...t, parent_woo_id: (t as { parent_id?: number }).parent_id ?? null }))
     : [];
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useExplorerKeyboard({
+    searchRef: searchInputRef,
+    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if (page < totalPages - 1 && !isFetching) setPage((p) => p + 1); },
+  });
 
   function handleExport() {
     exportCsv(
@@ -118,11 +125,15 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
+                  ref={searchInputRef}
                   value={search}
                   onChange={(e) => { onSearchChange(e.target.value); setPage(0); }}
                   placeholder={`Search ${mode}…`}
-                  className="pl-9 pr-9 h-9"
+                  className="pl-9 pr-12 h-9"
                 />
+                {!search && (
+                  <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground pointer-events-none">⌘K</kbd>
+                )}
                 {isFetching && search && (
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />
                 )}

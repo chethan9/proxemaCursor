@@ -1,6 +1,6 @@
 ---
 title: Keyboard shortcuts for explorer tabs (Cmd+K + arrow nav)
-status: in_progress
+status: done
 priority: medium
 type: feature
 tags: [ux, keyboard, productivity]
@@ -15,15 +15,15 @@ Power-user keyboard shortcuts on Products/Orders/Taxonomy explore tabs:
 - **⌘K / Ctrl+K** focuses the search input (selects existing text)
 - **Left arrow** previous page; **Right arrow** next page (only when not typing in an input/textarea, no modifier keys)
 
-Single shared hook `useExplorerKeyboard` to keep behavior identical across tabs.
+Single shared hook `useExplorerKeyboard` keeps behavior identical across tabs.
 
 ## Checklist
 
 - [x] Create `src/hooks/useExplorerKeyboard.ts` — handles ⌘K focus + arrow pagination, ignores typing context
-- [ ] Wire into ProductsTab — searchRef + onPrev/onNext + ⌘K kbd hint in input
-- [ ] Wire into OrdersTab — same
-- [ ] Wire into TaxonomyTab — same
-- [ ] kbd hint visible only when search empty + not fetching (no overlap with spinner)
+- [x] Wire into ProductsTab — searchRef + onPrev/onNext + ⌘K kbd hint in input
+- [x] Wire into OrdersTab — same
+- [x] Wire into TaxonomyTab — same
+- [x] kbd hint visible only when search empty (no overlap with refetch spinner)
 
 ## Acceptance
 
