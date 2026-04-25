@@ -261,9 +261,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
 
   try {
-    const tenMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const tenMinAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString();
     await supabase.from("sync_runs").update({
-      status: "failed", error_message: "Auto-timeout: sync exceeded 30 minute limit",
+      status: "failed", error_message: "Auto-timeout: sync exceeded 90 minute limit",
       completed_at: new Date().toISOString(),
     }).eq("store_id", storeId).eq("status", "running").lt("started_at", tenMinAgo);
 

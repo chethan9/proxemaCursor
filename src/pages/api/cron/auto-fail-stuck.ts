@@ -6,8 +6,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const STUCK_THRESHOLD_MINUTES = 30;
-const BULK_STUCK_THRESHOLD_MINUTES = 30;
+const STUCK_THRESHOLD_MINUTES = 90;
+const BULK_STUCK_THRESHOLD_MINUTES = 90;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST" && req.method !== "GET") {
