@@ -5,7 +5,6 @@ import { useRouter } from "next/router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { BrandingProvider } from "@/contexts/BrandingProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
@@ -106,7 +105,6 @@ export default function App({ Component, pageProps }: AppProps) {
           <Component {...pageProps} />
           <Toaster />
           <Analytics />
-          <SpeedInsights />
         </Providers>
       </QueryClientProvider>
     );
@@ -125,7 +123,6 @@ export default function App({ Component, pageProps }: AppProps) {
         <Component {...pageProps} />
         <Toaster />
         <Analytics />
-        <SpeedInsights />
       </Providers>
     </PersistQueryClientProvider>
   );
