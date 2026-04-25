@@ -1,6 +1,6 @@
 ---
 title: Optimize sync engine (dedup, parallel, incremental, retry)
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [sync, performance, woocommerce]
