@@ -24,8 +24,10 @@ export class TapGateway implements PaymentGateway {
     if (!req.sourceToken) {
       const pk = await this.getPublishable();
       const payload: TapInitPayload = {
-        type: "inline",
+        type: "tap-inline",
         publishableKey: pk,
+        amountMinor: req.amountMinor,
+        currency: req.currency,
         prefill: { email: req.customerEmail || "", name: req.customerName || "" },
       };
       return { gateway: "tap", gatewayRef: "", payload };
@@ -55,9 +57,8 @@ export class TapGateway implements PaymentGateway {
     const j = await r.json();
     if (!j.id) throw new Error(j?.errors?.[0]?.description || j?.message || "Tap charge failed");
     const payload: TapChargeRedirectPayload = {
-      type: "tap-charge",
-      transactionUrl: j?.transaction?.url || undefined,
-      chargeId: j.id,
+      type: "tap-redirect",
+      transactionUrl: j?.transaction?.url || "",
     };
     return { gateway: "tap", gatewayRef: j.id, payload };
   }
@@ -66,7 +67,7 @@ export class TapGateway implements PaymentGateway {
     const sk = await this.getSecret();
     const r = await fetch(`${this.baseUrl}/charges/${gatewayRef}`, { headers: { Authorization: `Bearer ${sk}` } });
     const j = await r.json();
-    return { status: this.mapStatus(j.status), amountMinor: Math.round((j.amount || 0) * 100), currency: j.currency, gatewayRef };
+    return { status: this.mapStatus(j.status), amountMinor: Math.round((j.amount || 0) * 100), currency: j.currency || "USD", gatewayRef, rawPayload: j };
   }
 
   async refund(req: RefundRequest): Promise<RefundResult> {
@@ -77,8 +78,8 @@ export class TapGateway implements PaymentGateway {
       body: JSON.stringify({ charge_id: req.gatewayRef, amount: req.amountMinor / 100, currency: "USD", reason: "requested_by_customer", reference: { merchant: req.reason || "" } }),
     });
     const j = await r.json();
-    if (!j.id) return { ok: false, error: j?.errors?.[0]?.description };
-    return { ok: true, refundRef: j.id };
+    if (!j.id) return { refundRef: "", status: "failed", rawPayload: j };
+    return { refundRef: j.id, status: "succeeded", rawPayload: j };
   }
 
   async parseWebhook(input: WebhookInput): Promise<WebhookEvent> {

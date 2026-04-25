@@ -35,7 +35,7 @@ class MyFatoorahGateway implements PaymentGateway {
     });
     const j = await r.json();
     if (!j.IsSuccess) throw new Error(j.Message || "MyFatoorah charge init failed");
-    const payload: MyFatoorahInitPayload = { type: "redirect", redirectUrl: j.Data.InvoiceURL };
+    const payload: MyFatoorahInitPayload = { type: "redirect", paymentUrl: j.Data.InvoiceURL };
     return { gateway: "myfatoorah", gatewayRef: String(j.Data.InvoiceId), payload };
   }
 
@@ -51,7 +51,7 @@ class MyFatoorahGateway implements PaymentGateway {
     const map: Record<string, PaymentStatusResult["status"]> = {
       paid: "paid", pending: "pending", failed: "failed", canceled: "canceled", expired: "failed",
     };
-    return { status: map[status] || "pending", amountMinor: Math.round((j?.Data?.InvoiceValue || 0) * 100), currency: j?.Data?.InvoiceDisplayValue, gatewayRef };
+    return { status: map[status] || "pending", amountMinor: Math.round((j?.Data?.InvoiceValue || 0) * 100), currency: j?.Data?.InvoiceDisplayValue || "USD", gatewayRef, rawPayload: j };
   }
 
   async refund(req: RefundRequest): Promise<RefundResult> {
@@ -62,8 +62,8 @@ class MyFatoorahGateway implements PaymentGateway {
       body: JSON.stringify({ KeyType: "InvoiceId", Key: req.gatewayRef, RefundAmount: req.amountMinor / 100, Comment: req.reason || "Refund" }),
     });
     const j = await r.json();
-    if (!j.IsSuccess) return { ok: false, error: j.Message };
-    return { ok: true, refundRef: String(j?.Data?.RefundReference || "") };
+    if (!j.IsSuccess) return { refundRef: "", status: "failed", rawPayload: j };
+    return { refundRef: String(j?.Data?.RefundReference || ""), status: "succeeded", rawPayload: j };
   }
 
   async parseWebhook(input: WebhookInput): Promise<WebhookEvent> {

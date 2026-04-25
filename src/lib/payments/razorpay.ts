@@ -41,7 +41,6 @@ class RazorpayGateway implements PaymentGateway {
       amount: j.amount,
       currency: j.currency,
       prefill: { email: req.customerEmail, name: req.customerName || "" },
-      description: req.description || "",
     };
     return { gateway: "razorpay", gatewayRef: j.id, payload };
   }
@@ -50,7 +49,7 @@ class RazorpayGateway implements PaymentGateway {
     const r = await fetch(`${this.baseUrl}/orders/${gatewayRef}`, { headers: { Authorization: await this.authHeader() } });
     const j = await r.json();
     const map: Record<string, PaymentStatusResult["status"]> = { paid: "paid", attempted: "pending", created: "pending" };
-    return { status: map[j.status] || "pending", amountMinor: j.amount, currency: j.currency, gatewayRef };
+    return { status: map[j.status] || "pending", amountMinor: j.amount, currency: j.currency, gatewayRef, rawPayload: j };
   }
 
   async refund(req: RefundRequest): Promise<RefundResult> {
@@ -60,8 +59,8 @@ class RazorpayGateway implements PaymentGateway {
       body: JSON.stringify({ amount: req.amountMinor, notes: { reason: req.reason || "" } }),
     });
     const j = await r.json();
-    if (j.error) return { ok: false, error: j.error?.description };
-    return { ok: true, refundRef: j.id };
+    if (j.error) return { refundRef: "", status: "failed", rawPayload: j };
+    return { refundRef: j.id, status: "succeeded", rawPayload: j };
   }
 
   async parseWebhook(input: WebhookInput): Promise<WebhookEvent> {
