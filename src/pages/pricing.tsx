@@ -109,14 +109,12 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
       return;
     }
     if (action === "subscribe") {
-      if (user) startCheckout(plan.id);
+      if (user) router.push(`/billing/checkout?plan=${plan.id}`);
       else router.push(`/auth/signup?plan=${plan.id}&country=${country}`);
       return;
     }
     if (action === "upgrade") {
-      setDialogMode("upgrade");
-      setPendingPlan(plan);
-      setDialogOpen(true);
+      router.push(`/billing/checkout?plan=${plan.id}`);
       return;
     }
     if (action === "downgrade") {
