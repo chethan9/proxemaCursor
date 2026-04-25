@@ -60,6 +60,7 @@ import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
+import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -141,6 +142,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
   const { data: activeSyncs = [] } = useAllActiveSyncs();
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
+  const { locked } = useSyncLocked(storeId);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
@@ -397,6 +399,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
   return (
     <div className="space-y-3">
+      <SyncLockBanner storeId={storeId} />
       {embedHeader && (
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -407,6 +410,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     variant={paymentFilter !== "all" ? "secondary" : "outline"}
                     size="sm"
                     className="h-9 text-xs gap-1.5 px-2.5"
+                    disabled={locked}
+                    title={locked ? "Available after initial sync completes" : undefined}
                   >
                     <Filter className="h-3.5 w-3.5" />
                     <span className="max-w-[120px] truncate">{paymentFilter === "all" ? "Payment" : paymentFilter}</span>
@@ -437,6 +442,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 setCustomFrom(f);
                 setCustomTo(t);
               }}
+              disabled={locked}
             />
             <Popover>
               <PopoverTrigger asChild>
@@ -444,6 +450,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   variant={totalMin || totalMax ? "secondary" : "outline"}
                   size="sm"
                   className="h-9 text-xs gap-1.5 px-2.5"
+                  disabled={locked}
+                  title={locked ? "Available after initial sync completes" : undefined}
                 >
                   <DollarSign className="h-3.5 w-3.5" />
                   <span>
@@ -484,7 +492,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`} disabled={locked}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
                   <span className="text-xs">Sort</span>
                 </Button>
@@ -499,7 +507,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns" disabled={locked}>
                   <Columns3 className="h-3.5 w-3.5" />
                   <span className="text-xs">Columns</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
@@ -572,7 +580,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0} title="Export CSV" onClick={handleExportCsv}>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0 || locked} title={locked ? "Available after initial sync completes" : "Export CSV"} onClick={handleExportCsv}>
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
             </Button>
@@ -597,6 +605,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                     variant={paymentFilter !== "all" ? "secondary" : "outline"}
                     size="sm"
                     className="h-9 text-xs gap-1.5 px-2.5"
+                    disabled={locked}
+                    title={locked ? "Available after initial sync completes" : undefined}
                   >
                     <Filter className="h-3.5 w-3.5" />
                     <span className="max-w-[120px] truncate">
@@ -644,6 +654,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   setCustomFrom(f);
                   setCustomTo(t);
                 }}
+                disabled={locked}
               />
             )}
 
@@ -673,7 +684,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`}>
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`} disabled={locked}>
                       <ArrowUpDown className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -688,7 +699,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns">
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns" disabled={locked}>
                       <Columns3 className="h-3.5 w-3.5" />
                       <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
                     </Button>
@@ -883,8 +894,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   <TableRow>
                     <TableHead className="w-8 pl-3 pr-0">
                       <Checkbox
-                        checked={orders.length > 0 && orders.every((o) => selectedIds.has(o.id))}
+                        checked={!locked && orders.length > 0 && orders.every((o) => selectedIds.has(o.id))}
+                        disabled={locked}
                         onCheckedChange={(v) => {
+                          if (locked) return;
                           if (v) setSelectedIds(new Set(orders.map((o) => o.id)));
                           else setSelectedIds(new Set());
                         }}
@@ -945,7 +958,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       <React.Fragment key={o.id}>
                         <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
                           <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(o.id)} />
+                            <Checkbox checked={isSelected} disabled={locked} onCheckedChange={() => { if (!locked) toggleSelect(o.id); }} />
                           </TableCell>
                           {visibleColList.map((c) => {
                             if (c.key === "id") {

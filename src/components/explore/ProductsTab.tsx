@@ -45,6 +45,7 @@ import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
+import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -105,6 +106,7 @@ interface ProductsTabProps {
 
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
   const queryClient = useQueryClient();
+  const { locked } = useSyncLocked(storeId);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -386,10 +388,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   return (
     <div className="space-y-2">
+      <SyncLockBanner storeId={storeId} />
       {embedHeader && (
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
               <SelectTrigger className="h-9 w-[180px] text-xs gap-1.5 px-2.5 border-border bg-card shadow-polaris-xs hover:bg-muted">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
@@ -432,7 +435,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? "Available after initial sync completes" : "Customize columns"}>
                   <Columns3 className="h-3.5 w-3.5" />
                   <span className="text-xs">Columns</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
@@ -476,11 +479,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0 || locked} title={locked ? "Available after initial sync completes" : "Export CSV"}>
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
             </Button>
-            <Link href={`/sites/${storeId}/products/new`}>
+            <Link href={`/sites/${storeId}/products/new`} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
               <Button size="sm" className="h-9 gap-1.5">
                 <Plus className="h-4 w-4" />
                 Add product
@@ -517,7 +520,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 <span>Out of stock only</span>
               </label>
               {!embedHeader && (
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
                   <SelectTrigger className="h-9 w-[180px] text-xs">
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
@@ -564,7 +567,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     </DropdownMenu>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? "Available after initial sync completes" : "Customize columns"}>
                           <Columns3 className="h-3.5 w-3.5" />
                           <span className="text-xs">Columns</span>
                           <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
@@ -608,7 +611,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         </div>
                       </PopoverContent>
                     </Popover>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0} title="Export CSV">
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0 || locked} title={locked ? "Available after initial sync completes" : "Export CSV"}>
                       <Download className="h-3.5 w-3.5" />
                       <span className="text-xs">Export</span>
                     </Button>
@@ -873,8 +876,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   <TableRow className="bg-muted/30">
                     <TableHead className="w-8 pl-3 pr-0">
                       <Checkbox
-                        checked={products.length > 0 && products.every((p) => selectedIds.has(p.id))}
+                        checked={!locked && products.length > 0 && products.every((p) => selectedIds.has(p.id))}
+                        disabled={locked}
                         onCheckedChange={(v) => {
+                          if (locked) return;
                           if (v) setSelectedIds(new Set(products.map((p) => p.id)));
                           else setSelectedIds(new Set());
                         }}
@@ -970,7 +975,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         <React.Fragment key={p.id}>
                           <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} />
+                              <Checkbox checked={isSelected} disabled={locked} onCheckedChange={() => { if (!locked) toggleSelect(p.id); }} />
                             </TableCell>
                             {visibleColList.map((c) => {
                               if (c.key === "image") {

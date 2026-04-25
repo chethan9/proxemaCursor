@@ -33,11 +33,13 @@ export function DateRangeFilter({
   from,
   to,
   onChange,
+  disabled,
 }: {
   range: PresetValue;
   from?: Date;
   to?: Date;
   onChange: (range: PresetValue, from?: Date, to?: Date) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [draftRange, setDraftRange] = useState<PresetValue>(range);
@@ -72,7 +74,7 @@ export function DateRangeFilter({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant={active ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5">
+        <Button variant={active ? "secondary" : "outline"} size="sm" className="h-9 text-xs gap-1.5 px-2.5" disabled={disabled} title={disabled ? "Available after initial sync completes" : undefined}>
           <Filter className="h-3.5 w-3.5" />
           <span>{triggerLabel(range, from, to)}</span>
         </Button>

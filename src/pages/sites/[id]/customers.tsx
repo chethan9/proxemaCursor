@@ -51,6 +51,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
+import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 
 type ColumnKey =
   | "name"
@@ -176,6 +177,7 @@ function CustomersInner() {
   const router = useRouter();
   const storeId = typeof router.query.id === "string" ? router.query.id : "";
   const { toast } = useToast();
+  const { locked } = useSyncLocked(storeId);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -311,6 +313,7 @@ function CustomersInner() {
 
   return (
     <div className="space-y-3">
+      <SyncLockBanner storeId={storeId} />
       <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -347,7 +350,7 @@ function CustomersInner() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns">
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? "Available after initial sync completes" : "Customize columns"}>
                   <Columns3 className="h-3.5 w-3.5" />
                   <span className="text-xs">Columns</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
@@ -389,7 +392,7 @@ function CustomersInner() {
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={customers.length === 0} onClick={handleExport} title="Export CSV">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={customers.length === 0 || locked} onClick={handleExport} title={locked ? "Available after initial sync completes" : "Export CSV"}>
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
             </Button>
@@ -424,8 +427,8 @@ function CustomersInner() {
                 </>
               )}
             </div>
-            <Button size="sm" className="h-9 px-3 gap-1.5" asChild>
-              <Link href={`/sites/${storeId}/customers/new`}>
+            <Button size="sm" className="h-9 px-3 gap-1.5" asChild disabled={locked}>
+              <Link href={`/sites/${storeId}/customers/new`} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
                 <UserPlus className="h-3.5 w-3.5" />
                 <span className="text-xs">New customer</span>
               </Link>
