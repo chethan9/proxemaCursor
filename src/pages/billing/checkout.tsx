@@ -265,9 +265,9 @@ function CheckoutInner() {
               By continuing you agree to our <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>. {user?.email ? <>Subscribing as <span className="font-medium">{user.email}</span>.</> : null}
             </p>
           </div>
-        </main>
-      </div>
-    </AuthGuard>
+        </div>
+      </main>
+    </div>
   );
 }
 
