@@ -19,7 +19,7 @@ interface PlanRow {
 
 export function CurrentPlanCard() {
   const { profile } = useAuth();
-  const { data: subscription, refetch } = useSubscription(profile?.client_id || "");
+  const { subscription, refetch } = useSubscription();
   const [plan, setPlan] = useState<PlanRow | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
