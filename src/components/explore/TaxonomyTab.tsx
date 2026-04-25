@@ -1,7 +1,7 @@
 import { useState, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon } from "lucide-react";
+import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +21,8 @@ import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
+import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { cn } from "@/lib/utils";
 
 type Props = {
   storeId: string;
@@ -119,8 +121,11 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                   value={search}
                   onChange={(e) => { onSearchChange(e.target.value); setPage(0); }}
                   placeholder={`Search ${mode}…`}
-                  className="pl-9 h-9"
+                  className="pl-9 pr-9 h-9"
                 />
+                {isFetching && search && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />
+                )}
               </div>
             </div>
           </div>
@@ -154,8 +159,8 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                       {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronRight className="h-3.5 w-3.5 rotate-180" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}><ChevronRight className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ChevronRight className="h-3.5 w-3.5 rotate-180" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isFetching}><ChevronRight className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>
                 </>
@@ -170,8 +175,9 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
       </div>
 
       <Card className="relative">
+        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !isLoading && items.length > 0 && "opacity-70")}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">

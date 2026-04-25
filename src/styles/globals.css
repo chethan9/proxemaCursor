@@ -5,6 +5,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes progress-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(400%); }
+}
+
+.animate-progress-slide {
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+
 @layer base {
   :root {
     --radius: 0.75rem;

@@ -1,6 +1,6 @@
 ---
 title: Instant feedback on filter/sort/search/pagination
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ui, ux, polish, performance-perception]
@@ -17,12 +17,12 @@ Solution: 4 layers of perceived-performance polish (no logic changes).
 
 ## Checklist
 
-- [x] Layer 1: Create `<TopProgressBar />` component — 2px animated bar pinned to top of data card, visible whenever a query is fetching
-- [ ] Layer 2: Reduce search debounce 400ms → 200ms; add inline spinner inside search input right edge while fetching
-- [ ] Layer 3: Disable pagination arrows while fetching (currently only disabled during initial load); add subtle pressed-state ring on filter pills
-- [ ] Layer 4: Soft data dimming — wrap data area in `opacity-70 transition-opacity` while `isFetching && !isLoading`
-- [ ] Apply all 4 layers uniformly to ProductsTab, OrdersTab, TaxonomyTab
-- [ ] Add `@keyframes progress-slide` to globals.css for the moving bar animation
+- [x] Layer 1: `<TopProgressBar />` component — 2px animated gradient bar pinned to top of data card, visible whenever a query is fetching
+- [x] Layer 2: Search debounce 400→200ms (Products), 300→200ms (Orders); inline spinner inside search input right edge while fetching
+- [x] Layer 3: Pagination arrows now disabled on `isFetching` (was only disabled during initial load) — prevents double-click and signals activity
+- [x] Layer 4: Soft data dimming — `opacity-70 transition-opacity` on data area while `isFetching && !isLoading`
+- [x] Applied uniformly to ProductsTab, OrdersTab, TaxonomyTab
+- [x] Added `@keyframes progress-slide` to globals.css
 
 ## Acceptance
 
