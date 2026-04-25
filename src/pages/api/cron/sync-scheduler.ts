@@ -13,111 +13,40 @@ interface StoreToSync {
   next_sync_at: string | null;
 }
 
-interface WooProduct {
-  id: number;
-  name: string;
-  slug: string;
-  sku: string;
-  price: string;
-  regular_price: string;
-  sale_price: string;
-  stock_quantity: number | null;
-  stock_status: string;
-  status: string;
-  type: string;
-  description: string;
-  short_description: string;
-  categories: Array<{ id: number; name: string; slug: string }>;
-  images: Array<{ id: number; src: string; name: string; alt: string }>;
-  attributes: Array<{ id: number; name: string; options: string[] }>;
-  date_created: string;
-  date_modified: string;
-}
-
-interface WooOrder {
-  id: number;
-  number: string;
-  status: string;
-  currency: string;
-  total: string;
-  discount_total: string;
-  shipping_total: string;
-  customer_id: number;
-  billing: Record<string, unknown>;
-  shipping: Record<string, unknown>;
-  line_items: Array<Record<string, unknown>>;
-  shipping_lines: Array<Record<string, unknown>>;
-  fee_lines: Array<Record<string, unknown>>;
-  coupon_lines: Array<Record<string, unknown>>;
-  date_created: string;
-  date_modified: string;
-}
-
-interface WooCustomer {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  username: string;
-  billing: Record<string, unknown>;
-  shipping: Record<string, unknown>;
-  avatar_url: string;
-  is_paying_customer: boolean;
-  orders_count: number;
-  total_spent: string;
-  date_created: string;
-  date_modified: string;
-}
-
-interface WooCategory {
-  id: number;
-  name: string;
-  slug: string;
-  parent: number;
-  description: string;
-  display: string;
-  image: { id: number; src: string; name: string; alt: string } | null;
-  menu_order: number;
-  count: number;
-}
-
-interface WooCoupon {
-  id: number;
-  code: string;
-  amount: string;
-  discount_type: string;
-  description: string;
-  date_expires: string | null;
-  usage_count: number;
-  individual_use: boolean;
-  product_ids: number[];
-  excluded_product_ids: number[];
-  usage_limit: number | null;
-  usage_limit_per_user: number | null;
-  free_shipping: boolean;
-  minimum_amount: string;
-  maximum_amount: string;
-  date_created: string;
-  date_modified: string;
-}
-
-interface WooTag {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  count: number;
-}
+interface SyncResult { processed: number; created: number; updated: number; isDelta: boolean }
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
+}
+
+async function getWatermark(storeId: string, aspect: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("store_aspect_sync_state")
+    .select("last_synced_at")
+    .eq("store_id", storeId)
+    .eq("aspect", aspect)
+    .maybeSingle();
+  return data?.last_synced_at || null;
+}
+
+async function setWatermark(storeId: string, aspect: string, recordsSeen: number, syncedAt: string): Promise<void> {
+  await supabase
+    .from("store_aspect_sync_state")
+    .upsert({
+      store_id: storeId,
+      aspect,
+      last_synced_at: syncedAt,
+      last_completed_at: new Date().toISOString(),
+      records_seen: recordsSeen,
+    }, { onConflict: "store_id,aspect" });
 }
 
 async function fetchAllFromWooCommerce<T>(
   storeUrl: string,
   consumerKey: string,
   consumerSecret: string,
-  endpoint: string
+  endpoint: string,
+  modifiedAfter?: string | null,
 ): Promise<T[]> {
   const allItems: T[] = [];
   let page = 1;
@@ -129,6 +58,10 @@ async function fetchAllFromWooCommerce<T>(
     const url = new URL(`${storeUrl}/wp-json/wc/v3/${endpoint}`);
     url.searchParams.set("per_page", perPage.toString());
     url.searchParams.set("page", page.toString());
+    if (modifiedAfter) {
+      // WooCommerce expects ISO8601 in site timezone but accepts UTC. Use UTC.
+      url.searchParams.set("modified_after", modifiedAfter);
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -161,153 +94,189 @@ async function fetchAllFromWooCommerce<T>(
       if (items.length < perPage) hasMore = false;
       else page++;
     }
-    if (page > 50) hasMore = false;
+    // Safety: cap at 500 pages = 50k records per aspect per run.
+    // With incremental sync this should never trigger except on first full sync of huge stores.
+    if (page > 500) {
+      console.warn(`[Sync] Hit 500-page safety cap on ${endpoint} — store has 50k+ records in this delta`);
+      hasMore = false;
+    }
   }
   return allItems;
 }
 
-async function syncProducts(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const products = await fetchAllFromWooCommerce<WooProduct>(store.url, store.consumer_key, store.consumer_secret, "products");
+interface WooBase { id: number; date_modified?: string; date_modified_gmt?: string }
+
+async function syncProducts(store: StoreToSync): Promise<SyncResult> {
+  const watermark = await getWatermark(store.id, "products");
+  const startedAt = new Date().toISOString();
+  const products = await fetchAllFromWooCommerce<WooBase & Record<string, unknown>>(
+    store.url, store.consumer_key, store.consumer_secret, "products", watermark
+  );
   let created = 0, updated = 0;
 
   for (const product of products) {
     const data = {
-      store_id: store.id, woo_id: product.id, name: product.name, slug: product.slug,
-      sku: product.sku || null, price: product.price ? parseFloat(product.price) : null,
-      regular_price: product.regular_price ? parseFloat(product.regular_price) : null,
-      sale_price: product.sale_price ? parseFloat(product.sale_price) : null,
-      stock_quantity: product.stock_quantity, stock_status: product.stock_status,
-      status: product.status, type: product.type, description: product.description,
-      short_description: product.short_description, categories: toJson(product.categories),
-      images: toJson(product.images), attributes: toJson(product.attributes || []),
-      raw_data: toJson(product), synced_at: new Date().toISOString(),
+      store_id: store.id, woo_id: product.id, name: (product.name as string) || "", slug: (product.slug as string) || "",
+      sku: (product.sku as string) || null,
+      price: product.price ? parseFloat(product.price as string) : null,
+      regular_price: product.regular_price ? parseFloat(product.regular_price as string) : null,
+      sale_price: product.sale_price ? parseFloat(product.sale_price as string) : null,
+      stock_quantity: (product.stock_quantity as number | null), stock_status: (product.stock_status as string) || "",
+      status: (product.status as string) || "", type: (product.type as string) || "",
+      description: (product.description as string) || "", short_description: (product.short_description as string) || "",
+      categories: toJson(product.categories || []), images: toJson(product.images || []),
+      attributes: toJson(product.attributes || []), raw_data: toJson(product), synced_at: new Date().toISOString(),
     };
-    const { data: existing } = await supabase.from("products").select("id").eq("store_id", store.id).eq("woo_id", product.id).single();
+    const { data: existing } = await supabase.from("products").select("id").eq("store_id", store.id).eq("woo_id", product.id).maybeSingle();
     if (existing) { await supabase.from("products").update(data).eq("id", existing.id); updated++; }
     else { await supabase.from("products").insert(data); created++; }
   }
-  return { processed: products.length, created, updated };
+  await setWatermark(store.id, "products", products.length, startedAt);
+  return { processed: products.length, created, updated, isDelta: !!watermark };
 }
 
-async function syncOrders(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const orders = await fetchAllFromWooCommerce<WooOrder>(store.url, store.consumer_key, store.consumer_secret, "orders");
+async function syncOrders(store: StoreToSync): Promise<SyncResult> {
+  const watermark = await getWatermark(store.id, "orders");
+  const startedAt = new Date().toISOString();
+  const orders = await fetchAllFromWooCommerce<WooBase & Record<string, unknown>>(
+    store.url, store.consumer_key, store.consumer_secret, "orders", watermark
+  );
   let created = 0, updated = 0;
 
   for (const order of orders) {
     const data = {
-      store_id: store.id, woo_id: order.id, order_number: order.number, status: order.status,
-      currency: order.currency, total: order.total ? parseFloat(order.total) : null,
-      discount_total: order.discount_total ? parseFloat(order.discount_total) : null,
-      shipping_total: order.shipping_total ? parseFloat(order.shipping_total) : null,
-      customer_id: order.customer_id || null, billing: toJson(order.billing),
-      shipping: toJson(order.shipping), line_items: toJson(order.line_items),
+      store_id: store.id, woo_id: order.id, order_number: (order.number as string) || "",
+      status: (order.status as string) || "", currency: (order.currency as string) || "",
+      total: order.total ? parseFloat(order.total as string) : null,
+      discount_total: order.discount_total ? parseFloat(order.discount_total as string) : null,
+      shipping_total: order.shipping_total ? parseFloat(order.shipping_total as string) : null,
+      customer_id: (order.customer_id as number) || null, billing: toJson(order.billing || {}),
+      shipping: toJson(order.shipping || {}), line_items: toJson(order.line_items || []),
       shipping_lines: toJson(order.shipping_lines || []), fee_lines: toJson(order.fee_lines || []),
       coupon_lines: toJson(order.coupon_lines || []), raw_data: toJson(order),
-      date_created: order.date_created, date_modified: order.date_modified,
+      date_created: (order.date_created as string), date_modified: (order.date_modified as string),
       synced_at: new Date().toISOString(),
     };
-    const { data: existing } = await supabase.from("orders").select("id").eq("store_id", store.id).eq("woo_id", order.id).single();
+    const { data: existing } = await supabase.from("orders").select("id").eq("store_id", store.id).eq("woo_id", order.id).maybeSingle();
     if (existing) { await supabase.from("orders").update(data).eq("id", existing.id); updated++; }
     else { await supabase.from("orders").insert(data); created++; }
   }
-  return { processed: orders.length, created, updated };
+  await setWatermark(store.id, "orders", orders.length, startedAt);
+  return { processed: orders.length, created, updated, isDelta: !!watermark };
 }
 
-async function syncCustomers(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const customers = await fetchAllFromWooCommerce<WooCustomer>(store.url, store.consumer_key, store.consumer_secret, "customers");
+async function syncCustomers(store: StoreToSync): Promise<SyncResult> {
+  const watermark = await getWatermark(store.id, "customers");
+  const startedAt = new Date().toISOString();
+  const customers = await fetchAllFromWooCommerce<WooBase & Record<string, unknown>>(
+    store.url, store.consumer_key, store.consumer_secret, "customers", watermark
+  );
   let created = 0, updated = 0;
 
   for (const customer of customers) {
     const data = {
-      store_id: store.id, woo_id: customer.id, email: customer.email,
-      first_name: customer.first_name, last_name: customer.last_name,
-      username: customer.username, billing: toJson(customer.billing),
-      shipping: toJson(customer.shipping), avatar_url: customer.avatar_url || null,
-      is_paying_customer: customer.is_paying_customer || false,
-      orders_count: customer.orders_count || 0,
-      total_spent: customer.total_spent ? parseFloat(customer.total_spent) : null,
-      raw_data: toJson(customer), date_created: customer.date_created,
+      store_id: store.id, woo_id: customer.id, email: (customer.email as string) || "",
+      first_name: (customer.first_name as string) || "", last_name: (customer.last_name as string) || "",
+      username: (customer.username as string) || "", billing: toJson(customer.billing || {}),
+      shipping: toJson(customer.shipping || {}), avatar_url: (customer.avatar_url as string) || null,
+      is_paying_customer: (customer.is_paying_customer as boolean) || false,
+      orders_count: (customer.orders_count as number) || 0,
+      total_spent: customer.total_spent ? parseFloat(customer.total_spent as string) : null,
+      raw_data: toJson(customer), date_created: (customer.date_created as string),
       synced_at: new Date().toISOString(),
     };
-    const { data: existing } = await supabase.from("customers").select("id").eq("store_id", store.id).eq("woo_id", customer.id).single();
+    const { data: existing } = await supabase.from("customers").select("id").eq("store_id", store.id).eq("woo_id", customer.id).maybeSingle();
     if (existing) { await supabase.from("customers").update(data).eq("id", existing.id); updated++; }
     else { await supabase.from("customers").insert(data); created++; }
   }
-  return { processed: customers.length, created, updated };
+  await setWatermark(store.id, "customers", customers.length, startedAt);
+  return { processed: customers.length, created, updated, isDelta: !!watermark };
 }
 
-async function syncCategories(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const categories = await fetchAllFromWooCommerce<WooCategory>(store.url, store.consumer_key, store.consumer_secret, "products/categories");
+async function syncCategories(store: StoreToSync): Promise<SyncResult> {
+  // Categories don't support modified_after — full fetch each time but they're small
+  const startedAt = new Date().toISOString();
+  const categories = await fetchAllFromWooCommerce<Record<string, unknown> & { id: number }>(
+    store.url, store.consumer_key, store.consumer_secret, "products/categories"
+  );
   let created = 0, updated = 0;
 
   for (const cat of categories) {
     const data = {
-      store_id: store.id, woo_id: cat.id, name: cat.name, slug: cat.slug,
-      parent_id: cat.parent || null, description: cat.description, display: cat.display,
-      image: toJson(cat.image), menu_order: cat.menu_order, count: cat.count,
+      store_id: store.id, woo_id: cat.id, name: (cat.name as string) || "", slug: (cat.slug as string) || "",
+      parent_id: (cat.parent as number) || null, description: (cat.description as string) || "",
+      display: (cat.display as string) || "", image: toJson(cat.image || null),
+      menu_order: (cat.menu_order as number) || 0, count: (cat.count as number) || 0,
       raw_data: toJson(cat), synced_at: new Date().toISOString(),
     };
-    const { data: existing } = await supabase.from("categories").select("id").eq("store_id", store.id).eq("woo_id", cat.id).single();
+    const { data: existing } = await supabase.from("categories").select("id").eq("store_id", store.id).eq("woo_id", cat.id).maybeSingle();
     if (existing) { await supabase.from("categories").update(data).eq("id", existing.id); updated++; }
     else { await supabase.from("categories").insert(data); created++; }
   }
-  return { processed: categories.length, created, updated };
+  await setWatermark(store.id, "categories", categories.length, startedAt);
+  return { processed: categories.length, created, updated, isDelta: false };
 }
 
-async function syncTags(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const tags = await fetchAllFromWooCommerce<WooTag>(store.url, store.consumer_key, store.consumer_secret, "products/tags");
+async function syncTags(store: StoreToSync): Promise<SyncResult> {
+  const startedAt = new Date().toISOString();
+  const tags = await fetchAllFromWooCommerce<Record<string, unknown> & { id: number }>(
+    store.url, store.consumer_key, store.consumer_secret, "products/tags"
+  );
   let created = 0, updated = 0;
 
   for (const tag of tags) {
     const data = {
-      store_id: store.id, woo_id: tag.id, name: tag.name, slug: tag.slug,
-      description: tag.description || "", count: tag.count || 0,
+      store_id: store.id, woo_id: tag.id, name: (tag.name as string) || "", slug: (tag.slug as string) || "",
+      description: (tag.description as string) || "", count: (tag.count as number) || 0,
       raw_data: toJson(tag), synced_at: new Date().toISOString(),
     };
     const { data: existing } = await supabase.from("tags").select("id").eq("store_id", store.id).eq("woo_id", tag.id).maybeSingle();
     if (existing) { await supabase.from("tags").update(data).eq("id", existing.id); updated++; }
     else { await supabase.from("tags").insert(data); created++; }
   }
-  return { processed: tags.length, created, updated };
+  await setWatermark(store.id, "tags", tags.length, startedAt);
+  return { processed: tags.length, created, updated, isDelta: false };
 }
 
-async function syncCoupons(store: StoreToSync): Promise<{ processed: number; created: number; updated: number }> {
-  const coupons = await fetchAllFromWooCommerce<WooCoupon>(store.url, store.consumer_key, store.consumer_secret, "coupons");
-  console.log(`[Sync] Fetched ${coupons.length} coupons for ${store.name}`);
+async function syncCoupons(store: StoreToSync): Promise<SyncResult> {
+  const startedAt = new Date().toISOString();
+  const coupons = await fetchAllFromWooCommerce<Record<string, unknown> & { id: number }>(
+    store.url, store.consumer_key, store.consumer_secret, "coupons"
+  );
   let created = 0, updated = 0;
 
   for (const coupon of coupons) {
     try {
       const data = {
-        store_id: store.id, woo_id: coupon.id, code: coupon.code,
-        amount: coupon.amount ? parseFloat(coupon.amount) : null,
-        discount_type: coupon.discount_type, description: coupon.description || "",
-        date_expires: coupon.date_expires, usage_count: coupon.usage_count || 0,
-        individual_use: coupon.individual_use || false,
+        store_id: store.id, woo_id: coupon.id, code: (coupon.code as string) || "",
+        amount: coupon.amount ? parseFloat(coupon.amount as string) : null,
+        discount_type: (coupon.discount_type as string) || "", description: (coupon.description as string) || "",
+        date_expires: (coupon.date_expires as string | null), usage_count: (coupon.usage_count as number) || 0,
+        individual_use: (coupon.individual_use as boolean) || false,
         product_ids: toJson(coupon.product_ids || []),
         excluded_product_ids: toJson(coupon.excluded_product_ids || []),
-        usage_limit: coupon.usage_limit, usage_limit_per_user: coupon.usage_limit_per_user,
-        free_shipping: coupon.free_shipping || false,
-        minimum_amount: coupon.minimum_amount ? parseFloat(coupon.minimum_amount) : null,
-        maximum_amount: coupon.maximum_amount ? parseFloat(coupon.maximum_amount) : null,
-        raw_data: toJson(coupon), date_created: coupon.date_created,
+        usage_limit: (coupon.usage_limit as number | null),
+        usage_limit_per_user: (coupon.usage_limit_per_user as number | null),
+        free_shipping: (coupon.free_shipping as boolean) || false,
+        minimum_amount: coupon.minimum_amount ? parseFloat(coupon.minimum_amount as string) : null,
+        maximum_amount: coupon.maximum_amount ? parseFloat(coupon.maximum_amount as string) : null,
+        raw_data: toJson(coupon), date_created: (coupon.date_created as string),
         synced_at: new Date().toISOString(),
       };
       const { data: existing } = await supabase.from("coupons").select("id").eq("store_id", store.id).eq("woo_id", coupon.id).maybeSingle();
       if (existing) {
         const { error } = await supabase.from("coupons").update(data).eq("id", existing.id);
-        if (error) console.error(`[Sync] Coupon update error for ${coupon.code}:`, error.message);
-        else updated++;
+        if (!error) updated++;
       } else {
         const { error } = await supabase.from("coupons").insert(data);
-        if (error) console.error(`[Sync] Coupon insert error for ${coupon.code}:`, error.message);
-        else created++;
+        if (!error) created++;
       }
     } catch (err) {
       console.error(`[Sync] Coupon exception for ${coupon.code}:`, err);
     }
   }
-  return { processed: coupons.length, created, updated };
+  await setWatermark(store.id, "coupons", coupons.length, startedAt);
+  return { processed: coupons.length, created, updated, isDelta: false };
 }
 
 async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
@@ -318,7 +287,6 @@ async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
 
   if (missingTopics.length === 0) return;
 
-  // Build the webhook delivery URL
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL
     || process.env.NEXT_PUBLIC_SITE_URL
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -375,16 +343,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const stuckStoreIds = [...new Set(stuckRuns.map(r => r.store_id))];
       for (const sid of stuckStoreIds) {
         const { data: stillRunning } = await supabase
-          .from("sync_runs")
-          .select("id")
-          .eq("store_id", sid)
-          .eq("status", "running")
-          .limit(1);
+          .from("sync_runs").select("id").eq("store_id", sid).eq("status", "running").limit(1);
         if (!stillRunning?.length) {
           await supabase.from("stores").update({ status: "connected" }).eq("id", sid);
         }
       }
-      console.log(`[Cron] Auto-timed-out ${stuckRuns.length} stuck sync runs`);
     }
 
     const { data: stores, error: storesError } = await supabase
@@ -407,8 +370,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       try {
         await ensureWebhooksRegistered(store);
-        const syncFunctions: Record<string, (s: StoreToSync) => Promise<{ processed: number; created: number; updated: number }>> = { products: syncProducts, orders: syncOrders, customers: syncCustomers, categories: syncCategories, tags: syncTags, coupons: syncCoupons };
+        const syncFunctions: Record<string, (s: StoreToSync) => Promise<SyncResult>> = { products: syncProducts, orders: syncOrders, customers: syncCustomers, categories: syncCategories, tags: syncTags, coupons: syncCoupons };
         let totalRecords = 0, totalCreated = 0, totalUpdated = 0;
+        const aspectSummaries: Record<string, { processed: number; isDelta: boolean }> = {};
 
         for (const [aspect, syncFn] of Object.entries(syncFunctions)) {
           const { data: syncRun } = await supabase.from("sync_runs").insert({ store_id: store.id, aspect, status: "running", started_at: new Date().toISOString() }).select().single();
@@ -417,7 +381,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             totalRecords += result.processed;
             totalCreated += result.created;
             totalUpdated += result.updated;
-            if (syncRun) await supabase.from("sync_runs").update({ status: "completed", completed_at: new Date().toISOString(), records_processed: result.processed, records_created: result.created, records_updated: result.updated }).eq("id", syncRun.id);
+            aspectSummaries[aspect] = { processed: result.processed, isDelta: result.isDelta };
+            if (syncRun) await supabase.from("sync_runs").update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+              records_processed: result.processed,
+              records_created: result.created,
+              records_updated: result.updated,
+            }).eq("id", syncRun.id);
           } catch (aspectError) {
             if (syncRun) {
               const errMsg = aspectError instanceof Error ? aspectError.message : "Unknown error";
@@ -445,8 +416,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const nextSyncAt = new Date();
         nextSyncAt.setMinutes(nextSyncAt.getMinutes() + (store.sync_interval || 60));
         await supabase.from("stores").update({ last_sync_at: new Date().toISOString(), next_sync_at: nextSyncAt.toISOString() }).eq("id", store.id);
-        if (cronLog) await supabase.from("cron_logs").update({ status: "completed", message: `Sync completed. ${totalRecords} records (${totalCreated} created, ${totalUpdated} updated).`, completed_at: new Date().toISOString(), metadata: { records_processed: totalRecords, records_created: totalCreated, records_updated: totalUpdated, next_sync_at: nextSyncAt.toISOString() } }).eq("id", cronLog.id);
-        results.push({ store_id: store.id, store_name: store.name, status: "completed", records_processed: totalRecords, records_created: totalCreated, records_updated: totalUpdated, next_sync_at: nextSyncAt.toISOString() });
+        if (cronLog) await supabase.from("cron_logs").update({
+          status: "completed",
+          message: `Sync completed. ${totalRecords} records (${totalCreated} created, ${totalUpdated} updated).`,
+          completed_at: new Date().toISOString(),
+          metadata: {
+            records_processed: totalRecords,
+            records_created: totalCreated,
+            records_updated: totalUpdated,
+            next_sync_at: nextSyncAt.toISOString(),
+            aspects: aspectSummaries,
+          },
+        }).eq("id", cronLog.id);
+        results.push({ store_id: store.id, store_name: store.name, status: "completed", records_processed: totalRecords, records_created: totalCreated, records_updated: totalUpdated, next_sync_at: nextSyncAt.toISOString(), aspects: aspectSummaries });
       } catch (syncError) {
         if (cronLog) await supabase.from("cron_logs").update({ status: "failed", error_message: syncError instanceof Error ? syncError.message : "Unknown error", completed_at: new Date().toISOString() }).eq("id", cronLog.id);
         results.push({ store_id: store.id, store_name: store.name, status: "failed", error: syncError instanceof Error ? syncError.message : "Unknown error" });

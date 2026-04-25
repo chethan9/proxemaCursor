@@ -1570,6 +1570,38 @@ export type Database = {
         }
         Relationships: []
       }
+      store_aspect_sync_state: {
+        Row: {
+          aspect: string
+          last_completed_at: string
+          last_synced_at: string | null
+          records_seen: number
+          store_id: string
+        }
+        Insert: {
+          aspect: string
+          last_completed_at?: string
+          last_synced_at?: string | null
+          records_seen?: number
+          store_id: string
+        }
+        Update: {
+          aspect?: string
+          last_completed_at?: string
+          last_synced_at?: string | null
+          records_seen?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_aspect_sync_state_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           celebration_shown_at: string | null
