@@ -19,7 +19,7 @@ type Invoice = Tables<"invoices">;
 
 function BillingInner() {
   const { profile } = useAuth();
-  const usage = useBillingUsage();
+  const usage = useBillingUsage(profile?.client_id || "");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
