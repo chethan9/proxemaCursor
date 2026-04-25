@@ -322,31 +322,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const now = new Date().toISOString();
 
-    // Auto-timeout: mark stuck running syncs (>30 min) as failed across all stores
-    const stuckThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { data: stuckRuns } = await supabase
+    // ---- Resume chunked syncs whose heartbeat has gone stale ----
+    const RESUME_STALE_SECONDS = 60;
+    const resumeCutoff = new Date(Date.now() - RESUME_STALE_SECONDS * 1000).toISOString();
+    const { data: resumable } = await supabase
       .from("sync_runs")
-      .select("id, store_id")
+      .select("id, store_id, aspect, last_heartbeat_at")
       .eq("status", "running")
-      .lt("started_at", stuckThreshold);
+      .neq("aspect", "all")
+      .or(`last_heartbeat_at.lt.${resumeCutoff},last_heartbeat_at.is.null`)
+      .limit(20);
 
-    if (stuckRuns && stuckRuns.length > 0) {
-      await supabase
-        .from("sync_runs")
-        .update({
-          status: "failed",
-          error_message: "Auto-timeout: sync exceeded 30 minute limit",
-          completed_at: new Date().toISOString(),
-        })
-        .in("id", stuckRuns.map(r => r.id));
+    const resumeBaseUrl = process.env.NEXT_PUBLIC_APP_URL
+      || process.env.NEXT_PUBLIC_SITE_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
-      const stuckStoreIds = [...new Set(stuckRuns.map(r => r.store_id))];
-      for (const sid of stuckStoreIds) {
-        const { data: stillRunning } = await supabase
-          .from("sync_runs").select("id").eq("store_id", sid).eq("status", "running").limit(1);
-        if (!stillRunning?.length) {
-          await supabase.from("stores").update({ status: "connected" }).eq("id", sid);
-        }
+    const resumeResults: { id: string; store_id: string; aspect: string; triggered: boolean }[] = [];
+    for (const r of (resumable || [])) {
+      // Claim: bump heartbeat NOW so we don't double-trigger if sync.ts hasn't written one yet
+      await supabase.from("sync_runs").update({ last_heartbeat_at: new Date().toISOString() }).eq("id", r.id);
+      try {
+        // Fire-and-forget — don't await body, sync.ts will run for up to 5 min
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (cronSecret) headers["Authorization"] = `Bearer ${cronSecret}`;
+        fetch(`${resumeBaseUrl}/api/stores/${r.store_id}/sync?aspect=${encodeURIComponent(r.aspect)}&resume=true`, {
+          method: "POST",
+          headers,
+          body: "{}",
+        }).catch((e) => console.error(`[sync-scheduler] resume ${r.aspect} for ${r.store_id} failed:`, e));
+        resumeResults.push({ id: r.id, store_id: r.store_id, aspect: r.aspect, triggered: true });
+      } catch (e) {
+        console.error(`[sync-scheduler] resume trigger error:`, e);
+        resumeResults.push({ id: r.id, store_id: r.store_id, aspect: r.aspect, triggered: false });
       }
     }
 
@@ -361,7 +368,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (storesError) throw storesError;
     if (!stores || stores.length === 0) {
-      return res.status(200).json({ message: "No stores due for sync", checked_at: now, stores_synced: 0 });
+      return res.status(200).json({ message: "No stores due for sync", checked_at: now, stores_synced: 0, resumes_triggered: resumeResults.length });
     }
 
     const results = [];
@@ -435,7 +442,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    return res.status(200).json({ message: "Sync completed", checked_at: now, stores_synced: results.length, results });
+    return res.status(200).json({ message: "Sync completed", checked_at: now, stores_synced: results.length, results, resumes_triggered: resumeResults.length });
   } catch (error) {
     return res.status(500).json({ error: "Internal server error", message: error instanceof Error ? error.message : "Unknown error" });
   }
