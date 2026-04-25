@@ -107,3 +107,51 @@ export function SiteLoadingSkeleton() {
     </div>
   );
 }
+
+export function CustomerDetailSkeleton() {
+  return (
+    <div className="p-6 space-y-4 max-w-[1200px] mx-auto animate-in fade-in duration-200">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-7 w-48" />
+      </div>
+      <Card>
+        <CardContent className="p-5 flex items-center gap-4">
+          <Skeleton className="h-16 w-16 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-56" />
+            <Skeleton className="h-3.5 w-72" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-9" />
+          </div>
+        </CardContent>
+      </Card>
+      <div className="flex gap-2">
+        <Skeleton className="h-9 w-28" />
+        <Skeleton className="h-9 w-28" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card><CardContent className="p-5 space-y-3">
+          <Skeleton className="h-4 w-32" />
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex justify-between">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3.5 w-32" />
+            </div>
+          ))}
+        </CardContent></Card>
+        <Card><CardContent className="p-5 space-y-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-5/6" />
+          <Skeleton className="h-3.5 w-4/6" />
+          <Skeleton className="h-3.5 w-3/4" />
+        </CardContent></Card>
+      </div>
+    </div>
+  );
+}
