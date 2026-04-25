@@ -38,23 +38,6 @@ function GlobalScrollButton() {
   return <ScrollToEdgeButton />;
 }
 
-function FloatingThemeSwitch() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
-  const hidden =
-    loading ||
-    !user ||
-    router.pathname.startsWith("/auth") ||
-    router.pathname.startsWith("/sites/connect");
-  if (hidden) return null;
-  return (
-    <div className="fixed top-4 right-4 z-[100] flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1 shadow-lg">
-      <span className="text-xs font-medium text-muted-foreground">Theme</span>
-      <ThemeSwitch />
-    </div>
-  );
-}
-
 function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -102,7 +85,6 @@ function Providers({ children }: { children: React.ReactNode }) {
             <Shell>{children}</Shell>
             <BulkJobsToast />
             <GlobalScrollButton />
-            <FloatingThemeSwitch />
             <IncompleteOnboardingPrompt />
           </RecentMutationsProvider>
         </BrandingProvider>

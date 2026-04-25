@@ -19,10 +19,52 @@ export interface FetchCustomersOptions {
   minOrders?: number;
   minSpent?: number;
   roleFilter?: "all" | "customer" | "subscriber" | "guest";
+  useLive?: boolean;
 }
 
-export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ data: CustomerRow[]; count: number }> {
-  const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter } = opts;
+function wooCustomerToRow(c: Record<string, unknown>, storeId: string): CustomerRow {
+  return {
+    id: `live-${c.id}`,
+    store_id: storeId,
+    woo_id: (c.id as number) ?? null,
+    email: (c.email as string) ?? null,
+    first_name: (c.first_name as string) ?? null,
+    last_name: (c.last_name as string) ?? null,
+    username: (c.username as string) ?? null,
+    role: (c.role as string) ?? null,
+    billing: (c.billing as Record<string, unknown>) ?? null,
+    shipping: (c.shipping as Record<string, unknown>) ?? null,
+    avatar_url: (c.avatar_url as string) ?? null,
+    orders_count: (c.orders_count as number) ?? 0,
+    total_spent: (c.total_spent as string) ? Number(c.total_spent) : 0,
+    date_created: (c.date_created as string) ?? null,
+    date_modified: (c.date_modified as string) ?? null,
+    raw_data: c,
+    synced_at: null,
+    created_at: (c.date_created as string) ?? null,
+    updated_at: (c.date_modified as string) ?? null,
+  } as unknown as CustomerRow;
+}
+
+export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ data: CustomerRow[]; count: number; live?: boolean }> {
+  const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter, useLive } = opts;
+
+  if (useLive) {
+    const qs = new URLSearchParams();
+    qs.set("page", String(page + 1));
+    qs.set("per_page", String(pageSize));
+    if (search) qs.set("search", search);
+    const orderMap: Record<string, string> = { date_created: "registered_date", name: "name", first_name: "name", email: "email", orders_count: "id", total_spent: "id", synced_at: "registered_date" };
+    qs.set("orderby", orderMap[sortField] || "registered_date");
+    qs.set("order", sortDirection);
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const res = await fetch(`/api/stores/${storeId}/live/customers?${qs.toString()}`, { headers });
+    if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
+    const json = await res.json();
+    return { data: (json.data as Record<string, unknown>[]).map((c) => wooCustomerToRow(c, storeId)), count: json.count, live: true };
+  }
+
   let q = supabase.from("customers").select("*", { count: "exact" }).eq("store_id", storeId);
   if (search && search.trim()) {
     const raw = search.trim();

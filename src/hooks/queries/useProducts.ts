@@ -9,22 +9,22 @@ export function useProducts(opts: FetchProductsOptions) {
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
-    queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "hybrid" : "db"] as const,
+    queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "live" : "db"] as const,
     queryFn: async () => {
-      const dbRes = await fetchProducts({ ...opts, useLive: false });
-      if (dbRes.data.length > 0 || !initialSyncRunning) return dbRes;
-      try {
-        const live = await fetchProducts({ ...opts, useLive: true });
-        return live;
-      } catch (e) {
-        console.warn("[useProducts] live fetch failed:", e);
-        return dbRes;
+      if (initialSyncRunning) {
+        try {
+          return await fetchProducts({ ...opts, useLive: true });
+        } catch (e) {
+          console.warn("[useProducts] live fetch failed, falling back to DB:", e);
+          return fetchProducts({ ...opts, useLive: false });
+        }
       }
+      return fetchProducts({ ...opts, useLive: false });
     },
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
-    refetchInterval: anySyncRunning ? 5000 : false,
+    refetchInterval: anySyncRunning ? 8000 : false,
     retry: 1,
   });
 }

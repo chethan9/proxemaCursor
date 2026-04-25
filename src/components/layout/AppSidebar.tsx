@@ -25,7 +25,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight } from "lucide-react";
+import { LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "next-themes";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
 
@@ -99,6 +100,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
   const qc = useQueryClient();
+  const { theme: currentTheme, setTheme } = useTheme();
   const prefetchStore = (id: string) => {
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
@@ -659,6 +661,23 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Theme</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                <Sun className="h-4 w-4 mr-2" />
+                Light
+                {currentTheme === "light" && <Check className="h-3.5 w-3.5 ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                <Moon className="h-4 w-4 mr-2" />
+                Dark
+                {currentTheme === "dark" && <Check className="h-3.5 w-3.5 ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                <Monitor className="h-4 w-4 mr-2" />
+                System
+                {currentTheme === "system" && <Check className="h-3.5 w-3.5 ml-auto" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />

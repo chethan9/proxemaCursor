@@ -18,7 +18,7 @@ export interface LiveFetchParams {
 
 export async function wooLiveFetch<T>(
   storeId: string,
-  resource: "products" | "orders" | "products/categories" | "products/tags",
+  resource: "products" | "orders" | "products/categories" | "products/tags" | "customers",
   params: LiveFetchParams = {}
 ): Promise<{ data: T[]; total: number; totalPages: number }> {
   const creds = await getStoreCreds(storeId);
@@ -28,7 +28,7 @@ export async function wooLiveFetch<T>(
 
 export async function wooLiveFetchWithCreds<T>(
   creds: WooStoreCreds,
-  resource: "products" | "orders" | "products/categories" | "products/tags",
+  resource: "products" | "orders" | "products/categories" | "products/tags" | "customers",
   params: LiveFetchParams = {}
 ): Promise<{ data: T[]; total: number; totalPages: number }> {
   const qs = new URLSearchParams();

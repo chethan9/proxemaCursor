@@ -9,22 +9,22 @@ export function useOrders(opts: FetchOrdersOptions) {
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
-    queryKey: [...queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "hybrid" : "db"] as const,
+    queryKey: [...queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "live" : "db"] as const,
     queryFn: async () => {
-      const dbRes = await fetchOrders({ ...opts, useLive: false });
-      if (dbRes.data.length > 0 || !initialSyncRunning) return dbRes;
-      try {
-        const live = await fetchOrders({ ...opts, useLive: true });
-        return live;
-      } catch (e) {
-        console.warn("[useOrders] live fetch failed:", e);
-        return dbRes;
+      if (initialSyncRunning) {
+        try {
+          return await fetchOrders({ ...opts, useLive: true });
+        } catch (e) {
+          console.warn("[useOrders] live fetch failed, falling back to DB:", e);
+          return fetchOrders({ ...opts, useLive: false });
+        }
       }
+      return fetchOrders({ ...opts, useLive: false });
     },
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
-    refetchInterval: anySyncRunning ? 5000 : false,
+    refetchInterval: anySyncRunning ? 8000 : false,
     retry: 1,
   });
 }

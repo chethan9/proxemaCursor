@@ -4,14 +4,25 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 export function useCustomers(opts: FetchCustomersOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
-  const anySyncRunning = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
+  const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
+  const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
-    queryKey: ["customers", opts.storeId, opts] as const,
-    queryFn: () => fetchCustomers(opts),
+    queryKey: ["customers", opts.storeId, opts, initialSyncRunning ? "live" : "db"] as const,
+    queryFn: async () => {
+      if (initialSyncRunning) {
+        try {
+          return await fetchCustomers({ ...opts, useLive: true });
+        } catch (e) {
+          console.warn("[useCustomers] live fetch failed, falling back to DB:", e);
+          return fetchCustomers({ ...opts, useLive: false });
+        }
+      }
+      return fetchCustomers({ ...opts, useLive: false });
+    },
     placeholderData: keepPreviousData,
-    enabled: !!opts.storeId,
+    enabled: !!opts.storeId && syncStatus !== undefined,
     refetchOnWindowFocus: true,
-    refetchInterval: anySyncRunning ? 5000 : false,
+    refetchInterval: anySyncRunning ? 8000 : false,
     retry: 1,
   });
 }

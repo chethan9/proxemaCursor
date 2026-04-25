@@ -610,3 +610,59 @@
     border-radius: 4px;
   }
 }
+
+@layer components {
+  .dark[data-theme-preset="modern"] [data-slot="card"],
+  .dark[data-theme-preset="modern"] .bg-card {
+    border-color: hsl(var(--border));
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark[data-theme-preset="modern"] thead tr {
+    background-color: hsl(var(--muted));
+  }
+
+  .dark[data-theme-preset="modern"] th {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .dark[data-theme-preset="modern"] [data-sidebar="sidebar"] {
+    border-right: 1px solid hsl(var(--sidebar-border));
+  }
+
+  .dark[data-theme-preset="modern"] [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
+  .dark[data-theme-preset="modern"] [data-sidebar="menu-button"]:hover {
+    background-color: hsl(var(--sidebar-accent) / 0.6);
+  }
+
+  .dark[data-theme-preset="modern"] [data-sidebar="group-label"] {
+    color: hsl(var(--sidebar-muted));
+  }
+
+  .dark[data-theme-preset="modern"] [data-slot="skeleton"] {
+    background-color: hsl(var(--muted));
+  }
+
+  .dark[data-theme-preset="modern"] [data-slot="skeleton"]::before {
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.05), transparent);
+  }
+
+  .dark[data-theme-preset="modern"] [role="option"][data-highlighted],
+  .dark[data-theme-preset="modern"] [role="option"][data-state="checked"],
+  .dark[data-theme-preset="modern"] [role="option"][aria-selected="true"],
+  .dark[data-theme-preset="modern"] [role="menuitem"][data-highlighted],
+  .dark[data-theme-preset="modern"] [role="menuitemcheckbox"][data-highlighted],
+  .dark[data-theme-preset="modern"] [role="menuitemradio"][data-highlighted],
+  .dark[data-theme-preset="modern"] [cmdk-item][data-selected="true"],
+  .dark[data-theme-preset="modern"] [role="option"]:hover,
+  .dark[data-theme-preset="modern"] [role="option"]:focus,
+  .dark[data-theme-preset="modern"] [role="menuitem"]:hover,
+  .dark[data-theme-preset="modern"] [role="menuitem"]:focus {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+  }
+}
