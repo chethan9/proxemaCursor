@@ -289,6 +289,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       description: (created.description as string) ?? null,
       short_description: (created.short_description as string) ?? null,
       categories: created.categories ?? [],
+      tags: created.tags ?? [],
       images: created.images ?? [],
       attributes: created.attributes ?? [],
       raw_data: created,

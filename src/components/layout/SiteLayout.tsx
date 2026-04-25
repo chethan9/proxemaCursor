@@ -33,7 +33,7 @@ export function SiteLayout({ children }: Props) {
       {siteId ? (
         <SiteSidebar siteId={siteId} />
       ) : (
-        <aside className="flex shrink-0 flex-col w-52 bg-background border-r border-border p-2 gap-2">
+        <aside className="flex shrink-0 flex-col w-44 bg-background border-r border-border p-2 gap-2">
           <Skeleton className="h-9 w-full" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />

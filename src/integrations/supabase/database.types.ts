@@ -1423,6 +1423,7 @@ export type Database = {
           stock_status: string | null
           store_id: string
           synced_at: string | null
+          tags: Json
           type: string | null
           updated_at: string | null
           woo_id: number
@@ -1448,6 +1449,7 @@ export type Database = {
           stock_status?: string | null
           store_id: string
           synced_at?: string | null
+          tags?: Json
           type?: string | null
           updated_at?: string | null
           woo_id: number
@@ -1473,6 +1475,7 @@ export type Database = {
           stock_status?: string | null
           store_id?: string
           synced_at?: string | null
+          tags?: Json
           type?: string | null
           updated_at?: string | null
           woo_id?: number

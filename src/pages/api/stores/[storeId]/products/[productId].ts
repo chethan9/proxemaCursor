@@ -159,6 +159,7 @@ interface WooProduct {
   description: string;
   short_description: string;
   categories: unknown[];
+  tags: unknown[];
   images: unknown[];
   attributes: unknown[];
   date_created: string;
@@ -428,6 +429,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       description: updated.description,
       short_description: updated.short_description,
       categories: toJson(updated.categories),
+      tags: toJson(updated.tags || []),
       images: toJson(updated.images),
       attributes: toJson(updated.attributes || []),
       raw_data: toJson(updated),

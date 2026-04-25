@@ -64,6 +64,7 @@ const ASPECTS: Record<string, AspectConfig> = {
       status: p.status, type: p.type, description: p.description,
       short_description: p.short_description,
       categories: toJson(p.categories), images: toJson(p.images),
+      tags: toJson(p.tags || []),
       attributes: toJson(p.attributes || []), raw_data: toJson(p), synced_at: now,
     }),
   },

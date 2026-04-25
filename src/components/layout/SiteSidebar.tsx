@@ -176,7 +176,7 @@ export function SiteSidebar({ siteId }: Props) {
   };
 
   return (
-    <aside className="flex shrink-0 flex-col w-52 bg-background border-r border-border">
+    <aside className="flex shrink-0 flex-col w-44 bg-background border-r border-border">
       {/* Site switcher */}
       <div className="h-12 flex items-center px-2 border-b border-border">
         <Popover open={open} onOpenChange={setOpen}>
