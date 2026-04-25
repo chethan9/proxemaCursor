@@ -19,6 +19,8 @@ type ActiveSyncData = {
   elapsed_seconds: number;
   estimated_total: number;
   processed: number;
+  pages_done?: number;
+  pages_total?: number;
   started_at?: string;
   is_initial: boolean;
 } | null;
