@@ -132,7 +132,13 @@ export async function updateStore(
   return updated;
 }
 
-export async function deleteStore(id: string): Promise<{ webhooks_removed: number; webhooks_failed: number }> {
+export async function deleteStore(id: string): Promise<{
+  webhooks_removed: number;
+  webhooks_failed: number;
+  api_key_removed: boolean;
+  api_key_error?: string | null;
+  record_counts?: Record<string, number>;
+}> {
   let token: string | null = null;
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

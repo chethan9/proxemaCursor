@@ -44,6 +44,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: "Forbidden" });
   }
 
+  // Count records in major child tables for transparency (CASCADE handles actual deletion)
+  const countTables = ["products", "orders", "customers", "categories", "tags", "coupons", "sync_runs", "webhooks", "deleted_records"] as const;
+  const countResults = await Promise.all(
+    countTables.map(async (t) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count } = await (supabaseAdmin as any)
+        .from(t)
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", storeId);
+      return [t, count || 0] as const;
+    })
+  );
+  const recordCounts = Object.fromEntries(countResults) as Record<typeof countTables[number], number>;
+
   // Try to remove webhooks from WooCommerce
   const { data: webhooks } = await supabaseAdmin
     .from("webhooks")
@@ -144,6 +158,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     metadata: {
       webhooks_removed: webhookResults.filter((r) => r.ok).length,
       api_key_removed: apiKeyRemoved,
+      record_counts: recordCounts,
     },
     req,
   });
@@ -154,6 +169,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     webhooks_failed: webhookResults.filter((r) => !r.ok).length,
     api_key_removed: apiKeyRemoved,
     api_key_error: apiKeyError,
+    record_counts: recordCounts,
     details: webhookResults,
   });
 }

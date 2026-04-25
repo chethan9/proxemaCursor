@@ -86,8 +86,23 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selec
     if (!deletingStore) return;
     setDeleting(true);
     try {
-      await deleteStoreMutation.mutateAsync(deletingStore.id);
-      toast({ title: "Incomplete setup removed." });
+      const result = await deleteStoreMutation.mutateAsync(deletingStore.id);
+      const counts = result.record_counts || {};
+      const totalRecords = Object.values(counts).reduce((sum, n) => sum + (n || 0), 0);
+      const parts: string[] = [];
+      if (counts.products) parts.push(`${counts.products} products`);
+      if (counts.orders) parts.push(`${counts.orders} orders`);
+      if (counts.customers) parts.push(`${counts.customers} customers`);
+      if (counts.categories) parts.push(`${counts.categories} categories`);
+      if (counts.tags) parts.push(`${counts.tags} tags`);
+      if (counts.coupons) parts.push(`${counts.coupons} coupons`);
+      if (counts.sync_runs) parts.push(`${counts.sync_runs} sync runs`);
+      if (result.webhooks_removed > 0) parts.push(`${result.webhooks_removed} webhook${result.webhooks_removed === 1 ? "" : "s"}`);
+      const apiKeyNote = result.api_key_removed ? " · API key revoked" : "";
+      toast({
+        title: totalRecords > 0 ? `Removed ${deletingStore.name} and all its data` : `Removed ${deletingStore.name}`,
+        description: parts.length > 0 ? `Deleted: ${parts.join(", ")}${apiKeyNote}` : (apiKeyNote || "Site removed."),
+      });
       setDeletingStore(null);
     } catch (e) {
       toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
