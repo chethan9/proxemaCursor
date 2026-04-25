@@ -14,6 +14,7 @@ import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
 import { IncompleteOnboardingPrompt } from "@/components/IncompleteOnboardingPrompt";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 
@@ -35,6 +36,22 @@ function GlobalScrollButton() {
   const hidden = router.pathname.startsWith("/auth") || router.pathname.startsWith("/sites/connect");
   if (hidden) return null;
   return <ScrollToEdgeButton />;
+}
+
+function FloatingThemeSwitch() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const hidden =
+    loading ||
+    !user ||
+    router.pathname.startsWith("/auth") ||
+    router.pathname.startsWith("/sites/connect");
+  if (hidden) return null;
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      <ThemeSwitch />
+    </div>
+  );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -71,7 +88,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="light"
+      enableSystem
+      disableTransitionOnChange
+    >
       <AuthProvider>
         <CacheBuster />
         <BrandingProvider>
@@ -79,6 +101,7 @@ function Providers({ children }: { children: React.ReactNode }) {
             <Shell>{children}</Shell>
             <BulkJobsToast />
             <GlobalScrollButton />
+            <FloatingThemeSwitch />
             <IncompleteOnboardingPrompt />
           </RecentMutationsProvider>
         </BrandingProvider>
