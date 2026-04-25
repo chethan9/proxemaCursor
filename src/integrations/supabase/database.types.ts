@@ -1889,10 +1889,12 @@ export type Database = {
           attempt: number
           completed_at: string | null
           created_at: string | null
+          cursor_page: number | null
           error_message: string | null
           estimated_total: number | null
           id: string
           is_initial: boolean | null
+          last_heartbeat_at: string | null
           next_retry_at: string | null
           processed_total: number | null
           records_created: number | null
@@ -1907,16 +1909,19 @@ export type Database = {
           started_at: string | null
           status: string | null
           store_id: string
+          total_pages: number | null
         }
         Insert: {
           aspect: string
           attempt?: number
           completed_at?: string | null
           created_at?: string | null
+          cursor_page?: number | null
           error_message?: string | null
           estimated_total?: number | null
           id?: string
           is_initial?: boolean | null
+          last_heartbeat_at?: string | null
           next_retry_at?: string | null
           processed_total?: number | null
           records_created?: number | null
@@ -1931,16 +1936,19 @@ export type Database = {
           started_at?: string | null
           status?: string | null
           store_id: string
+          total_pages?: number | null
         }
         Update: {
           aspect?: string
           attempt?: number
           completed_at?: string | null
           created_at?: string | null
+          cursor_page?: number | null
           error_message?: string | null
           estimated_total?: number | null
           id?: string
           is_initial?: boolean | null
+          last_heartbeat_at?: string | null
           next_retry_at?: string | null
           processed_total?: number | null
           records_created?: number | null
@@ -1955,6 +1963,7 @@ export type Database = {
           started_at?: string | null
           status?: string | null
           store_id?: string
+          total_pages?: number | null
         }
         Relationships: [
           {

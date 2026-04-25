@@ -147,3 +147,95 @@ export async function fetchPagesConcurrent<T>(
 
   return all;
 }
+
+/**
+ * Cursor-aware page fetcher for chunked / resumable syncs.
+ * Reads up to `maxPages` pages starting at `startPage` (1-based),
+ * calls `onBatch(items, pageNum)` per page (in order) so the caller can
+ * persist + heartbeat as progress is made. Returns the last page actually
+ * processed and whether more pages remain on the remote.
+ *
+ * Caller stores `lastPage` as cursor; next invocation passes `startPage = cursor + 1`.
+ * When `hasMore === false`, the aspect is complete.
+ */
+export async function fetchPagesChunked<T>(
+  storeUrl: string,
+  auth: string,
+  endpoint: string,
+  params: Record<string, string>,
+  opts: {
+    startPage: number;
+    maxPages: number;
+    perPage?: number;
+    concurrency?: number;
+    onBatch: (items: T[], pageNum: number) => Promise<void>;
+  }
+): Promise<{ lastPage: number; hasMore: boolean; totalPages: number }> {
+  const perPage = opts.perPage ?? 100;
+  const concurrency = opts.concurrency ?? 4;
+  const startPage = Math.max(1, opts.startPage || 1);
+  const maxPages = Math.max(1, opts.maxPages);
+
+  const firstUrl = buildUrl(storeUrl, endpoint, { ...params, per_page: String(perPage), page: String(startPage) });
+  const firstRes = await fetchWooWithRetry(firstUrl, auth);
+
+  if (!firstRes.ok) {
+    if (firstRes.status === 400 || firstRes.status === 404) {
+      return { lastPage: startPage - 1, hasMore: false, totalPages: startPage - 1 };
+    }
+    const text = await firstRes.text().catch(() => "");
+    const detection = detectBlockingService(firstRes.status, text.slice(0, 2000), firstRes.headers);
+    const suffix = detection ? ` [blocked by ${detection.service}: ${detection.hint}]` : "";
+    throw new Error(`${endpoint}: ${firstRes.status} ${firstRes.statusText}${suffix}`);
+  }
+
+  const firstPage: T[] = await firstRes.json();
+  const totalPages = parseInt(firstRes.headers.get("x-wp-totalpages") || "1", 10);
+
+  if (firstPage.length > 0) {
+    await opts.onBatch(firstPage, startPage);
+  }
+
+  if (firstPage.length < perPage || startPage >= totalPages) {
+    return { lastPage: startPage, hasMore: false, totalPages };
+  }
+
+  const lastPossible = Math.min(startPage + maxPages - 1, totalPages);
+  const remaining = Array.from({ length: lastPossible - startPage }, (_, i) => startPage + 1 + i);
+
+  let lastProcessed = startPage;
+  let aborted = false;
+
+  for (let i = 0; i < remaining.length && !aborted; i += concurrency) {
+    const batch = remaining.slice(i, i + concurrency);
+    const results = await Promise.allSettled(
+      batch.map(async (pageNum) => {
+        const url = buildUrl(storeUrl, endpoint, { ...params, per_page: String(perPage), page: String(pageNum) });
+        const res = await fetchWooWithRetry(url, auth);
+        if (!res.ok) {
+          if (res.status === 400 || res.status === 404) return { page: pageNum, items: [] as T[] };
+          throw new Error(`${endpoint} p${pageNum}: ${res.status}`);
+        }
+        return { page: pageNum, items: (await res.json()) as T[] };
+      })
+    );
+
+    const indexed = results.map((r, idx) => ({ r, page: batch[idx] })).sort((a, b) => a.page - b.page);
+
+    for (const { r, page } of indexed) {
+      if (r.status === "fulfilled") {
+        if (r.value.items.length > 0) {
+          await opts.onBatch(r.value.items, r.value.page);
+        }
+        lastProcessed = page;
+      } else {
+        console.error(`[sync-engine] ${endpoint} p${page} failed, halting chunk:`, r.reason);
+        aborted = true;
+        break;
+      }
+    }
+  }
+
+  const hasMore = lastProcessed < totalPages;
+  return { lastPage: lastProcessed, hasMore, totalPages };
+}

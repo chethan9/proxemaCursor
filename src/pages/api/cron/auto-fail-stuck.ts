@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const STUCK_THRESHOLD_MINUTES = 90;
+const HEARTBEAT_DEAD_MINUTES = 90;
 const BULK_STUCK_THRESHOLD_MINUTES = 90;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,32 +15,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const threshold = new Date(Date.now() - STUCK_THRESHOLD_MINUTES * 60 * 1000).toISOString();
+    const threshold = new Date(Date.now() - HEARTBEAT_DEAD_MINUTES * 60 * 1000).toISOString();
 
-    const { data: stuckRuns, error: findErr } = await supabase
+    // Truly dead runs: heartbeat older than threshold OR no heartbeat AND started_at older than threshold
+    const { data: heartbeatDead } = await supabase
       .from("sync_runs")
-      .select("id, store_id, aspect, started_at")
+      .select("id, store_id, aspect, last_heartbeat_at, started_at")
       .eq("status", "running")
+      .not("last_heartbeat_at", "is", null)
+      .lt("last_heartbeat_at", threshold);
+
+    const { data: legacyDead } = await supabase
+      .from("sync_runs")
+      .select("id, store_id, aspect, last_heartbeat_at, started_at")
+      .eq("status", "running")
+      .is("last_heartbeat_at", null)
       .lt("started_at", threshold);
 
-    if (findErr) throw findErr;
+    const stuckRuns = [...(heartbeatDead || []), ...(legacyDead || [])];
 
     let failedSyncCount = 0;
-    if (stuckRuns && stuckRuns.length > 0) {
+    if (stuckRuns.length > 0) {
       const ids = stuckRuns.map((r) => r.id);
       const { error: updateErr } = await supabase
         .from("sync_runs")
         .update({
           status: "failed",
           completed_at: new Date().toISOString(),
-          error_message: `Auto-failed: no progress for ${STUCK_THRESHOLD_MINUTES}+ minutes`,
+          error_message: `Auto-failed: heartbeat dead for ${HEARTBEAT_DEAD_MINUTES}+ minutes`,
         })
         .in("id", ids);
       if (updateErr) throw updateErr;
       failedSyncCount = stuckRuns.length;
     }
 
-    // Bulk jobs stuck > 30 minutes
     const bulkThreshold = new Date(Date.now() - BULK_STUCK_THRESHOLD_MINUTES * 60 * 1000).toISOString();
     const { data: stuckBulk } = await supabase
       .from("bulk_jobs")
