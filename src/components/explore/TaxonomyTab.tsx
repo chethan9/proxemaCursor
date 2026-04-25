@@ -20,6 +20,7 @@ import type { TaxonomySortField, TaxonomySortDirection } from "@/services/taxono
 import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
+import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 
 type Props = {
   storeId: string;
@@ -50,7 +51,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: pageRes, isLoading } = useTaxonomyRows(storeId, mode, search, page, pageSize, sort.field, sort.direction);
+  const { data: pageRes, isLoading, isFetching } = useTaxonomyRows(storeId, mode, search, page, pageSize, sort.field, sort.direction);
   const { data: allCats } = useAllCategories(storeId, mode === "categories");
 
   const items = (pageRes?.data || []).map((t) => ({
@@ -59,6 +60,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   }));
   const total = pageRes?.count || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const showRefetchOverlay = isFetching && !isLoading && items.length > 0;
   const parentPool = mode === "categories"
     ? (allCats || []).map((t) => ({ ...t, parent_woo_id: (t as { parent_id?: number }).parent_id ?? null }))
     : [];
@@ -167,7 +169,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
         </div>
       </div>
 
-      <Card>
+      <Card className="relative">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -240,6 +242,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
             </Table>
           </div>
         </CardContent>
+        <TableLoadingOverlay show={showRefetchOverlay} />
       </Card>
       <TaxonomyDialog
         open={dialogOpen}

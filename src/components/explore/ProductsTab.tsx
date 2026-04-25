@@ -46,6 +46,7 @@ import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
+import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -211,7 +212,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     setPage(0);
   }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
-  const { data: productsResult, isLoading: loading } = useProducts({
+  const { data: productsResult, isLoading: loading, isFetching } = useProducts({
     storeId,
     page,
     pageSize,
@@ -227,6 +228,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   });
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
+  const showRefetchOverlay = isFetching && !loading && products.length > 0;
 
   const submitBulk = useCallback(async () => {
     if (!bulkDialog || selectedIds.size === 0 || overLimit) return;
@@ -649,7 +651,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         </Card>
       </div>
 
-      <Card>
+      <Card className="relative">
         <CardContent className="p-0">
           {selectedIds.size > 0 && (
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
@@ -1136,6 +1138,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </div>
           )}
         </CardContent>
+        <TableLoadingOverlay show={showRefetchOverlay} />
       </Card>
 
       <ProductQuickEdit

@@ -52,6 +52,7 @@ import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
+import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 
 type ColumnKey =
   | "name"
@@ -268,7 +269,7 @@ function CustomersInner() {
     [visibleCols, columnOrder]
   );
 
-  const { data: result, isLoading } = useCustomers({
+  const { data: result, isLoading, isFetching } = useCustomers({
     storeId,
     page,
     pageSize,
@@ -278,6 +279,7 @@ function CustomersInner() {
   });
   const customers = result?.data ?? [];
   const count = result?.count ?? 0;
+  const showRefetchOverlay = isFetching && !isLoading && customers.length > 0;
 
   const hasActiveFilters = !!search;
 
@@ -437,7 +439,7 @@ function CustomersInner() {
         </div>
       </div>
 
-      <Card>
+      <Card className="relative">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -559,6 +561,7 @@ function CustomersInner() {
             </Table>
           </div>
         </CardContent>
+        <TableLoadingOverlay show={showRefetchOverlay} />
       </Card>
     </div>
   );

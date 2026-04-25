@@ -61,6 +61,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
+import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -227,7 +228,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     return { from: undefined, to: undefined };
   }, [dateRange, customFrom, customTo]);
 
-  const { data: ordersResult, isLoading: loading, isPlaceholderData } = useOrders({
+  const { data: ordersResult, isLoading: loading, isFetching, isPlaceholderData } = useOrders({
     storeId,
     page,
     pageSize,
@@ -244,6 +245,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const orders = ordersResult?.data ?? [];
   const orderCount = ordersResult?.count ?? 0;
   void isPlaceholderData;
+  const showRefetchOverlay = isFetching && !loading && orders.length > 0;
 
   const submitBulk = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0 || overLimit) return;
@@ -814,7 +816,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         </Card>
       </div>
 
-      <Card>
+      <Card className="relative">
         <CardContent className="p-0">
           {selectedIds.size > 0 && (
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
@@ -1102,6 +1104,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             </div>
           )}
         </CardContent>
+        <TableLoadingOverlay show={showRefetchOverlay} />
       </Card>
 
       <Dialog open={!!bulkAction} onOpenChange={(v) => {
