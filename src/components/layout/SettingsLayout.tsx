@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers, Sparkles, Activity } from "lucide-react";
+import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers, Sparkles, Activity, Receipt } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,7 @@ export function SettingsLayout({ children, title = "Settings", requirePermission
       label: "Admin",
       items: [
         { href: "/settings/plans", icon: Layers, label: "Plans", show: isSuperAdmin },
+        { href: "/settings/subscriptions", icon: Receipt, label: "Subscriptions", show: isSuperAdmin },
         { href: "/settings/menu-editor", icon: ListTree, label: "Menu Editor", show: isSuperAdmin },
         { href: "/settings/payment-methods", icon: CreditCard, label: "Payment Methods", show: isSuperAdmin },
       ],
