@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import Lottie from "lottie-react";
 import { ConnectLayout } from "@/components/layout/ConnectLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Loader2, AlertTriangle, Circle, KeyRound, ExternalLink, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle, KeyRound, ExternalLink, RefreshCw, ArrowRight, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -398,21 +398,70 @@ export default function ConnectSuccessPage() {
             </div>
 
             <div className="space-y-2 mb-5">
-              {visibleSteps.map((step) => (
-                <div key={step.id} className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2">
-                  <div className="shrink-0">
-                    {step.status === "done" && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
-                    {step.status === "active" && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-                    {step.status === "pending" && <Circle className="h-5 w-5 text-muted-foreground/40" />}
-                    {step.status === "error" && <AlertTriangle className="h-5 w-5 text-warning" />}
+              {visibleSteps.map((step, idx) => {
+                const stepNum = idx + 1;
+                const isActiveUserAction = step.status === "active" && (
+                  (step.id === "wp" && stage === "wp") ||
+                  (step.id === "auth" && stage === "credentials")
+                );
+                return (
+                  <div
+                    key={step.id}
+                    className={
+                      "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors " +
+                      (step.status === "done"
+                        ? "border-emerald-200 bg-emerald-50/40"
+                        : step.status === "active"
+                        ? "border-primary/40 bg-primary/5"
+                        : step.status === "error"
+                        ? "border-warning/40 bg-warning/5"
+                        : "border-border/60")
+                    }
+                  >
+                    <div className="relative shrink-0">
+                      <div
+                        className={
+                          "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold border-2 " +
+                          (step.status === "done"
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : step.status === "active"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : step.status === "error"
+                            ? "bg-warning text-warning-foreground border-warning"
+                            : "bg-muted text-muted-foreground border-border")
+                        }
+                      >
+                        {step.status === "done" ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : step.status === "error" ? (
+                          <AlertTriangle className="h-4 w-4" />
+                        ) : step.status === "active" && !isActiveUserAction ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          stepNum
+                        )}
+                      </div>
+                      {isActiveUserAction && (
+                        <span className="absolute -inset-0.5 rounded-full ring-2 ring-primary/40 animate-ping" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={
+                        "text-sm " +
+                        (step.status === "pending" ? "text-muted-foreground"
+                          : step.status === "error" ? "text-warning font-medium"
+                          : "text-foreground font-medium")
+                      }>{step.label}</div>
+                      {isActiveUserAction && (
+                        <div className="text-[11px] text-primary font-medium flex items-center gap-1 mt-0.5">
+                          <Hand className="h-3 w-3" />
+                          Action required — see below
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className={
-                    step.status === "pending" ? "text-sm text-muted-foreground"
-                    : step.status === "error" ? "text-sm text-warning font-medium"
-                    : "text-sm text-foreground font-medium"
-                  }>{step.label}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {stage === "credentials" && (
@@ -485,13 +534,19 @@ export default function ConnectSuccessPage() {
             )}
 
             {stage === "wp" && !failed && (
-              <div className="space-y-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <div className="space-y-4 rounded-lg border-2 border-primary/40 bg-primary/5 p-4 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30 animate-pulse" />
                 <div className="flex items-start gap-3">
                   <KeyRound className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold">WordPress Media Access</p>
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold">WordPress Media Access</p>
+                      <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
+                        Action needed
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      To upload product images directly to your WooCommerce media library, we need a WordPress Application Password. Click Authorize — you&apos;ll approve on your own site, no password needed here.
+                      To upload product images directly to your WooCommerce media library, we need a WordPress Application Password. Click the button below — you&apos;ll approve on your own site, no password needed here.
                     </p>
                   </div>
                 </div>
@@ -501,12 +556,16 @@ export default function ConnectSuccessPage() {
                 )}
 
                 {authorizeUrl && (
-                  <Button asChild className="w-full" size="lg">
-                    <a href={authorizeUrl}>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Authorize via WordPress
-                    </a>
-                  </Button>
+                  <div className="relative">
+                    <span className="absolute -inset-1 rounded-lg bg-primary/25 blur-md animate-pulse pointer-events-none" />
+                    <Button asChild className="w-full relative shadow-lg hover:shadow-xl transition-shadow" size="lg">
+                      <a href={authorizeUrl}>
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Authorize via WordPress
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </a>
+                    </Button>
+                  </div>
                 )}
 
                 <div className="text-center">
