@@ -315,6 +315,43 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
 
           <Card>
             <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Pricing</div>
+                {discountPct > 0 && (
+                  <Badge variant="secondary" className="text-[10px] h-5">-{discountPct}%</Badge>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground" required={publishing}>Regular price</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.regular_price || ""}
+                  onChange={(e) => setForm((p) => ({ ...p, regular_price: clampNonNegative(e.target.value) }))}
+                  placeholder="0.00"
+                  className={priceInvalid ? "border-destructive" : ""}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Sale price</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.sale_price || ""}
+                  onChange={(e) => setForm((p) => ({ ...p, sale_price: clampNonNegative(e.target.value) }))}
+                  placeholder="Optional"
+                />
+                {saleNum > 0 && regularNum > 0 && saleNum >= regularNum && (
+                  <p className="text-[10px] text-destructive">Sale price should be lower than regular price</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 space-y-3">
               <div className="text-sm font-medium">Inventory</div>
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox checked={form.manage_stock} onCheckedChange={(v) => setForm((p) => ({ ...p, manage_stock: !!v }))} />
