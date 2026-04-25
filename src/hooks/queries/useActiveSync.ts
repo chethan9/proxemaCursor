@@ -38,7 +38,7 @@ export function useActiveSync(storeId: string | null) {
       const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
       const { data: runs } = await supabase
         .from("sync_runs")
-        .select("id, aspect, status, records_processed, started_at, completed_at, is_initial")
+        .select("id, aspect, status, records_processed, started_at, completed_at, is_initial, cursor_page, total_pages")
         .eq("store_id", storeId)
         .gte("started_at", since)
         .order("started_at", { ascending: false })
@@ -57,17 +57,25 @@ export function useActiveSync(storeId: string | null) {
       const batchStart = allRow.started_at;
       const batchRuns = runs.filter((r) => r.aspect !== "all" && r.started_at >= batchStart);
 
-      const statusByAspect = new Map<string, { status: string; processed: number }>();
+      const statusByAspect = new Map<string, { status: string; processed: number; cursor: number; totalPages: number; started_at: string }>();
       for (const r of batchRuns) {
         const prev = statusByAspect.get(r.aspect);
-        if (!prev || r.started_at > (prev as { started_at?: string }).started_at!) {
-          statusByAspect.set(r.aspect, { status: r.status, processed: r.records_processed || 0 });
+        if (!prev || r.started_at > prev.started_at) {
+          statusByAspect.set(r.aspect, {
+            status: r.status,
+            processed: r.records_processed || 0,
+            cursor: r.cursor_page || 0,
+            totalPages: r.total_pages || 0,
+            started_at: r.started_at,
+          });
         }
       }
 
       let progress = 0;
       let currentAspect: string | null = null;
       let totalProcessed = 0;
+      let pagesDone = 0;
+      let pagesTotal = 0;
       for (const asp of ASPECTS) {
         const weight = ASPECT_WEIGHTS[asp] || 0;
         const s = statusByAspect.get(asp);
@@ -75,12 +83,19 @@ export function useActiveSync(storeId: string | null) {
         if (s.status === "completed") {
           progress += weight;
           totalProcessed += s.processed;
+          pagesDone += s.totalPages || s.cursor;
+          pagesTotal += s.totalPages || s.cursor;
         } else if (s.status === "running") {
-          progress += weight * 0.4;
-          currentAspect = asp;
+          const pageRatio = s.totalPages > 0 ? Math.min(1, s.cursor / s.totalPages) : 0.05;
+          progress += weight * pageRatio;
+          if (!currentAspect) currentAspect = asp;
           totalProcessed += s.processed;
+          pagesDone += s.cursor;
+          pagesTotal += s.totalPages;
         } else if (s.status === "failed") {
           progress += weight;
+          pagesDone += s.cursor;
+          pagesTotal += s.totalPages || s.cursor;
         }
       }
 
@@ -97,6 +112,8 @@ export function useActiveSync(storeId: string | null) {
         elapsed_seconds: elapsed,
         estimated_total: 0,
         processed: totalProcessed,
+        pages_done: pagesDone,
+        pages_total: pagesTotal,
         started_at: batchStart,
         is_initial: !!allRow.is_initial,
       };

@@ -62,7 +62,7 @@ export function useAllActiveSyncs() {
 
       const { data: childRuns } = await supabase
         .from("sync_runs")
-        .select("store_id, aspect, status, started_at")
+        .select("store_id, aspect, status, started_at, cursor_page, total_pages")
         .in("store_id", storeIds)
         .neq("aspect", "all")
         .gte("started_at", since)
@@ -76,17 +76,28 @@ export function useAllActiveSyncs() {
         const batch = (childRuns || []).filter(
           (r) => r.store_id === storeId && r.started_at >= runInfo.started_at
         );
-        const byAspect = new Map<string, string>();
-        for (const r of batch) if (!byAspect.has(r.aspect)) byAspect.set(r.aspect, r.status);
+        type Aspect = { status: string; cursor: number; totalPages: number };
+        const byAspect = new Map<string, Aspect>();
+        for (const r of batch) {
+          if (!byAspect.has(r.aspect)) byAspect.set(r.aspect, {
+            status: r.status,
+            cursor: r.cursor_page || 0,
+            totalPages: r.total_pages || 0,
+          });
+        }
 
         let progress = 0;
         let currentAspect: string | null = null;
         for (const asp of ASPECTS) {
           const w = ASPECT_WEIGHTS[asp] || 0;
-          const st = byAspect.get(asp);
-          if (!st) continue;
-          if (st === "completed" || st === "failed") progress += w;
-          else if (st === "running") { progress += w * 0.4; currentAspect = asp; }
+          const a = byAspect.get(asp);
+          if (!a) continue;
+          if (a.status === "completed" || a.status === "failed") progress += w;
+          else if (a.status === "running") {
+            const ratio = a.totalPages > 0 ? Math.min(1, a.cursor / a.totalPages) : 0.05;
+            progress += w * ratio;
+            if (!currentAspect) currentAspect = asp;
+          }
         }
         if (progress >= 100) progress = 99;
         if (progress === 0 && byAspect.size === 0) progress = 5;

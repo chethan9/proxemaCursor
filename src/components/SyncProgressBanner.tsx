@@ -150,6 +150,11 @@ export function SyncProgressBanner() {
             {message}
           </span>
           <span className="text-xs tabular-nums text-muted-foreground hidden lg:inline">Elapsed {formatElapsed(data.elapsed_seconds)}</span>
+          {(data.pages_total ?? 0) > 0 && (
+            <span className="text-xs tabular-nums text-muted-foreground hidden xl:inline">
+              {data.pages_done ?? 0}/{data.pages_total} pages
+            </span>
+          )}
           <span className="text-xs font-semibold tabular-nums text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">{data.progress}%</span>
           {bgSyncs.length > 0 && (
             <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline" title={`${bgSyncs.length} other site${bgSyncs.length > 1 ? "s" : ""} syncing`}>
