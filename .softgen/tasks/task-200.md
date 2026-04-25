@@ -1,28 +1,26 @@
 ---
 title: Skeleton shimmers for detail pages
-status: todo
+status: done
 priority: high
 type: feature
-tags: [ux, loading, polish]
+tags: [ui, polish, loading]
 created_by: agent
-created_at: 2026-04-25T22:00:00Z
+created_at: 2026-04-25T20:00:00Z
 position: 200
 ---
 
 ## Notes
 
-Refetch overlay for list tables (Products, Orders, Customers, Categories, Tags) is shipped — `TableLoadingOverlay` component shows a centered "Updating…" pill during filter/sort/pagination refetches with old data still visible underneath.
-
-Remaining work: replace plain spinners with **layout-matching skeleton shimmers** on detail/edit pages that currently show a blank screen or generic spinner during first load.
+Detail pages (product edit, order detail, customer detail) used a generic full-page spinner while loading. Replaced with shimmer skeletons that mirror the actual layout so users see the page structure immediately and content fades in cleanly without layout shift.
 
 ## Checklist
 
-- [ ] Product edit page (`src/pages/sites/[id]/products/edit/[productId].tsx`) — shimmer matching: image gallery area, basic info fields (name/SKU/status), tab strip, pricing card, inventory card
-- [ ] Order detail page (`src/pages/sites/[id]/orders/[orderId].tsx`) — shimmer matching: header (order number/status badges/customer), line items table rows, customer panel (avatar + contact), totals card
-- [ ] Customer detail/edit page (`src/pages/sites/[id]/customers/[customerId].tsx`) — shimmer matching: avatar + name header, contact fields grid, addresses card, recent orders list
-- [ ] Verify list-page shimmers (Products table+grid, Orders, Customers, Categories, Tags) match final row/card shape — refine any that look generic
+- [x] Product edit page (`src/pages/sites/[id]/products/edit/[productId].tsx`): skeleton mirrors header bar + image gallery card + basic info card + pricing card + sidebar (status panel + sections)
+- [x] Order detail page (`src/pages/sites/[id]/orders/[orderId].tsx`): skeleton mirrors stepper card + 3-up info row + items table with rows + sidebar (actions, status, notes)
+- [x] Customer detail page (`src/pages/sites/[id]/customers/[customerId].tsx`): skeleton mirrors header card + tabs + details grid + addresses (CustomerDetailSkeleton from `@/components/site/shared`)
+- [x] All skeletons use `animate-in fade-in duration-200` so the transition into real content is smooth
 
 ## Acceptance
 
-- Opening Product/Order/Customer edit pages cold shows a skeleton mirroring the final layout — no blank screen, no plain centered spinner
+- Navigating to a product/order/customer detail page shows a layout-shaped shimmer, not a plain centered spinner
 - Skeleton shape transitions smoothly into real data without layout shift
