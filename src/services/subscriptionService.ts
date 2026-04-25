@@ -92,7 +92,6 @@ export interface AssignSubscriptionInput {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   gracePeriodDays: number;
-  notes?: string | null;
 }
 
 export async function assignSubscription(input: AssignSubscriptionInput): Promise<Subscription> {
@@ -105,7 +104,6 @@ export async function assignSubscription(input: AssignSubscriptionInput): Promis
       current_period_start: input.currentPeriodStart,
       current_period_end: input.currentPeriodEnd,
       grace_period_days: input.gracePeriodDays,
-      notes: input.notes ?? null,
     })
     .select()
     .single();
@@ -122,7 +120,7 @@ export async function assignSubscription(input: AssignSubscriptionInput): Promis
 export type AdminUpdates = Partial<
   Pick<
     Subscription,
-    "plan_id" | "status" | "current_period_start" | "current_period_end" | "grace_period_days" | "notes"
+    "plan_id" | "status" | "current_period_start" | "current_period_end" | "grace_period_days"
   >
 >;
 

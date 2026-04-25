@@ -167,13 +167,12 @@ function AssignDialog({ open, onOpenChange, plans, onAssigned }: { open: boolean
   const [periodStart, setPeriodStart] = useState(new Date().toISOString().slice(0, 10));
   const [periodEnd, setPeriodEnd] = useState(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
   const [grace, setGrace] = useState(7);
-  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       listClientsWithoutActiveSubscription().then(setClients).catch(() => {});
-      setClientId(""); setPlanId(""); setStatus("trialing"); setNotes("");
+      setClientId(""); setPlanId(""); setStatus("trialing");
     }
   }, [open]);
 
@@ -189,7 +188,6 @@ function AssignDialog({ open, onOpenChange, plans, onAssigned }: { open: boolean
         currentPeriodStart: new Date(periodStart).toISOString(),
         currentPeriodEnd: new Date(periodEnd).toISOString(),
         gracePeriodDays: grace,
-        notes: notes || null,
       });
       toast({ title: "Subscription assigned" });
       onOpenChange(false);
@@ -238,10 +236,6 @@ function AssignDialog({ open, onOpenChange, plans, onAssigned }: { open: boolean
             <div><Label className="text-xs">Period start</Label><Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></div>
             <div><Label className="text-xs">Period end</Label><Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
           </div>
-          <div>
-            <Label className="text-xs">Notes</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes (optional)" />
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -263,7 +257,6 @@ function DetailDrawer({ subscription, plans, onClose, onMutated }: {
   const [status, setStatus] = useState<SubscriptionStatus>("active");
   const [periodEnd, setPeriodEnd] = useState("");
   const [grace, setGrace] = useState(7);
-  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -272,7 +265,6 @@ function DetailDrawer({ subscription, plans, onClose, onMutated }: {
       setStatus((subscription.status || "active") as SubscriptionStatus);
       setPeriodEnd(subscription.current_period_end ? subscription.current_period_end.slice(0, 10) : "");
       setGrace(subscription.grace_period_days ?? 7);
-      setNotes((subscription.notes as string) ?? "");
     }
   }, [subscription]);
 
@@ -331,10 +323,9 @@ function DetailDrawer({ subscription, plans, onClose, onMutated }: {
               <div><Label className="text-xs text-muted-foreground">Period end</Label><Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
               <div><Label className="text-xs text-muted-foreground">Grace days</Label><Input type="number" min={0} value={grace} onChange={(e) => setGrace(Number(e.target.value) || 0)} /></div>
             </div>
-            <div><Label className="text-xs text-muted-foreground">Notes</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             <Button size="sm" className="w-full" disabled={saving} onClick={() => wrap(() => updateSubscriptionAdmin(subscription.id, {
               plan_id: planId, status, current_period_end: periodEnd ? new Date(periodEnd).toISOString() : null,
-              grace_period_days: grace, notes: notes || null,
+              grace_period_days: grace,
             }), "Subscription updated")}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}</Button>
           </div>
 
