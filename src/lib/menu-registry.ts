@@ -66,6 +66,9 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "pricing", defaultLabel: "Plans", defaultIcon: "DollarSign", href: "/pricing", defaultGroup: "Billing", defaultOrder: 2 },
   { id: "users", defaultLabel: "Users", defaultIcon: "UserCog", href: "/settings/users", defaultGroup: "Administration", defaultOrder: 0, permission: PERMISSIONS.USERS_VIEW },
   { id: "roles", defaultLabel: "Roles", defaultIcon: "Shield", href: "/settings/roles", defaultGroup: "Administration", defaultOrder: 1, permission: PERMISSIONS.ROLES_VIEW },
+  { id: "admin-payment-gateways", defaultLabel: "Payment Gateways", defaultIcon: "CreditCard", href: "/admin/payment-gateways", defaultGroup: "Administration", defaultOrder: 2, superAdminOnly: true },
+  { id: "admin-payment-logs", defaultLabel: "Payment Logs", defaultIcon: "Receipt", href: "/admin/payment-logs", defaultGroup: "Administration", defaultOrder: 3, superAdminOnly: true },
+  { id: "admin-activity", defaultLabel: "Activity Log", defaultIcon: "Activity", href: "/admin/activity", defaultGroup: "Administration", defaultOrder: 4, superAdminOnly: true },
   { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings/profile", defaultGroup: "System", defaultOrder: 0 },
 ];
 
