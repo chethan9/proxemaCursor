@@ -103,23 +103,18 @@ export function subscribeToBulkJob(
   };
 }
 
-export function subscribeToStoreBulkJobs(
-  storeId: string,
-  onChange: (job: BulkJob) => void,
-): () => void {
+export function subscribeToStoreBulkJobs(storeId: string, onChange: () => void): () => void {
+  const uniq = Math.random().toString(36).slice(2, 10);
   const channel = supabase
-    .channel(`bulk_jobs_store_${storeId}`)
+    .channel(`bulk_jobs_store_${storeId}_${uniq}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "bulk_jobs", filter: `store_id=eq.${storeId}` },
-      (payload) => {
-        const next = (payload.new ?? payload.old) as BulkJob;
-        onChange(next);
-      },
+      () => onChange()
     )
     .subscribe();
   return () => {
-    void supabase.removeChannel(channel);
+    supabase.removeChannel(channel);
   };
 }
 
