@@ -53,8 +53,7 @@ export function UnsavedChangesGuard({
       setPendingUrl(url);
       setOpen(true);
       router.events.emit("routeChangeError");
-      // eslint-disable-next-line @typescript-eslint/no-throw-literal
-      throw "Route change aborted by unsaved changes guard.";
+      throw new Error("Route change aborted by unsaved changes guard.");
     };
 
     window.addEventListener("beforeunload", beforeUnload);
