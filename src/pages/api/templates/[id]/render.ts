@@ -2,29 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { renderTemplateHtml } from "@/lib/templates/render-html";
 import { renderHtmlToPdf } from "@/lib/templates/render-pdf";
-import { resolveOrderData } from "@/lib/templates/resolve-order";
-import type { JSONContent } from "@tiptap/core";
-
-const sampleInvoiceData = {
-  order: {
-    number: "1024",
-    date: "May 22, 2024",
-    total: "$88.80",
-    subtotal: "$78.00",
-    shipping: "$8.00",
-    tax: "$7.80",
-    discount: "-$5.00",
-    currency: "USD",
-    items: [
-      { name: "Cap", sku: "woo-cap", quantity: 2, price: "$18.00", total: "$36.00" },
-      { name: "Hoodie", sku: "woo-hoodie", quantity: 1, price: "$42.00", total: "$42.00" },
-    ],
-    billing: { first_name: "John", last_name: "Doe", address_1: "123 Street Name", address_2: "Apartment 4B", city: "New York", state: "NY", postcode: "10001", country: "United States" },
-    shipping_address: { first_name: "John", last_name: "Doe", address_1: "456 Park Avenue", address_2: "Apartment 4B", city: "New York", state: "NY", postcode: "10001", country: "United States" },
-  },
-  customer: { name: "John Doe", email: "john@example.com" },
-  store: { name: "Proxema", email: "support@proxema.com" },
-};
+import { resolveOrderContext, getSampleContext } from "@/lib/templates/resolve-order";
+import type { TemplateConfig } from "@/lib/templates/document";
 
 export const config = { api: { bodyParser: { sizeLimit: "1mb" }, responseLimit: false } };
 
@@ -53,32 +32,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .maybeSingle();
     if (verErr || !ver) return res.status(404).json({ error: "Template version not found" });
 
-    const document = ver.document as unknown as JSONContent;
+    const cfg = ver.document as unknown as TemplateConfig;
+    const html = typeof cfg?.html === "string" ? cfg.html : "";
+    if (!html) return res.status(400).json({ error: "Template has no HTML content" });
 
-    let data: Record<string, unknown>;
-    if (useSample) {
-      data = sampleInvoiceData as unknown as Record<string, unknown>;
-    } else if (storeId && orderId) {
-      data = (await resolveOrderData(supabaseAdmin, storeId, orderId)) as unknown as Record<string, unknown>;
-    } else {
-      return res.status(400).json({ error: "Provide store_id+order_id or sample=1" });
+    const meta = { name: tpl.name as string, type: tpl.type as string };
+    const context = useSample
+      ? getSampleContext(meta)
+      : storeId && orderId
+      ? await resolveOrderContext(supabaseAdmin, storeId, orderId, meta)
+      : null;
+
+    if (!context) return res.status(400).json({ error: "Provide store_id+order_id or sample=1" });
+
+    let rendered: string;
+    try {
+      rendered = await renderTemplateHtml(html, context as unknown as Record<string, unknown>);
+    } catch (e) {
+      const err = e as Error & { renderError?: { message: string; line?: number; column?: number }; status?: number };
+      return res.status(err.status ?? 500).json({ error: err.message, detail: err.renderError });
     }
-
-    const html = await renderTemplateHtml(document, data);
 
     if (format === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.status(200).send(html);
-      void logRender(templateId, ver.id, "html", orderId);
+      res.status(200).send(rendered);
+      void logRender(templateId, ver.id as string, "html", orderId);
       return;
     }
 
-    const buffer = await renderHtmlToPdf(html);
-    const filename = `${tpl.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${orderId || "sample"}.pdf`;
+    const buffer = await renderHtmlToPdf(rendered);
+    const filename = `${(tpl.name as string).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${orderId || "sample"}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     res.status(200).send(buffer);
-    void logRender(templateId, ver.id, "pdf", orderId);
+    void logRender(templateId, ver.id as string, "pdf", orderId);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Render failed";
     console.error("[template-render]", e);
