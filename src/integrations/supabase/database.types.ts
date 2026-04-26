@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1244,6 +1244,7 @@ export type Database = {
           is_custom: boolean
           is_default_trial: boolean
           max_api_calls_per_month: number
+          max_initial_history_days: number | null
           max_products_per_site: number
           max_sites: number
           max_users: number
@@ -1264,6 +1265,7 @@ export type Database = {
           is_custom?: boolean
           is_default_trial?: boolean
           max_api_calls_per_month?: number
+          max_initial_history_days?: number | null
           max_products_per_site?: number
           max_sites?: number
           max_users?: number
@@ -1284,6 +1286,7 @@ export type Database = {
           is_custom?: boolean
           is_default_trial?: boolean
           max_api_calls_per_month?: number
+          max_initial_history_days?: number | null
           max_products_per_site?: number
           max_sites?: number
           max_users?: number
@@ -1624,6 +1627,7 @@ export type Database = {
           name: string
           next_sync_at: string | null
           onboarding_completed_at: string | null
+          orders_history_from: string
           screenshot_captured_at: string | null
           screenshot_url: string | null
           short_id: string | null
@@ -1654,6 +1658,7 @@ export type Database = {
           name: string
           next_sync_at?: string | null
           onboarding_completed_at?: string | null
+          orders_history_from?: string
           screenshot_captured_at?: string | null
           screenshot_url?: string | null
           short_id?: string | null
@@ -1684,6 +1689,7 @@ export type Database = {
           name?: string
           next_sync_at?: string | null
           onboarding_completed_at?: string | null
+          orders_history_from?: string
           screenshot_captured_at?: string | null
           screenshot_url?: string | null
           short_id?: string | null

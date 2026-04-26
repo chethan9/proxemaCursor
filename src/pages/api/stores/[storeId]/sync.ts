@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { fetchPagesChunked, basicAuth } from "@/lib/sync-engine";
 import { getAppUrl } from "@/lib/app-url";
 import { waitUntil } from "@vercel/functions";
+import { getEffectiveHistoryFrom } from "@/lib/history-window";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -215,7 +216,8 @@ async function runAspectChunk(
   aspectName: string,
   modifiedAfter: string | null,
   isInitial: boolean,
-  resumeRun: SyncRunRow | null
+  resumeRun: SyncRunRow | null,
+  ordersHistoryFrom: string | null = null,
 ): Promise<AspectResult> {
   const cfg = ASPECTS[aspectName];
   const nowIso = new Date().toISOString();
@@ -251,6 +253,9 @@ async function runAspectChunk(
   const startPage = (run.cursor_page || 0) + 1;
   const params: Record<string, string> = {};
   if (cfg.supportsModifiedAfter && modifiedAfter) params.modified_after = modifiedAfter;
+  else if ((aspectName === "orders" || aspectName === "customers") && ordersHistoryFrom) {
+    params.after = ordersHistoryFrom;
+  }
 
   try {
     const result = await fetchPagesChunked(store.url, store.auth, cfg.endpoint, params, {
@@ -314,7 +319,7 @@ async function runAspectChunk(
   }
 }
 
-async function fetchStoreForSync(storeId: string): Promise<{ store: StoreToSync; isInitial: boolean; modifiedAfter: string | null; allRunId: string | null; allStartedAt: string | null; rawStore: { last_full_sync_at: string | null; last_sync_at: string | null; initial_sync_completed_at: string | null; client_id: string | null; logo_url: string | null; name: string | null; url: string } } | { error: string; status: number }> {
+async function fetchStoreForSync(storeId: string): Promise<{ store: StoreToSync; isInitial: boolean; modifiedAfter: string | null; ordersHistoryFrom: string | null; allRunId: string | null; allStartedAt: string | null; rawStore: { last_full_sync_at: string | null; last_sync_at: string | null; initial_sync_completed_at: string | null; client_id: string | null; logo_url: string | null; name: string | null; url: string } } | { error: string; status: number }> {
   const { data: store, error: storeError } = await supabase
     .from("stores")
     .select("id, name, url, consumer_key, consumer_secret, last_sync_at, last_full_sync_at, initial_sync_completed_at, client_id, logo_url")
@@ -342,6 +347,8 @@ async function fetchStoreForSync(storeId: string): Promise<{ store: StoreToSync;
     modifiedAfter = new Date(t).toISOString();
   }
 
+  const ordersHistoryFrom = await getEffectiveHistoryFrom(storeId);
+
   return {
     store: {
       id: store.id, name: store.name || "", url: store.url,
@@ -350,6 +357,7 @@ async function fetchStoreForSync(storeId: string): Promise<{ store: StoreToSync;
     },
     isInitial,
     modifiedAfter,
+    ordersHistoryFrom,
     allRunId: allRow?.id || null,
     allStartedAt: allRow?.started_at || null,
     rawStore: store,
@@ -424,7 +432,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ctx = await fetchStoreForSync(storeId);
     if ("error" in ctx) return res.status(ctx.status).json({ error: ctx.error });
 
-    const { store, isInitial, modifiedAfter, allRunId, allStartedAt, rawStore } = ctx;
+    const { store, isInitial, modifiedAfter, ordersHistoryFrom, allRunId, allStartedAt, rawStore } = ctx;
 
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
@@ -439,7 +447,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!runRow) {
         return res.status(404).json({ error: "No running run to resume", aspect: targetAspect });
       }
-      const result = await runAspectChunk(store, targetAspect, modifiedAfter, !!runRow.is_initial, runRow as unknown as SyncRunRow);
+      const result = await runAspectChunk(store, targetAspect, modifiedAfter, !!runRow.is_initial, runRow as unknown as SyncRunRow, ordersHistoryFrom);
 
       // After this chunk, check whether the whole "all" run is now complete
       if (allRunId) {
@@ -487,7 +495,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ---------- Fresh single aspect ----------
     if (targetAspect && targetAspect !== "all" && targetAspect !== "variations") {
       if (!ASPECTS[targetAspect]) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
-      const result = await runAspectChunk(store, targetAspect, modifiedAfter, false, null);
+      const result = await runAspectChunk(store, targetAspect, modifiedAfter, false, null, ordersHistoryFrom);
       if (!result.hasMore) {
         await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
       }
@@ -497,7 +505,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ---------- Fresh "all" sync — first chunk for each aspect in parallel ----------
     const aspectNames = Object.keys(ASPECTS);
     const results = await Promise.all(
-      aspectNames.map((name) => runAspectChunk(store, name, modifiedAfter, isInitial, null))
+      aspectNames.map((name) => runAspectChunk(store, name, modifiedAfter, isInitial, null, ordersHistoryFrom))
     );
 
     const totals = results.reduce((a, r) => ({

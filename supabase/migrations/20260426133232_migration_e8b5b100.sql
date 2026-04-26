@@ -1,0 +1,2 @@
+ALTER TABLE public.plans ADD COLUMN IF NOT EXISTS max_initial_history_days int;
+COMMENT ON COLUMN public.plans.max_initial_history_days IS 'Cap on how far back orders/customers are fetched on initial/full sync. NULL = unlimited.';
