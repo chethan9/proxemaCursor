@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Pencil, Loader2 } from "lucide-react";
-import { getTemplate, saveNewVersion, renameTemplate } from "@/services/templateService";
+import { getTemplate, saveNewVersion, renameTemplate, createTemplate } from "@/services/templateService";
 import { defaultStyles, emptyDocument, type AnyBlock, type BlockType, type TemplateDocument, type DocumentStyles } from "@/lib/templates/document";
 import { createBlock } from "@/lib/templates/block-defaults";
 import { useToast } from "@/hooks/use-toast";
@@ -32,13 +32,33 @@ function findBlock(blocks: AnyBlock[], id: string): AnyBlock | null {
 function BuilderInner() {
   const router = useRouter();
   const id = router.query.id as string;
+  const isNew = id === "new";
+  const newType = (router.query.type as string) === "pickslip" ? "pickslip" : "invoice";
   const qc = useQueryClient();
   const { toast } = useToast();
+  const creatingRef = useRef(false);
+
+  useEffect(() => {
+    if (!router.isReady || !isNew || creatingRef.current) return;
+    creatingRef.current = true;
+    (async () => {
+      try {
+        const created = await createTemplate({
+          name: newType === "invoice" ? "Untitled invoice" : "Untitled pick slip",
+          type: newType,
+        });
+        router.replace(`/templates/${created.id}`);
+      } catch (e) {
+        toast({ title: "Failed to create template", description: (e as Error).message, variant: "destructive" });
+        router.replace("/templates");
+      }
+    })();
+  }, [router.isReady, isNew, newType, router, toast]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["template", id],
     queryFn: () => getTemplate(id),
-    enabled: !!id,
+    enabled: !!id && !isNew,
   });
 
   const [doc, setDoc] = useState<TemplateDocument>(emptyDocument());
@@ -133,7 +153,7 @@ function BuilderInner() {
 
   const selectedBlock = selectedId ? findBlock(doc.blocks, selectedId) : null;
 
-  if (isLoading || !data) {
+  if (isNew || isLoading || !data) {
     return <div className="h-screen flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
 
