@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { listTemplates, forkSampleTemplate, deleteTemplate } from "@/services/templateService";
+import { listTemplates, forkSampleTemplate, deleteTemplate, setDefaultForType } from "@/services/templateService";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FileText, Receipt, Plus, Search, Sparkles, MoreVertical, Copy, Trash2, Pencil, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,18 @@ function TemplatesInner() {
       qc.invalidateQueries({ queryKey: ["templates"] });
     },
     onError: (e: Error) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: ({ id, type }: { id: string; type: "invoice" | "pickslip" }) => {
+      if (!clientId) throw new Error("No client");
+      return setDefaultForType(clientId, type, id);
+    },
+    onSuccess: () => {
+      toast({ title: "Default updated" });
+      qc.invalidateQueries({ queryKey: ["templates"] });
+    },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
 
   const filtered = templates.filter((t) => !search.trim() || t.name.toLowerCase().includes(search.toLowerCase()));
@@ -106,7 +118,7 @@ function TemplatesInner() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {samples.map((t) => (
-                          <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} forking={forkMutation.isPending} />
+                          <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} onSetDefault={() => setDefaultMutation.mutate({ id: t.id, type: t.type as "invoice" | "pickslip" })} forking={forkMutation.isPending} />
                         ))}
                       </div>
                     </section>
@@ -127,7 +139,7 @@ function TemplatesInner() {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {custom.map((t) => (
-                          <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} forking={forkMutation.isPending} />
+                          <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} onSetDefault={() => setDefaultMutation.mutate({ id: t.id, type: t.type as "invoice" | "pickslip" })} forking={forkMutation.isPending} />
                         ))}
                       </div>
                     )}
@@ -142,7 +154,7 @@ function TemplatesInner() {
   );
 }
 
-function TemplateCard({ t, onUse, onFork, onDelete, forking }: { t: TemplateRow; onUse: () => void; onFork: () => void; onDelete: () => void; forking: boolean }) {
+function TemplateCard({ t, onUse, onFork, onDelete, onSetDefault, forking }: { t: TemplateRow; onUse: () => void; onFork: () => void; onDelete: () => void; onSetDefault: () => void; forking: boolean }) {
   return (
     <div className="group rounded-lg border border-border bg-card hover:border-foreground/20 hover:shadow-sm transition-all overflow-hidden">
       <div className="aspect-[4/3] bg-muted/40 flex items-center justify-center border-b border-border relative">
@@ -166,6 +178,7 @@ function TemplateCard({ t, onUse, onFork, onDelete, forking }: { t: TemplateRow;
               ) : (
                 <>
                   <DropdownMenuItem onClick={onUse}><Pencil className="h-3.5 w-3.5 mr-2" /> Edit</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onSetDefault} disabled={t.is_default_for_type}><Star className={`h-3.5 w-3.5 mr-2 ${t.is_default_for_type ? "fill-amber-500 text-amber-500" : ""}`} /> {t.is_default_for_type ? "Default template" : "Set as default"}</DropdownMenuItem>
                   <DropdownMenuItem onClick={onFork} disabled={forking}><Copy className="h-3.5 w-3.5 mr-2" /> Duplicate</DropdownMenuItem>
                   <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive"><Trash2 className="h-3.5 w-3.5 mr-2" /> Delete</DropdownMenuItem>
                 </>

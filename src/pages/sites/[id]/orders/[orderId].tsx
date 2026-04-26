@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
@@ -392,6 +393,10 @@ export default function OrderDetailsPage() {
                 <Card>
                   <CardContent className="p-4">
                     <h3 className="text-sm font-semibold mb-3">Actions</h3>
+                    <div className="grid grid-cols-2 gap-1.5 mb-2">
+                      <TemplatePrintMenu storeId={storeId} orderId={orderId} type="invoice" className="w-full" />
+                      <TemplatePrintMenu storeId={storeId} orderId={orderId} type="pickslip" className="w-full" />
+                    </div>
                     <div className="space-y-1.5">
                       {getCustomerEmail(order.billing) && (
                         <a href={`mailto:${getCustomerEmail(order.billing)}?subject=Order #${order.order_number || order.woo_id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">

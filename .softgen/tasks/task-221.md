@@ -1,6 +1,6 @@
 ---
 title: Production wiring — invoice + pickslip download on order pages, default template selection
-status: todo
+status: done
 priority: high
 type: feature
 tags: [templates, integration, orders, pdf-download]
