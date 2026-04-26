@@ -1233,13 +1233,19 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         </CardContent>
       </Card>
 
-      <ProductTypeDialog open={typeDialogOpen} onOpenChange={setTypeDialogOpen} storeId={storeId} />
+      <ProductTypeDialog
+        open={typeDialogOpen}
+        onOpenChange={setTypeDialogOpen}
+        onSelect={(type) => {
+          setTypeDialogOpen(false);
+          router.push(`/sites/${storeId}/products/new?type=${type}`);
+        }}
+      />
 
       <ProductQuickEdit
         product={quickEditProduct}
         open={!!quickEditProduct}
         onOpenChange={(o) => { if (!o) setQuickEditProduct(null); }}
-        storeId={storeId}
       />
 
       <Dialog open={!!bulkDialog} onOpenChange={(o) => { if (!o) setBulkDialog(null); }}>
