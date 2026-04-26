@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, FileArchive, type LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTemplates } from "@/services/templateService";
@@ -195,6 +195,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<{ type: "update_status"; status: string } | { type: "delete" } | null>(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printTemplateId, setPrintTemplateId] = useState<string>("");
+  const [printOutputMode, setPrintOutputMode] = useState<"single-pdf" | "zip">("single-pdf");
+  const [printSubmitting, setPrintSubmitting] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -220,6 +224,46 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
   const defaultInvoice = useMemo(() => resolveDefaultTemplate(invoiceTemplates), [invoiceTemplates, resolveDefaultTemplate]);
   const defaultPickslip = useMemo(() => resolveDefaultTemplate(pickslipTemplates), [pickslipTemplates, resolveDefaultTemplate]);
+
+  useEffect(() => {
+    if (!printTemplateId && invoiceTemplates.length > 0) {
+      const def = invoiceTemplates.find((t) => t.is_default_for_type && !t.is_sample) ?? invoiceTemplates.find((t) => !t.is_sample) ?? invoiceTemplates[0];
+      setPrintTemplateId(def.id);
+    }
+  }, [invoiceTemplates, printTemplateId]);
+
+  const submitPrint = useCallback(async () => {
+    if (!printTemplateId || selectedIds.size === 0 || overLimit) return;
+    const orderIds = orders.filter((o) => selectedIds.has(o.id)).map((o) => o.id);
+    if (orderIds.length === 0) {
+      toast({ title: "Nothing to print", description: "Selected orders not on this page", variant: "destructive" });
+      return;
+    }
+    setPrintSubmitting(true);
+    try {
+      await createBulkJob({
+        store_id: storeId,
+        job_type: "print_invoices_bulk",
+        total: orderIds.length,
+        payload: {
+          type: "print_invoices_bulk",
+          order_ids: orderIds,
+          template_id: printTemplateId,
+          output_mode: printOutputMode,
+        },
+      });
+      toast({
+        title: "Print job queued",
+        description: `Generating ${orderIds.length} invoice${orderIds.length === 1 ? "" : "s"}. Download will appear when ready.`,
+      });
+      setSelectedIds(new Set());
+      setPrintDialogOpen(false);
+    } catch (err) {
+      toast({ title: "Failed to queue print job", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setPrintSubmitting(false);
+    }
+  }, [printTemplateId, selectedIds, orders, overLimit, storeId, printOutputMode, toast]);
 
   const handleMarkComplete = useCallback(async (orderId: string) => {
     setCompletingId(orderId);
@@ -914,6 +958,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 )}
               </div>
               <div className="flex-1" />
+              <Button size="sm" className="h-8 text-xs gap-1.5" onClick={() => setPrintDialogOpen(true)} disabled={overLimit || invoiceTemplates.length === 0}>
+                <Printer className="h-3.5 w-3.5" />
+                Print invoices
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit}>
@@ -1272,6 +1320,85 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               variant={bulkAction?.type === "delete" ? "destructive" : "default"}
             >
               {bulkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : "Queue job"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={printDialogOpen} onOpenChange={(v) => { if (!printSubmitting) setPrintDialogOpen(v); }}>
+        <DialogContent className="max-w-md" onPointerDownOutside={(e) => printSubmitting && e.preventDefault()} onEscapeKeyDown={(e) => printSubmitting && e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Print {selectedIds.size} invoice{selectedIds.size === 1 ? "" : "s"}</DialogTitle>
+            <DialogDescription>
+              Generates invoices in the background. Closing this page won&apos;t cancel the job — the download will appear in the bulk-jobs toast.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Invoice template</Label>
+              <Select value={printTemplateId} onValueChange={setPrintTemplateId}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Choose a template…" /></SelectTrigger>
+                <SelectContent>
+                  {invoiceTemplates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                      {t.is_default_for_type && !t.is_sample ? " · default" : ""}
+                      {t.is_sample ? " · sample" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Output</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPrintOutputMode("single-pdf")}
+                  className={cn(
+                    "flex flex-col items-start gap-1 p-3 rounded-md border text-left transition-colors",
+                    printOutputMode === "single-pdf" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:bg-muted/40",
+                  )}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5" />
+                    <span className="text-xs font-semibold">Single PDF</span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">Merged into one file</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintOutputMode("zip")}
+                  className={cn(
+                    "flex flex-col items-start gap-1 p-3 rounded-md border text-left transition-colors",
+                    printOutputMode === "zip" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:bg-muted/40",
+                  )}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <FileArchive className="h-3.5 w-3.5" />
+                    <span className="text-xs font-semibold">ZIP archive</span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">One PDF per order</span>
+                </button>
+              </div>
+            </div>
+
+            {selectedIds.size > 100 && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 p-2.5">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="text-[11px] text-amber-900 dark:text-amber-200">
+                  Generating {selectedIds.size} invoices may take {Math.ceil(selectedIds.size * 1.5 / 60)}–{Math.ceil(selectedIds.size * 3 / 60)} minutes. Hard cap: {MAX_BULK} per batch.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPrintDialogOpen(false)} disabled={printSubmitting}>Cancel</Button>
+            <Button onClick={submitPrint} disabled={!printTemplateId || printSubmitting}>
+              {printSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : <>Queue print job</>}
             </Button>
           </DialogFooter>
         </DialogContent>
