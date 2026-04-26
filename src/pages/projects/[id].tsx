@@ -362,7 +362,7 @@ export default function SiteWorkspacePage() {
           <TabsContent value="sync" className="space-y-6">
             <SyncPanel
               store={store} syncing={syncing} syncProgress={syncProgress}
-              dataCounts={dataCounts} syncRuns={syncRuns}
+              dataCounts={dataCounts as unknown as Record<string, number>} syncRuns={syncRuns}
               onSyncAll={handleSyncAll} onCancelSync={handleCancelSync}
               onSyncAspect={handleSyncAspect} onClearHistory={handleClearSyncHistory}
               onSelectRun={setSelectedSyncRun} getStatusIcon={getStatusIcon}
