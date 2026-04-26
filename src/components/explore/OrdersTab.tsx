@@ -58,7 +58,6 @@ import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
-import { useStore } from "@/hooks/queries/useStore";
 import { formatStoreDateTime } from "@/lib/format-store-date";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
@@ -130,8 +129,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
   const router = useRouter();
-  const { data: store } = useStore(storeId);
-  const storeTz = store?.timezone ?? null;
+  const storeTz: string | null = null;
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -388,6 +386,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         return pm?.label || o.payment_method_title || o.payment_method || "";
       },
       payment_method: (o) => o.payment_method || "",
+      actions: () => "",
     };
     const selected = selectedIds.size > 0 ? orders.filter((o) => selectedIds.has(o.id)) : orders;
     const columns: CsvColumn<OrderRow>[] = visibleColList.map((c) => ({
