@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -8,12 +9,26 @@ interface TableLoadingOverlayProps {
 }
 
 export function TableLoadingOverlay({ show, label = "Updating…", className }: TableLoadingOverlayProps) {
+  const [render, setRender] = useState(show);
+
+  useEffect(() => {
+    if (show) {
+      setRender(true);
+      return;
+    }
+    const t = setTimeout(() => setRender(false), 250);
+    return () => clearTimeout(t);
+  }, [show]);
+
+  if (!render) return null;
+
   return (
     <div
       aria-hidden={!show}
       className={cn(
-        "pointer-events-none absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-200",
-        show ? "opacity-100" : "opacity-0",
+        "pointer-events-none fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-200",
+        "top-20",
+        show ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2",
         className,
       )}
     >
