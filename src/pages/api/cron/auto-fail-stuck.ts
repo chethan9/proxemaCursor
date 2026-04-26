@@ -13,6 +13,14 @@ const BULK_STUCK_THRESHOLD_MINUTES = 90;
 
 const CRITICAL_ASPECTS = ["products", "orders", "customers", "categories", "tags", "coupons"];
 
+async function unlockStoreInitialSync(supabase: ReturnType<typeof createClient>, storeId: string) {
+  await supabase
+    .from("stores")
+    .update({ initial_sync_completed_at: new Date().toISOString() })
+    .eq("id", storeId)
+    .is("initial_sync_completed_at", null);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST" && req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });

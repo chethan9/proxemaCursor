@@ -1,0 +1,1 @@
+ALTER TABLE sync_runs ADD COLUMN IF NOT EXISTS info_message text;
