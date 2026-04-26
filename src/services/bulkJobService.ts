@@ -12,7 +12,8 @@ export type BulkJobType =
   | "update_product_stock"
   | "update_product_status"
   | "assign_product_categories"
-  | "delete_products";
+  | "delete_products"
+  | "print_invoices_bulk";
 
 export type BulkJobError = { id: number | string; error: string };
 
@@ -23,7 +24,8 @@ export type BulkJobPayload =
   | { type: "update_product_stock"; product_ids: number[]; operation: "set" | "adjust" | "set_status"; value?: number; stock_status?: "instock" | "outofstock" | "onbackorder" }
   | { type: "update_product_status"; product_ids: number[]; new_status: "publish" | "draft" | "pending" | "private" }
   | { type: "assign_product_categories"; product_ids: number[]; mode: "add" | "remove" | "replace"; category_ids: number[] }
-  | { type: "delete_products"; product_ids: number[]; force?: boolean };
+  | { type: "delete_products"; product_ids: number[]; force?: boolean }
+  | { type: "print_invoices_bulk"; order_ids: string[]; template_id: string; output_mode: "single-pdf" | "zip"; artifact_path?: string };
 
 export async function createBulkJob(args: {
   store_id: string;
@@ -129,6 +131,7 @@ export const JOB_TYPE_LABEL: Record<BulkJobType, string> = {
   update_product_status: "Update product status",
   assign_product_categories: "Assign categories",
   delete_products: "Delete products",
+  print_invoices_bulk: "Print invoices",
 };
 
 export const ORDER_STATUS_OPTIONS = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"] as const;
