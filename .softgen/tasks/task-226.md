@@ -1,6 +1,6 @@
 ---
 title: KNOWN_TRAPS.md — recurring footguns reference
-status: todo
+status: done
 priority: medium
 type: chore
 tags: [docs, dx, knowledge]
