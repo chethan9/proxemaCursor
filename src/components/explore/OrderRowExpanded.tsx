@@ -274,7 +274,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
               <span className="font-medium">Open order details</span>
               <span className="ml-auto">→</span>
             </Link>
-            <TemplatePrintMenu orderId={order.id} storeId={order.store_id} />
+            <TemplatePrintMenu orderId={order.id} storeId={order.store_id} type="invoice" />
             {custEmail && (
               <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <Mail className="h-2.5 w-2.5" />
