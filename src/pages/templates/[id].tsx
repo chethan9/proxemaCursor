@@ -13,6 +13,8 @@ import { emptyDocument, type TemplateDocument } from "@/lib/templates/document";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthProvider";
+import { wooExtensions } from "@/lib/templates/nodes";
+import { WooBlocksToolbar } from "@/components/template-builder/WooBlocksToolbar";
 
 import "@maily-to/core/style.css";
 
@@ -144,13 +146,17 @@ function BuilderInner() {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-hidden bg-muted/30">
-          <div className="h-full max-w-5xl mx-auto bg-background">
-            <MailyEditor
-              contentJson={doc}
-              onUpdate={handleEditorUpdate}
-              config={{ hasMenuBar: true, autofocus: false }}
-            />
+        <div className="flex-1 overflow-hidden bg-muted/30 flex flex-col">
+          <WooBlocksToolbar editor={editorRef.current} />
+          <div className="flex-1 overflow-auto">
+            <div className="max-w-5xl mx-auto bg-background">
+              <MailyEditor
+                contentJson={doc}
+                onUpdate={handleEditorUpdate}
+                extensions={wooExtensions()}
+                config={{ hasMenuBar: true, autofocus: false }}
+              />
+            </div>
           </div>
         </div>
       </div>

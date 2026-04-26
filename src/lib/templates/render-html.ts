@@ -1,12 +1,14 @@
 import { Maily } from "@maily-to/render";
 import type { JSONContent } from "@tiptap/core";
+import { renderCustomNodes } from "./render-custom-nodes";
 
 export async function renderTemplateHtml(
   document: JSONContent,
   variables: Record<string, unknown>
 ): Promise<string> {
   const flat = flattenVariables(variables);
-  const maily = new Maily(document);
+  const processed = await renderCustomNodes(document, variables);
+  const maily = new Maily(processed);
   maily.setVariableValues(flat);
   return await maily.render();
 }
