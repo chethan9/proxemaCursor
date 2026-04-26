@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, FileText, Files, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { listTemplates, type Template } from "@/services/templateService";
+import { listTemplates } from "@/services/templateService";
+import type { TemplateRow } from "@/lib/templates/document";
 import { createBulkJob } from "@/services/bulkJobService";
 import { logActivity } from "@/lib/activity-log";
 import { useToast } from "@/hooks/use-toast";
@@ -39,9 +40,9 @@ export function PrintInvoicesDialog({
 
   const defaultTpl = useMemo(() => {
     if (!templates.length) return null;
-    const def = templates.find((t: Template) => t.is_default_for_type && !t.is_sample);
+    const def = templates.find((t: TemplateRow) => t.is_default_for_type && !t.is_sample);
     if (def) return def;
-    const userTpl = templates.find((t: Template) => !t.is_sample);
+    const userTpl = templates.find((t: TemplateRow) => !t.is_sample);
     return userTpl ?? templates[0];
   }, [templates]);
 
@@ -88,10 +89,10 @@ export function PrintInvoicesDialog({
       try {
         await logActivity({
           action: "orders.bulk_invoice_printed",
-          entity_type: "bulk_job",
-          entity_id: job.id,
-          store_id: storeId,
+          entityType: "bulk_job",
+          entityId: job.id,
           metadata: {
+            store_id: storeId,
             order_count: orderIds.length,
             template_id: templateId,
             template_name: tplName,
