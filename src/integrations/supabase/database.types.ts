@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1610,6 +1610,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          address: Json
           celebration_shown_at: string | null
           client_id: string | null
           consumer_key: string | null
@@ -1628,19 +1629,23 @@ export type Database = {
           next_sync_at: string | null
           onboarding_completed_at: string | null
           orders_history_from: string
+          phone: string | null
           screenshot_captured_at: string | null
           screenshot_url: string | null
           short_id: string | null
           status: string | null
+          support_email: string | null
           sync_interval: number | null
           timezone: string | null
           updated_at: string | null
           url: string
+          website: string | null
           woo_key_id: number | null
           wp_app_password: string | null
           wp_username: string | null
         }
         Insert: {
+          address?: Json
           celebration_shown_at?: string | null
           client_id?: string | null
           consumer_key?: string | null
@@ -1659,19 +1664,23 @@ export type Database = {
           next_sync_at?: string | null
           onboarding_completed_at?: string | null
           orders_history_from?: string
+          phone?: string | null
           screenshot_captured_at?: string | null
           screenshot_url?: string | null
           short_id?: string | null
           status?: string | null
+          support_email?: string | null
           sync_interval?: number | null
           timezone?: string | null
           updated_at?: string | null
           url: string
+          website?: string | null
           woo_key_id?: number | null
           wp_app_password?: string | null
           wp_username?: string | null
         }
         Update: {
+          address?: Json
           celebration_shown_at?: string | null
           client_id?: string | null
           consumer_key?: string | null
@@ -1690,14 +1699,17 @@ export type Database = {
           next_sync_at?: string | null
           onboarding_completed_at?: string | null
           orders_history_from?: string
+          phone?: string | null
           screenshot_captured_at?: string | null
           screenshot_url?: string | null
           short_id?: string | null
           status?: string | null
+          support_email?: string | null
           sync_interval?: number | null
           timezone?: string | null
           updated_at?: string | null
           url?: string
+          website?: string | null
           woo_key_id?: number | null
           wp_app_password?: string | null
           wp_username?: string | null

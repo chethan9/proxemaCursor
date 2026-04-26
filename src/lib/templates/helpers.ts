@@ -8,10 +8,13 @@ interface HandlebarsLike {
 
 interface HelperOptions {
   hash?: Record<string, unknown>;
+  fn?: (ctx: unknown) => string;
+  inverse?: (ctx: unknown) => string;
 }
 
 export function registerHelpers(hb: HandlebarsLike) {
-  hb.registerHelper("currency", function (amount: unknown, currency?: unknown) {
+  // ── Currency / numbers ────────────────────────────────
+  const currencyFn = function (amount: unknown, currency?: unknown) {
     const n = Number(amount);
     if (isNaN(n)) return "";
     const code = typeof currency === "string" ? currency : "USD";
@@ -20,9 +23,20 @@ export function registerHelpers(hb: HandlebarsLike) {
     } catch {
       return n.toFixed(2);
     }
+  };
+  hb.registerHelper("currency", currencyFn);
+  hb.registerHelper("formatCurrency", currencyFn);
+  hb.registerHelper("money", currencyFn);
+
+  hb.registerHelper("number", (n: unknown, decimals?: unknown) => {
+    const v = Number(n);
+    if (isNaN(v)) return "";
+    const d = Number(decimals);
+    return v.toFixed(isNaN(d) ? 2 : d);
   });
 
-  hb.registerHelper("date", function (value: unknown, format?: unknown) {
+  // ── Date ──────────────────────────────────────────────
+  const dateFn = function (value: unknown, format?: unknown) {
     if (!value) return "";
     const d = new Date(String(value));
     if (isNaN(d.getTime())) return String(value);
@@ -33,8 +47,11 @@ export function registerHelpers(hb: HandlebarsLike) {
     if (fmt === "datetime") return d.toLocaleString("en-US");
     if (fmt === "time") return d.toLocaleTimeString("en-US");
     return d.toLocaleDateString("en-US");
-  });
+  };
+  hb.registerHelper("date", dateFn);
+  hb.registerHelper("formatDate", dateFn);
 
+  // ── Barcode (sync via bwip-js SVG) ────────────────────
   hb.registerHelper("barcode", function (value: unknown, options?: HelperOptions) {
     const text = String(value || "");
     if (!text) return "";
@@ -44,20 +61,14 @@ export function registerHelpers(hb: HandlebarsLike) {
     const height = Number(opts.height) || 12;
     const showText = opts.showText !== false;
     try {
-      const svg = bwipjs.toSVG({
-        bcid: format,
-        text,
-        height,
-        includetext: showText,
-        textxalign: "center",
-        scale: 2,
-      });
+      const svg = bwipjs.toSVG({ bcid: format, text, height, includetext: showText, textxalign: "center", scale: 2 });
       return new hb.SafeString(`<div class="hb-barcode" style="display:inline-block;max-width:${width}px;">${svg}</div>`);
-    } catch (e) {
+    } catch {
       return new hb.SafeString(`<span style="color:#dc2626;font-family:monospace;font-size:11px">[barcode error: ${text}]</span>`);
     }
   });
 
+  // ── QR Code (async via 2-pass token) ──────────────────
   hb.registerHelper("qrcode", function (value: unknown, options?: HelperOptions) {
     const text = String(value || "");
     if (!text) return "";
@@ -67,6 +78,7 @@ export function registerHelpers(hb: HandlebarsLike) {
     return new hb.SafeString(token);
   });
 
+  // ── Comparisons ───────────────────────────────────────
   hb.registerHelper("eq", (a: unknown, b: unknown) => a === b);
   hb.registerHelper("neq", (a: unknown, b: unknown) => a !== b);
   hb.registerHelper("gt", (a: unknown, b: unknown) => Number(a) > Number(b));
@@ -77,6 +89,16 @@ export function registerHelpers(hb: HandlebarsLike) {
   hb.registerHelper("or", (...args: unknown[]) => args.slice(0, -1).some(Boolean));
   hb.registerHelper("not", (a: unknown) => !a);
 
+  // ── ifCond block helper: {{#ifCond status "completed"}}…{{else}}…{{/ifCond}}
+  hb.registerHelper("ifCond", function (this: unknown, a: unknown, b: unknown, options: HelperOptions | unknown) {
+    const opts = (typeof options === "object" && options !== null ? options : (b as HelperOptions)) as HelperOptions;
+    const compareTo = typeof options === "object" && options !== null && "fn" in (options as HelperOptions) ? b : undefined;
+    const isMatch = compareTo === undefined ? Boolean(a) : a == compareTo;
+    if (!opts || typeof opts.fn !== "function") return "";
+    return isMatch ? opts.fn(this) : (opts.inverse ? opts.inverse(this) : "");
+  });
+
+  // ── Math ──────────────────────────────────────────────
   hb.registerHelper("multiply", (a: unknown, b: unknown) => Number(a) * Number(b));
   hb.registerHelper("add", (a: unknown, b: unknown) => Number(a) + Number(b));
   hb.registerHelper("subtract", (a: unknown, b: unknown) => Number(a) - Number(b));
@@ -90,6 +112,7 @@ export function registerHelpers(hb: HandlebarsLike) {
     return Math.round(Number(n) * m) / m;
   });
 
+  // ── String ────────────────────────────────────────────
   hb.registerHelper("uppercase", (s: unknown) => String(s ?? "").toUpperCase());
   hb.registerHelper("lowercase", (s: unknown) => String(s ?? "").toLowerCase());
   hb.registerHelper("capitalize", (s: unknown) => {
@@ -102,15 +125,19 @@ export function registerHelpers(hb: HandlebarsLike) {
   hb.registerHelper("concat", (...args: unknown[]) => args.slice(0, -1).map(String).join(""));
   hb.registerHelper("json", (obj: unknown) => JSON.stringify(obj, null, 2));
 
+  // ── Address block formatter ───────────────────────────
   hb.registerHelper("address", function (obj: unknown) {
     const a = (obj as Record<string, unknown>) || {};
     const lines: string[] = [];
-    const name = [a.first_name, a.last_name].filter(Boolean).join(" ");
-    if (name) lines.push(escape(name));
+    const name = [a.first_name || a.name, a.last_name].filter(Boolean).join(" ");
+    if (name) lines.push(escape(String(name)));
     if (a.company) lines.push(escape(String(a.company)));
-    if (a.address_1) lines.push(escape(String(a.address_1)));
-    if (a.address_2) lines.push(escape(String(a.address_2)));
-    const cityLine = [a.city, a.state, a.postcode].filter(Boolean).join(", ");
+    const addr = a.address as Record<string, unknown> | undefined;
+    const line1 = addr?.line1 || a.address_1 || "";
+    const line2 = addr?.line2 || a.address_2 || "";
+    if (line1) lines.push(escape(String(line1)));
+    if (line2) lines.push(escape(String(line2)));
+    const cityLine = [a.city, a.state, a.zip || a.postcode].filter(Boolean).join(", ");
     if (cityLine) lines.push(escape(cityLine));
     if (a.country) lines.push(escape(String(a.country)));
     return new hb.SafeString(lines.map((l) => `<div>${l}</div>`).join(""));
