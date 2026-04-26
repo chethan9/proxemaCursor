@@ -1,6 +1,6 @@
 ---
 title: Block product edit during initial sync (live preview mode)
-status: in_progress
+status: done
 priority: high
 type: bug
 tags: [products, sync-lock, live-preview]
