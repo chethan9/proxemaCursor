@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { WooApiError } from "@/lib/sync-error";
 import { logActivity } from "@/lib/activity-log";
 
 function toJson<T>(obj: T): Json {
@@ -479,6 +480,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(saved);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    const wooContext = err instanceof WooApiError ? err.context : undefined;
     console.error("[product update] error:", err);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -498,9 +500,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       retry_payload: toJson(wooPayload),
     });
 
-    return res.status(500).json({
+    return res.status(wooContext?.status && wooContext.status >= 400 && wooContext.status < 500 ? wooContext.status : 500).json({
       error: "Failed to update product",
       message,
+      woo_status: wooContext?.status,
+      woo_body: wooContext?.body,
+      blocking_service: wooContext?.blocking_service,
+      blocking_hint: wooContext?.blocking_hint,
     });
   }
 }

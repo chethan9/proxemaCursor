@@ -73,13 +73,26 @@ export async function wooRequest<T>(
     const text = await res.text();
     const bodySnippet = text.slice(0, 2000);
     const detection = detectBlockingService(res.status, bodySnippet, res.headers);
+    let wooMessage = "";
+    let wooCode = "";
+    try {
+      const parsed = JSON.parse(text) as { message?: string; code?: string; data?: { params?: Record<string, string> } };
+      if (parsed?.message) wooMessage = parsed.message;
+      if (parsed?.code) wooCode = parsed.code;
+      if (parsed?.data?.params) {
+        const params = Object.entries(parsed.data.params).map(([k, v]) => `${k}: ${v}`).join("; ");
+        if (params) wooMessage = wooMessage ? `${wooMessage} — ${params}` : params;
+      }
+    } catch { /* not JSON */ }
+    const detail = wooMessage || bodySnippet.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+    const tag = detection ? ` [${detection.service}]` : wooCode ? ` [${wooCode}]` : "";
     throw new WooApiError(
-      `WooCommerce ${method} ${endpoint} failed: ${res.status}${detection ? ` [${detection.service}]` : ""}`,
+      `WooCommerce ${method} ${endpoint} → ${res.status}${tag}: ${detail || "no body"}`,
       {
         url,
         method,
         status: res.status,
-        body: bodySnippet.slice(0, 300),
+        body: bodySnippet.slice(0, 600),
         blocking_service: detection?.service,
         blocking_hint: detection?.hint,
       }

@@ -206,12 +206,24 @@ function makeProductError(body: Record<string, unknown>, status: number): Produc
   const errors = Array.isArray(body.errors) ? (body.errors as ProductValidationIssue[]) : undefined;
   let message = (body.message as string) || (body.error as string) || `Request failed (${status})`;
   const code = body.code as string | undefined;
+  const wooStatus = body.woo_status as number | undefined;
+  const wooBody = body.woo_body as string | undefined;
+  const blockingHint = body.blocking_hint as string | undefined;
+  const blockingService = body.blocking_service as string | undefined;
   if (code === "product_invalid_sku" || /sku/i.test(message) && /duplicat|invalid|exists|taken/i.test(message)) {
     message = `SKU already in use. Pick a different SKU or auto-generate one.`;
   }
   if (errors && errors.length > 0 && !body.message) {
     message = errors.map((e) => e.message).slice(0, 3).join(" • ");
     if (errors.length > 3) message += ` (+${errors.length - 3} more)`;
+  }
+  if (blockingService) {
+    message = `${blockingService.toUpperCase()} firewall blocked the request${blockingHint ? `: ${blockingHint}` : ""}`;
+  } else if (wooStatus) {
+    const detail = wooBody ? ` — ${wooBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)}` : "";
+    if (!message.toLowerCase().includes("woocommerce")) {
+      message = `WooCommerce ${wooStatus}${detail || `: ${message}`}`;
+    }
   }
   const e = new Error(message) as ProductError;
   e.validationErrors = errors;
