@@ -1,6 +1,6 @@
 ---
 title: Visual templates builder — three-pane editor with drag-drop
-status: todo
+status: in_progress
 priority: high
 type: feature
 tags: [templates, builder, editor, dnd]
