@@ -952,7 +952,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
                                   setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
                                 }}
-                                className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${isActive ? "text-foreground font-semibold" : ""}`}
+                                className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${isActive ? "text-foreground font-medium" : ""}`}
                               >
                                 {c.label}
                                 <SortIcon className="h-3 w-3" />
@@ -1002,6 +1002,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const thumb = getProductThumbnail(p.images);
                       const isExpanded = expandedRowId === p.id;
                       const isSelected = selectedIds.has(p.id);
+                      const priceHtml = (p.raw_data?.price_html as string) || "";
+                      const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
+                      const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
+                      const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
+                      const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
                       return (
                         <React.Fragment key={p.id}>
                           <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
