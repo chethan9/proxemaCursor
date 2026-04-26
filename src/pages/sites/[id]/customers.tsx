@@ -54,7 +54,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect } from "@/contexts/LoadingProvider";
+import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
@@ -330,7 +330,7 @@ function CustomersInner() {
   return (
     <div className="space-y-3">
       <SyncLockBanner storeId={storeId} />
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur relative">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
@@ -457,6 +457,7 @@ function CustomersInner() {
             </Button>
           </div>
         </div>
+        <ProgressSlot />
       </div>
 
       <Card className="relative">

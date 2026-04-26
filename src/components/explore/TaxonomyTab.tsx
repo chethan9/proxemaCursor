@@ -21,7 +21,7 @@ import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect } from "@/contexts/LoadingProvider";
+import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 
@@ -95,7 +95,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
 
   return (
     <div className="space-y-3">
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur relative">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
@@ -184,6 +184,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
             </Button>
           </div>
         </div>
+        <ProgressSlot />
       </div>
 
       <Card className="relative">

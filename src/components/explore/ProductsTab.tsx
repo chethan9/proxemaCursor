@@ -47,7 +47,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect } from "@/contexts/LoadingProvider";
+import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
@@ -509,7 +509,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       )}
 
       {/* Sticky toolbar */}
-      <div className="sticky top-0 z-20 -mx-6 px-6 pt-2 pb-1 bg-background/85 backdrop-blur border-b border-border [[data-theme-preset=modern]_&]:border-b-0 [[data-theme-preset=modern]_&]:pb-0">
+      <div className="sticky top-0 z-20 -mx-6 px-6 pt-2 pb-1 bg-background/85 backdrop-blur border-b border-border [[data-theme-preset=modern]_&]:border-b-0 [[data-theme-preset=modern]_&]:pb-0 relative">
         <Card>
           <CardContent className="p-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -668,6 +668,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 )}
               </div>
             </div>
+            <ProgressSlot />
           </CardContent>
         </Card>
       </div>
