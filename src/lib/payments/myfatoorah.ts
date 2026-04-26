@@ -1,4 +1,3 @@
-import "server-only";
 import type {
   PaymentGateway, ChargeRequest, ChargeInitiated, PaymentStatusResult,
   RefundRequest, RefundResult, WebhookEvent, WebhookInput, MyFatoorahInitPayload,

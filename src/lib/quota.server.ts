@@ -1,4 +1,3 @@
-import "server-only";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Plan } from "@/services/planService";
 import type { QuotaCheck } from "@/lib/quota";

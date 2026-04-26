@@ -1,4 +1,3 @@
-import "server-only";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Tables } from "@/integrations/supabase/helpers";
 import { computeDiscount } from "./couponService";

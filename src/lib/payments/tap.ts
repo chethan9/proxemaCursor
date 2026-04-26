@@ -1,4 +1,3 @@
-import "server-only";
 import crypto from "crypto";
 import type {
   PaymentGateway, ChargeRequest, ChargeInitiated, PaymentStatusResult,
