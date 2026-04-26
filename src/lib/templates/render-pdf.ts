@@ -25,15 +25,23 @@ async function getBrowser(): Promise<Browser> {
   return _browser as Browser;
 }
 
-export async function renderHtmlToPdf(html: string, opts: { format?: "A4" | "Letter"; landscape?: boolean } = {}): Promise<Buffer> {
+export interface RenderPdfOptions {
+  format?: "A4" | "Letter";
+  landscape?: boolean;
+  printBackground?: boolean;
+}
+
+export async function renderHtmlToPdf(html: string, opts: RenderPdfOptions = {}): Promise<Buffer> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
     const pdf = await page.pdf({
       format: opts.format ?? "A4",
       landscape: opts.landscape ?? false,
-      printBackground: true,
+      printBackground: opts.printBackground ?? false,
+      preferCSSPageSize: true,
       margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" },
     });
     return Buffer.from(pdf);

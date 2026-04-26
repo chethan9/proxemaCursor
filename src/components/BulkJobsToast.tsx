@@ -48,6 +48,11 @@ export function BulkJobsToast() {
         headers: { Authorization: `Bearer ${token}` },
         redirect: "follow",
       });
+      if (res.status === 410) {
+        const j = await res.json().catch(() => ({}));
+        toast({ title: "Archive expired", description: j.error || "Auto-deleted after 7 days", variant: "destructive" });
+        return;
+      }
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || `HTTP ${res.status}`);

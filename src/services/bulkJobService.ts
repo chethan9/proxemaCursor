@@ -25,7 +25,7 @@ export type BulkJobPayload =
   | { type: "update_product_status"; product_ids: number[]; new_status: "publish" | "draft" | "pending" | "private" }
   | { type: "assign_product_categories"; product_ids: number[]; mode: "add" | "remove" | "replace"; category_ids: number[] }
   | { type: "delete_products"; product_ids: number[]; force?: boolean }
-  | { type: "print_invoices_bulk"; order_ids: string[]; template_id: string; output_mode: "single-pdf" | "zip"; artifact_path?: string };
+  | { type: "print_invoices_bulk"; order_ids: string[]; template_id: string; output_mode: "single-pdf" | "zip"; artifact_path?: string; compress?: boolean };
 
 export async function createBulkJob(args: {
   store_id: string;

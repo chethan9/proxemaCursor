@@ -36,7 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (ownerId !== userData.user.id) return res.status(403).json({ error: "Forbidden" });
   }
 
-  const payload = job.payload as { artifact_path?: string; output_mode?: string } | null;
+  const payload = job.payload as { artifact_path?: string; output_mode?: string; artifact_deleted?: boolean } | null;
+  if (payload?.artifact_deleted === true) {
+    return res.status(410).json({ error: "Invoice archive expired (auto-deleted after 7 days)" });
+  }
   const path = payload?.artifact_path;
   if (!path) return res.status(404).json({ error: "Artifact missing or expired" });
 

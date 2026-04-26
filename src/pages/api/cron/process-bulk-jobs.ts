@@ -432,7 +432,21 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
 
   let artifactPath: string;
   try {
-    artifactPath = await finalizeBulkInvoiceArtifact(pathScope, job.id, orderIds, outputMode);
+    const result = await finalizeBulkInvoiceArtifact(pathScope, job.id, orderIds, outputMode);
+    artifactPath = result.path;
+    console.log(`[print_invoices_bulk] jobId=${job.id} mode=${outputMode} parts=${result.partsCount} final_size=${result.sizeBytes} bytes (${(result.sizeBytes / 1024).toFixed(1)} KB)`);
+    const newPayload = { ...payload, artifact_path: artifactPath, artifact_size_bytes: result.sizeBytes };
+    const finalUpdate: BulkJobUpdate = {
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      processed,
+      succeeded,
+      failed,
+      errors: toJson(errors),
+      payload: newPayload as unknown as Json,
+    };
+    await supabaseAdmin.from("bulk_jobs").update(finalUpdate).eq("id", job.id);
+    return "done";
   } catch (e) {
     const p: BulkJobUpdate = {
       status: "failed",
@@ -446,19 +460,6 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
     await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
     return "done";
   }
-
-  const newPayload = { ...payload, artifact_path: artifactPath };
-  const finalUpdate: BulkJobUpdate = {
-    status: "completed",
-    completed_at: new Date().toISOString(),
-    processed,
-    succeeded,
-    failed,
-    errors: toJson(errors),
-    payload: newPayload as unknown as Json,
-  };
-  await supabaseAdmin.from("bulk_jobs").update(finalUpdate).eq("id", job.id);
-  return "done";
 }
 
 async function finalizeBulkInvoiceArtifact(
@@ -466,7 +467,7 @@ async function finalizeBulkInvoiceArtifact(
   jobId: string,
   orderIds: string[],
   outputMode: string,
-): Promise<string> {
+): Promise<{ path: string; sizeBytes: number; partsCount: number }> {
   const partsPrefix = `${pathScope}/${jobId}/parts`;
   const ext = outputMode === "zip" ? "zip" : "pdf";
   const finalKey = `${pathScope}/${jobId}.${ext}`;
@@ -489,7 +490,7 @@ async function finalizeBulkInvoiceArtifact(
     for (const p of parts) {
       zip.file(`invoice-${p.id}.pdf`, p.data);
     }
-    finalBuf = await zip.generateAsync({ type: "nodebuffer" });
+    finalBuf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 9 } });
     contentType = "application/zip";
   } else {
     const { PDFDocument } = await import("pdf-lib");
@@ -503,7 +504,8 @@ async function finalizeBulkInvoiceArtifact(
         // skip corrupt part
       }
     }
-    finalBuf = Buffer.from(await merged.save());
+    const savedBytes = await merged.save({ useObjectStreams: true, addDefaultPage: false });
+    finalBuf = Buffer.from(savedBytes);
     contentType = "application/pdf";
   }
 
@@ -523,7 +525,7 @@ async function finalizeBulkInvoiceArtifact(
     /* non-fatal */
   }
 
-  return finalKey;
+  return { path: finalKey, sizeBytes: finalBuf.length, partsCount: parts.length };
 }
 
 // --- Handler ---------------------------------------------------------------
