@@ -3,24 +3,37 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2, Wand2 } from "lucide-react";
 import { Variation } from "@/services/productEditService";
 import { variationLabel } from "./utils";
 
 type Props = {
   variations: Variation[];
+  parentSku?: string;
+  parentName?: string;
   onEdit: (idx: number) => void;
   onUpdate: (idx: number, patch: Partial<Variation>) => void;
   onBulk: (patch: Partial<Variation>, onlySelected: boolean, selectedIds: Set<string>) => void;
   onBulkDelete?: (keys: Set<string>) => void;
 };
 
-export function VariationsTable({ variations, onEdit, onUpdate, onBulk, onBulkDelete }: Props) {
+function slugify(input: string): string {
+  return input
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toUpperCase()
+    .slice(0, 24);
+}
+
+export function VariationsTable({ variations, parentSku, parentName, onEdit, onUpdate, onBulk, onBulkDelete }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkValue, setBulkValue] = useState("");
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
   const [groupBy, setGroupBy] = useState<string>("");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const emptySkuCount = variations.filter((v) => !v.sku?.trim()).length;
 
   const toggleAll = () => {
     if (selected.size === variations.length) setSelected(new Set());
@@ -102,6 +115,25 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk, onBulkDe
 
   const cellInput = "h-9 border-0 bg-muted/40 rounded-md text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background placeholder:text-muted-foreground/50";
 
+  const autoFillSkus = () => {
+    const base = (parentSku?.trim() || (parentName ? slugify(parentName) : "") || "SKU").toUpperCase();
+    const existing = new Set(variations.map((v) => v.sku?.trim()).filter(Boolean) as string[]);
+    variations.forEach((v, idx) => {
+      if (v.sku?.trim()) return;
+      const suffix = (v.attributes || [])
+        .map((a) => slugify(a.option))
+        .filter(Boolean)
+        .join("-") || String(idx + 1);
+      let candidate = `${base}-${suffix}`;
+      let n = 2;
+      while (existing.has(candidate)) {
+        candidate = `${base}-${suffix}-${n++}`;
+      }
+      existing.add(candidate);
+      onUpdate(idx, { sku: candidate });
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
@@ -144,6 +176,20 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk, onBulkDe
             </select>
           </div>
         )}
+        <div className={attrNames.length > 1 ? "" : "ml-auto"}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={autoFillSkus}
+            disabled={emptySkuCount === 0}
+            title={emptySkuCount === 0 ? "All variations already have SKUs" : `Auto-fill ${emptySkuCount} empty SKU${emptySkuCount === 1 ? "" : "s"}`}
+            className="rounded-full gap-1.5"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Auto-fill SKUs {emptySkuCount > 0 ? `(${emptySkuCount})` : ""}
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden bg-background">

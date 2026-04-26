@@ -176,7 +176,15 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               <div>Click &quot;Regenerate from attributes&quot; to create variations based on the options above.</div>
             </div>
           ) : (
-            <VariationsTable variations={form.variations} onEdit={setEditIdx} onUpdate={updateVariation} onBulk={applyBulk} onBulkDelete={bulkDelete} />
+            <VariationsTable
+              variations={form.variations}
+              parentSku={form.sku}
+              parentName={form.name}
+              onEdit={setEditIdx}
+              onUpdate={updateVariation}
+              onBulk={applyBulk}
+              onBulkDelete={bulkDelete}
+            />
           )}
         </div>
       )}
