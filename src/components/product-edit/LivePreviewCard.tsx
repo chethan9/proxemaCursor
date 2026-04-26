@@ -2,7 +2,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ProductFormState } from "@/services/productEditService";
+import { ProductFormState, ProductAttribute } from "@/services/productEditService";
+
+const MAX_PREVIEW_ATTRS = 4;
 
 export function LivePreviewCard({ form }: { form: ProductFormState }) {
   const [activeIdx, setActiveIdx] = useState(0);
@@ -32,8 +34,11 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
   const hasOffer = form.sale_price && Number(form.sale_price) > 0 && Number(form.sale_price) < Number(form.regular_price || 0);
   const discountPct = hasOffer ? Math.round((1 - Number(form.sale_price) / Number(form.regular_price)) * 100) : 0;
 
-  const sizeAttr = form.attributes.find((a) => a.name.toLowerCase() === "size");
-  const colorAttr = form.attributes.find((a) => a.name.toLowerCase() === "color");
+  const visibleAttrs: ProductAttribute[] = form.attributes.filter(
+    (a) => a.visible !== false && a.name.trim().length > 0 && a.options.length > 0
+  );
+  const shownAttrs = visibleAttrs.slice(0, MAX_PREVIEW_ATTRS);
+  const overflowCount = visibleAttrs.length - shownAttrs.length;
 
   const onKey = (e: React.KeyboardEvent) => {
     if (count < 2) return;
@@ -140,26 +145,21 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
               </>
             )}
           </div>
-          {sizeAttr && sizeAttr.options.length > 0 && (
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Size</div>
+
+          {shownAttrs.map((attr) => (
+            <div key={attr.name}>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{attr.name}</div>
               <div className="flex flex-wrap gap-1.5">
-                {sizeAttr.options.map((o) => (
+                {attr.options.map((o) => (
                   <div key={o} className="text-xs px-2 py-1 rounded border border-border">{o}</div>
                 ))}
               </div>
             </div>
+          ))}
+          {overflowCount > 0 && (
+            <div className="text-[10px] text-muted-foreground">+{overflowCount} more attribute{overflowCount === 1 ? "" : "s"}</div>
           )}
-          {colorAttr && colorAttr.options.length > 0 && (
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Color</div>
-              <div className="flex flex-wrap gap-1.5">
-                {colorAttr.options.map((o) => (
-                  <div key={o} className="text-xs px-2 py-1 rounded border border-border">{o}</div>
-                ))}
-              </div>
-            </div>
-          )}
+
           <div className="grid grid-cols-3 gap-2 pt-2 border-t">
             <div>
               <div className="text-[10px] text-muted-foreground uppercase">Stock</div>

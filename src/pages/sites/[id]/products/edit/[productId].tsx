@@ -70,6 +70,9 @@ function Inner() {
         const rawWeight = p.weight != null ? String(p.weight) : (raw.weight != null ? String(raw.weight) : "");
         const rawDims = (raw.dimensions as { length?: string; width?: string; height?: string } | undefined) || {};
 
+        const taxStatus = ((p.tax_status as ProductFormState["tax_status"]) ?? (raw.tax_status as ProductFormState["tax_status"]) ?? "taxable") as ProductFormState["tax_status"];
+        const taxClass = ((p.tax_class as string | null | undefined) ?? (raw.tax_class as string | null | undefined) ?? "") || "";
+
         setForm({
           ...base,
           name: (p.name as string) || "",
@@ -80,8 +83,8 @@ function Inner() {
           type: productType === "variable" ? "variable" : "simple",
           regular_price: toNumStr(p.regular_price),
           sale_price: toNumStr(p.sale_price),
-          tax_status: ((p.tax_status as ProductFormState["tax_status"]) || "taxable"),
-          tax_class: (p.tax_class as string) || "",
+          tax_status: taxStatus,
+          tax_class: taxClass,
           manage_stock: !!p.manage_stock,
           stock_quantity: (p.stock_quantity as number | null) ?? null,
           stock_status: ((p.stock_status as ProductFormState["stock_status"]) || "instock"),
