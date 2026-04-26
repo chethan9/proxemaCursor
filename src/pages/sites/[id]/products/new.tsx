@@ -61,7 +61,11 @@ function Inner() {
     ],
     siteName: store?.name,
     successToast: () => `Product created`,
-    onSuccessExtra: () => { setSavedOnce(true); router.push(`/sites/${id}/products`); },
+    onSuccessExtra: () => {
+      setSavedOnce(true);
+      setInitialFormJson(JSON.stringify(form));
+      setTimeout(() => router.push(`/sites/${id}/products`), 50);
+    },
     onErrorExtra: (err) => {
       const e = err as Error & { validationErrors?: ProductValidationIssue[] };
       setServerErrors(e.validationErrors || []);
