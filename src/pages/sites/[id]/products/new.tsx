@@ -14,6 +14,7 @@ import { ArrowLeft, AlertCircle, X } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 function Inner() {
   const router = useRouter();
@@ -22,6 +23,9 @@ function Inner() {
   const [form, setForm] = useState<ProductFormState>(emptyProductForm());
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
+  const [savedOnce, setSavedOnce] = useState(false);
+  const dirty = !savedOnce && (form.name.trim().length > 0 || form.description.trim().length > 0 || form.regular_price.trim().length > 0 || form.sku.trim().length > 0 || form.images.length > 0 || form.categories.length > 0 || form.tags.length > 0 || form.attributes.length > 0);
+  useUnsavedChangesGuard(dirty);
 
   const create = useSiteMutation<{ id?: string }, void>({
     mutationFn: () => createProduct(id, form),
@@ -34,7 +38,7 @@ function Inner() {
     ],
     siteName: store?.name,
     successToast: () => `Product created`,
-    onSuccessExtra: () => router.push(`/sites/${id}/products`),
+    onSuccessExtra: () => { setSavedOnce(true); router.push(`/sites/${id}/products`); },
     onErrorExtra: (err) => {
       const e = err as Error & { validationErrors?: ProductValidationIssue[] };
       setServerErrors(e.validationErrors || []);

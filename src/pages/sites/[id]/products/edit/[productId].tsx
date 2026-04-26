@@ -18,6 +18,7 @@ import { ArrowLeft, Loader2, Trash2, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 type ProductRow = Record<string, unknown>;
 
@@ -28,6 +29,8 @@ function Inner() {
   const productId = typeof router.query.productId === "string" ? router.query.productId : "";
 
   const [form, setForm] = useState<ProductFormState | null>(null);
+  const [initialFormJson, setInitialFormJson] = useState<string>("");
+  const [savedOnce, setSavedOnce] = useState(false);
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [loading, setLoading] = useState(true);
@@ -93,6 +96,10 @@ function Inner() {
           tags,
           attributes,
         });
+        setInitialFormJson(JSON.stringify({
+          ...base,
+          name: (p.name as string) || "",
+        }));
         if (productType === "variable") setMode("advanced");
       } catch (e) {
         toast({ title: "Failed to load product", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
@@ -103,12 +110,15 @@ function Inner() {
     return () => { cancelled = true; };
   }, [storeId, productId, toast]);
 
+  const dirty = !!form && !savedOnce && initialFormJson !== "" && JSON.stringify(form) !== initialFormJson;
+  useUnsavedChangesGuard(dirty);
+
   const save = useSiteMutation<unknown, void>({
     mutationFn: () => updateProduct(storeId, productId, form!),
     invalidateKeys: [queryKeys.products(storeId), ["product", productId]],
     siteName: store?.name,
     successToast: "Saved",
-    onSuccessExtra: () => router.push(`/sites/${storeId}/products`),
+    onSuccessExtra: () => { setSavedOnce(true); router.push(`/sites/${storeId}/products`); },
     onErrorExtra: (err) => {
       const e = err as Error & { validationErrors?: ProductValidationIssue[] };
       setServerErrors(e.validationErrors || []);
