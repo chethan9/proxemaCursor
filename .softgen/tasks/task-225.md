@@ -1,6 +1,6 @@
 ---
 title: Sentry + PostHog error & analytics tracking
-status: todo
+status: done
 priority: high
 type: feature
 tags: [observability, error-tracking, analytics]

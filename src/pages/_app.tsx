@@ -20,6 +20,22 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
+import { initPostHog, capturePostHogPageView } from "@/lib/posthog";
+
+function PostHogPageviews() {
+  const router = useRouter();
+  useEffect(() => {
+    initPostHog();
+  }, []);
+  useEffect(() => {
+    const handle = (url: string) => capturePostHogPageView(url);
+    router.events.on("routeChangeComplete", handle);
+    return () => {
+      router.events.off("routeChangeComplete", handle);
+    };
+  }, [router.events]);
+  return null;
+}
 
 function CacheBuster() {
   const { user } = useAuth();
@@ -83,6 +99,7 @@ function Providers({ children }: { children: React.ReactNode }) {
     >
       <AuthProvider>
         <CacheBuster />
+        <PostHogPageviews />
         <BrandingProvider>
           <RecentMutationsProvider>
             <LoadingProvider>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { hasPermission, type Permission } from "@/lib/permissions";
 import { clearPersistedCache } from "@/lib/query-persistence";
+import { identifyPostHogUser, resetPostHogUser } from "@/lib/posthog";
 
 export const authCleanupCallbacks = new Set<() => void>();
 
@@ -128,6 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_IN") {
         setUser(session?.user ?? null);
         if (session?.user) {
+          identifyPostHogUser(session.user.id, { email: session.user.email });
+          if (typeof window !== "undefined") {
+            import("@sentry/nextjs").then((Sentry) => {
+              Sentry.setUser({ id: session.user.id, email: session.user.email });
+            }).catch(() => { /* sentry not loaded in dev */ });
+          }
           if (!initializedRef.current) {
             setLoading(true);
             setProfileLoaded(false);
@@ -144,6 +151,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (event === "SIGNED_OUT") {
+        resetPostHogUser();
+        if (typeof window !== "undefined") {
+          import("@sentry/nextjs").then((Sentry) => {
+            Sentry.setUser(null);
+          }).catch(() => { /* sentry not loaded in dev */ });
+        }
         setUser(null);
         setProfile(null);
         setRole(null);
