@@ -18,6 +18,7 @@ import { createBlock } from "@/lib/templates/block-defaults";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthProvider";
 
 function findAndUpdate(blocks: AnyBlock[], id: string, fn: (b: AnyBlock) => AnyBlock): AnyBlock[] {
   return blocks.map((b) => (b.id === id ? fn(b) : b));
@@ -36,24 +37,27 @@ function BuilderInner() {
   const newType = (router.query.type as string) === "pickslip" ? "pickslip" : "invoice";
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { profile } = useAuth();
   const creatingRef = useRef(false);
 
   useEffect(() => {
     if (!router.isReady || !isNew || creatingRef.current) return;
+    if (!profile?.client_id) return;
     creatingRef.current = true;
     (async () => {
       try {
-        const created = await createTemplate({
+        const newId = await createTemplate({
           name: newType === "invoice" ? "Untitled invoice" : "Untitled pick slip",
           type: newType,
+          clientId: profile.client_id as string,
         });
-        router.replace(`/templates/${created.id}`);
+        router.replace(`/templates/${newId}`);
       } catch (e) {
         toast({ title: "Failed to create template", description: (e as Error).message, variant: "destructive" });
         router.replace("/templates");
       }
     })();
-  }, [router.isReady, isNew, newType, router, toast]);
+  }, [router.isReady, isNew, newType, profile?.client_id, router, toast]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["template", id],
