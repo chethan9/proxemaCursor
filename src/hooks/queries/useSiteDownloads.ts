@@ -1,15 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { listSiteDownloads, type DownloadsFilters } from "@/services/downloadsService";
+import { listSiteDownloads } from "@/services/downloadsService";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useSiteDownloads(storeId: string | undefined, filters: DownloadsFilters) {
+export function useSiteDownloads(storeId: string | undefined) {
   const queryClient = useQueryClient();
-  const queryKey = ["site-downloads", storeId, filters] as const;
 
   const query = useQuery({
-    queryKey,
-    queryFn: () => listSiteDownloads(storeId!, filters),
+    queryKey: ["site-downloads", storeId],
+    queryFn: () => listSiteDownloads(storeId!),
     enabled: !!storeId,
     staleTime: 15_000,
   });

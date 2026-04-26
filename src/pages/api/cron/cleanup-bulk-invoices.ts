@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
-        const newPayload = { ...payload, artifact_deleted: true };
+        const newPayload: Record<string, unknown> = { ...payload, artifact_deleted: true };
         delete newPayload.artifact_path;
         await supabaseAdmin
           .from("bulk_jobs")

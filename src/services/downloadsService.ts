@@ -8,54 +8,30 @@ export interface DownloadFile {
   source_id: string;
   type: DownloadFileType;
   file_name: string;
-  order_ref: string | null;
-  customer_name: string | null;
+  reference: string | null;
+  customer: string | null;
   generated_at: string;
+  expires_at: string | null;
   size_bytes: number | null;
   artifact_path: string;
+  download_url: string;
 }
 
-export interface DownloadsFilters {
-  search?: string;
-  types?: DownloadFileType[];
-  dateFrom?: string;
-  dateTo?: string;
-  page?: number;
-  pageSize?: number;
-}
-
-export interface DownloadsResult {
-  rows: DownloadFile[];
-  total: number;
-  counts: Record<DownloadFileType | "all", number>;
-}
-
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const JOB_TYPE_TO_FILE_TYPE: Record<string, DownloadFileType> = {
   print_invoices_bulk: "invoice",
 };
 
-export async function listSiteDownloads(
-  storeId: string,
-  filters: DownloadsFilters = {}
-): Promise<DownloadsResult> {
-  const page = Math.max(1, filters.page || 1);
-  const pageSize = Math.max(1, Math.min(200, filters.pageSize || 20));
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  let query = supabase
+export async function listSiteDownloads(storeId: string): Promise<DownloadFile[]> {
+  const { data, error } = await supabase
     .from("bulk_jobs")
-    .select("id, store_id, job_type, payload, status, completed_at, total", { count: "exact" })
+    .select("id, store_id, job_type, payload, status, completed_at, total")
     .eq("store_id", storeId)
     .eq("status", "completed")
     .in("job_type", Object.keys(JOB_TYPE_TO_FILE_TYPE))
-    .not("payload->>artifact_path", "is", null)
-    .order("completed_at", { ascending: false });
+    .order("completed_at", { ascending: false })
+    .limit(500);
 
-  if (filters.dateFrom) query = query.gte("completed_at", filters.dateFrom);
-  if (filters.dateTo) query = query.lte("completed_at", filters.dateTo);
-
-  const { data, error, count } = await query.range(from, to);
   if (error) throw error;
 
   const rows: DownloadFile[] = [];
@@ -66,18 +42,14 @@ export async function listSiteDownloads(
     if (!artifactPath) continue;
 
     const type = JOB_TYPE_TO_FILE_TYPE[j.job_type] || "invoice";
-    if (filters.types && filters.types.length > 0 && !filters.types.includes(type)) continue;
-
     const ext = artifactPath.split(".").pop() || "pdf";
     const total = j.total || 0;
     const fileName = `invoices_${j.id.slice(0, 8)}_${total}orders.${ext}`;
     const sizeBytes = (payload.artifact_size_bytes as number | undefined) ?? null;
-
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      const haystack = `${fileName} ${j.id}`.toLowerCase();
-      if (!haystack.includes(q)) continue;
-    }
+    const completedAt = j.completed_at as string;
+    const expiresAt = completedAt
+      ? new Date(new Date(completedAt).getTime() + RETENTION_MS).toISOString()
+      : null;
 
     rows.push({
       id: j.id,
@@ -85,41 +57,34 @@ export async function listSiteDownloads(
       source_id: j.id,
       type,
       file_name: fileName,
-      order_ref: null,
-      customer_name: null,
-      generated_at: j.completed_at as string,
+      reference: `Job ${j.id.slice(0, 8)}`,
+      customer: total > 0 ? `${total} orders` : null,
+      generated_at: completedAt,
+      expires_at: expiresAt,
       size_bytes: sizeBytes,
       artifact_path: artifactPath,
+      download_url: `/api/bulk-jobs/${j.id}/download`,
     });
   }
-
-  const counts: Record<DownloadFileType | "all", number> = {
-    all: rows.length,
-    invoice: rows.filter((r) => r.type === "invoice").length,
-    packing_slip: rows.filter((r) => r.type === "packing_slip").length,
-    credit_note: rows.filter((r) => r.type === "credit_note").length,
-    report: rows.filter((r) => r.type === "report").length,
-  };
-
-  return { rows, total: count || 0, counts };
+  return rows;
 }
 
-export async function deleteDownload(jobId: string, storeId: string): Promise<void> {
+export async function dismissJobArtifact(jobId: string): Promise<void> {
   const { data: job, error: fetchErr } = await supabase
     .from("bulk_jobs")
     .select("payload")
     .eq("id", jobId)
-    .eq("store_id", storeId)
     .maybeSingle();
   if (fetchErr) throw fetchErr;
   if (!job) throw new Error("Job not found");
 
-  const payload = { ...((job.payload as Record<string, unknown>) || {}), artifact_deleted: true };
-  delete payload.artifact_path;
+  const current = (job.payload as Record<string, unknown>) || {};
+  const next: Record<string, unknown> = { ...current, artifact_deleted: true };
+  delete next.artifact_path;
 
   const { error } = await supabase
     .from("bulk_jobs")
-    .update({ payload: payload as never })
+    .update({ payload: next as never })
     .eq("id", jobId);
   if (error) throw error;
 }
