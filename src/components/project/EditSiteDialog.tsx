@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useToast } from "@/hooks/use-toast";
-import { Store, Image as ImageIcon, Copy, ExternalLink, Trash2, AlertTriangle, Unlink, Loader2 } from "lucide-react";
+import { Store, Image as ImageIcon, Copy, ExternalLink, Trash2, AlertTriangle, Unlink, Loader2, Unlock } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/helpers";
 
 type Store = Tables<"stores">;
@@ -48,8 +48,9 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
   if (!site) return null;
 
   const hasWoo = Boolean(site.consumer_key && site.consumer_secret);
-  const hasWp = Boolean((site as unknown as { wp_access_token?: string }).wp_access_token);
+  const hasWp = Boolean((site as unknown as { wp_app_password?: string }).wp_app_password);
   const wpUsername = (site as unknown as { wp_username?: string }).wp_username ?? null;
+  const initialSyncIncomplete = !(site as unknown as { initial_sync_completed_at?: string | null }).initial_sync_completed_at;
 
   const handleSave = async () => {
     if (!name.trim() || !url.trim()) {
@@ -70,6 +71,20 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
       onOpenChange(false);
     } catch (err) {
       toast({ title: "Update failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReleaseSyncLock = async () => {
+    setSaving(true);
+    try {
+      await updateStore(site.id, { initial_sync_completed_at: new Date().toISOString() } as never);
+      queryClient.invalidateQueries({ queryKey: ["stores"] });
+      queryClient.invalidateQueries({ queryKey: ["store", site.id] });
+      toast({ title: "Sync lock released", description: "Site is no longer in live-preview mode. Edits, exports, and bulk actions are unlocked." });
+    } catch (err) {
+      toast({ title: "Failed to release lock", description: (err as Error).message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -247,6 +262,21 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
           </div>
 
           {/* Danger zone - compact single row */}
+          {initialSyncIncomplete && (
+            <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Unlock className="h-4 w-4 text-amber-700 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-amber-900">Site is in live-preview lock</div>
+                  <div className="text-[11px] text-amber-800/90 truncate">Initial import marked incomplete. Bypass if you&apos;ve verified data is good.</div>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="h-8 border-amber-400 text-amber-900 hover:bg-amber-100" onClick={handleReleaseSyncLock} disabled={saving || deleting}>
+                <Unlock className="h-3.5 w-3.5 mr-1.5" /> Release lock
+              </Button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
             <div className="flex items-center gap-2 min-w-0">
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
