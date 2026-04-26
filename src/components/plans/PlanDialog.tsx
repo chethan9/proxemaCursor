@@ -12,6 +12,7 @@ import { SUPPORTED_CURRENCIES, CURRENCY_LABELS, formatPrice } from "@/services/p
 import type { Plan } from "@/services/planService";
 import { Trash2, Plus } from "lucide-react";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
+import { logActivity } from "@/lib/activity-log";
 
 interface PlanDialogProps {
   open: boolean;
@@ -87,7 +88,19 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
   };
 
   const handleSave = async () => {
+    const beforeDays = plan?.max_initial_history_days ?? null;
+    const afterDays = (form as { max_initial_history_days?: number | null }).max_initial_history_days ?? null;
     await onSave({ ...form, prices });
+    if (plan && beforeDays !== afterDays) {
+      logActivity({
+        action: "plan.history_limit_changed",
+        entityType: "plan",
+        entityId: plan.id,
+        before: { max_initial_history_days: beforeDays },
+        after: { max_initial_history_days: afterDays },
+        metadata: { plan_slug: plan.slug, plan_name: plan.name },
+      });
+    }
   };
 
   const features = (form.features as Record<string, boolean>) || {};
@@ -207,6 +220,23 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
                 <div>
                   <Label className="text-xs">API calls / month</Label>
                   <Input type="number" min={0} value={form.max_api_calls_per_month ?? 0} onChange={(e) => setField("max_api_calls_per_month", parseInt(e.target.value) || 0)} className="h-9" />
+                </div>
+                <div className="col-span-2 md:col-span-4">
+                  <Label className="text-xs">Max initial history (days)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="Unlimited"
+                    value={(form as { max_initial_history_days?: number | null }).max_initial_history_days ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value.trim();
+                      setField("max_initial_history_days" as keyof typeof form, (v === "" ? null : Math.max(0, parseInt(v) || 0)) as never);
+                    }}
+                    className="h-9"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Cap on how far back orders &amp; customers are fetched on initial/full sync. Empty = unlimited. Suggested: Free 90, Pro 365.
+                  </p>
                 </div>
               </div>
             </CardContent>

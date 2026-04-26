@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useActiveSync } from "@/hooks/queries/useActiveSync";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
+import { HistoryWindowCard } from "@/components/site/HistoryWindowCard";
 
 const SYNC_INTERVALS = [
   { value: "0", label: "Manual only" },
@@ -349,6 +350,14 @@ function SettingsInner() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Historical data window */}
+          <HistoryWindowCard
+            storeId={store.id}
+            clientId={(store as { client_id?: string | null }).client_id || null}
+            ordersHistoryFrom={(store as { orders_history_from?: string | null }).orders_history_from || null}
+            onSaved={() => { getStore(store.id).then(setStore); }}
+          />
 
           {/* Danger Zone */}
           <Card className="border-destructive/40">
