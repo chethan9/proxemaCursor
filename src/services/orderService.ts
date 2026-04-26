@@ -84,7 +84,7 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
     return { data: (json.data as Record<string, unknown>[]).map((o) => wooOrderToRow(o, storeId)), count: json.count, live: true };
   }
 
-  let query = supabase.from("orders").select("*", { count: "exact" }).eq("store_id", storeId);
+  let query = supabase.from("orders").select("id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, shipping, line_items, shipping_lines, fee_lines, coupon_lines, date_created, date_modified, synced_at, created_at", { count: "exact" }).eq("store_id", storeId);
   if (search && search.trim()) {
     const s = search.trim();
     query = query.or(
