@@ -1,6 +1,6 @@
 ---
 title: Quick actions column on orders list
-status: todo
+status: done
 priority: high
 type: feature
 tags: [orders, templates, ux]
