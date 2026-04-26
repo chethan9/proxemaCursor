@@ -1,35 +1,32 @@
-import { Maily } from "@maily-to/render";
-import type { JSONContent } from "@tiptap/core";
-import { renderCustomNodes } from "./render-custom-nodes";
+import Handlebars from "handlebars";
+import { registerHelpers, resolveAsyncTokens } from "./helpers";
 
-export async function renderTemplateHtml(
-  document: JSONContent,
-  variables: Record<string, unknown>
-): Promise<string> {
-  const flat = flattenVariables(variables);
-  const processed = await renderCustomNodes(document, variables);
-  const maily = new Maily(processed);
-  maily.setVariableValues(flat);
-  return await maily.render();
+const hb = Handlebars.create();
+registerHelpers(hb);
+
+export interface RenderError {
+  message: string;
+  line?: number;
+  column?: number;
 }
 
-function flattenVariables(obj: unknown, prefix = "", out: Record<string, string> = {}): Record<string, string> {
-  if (obj === null || obj === undefined) return out;
-  if (typeof obj !== "object") {
-    if (prefix) out[prefix] = String(obj);
-    return out;
+export async function renderTemplateHtml(html: string, context: Record<string, unknown>): Promise<string> {
+  let template;
+  try {
+    template = hb.compile(html, { noEscape: false, strict: false });
+  } catch (e) {
+    const err = e as Error & { lineNumber?: number; column?: number };
+    const error: RenderError = { message: err.message, line: err.lineNumber, column: err.column };
+    throw Object.assign(new Error(`Template parse error: ${error.message}`), { renderError: error, status: 400 });
   }
-  if (Array.isArray(obj)) {
-    if (prefix) out[prefix] = JSON.stringify(obj);
-    return out;
+
+  let rendered: string;
+  try {
+    rendered = template(context);
+  } catch (e) {
+    const err = e as Error;
+    throw Object.assign(new Error(`Template render error: ${err.message}`), { renderError: { message: err.message }, status: 400 });
   }
-  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-    const key = prefix ? `${prefix}.${k}` : k;
-    if (v !== null && typeof v === "object" && !Array.isArray(v)) {
-      flattenVariables(v, key, out);
-    } else {
-      out[key] = v === null || v === undefined ? "" : Array.isArray(v) ? JSON.stringify(v) : String(v);
-    }
-  }
-  return out;
+
+  return await resolveAsyncTokens(rendered);
 }
