@@ -6,28 +6,19 @@ import { interpolate, resolvePath } from "./interpolate";
 const PAGE_SIZES: Record<string, [number, number]> = {
   A4: [595, 842],
   Letter: [612, 792],
-  Legal: [612, 1008],
 };
 
 function buildStyles(s: DocumentStyles) {
   return StyleSheet.create({
     body: { fontFamily: "Helvetica", fontSize: s.baseFontSize, color: s.textColor, lineHeight: 1.5 },
-    h1: { fontSize: 24, fontFamily: "Helvetica-Bold", marginBottom: 8 },
-    h2: { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 6 },
-    h3: { fontSize: 16, fontFamily: "Helvetica-Bold", marginBottom: 6 },
-    h4: { fontSize: 14, fontFamily: "Helvetica-Bold", marginBottom: 4 },
-    h5: { fontSize: 12, fontFamily: "Helvetica-Bold", marginBottom: 4 },
-    h6: { fontSize: 11, fontFamily: "Helvetica-Bold", marginBottom: 4 },
-    text: { fontSize: s.baseFontSize },
-    muted: { color: "#6b7280", fontSize: s.baseFontSize - 1 },
-    label: { fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 },
-    tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e5e7eb", paddingVertical: 6 },
-    tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f3f4f6", paddingVertical: 8 },
-    th: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5 },
-    td: { fontSize: s.baseFontSize },
-    totalsRow: { flexDirection: "row", justifyContent: "flex-end", paddingVertical: 4 },
-    totalsLabel: { fontSize: s.baseFontSize, color: "#6b7280", marginRight: 24 },
-    totalsValue: { fontSize: s.baseFontSize, minWidth: 80, textAlign: "right" },
+    label: { fontSize: 9, color: s.mutedColor, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4, fontFamily: "Helvetica-Bold" },
+    th: { fontSize: 9, fontFamily: "Helvetica-Bold", color: s.mutedColor, textTransform: "uppercase", letterSpacing: 0.5 },
+    td: { fontSize: s.baseFontSize, color: s.textColor },
+    tableHeaderRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: s.borderColor, paddingVertical: 6 },
+    tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: s.borderColor, paddingVertical: 8 },
+    totalsRow: { flexDirection: "row", justifyContent: "flex-end", paddingVertical: 3 },
+    totalsLabel: { fontSize: s.baseFontSize, color: s.mutedColor, marginRight: 24 },
+    totalsValue: { fontSize: s.baseFontSize, minWidth: 80, textAlign: "right", color: s.textColor },
     grandTotal: { fontSize: s.baseFontSize + 3, fontFamily: "Helvetica-Bold", color: s.primaryColor },
   });
 }
@@ -38,10 +29,23 @@ interface RenderCtx {
   doc: DocumentStyles;
 }
 
+const HEADING_SIZES: Record<1 | 2 | 3, number> = { 1: 24, 2: 18, 3: 14 };
+
 function alignToFlex(a?: string): "flex-start" | "center" | "flex-end" {
   if (a === "center") return "center";
   if (a === "right") return "flex-end";
   return "flex-start";
+}
+
+function alignText(a?: string): "left" | "center" | "right" {
+  if (a === "center") return "center";
+  if (a === "right") return "right";
+  return "left";
+}
+
+function fontWeightToFamily(w?: string): string {
+  if (w === "bold" || w === "semibold") return "Helvetica-Bold";
+  return "Helvetica";
 }
 
 function renderBlock(block: AnyBlock, ctx: RenderCtx, key: string | number): React.ReactElement | null {
@@ -51,17 +55,25 @@ function renderBlock(block: AnyBlock, ctx: RenderCtx, key: string | number): Rea
       const txt = interpolate(block.props.text || "", data);
       return (
         <View key={key} style={{ marginBottom: 6 }}>
-          <Text style={{ fontSize: block.props.fontSize ?? doc.baseFontSize, color: block.props.color || doc.textColor, textAlign: (block.props.align as "left" | "center" | "right") || "left" }}>{txt}</Text>
+          <Text style={{
+            fontSize: block.props.fontSize ?? doc.baseFontSize,
+            color: block.props.color || doc.textColor,
+            textAlign: alignText(block.props.align),
+            fontFamily: fontWeightToFamily(block.props.fontWeight),
+          }}>{txt}</Text>
         </View>
       );
     }
     case "heading": {
       const txt = interpolate(block.props.text || "", data);
-      const level = block.props.level || 2;
-      const levelStyle = styles[`h${level}` as keyof typeof styles] as object;
       return (
         <View key={key} style={{ marginBottom: 6 }}>
-          <Text style={{ ...(levelStyle || {}), color: block.props.color || doc.textColor, textAlign: (block.props.align as "left" | "center" | "right") || "left" }}>{txt}</Text>
+          <Text style={{
+            fontSize: HEADING_SIZES[block.props.level],
+            color: block.props.color || doc.textColor,
+            textAlign: alignText(block.props.align),
+            fontFamily: "Helvetica-Bold",
+          }}>{txt}</Text>
         </View>
       );
     }
@@ -75,56 +87,63 @@ function renderBlock(block: AnyBlock, ctx: RenderCtx, key: string | number): Rea
       );
     }
     case "divider":
-      return <View key={key} style={{ height: 1, backgroundColor: block.props.color || "#e5e7eb", marginVertical: 12 }} />;
+      return <View key={key} style={{ height: block.props.thickness || 1, backgroundColor: block.props.color || doc.borderColor, marginVertical: 12 }} />;
     case "spacer":
       return <View key={key} style={{ height: block.props.height || 16 }} />;
     case "columns": {
       const gap = block.props.gap ?? 16;
-      const colCount = block.props.columns?.length || 2;
       return (
         <View key={key} style={{ flexDirection: "row", gap, marginBottom: 6 }}>
           {block.props.columns.map((col, i) => (
-            <View key={i} style={{ flex: 1, width: `${100 / colCount}%` }}>
-              {col.children.map((c, j) => renderBlock(c, ctx, j))}
+            <View key={i} style={{ flex: 1 }}>
+              {col.map((c, j) => renderBlock(c, ctx, j))}
             </View>
           ))}
         </View>
       );
     }
     case "address_block": {
-      const addr = (resolvePath(data, block.props.source || "billing") as Record<string, string>) || {};
-      const lines = [
-        block.props.label,
-        `${addr.first_name || ""} ${addr.last_name || ""}`.trim(),
-        addr.address_1,
-        addr.address_2,
-        [addr.city, addr.state, addr.postcode].filter(Boolean).join(", "),
-        addr.country,
-      ].filter(Boolean) as string[];
+      const src = block.props.source === "shipping" ? "order.shipping" : "order.billing";
+      const addr = (resolvePath(data, src) as Record<string, string>) || {};
+      const lines: string[] = [];
+      if (block.props.showName !== false) lines.push(`${addr.first_name || ""} ${addr.last_name || ""}`.trim());
+      if (addr.address_1) lines.push(addr.address_1);
+      if (addr.address_2) lines.push(addr.address_2);
+      const city = [addr.city, addr.state, addr.postcode].filter(Boolean).join(", ");
+      if (city) lines.push(city);
+      if (addr.country) lines.push(addr.country);
       return (
         <View key={key} style={{ marginBottom: 6 }}>
           {block.props.label && <Text style={styles.label}>{block.props.label}</Text>}
-          {lines.slice(block.props.label ? 1 : 0).map((line, i) => (
-            <Text key={i} style={styles.text}>{line}</Text>
+          {lines.filter(Boolean).map((line, i) => (
+            <Text key={i} style={styles.td}>{line}</Text>
           ))}
         </View>
       );
     }
     case "order_items_table": {
       const items = (resolvePath(data, "order.items") as Array<Record<string, unknown>>) || [];
-      const cols = block.props.columns || [];
-      const visibleCols = cols.filter((c) => c.visible !== false);
+      const cols: Array<{ key: string; label: string; flex: number; align: "left" | "center" | "right" }> = [];
+      if (block.props.showImage) cols.push({ key: "image", label: "", flex: 0.6, align: "left" });
+      cols.push({ key: "name", label: "Product", flex: 2.2, align: "left" });
+      if (block.props.showSku) cols.push({ key: "sku", label: "SKU", flex: 1, align: "left" });
+      if (block.props.showQty) cols.push({ key: "quantity", label: "Qty", flex: 0.6, align: "center" });
+      if (block.props.showPrice) cols.push({ key: "price", label: "Price", flex: 1, align: "right" });
+      if (block.props.showTotal) cols.push({ key: "total", label: "Total", flex: 1, align: "right" });
+      const headerBg = block.props.headerColor || "#F8FAFC";
       return (
         <View key={key} style={{ marginVertical: 8 }}>
-          <View style={styles.tableHeader}>
-            {visibleCols.map((c) => (
-              <Text key={c.field} style={[styles.th, { flex: c.flex || 1, textAlign: c.align || "left" }]}>{c.label}</Text>
+          <View style={[styles.tableHeaderRow, { backgroundColor: headerBg }]}>
+            {cols.map((c) => (
+              <Text key={c.key} style={[styles.th, { flex: c.flex, textAlign: c.align, paddingHorizontal: 6 }]}>{c.label}</Text>
             ))}
           </View>
           {items.map((item, i) => (
             <View key={i} style={styles.tableRow}>
-              {visibleCols.map((c) => (
-                <Text key={c.field} style={[styles.td, { flex: c.flex || 1, textAlign: c.align || "left" }]}>{String(item[c.field] ?? "")}</Text>
+              {cols.map((c) => (
+                <Text key={c.key} style={[styles.td, { flex: c.flex, textAlign: c.align, paddingHorizontal: 6 }]}>
+                  {c.key === "image" ? "" : String(item[c.key] ?? "")}
+                </Text>
               ))}
             </View>
           ))}
@@ -132,39 +151,55 @@ function renderBlock(block: AnyBlock, ctx: RenderCtx, key: string | number): Rea
       );
     }
     case "totals_block": {
-      const order = (data.order as Record<string, string>) || {};
-      const rows = block.props.rows || [];
+      const totals = (resolvePath(data, "order.totals") as Record<string, string>) || (data.order as Record<string, string>) || {};
+      const cur = (resolvePath(data, "order.currency") as string) || "";
+      const rows: Array<[string, string, boolean]> = [];
+      if (block.props.showSubtotal) rows.push(["Subtotal", totals.subtotal ?? "0.00", false]);
+      if (block.props.showShipping) rows.push(["Shipping", totals.shipping ?? totals.shipping_total ?? "0.00", false]);
+      if (block.props.showTax) rows.push(["Tax", totals.tax ?? totals.tax_total ?? "0.00", false]);
+      if (block.props.showDiscount && Number(totals.discount ?? totals.discount_total ?? 0) > 0) rows.push(["Discount", `-${totals.discount ?? totals.discount_total}`, false]);
+      if (block.props.showTotal) rows.push(["Total", totals.total ?? "0.00", true]);
       return (
-        <View key={key} style={{ marginVertical: 8, alignItems: "flex-end" }}>
-          {rows.filter((r) => r.visible !== false).map((row, i) => {
-            const value = String(order[row.field] ?? "0.00");
-            const isTotal = row.field === "total";
-            return (
-              <View key={i} style={styles.totalsRow}>
-                <Text style={isTotal ? [styles.totalsLabel, { fontFamily: "Helvetica-Bold", color: doc.textColor }] : styles.totalsLabel}>{row.label}</Text>
-                <Text style={isTotal ? [styles.totalsValue, styles.grandTotal] : styles.totalsValue}>{order.currency || ""} {value}</Text>
-              </View>
-            );
-          })}
+        <View key={key} style={{ marginVertical: 8 }}>
+          {rows.map(([label, val, isTotal], i) => (
+            <View key={i} style={styles.totalsRow}>
+              <Text style={isTotal ? [styles.totalsLabel, { fontFamily: "Helvetica-Bold", color: doc.textColor }] : styles.totalsLabel}>{label}</Text>
+              <Text style={isTotal ? styles.grandTotal : styles.totalsValue}>{cur} {val}</Text>
+            </View>
+          ))}
         </View>
       );
     }
-    case "barcode":
-    case "qr_code":
+    case "barcode": {
+      const val = block.props.source === "custom" ? (block.props.value || "") : (resolvePath(data, "order.number") as string) || "";
       return (
         <View key={key} style={{ alignItems: alignToFlex(block.props.align), marginVertical: 8 }}>
-          <View style={{ width: block.props.width || 160, height: block.props.height || 60, borderWidth: 1, borderColor: "#e5e7eb", justifyContent: "center", alignItems: "center" }}>
-            <Text style={{ fontSize: 8, color: "#9ca3af" }}>[{block.type}: {interpolate(block.props.value || "", data)}]</Text>
+          <View style={{ width: block.props.width || 200, height: block.props.height || 60, borderWidth: 1, borderColor: doc.borderColor, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ fontSize: 9, color: doc.mutedColor, letterSpacing: 2 }}>||| {val} |||</Text>
           </View>
         </View>
       );
-    case "signature_line":
+    }
+    case "qr_code": {
+      const val = interpolate(block.props.value || "", data);
+      const size = block.props.size || 80;
       return (
-        <View key={key} style={{ marginTop: 24, marginBottom: 8, width: block.props.width || 200 }}>
-          <View style={{ borderBottomWidth: 1, borderBottomColor: "#9ca3af", height: 24 }} />
-          <Text style={{ fontSize: 9, color: "#6b7280", marginTop: 4 }}>{block.props.label || "Signature"}</Text>
+        <View key={key} style={{ alignItems: alignToFlex(block.props.align), marginVertical: 8 }}>
+          <View style={{ width: size, height: size, borderWidth: 1, borderColor: doc.borderColor, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ fontSize: 7, color: doc.mutedColor }}>{val.slice(0, 12)}</Text>
+          </View>
         </View>
       );
+    }
+    case "signature_line": {
+      const widthPct = block.props.widthPercent ?? 60;
+      return (
+        <View key={key} style={{ marginTop: 24, marginBottom: 8, width: `${widthPct}%` }}>
+          <View style={{ borderBottomWidth: 1, borderBottomColor: doc.textColor, height: 24 }} />
+          <Text style={{ fontSize: 9, color: doc.mutedColor, marginTop: 4 }}>{block.props.label || "Signature"}</Text>
+        </View>
+      );
+    }
     case "html":
       return null;
     case "page_break":
@@ -174,23 +209,23 @@ function renderBlock(block: AnyBlock, ctx: RenderCtx, key: string | number): Rea
   }
 }
 
-interface DocProps { doc: TemplateDocument; data: Record<string, unknown> }
-const TemplatePdfDocument: React.FC<DocProps> = ({ doc, data }) => {
-  const styles = buildStyles(doc.styles);
+interface DocProps { doc: TemplateDocument; styles: DocumentStyles; data: Record<string, unknown> }
+const TemplatePdfDocument: React.FC<DocProps> = ({ doc, styles, data }) => {
+  const ctxStyles = buildStyles(styles);
   const size = PAGE_SIZES[doc.page.size] || PAGE_SIZES.A4;
   const m = doc.page.margins;
   return (
     <Document>
-      <Page size={size} orientation={doc.page.orientation || "portrait"} style={{ padding: 0, backgroundColor: doc.styles.backgroundColor }}>
-        <View style={[styles.body, { paddingTop: m.top, paddingBottom: m.bottom, paddingLeft: m.left, paddingRight: m.right }]}>
-          {doc.blocks.map((b, i) => renderBlock(b, { data, styles, doc: doc.styles }, i))}
+      <Page size={size} orientation={doc.page.orientation || "portrait"} style={{ padding: 0, backgroundColor: "#fff" }}>
+        <View style={[ctxStyles.body, { paddingTop: m.top, paddingBottom: m.bottom, paddingLeft: m.left, paddingRight: m.right }]}>
+          {doc.blocks.map((b, i) => renderBlock(b, { data, styles: ctxStyles, doc: styles }, i))}
         </View>
       </Page>
     </Document>
   );
 };
 
-export async function renderTemplatePdf(doc: TemplateDocument, data: Record<string, unknown>): Promise<Buffer> {
-  const stream = await pdf(<TemplatePdfDocument doc={doc} data={data} />).toBuffer();
-  return stream as unknown as Buffer;
+export async function renderTemplatePdf(doc: TemplateDocument, styles: DocumentStyles, data: Record<string, unknown>): Promise<Buffer> {
+  const buf = await pdf(<TemplatePdfDocument doc={doc} styles={styles} data={data} />).toBuffer();
+  return buf as unknown as Buffer;
 }

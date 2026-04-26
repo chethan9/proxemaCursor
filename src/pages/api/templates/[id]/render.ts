@@ -1,12 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { renderTemplatePdf } from "@/lib/templates/render-pdf";
-import { renderHtml } from "@/lib/templates/render-html";
+import { renderDocumentToHtml } from "@/lib/templates/render-html";
 import { resolveOrderData } from "@/lib/templates/resolve-order";
 import { sampleInvoiceData } from "@/lib/templates/sample-data";
-import type { TemplateDocument } from "@/lib/templates/document";
+import { defaultStyles } from "@/lib/templates/document";
+import type { TemplateDocument, DocumentStyles } from "@/lib/templates/document";
 
-export const config = { api: { bodyParser: { sizeLimit: "1mb" } } };
+export const config = { api: { bodyParser: { sizeLimit: "1mb" }, responseLimit: false } };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET" && req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -28,12 +29,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: ver, error: verErr } = await supabaseAdmin
       .from("template_versions")
-      .select("id, document")
+      .select("id, document, styles")
       .eq("id", tpl.current_version_id)
       .maybeSingle();
     if (verErr || !ver) return res.status(404).json({ error: "Template version not found" });
 
     const doc = ver.document as unknown as TemplateDocument;
+    const styles = (ver.styles as unknown as DocumentStyles) || defaultStyles();
 
     let data: Record<string, unknown>;
     if (useSample) {
@@ -45,20 +47,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (format === "html") {
-      const html = renderHtml(doc, data);
+      const html = renderDocumentToHtml(doc, data, styles);
       const wrapped = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tpl.name}</title></head><body style="margin:0;background:#f3f4f6;padding:24px;"><div style="max-width:800px;margin:0 auto;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.1);">${html}</div></body></html>`;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.status(200).send(wrapped);
-      await logRender(templateId, ver.id, "html", orderId, storeId);
+      void logRender(templateId, ver.id, "html", orderId);
       return;
     }
 
-    const buffer = await renderTemplatePdf(doc, data);
+    const buffer = await renderTemplatePdf(doc, styles, data);
     const filename = `${tpl.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${orderId || "sample"}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     res.status(200).send(buffer);
-    await logRender(templateId, ver.id, "pdf", orderId, storeId);
+    void logRender(templateId, ver.id, "pdf", orderId);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Render failed";
     console.error("[template-render]", e);
@@ -66,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function logRender(templateId: string, versionId: string, format: string, orderId: string, storeId: string) {
+async function logRender(templateId: string, versionId: string, format: string, orderId: string) {
   try {
     await supabaseAdmin.from("template_renders").insert({
       template_id: templateId,
@@ -74,8 +76,6 @@ async function logRender(templateId: string, versionId: string, format: string, 
       output_format: format,
       entity_type: orderId ? "order" : "sample",
       entity_id: orderId || null,
-      store_id: storeId || null,
-      status: "success",
     });
   } catch {
     /* non-fatal */
