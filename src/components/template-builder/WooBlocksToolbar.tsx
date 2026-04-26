@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Package, Receipt, MapPin, Barcode as BarcodeIcon, QrCode } from "lucide-react";
+import { Package, Receipt, MapPin, Barcode as BarcodeIcon, QrCode, PenLine, FileText } from "lucide-react";
 import type { Editor } from "@tiptap/core";
 
 interface Props {
@@ -13,6 +13,8 @@ const INSERTS = [
   { type: "address_block", label: "Shipping Address", icon: MapPin, attrs: { source: "shipping", label: "Shipping Address" } },
   { type: "barcode", label: "Barcode", icon: BarcodeIcon, attrs: { source: "order_number", value: "", format: "code128", width: 200, height: 60 } },
   { type: "qr_code", label: "QR Code", icon: QrCode, attrs: { value: "{{order.number}}", size: 120 } },
+  { type: "signatureLine", label: "Signature", icon: PenLine, attrs: { label: "Signature", width: 60 } },
+  { type: "pageBreak", label: "Page Break", icon: FileText, attrs: {} },
 ];
 
 export function WooBlocksToolbar({ editor }: Props) {
