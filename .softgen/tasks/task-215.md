@@ -1,6 +1,6 @@
 ---
 title: Add-new advanced product parity with edit + SKU optional
-status: todo
+status: done
 priority: high
 type: bug
 tags: [products, add-new, variants, parity, sku]
