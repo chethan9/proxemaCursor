@@ -102,6 +102,17 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     }));
   };
 
+  const bulkDelete = (keys: Set<string>) => {
+    setForm((p) => {
+      const removedIds = p.variations.filter((v) => keys.has(v.key) && v.id).map((v) => v.id!) as number[];
+      return {
+        ...p,
+        variations: p.variations.filter((v) => !keys.has(v.key)),
+        deletedVariationIds: [...(p.deletedVariationIds || []), ...removedIds],
+      };
+    });
+  };
+
   const hasVariableAttrs = form.attributes.some((a) => a.variation && a.options.length > 0);
 
   const duplicateCombos = (() => {
@@ -185,7 +196,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               <div>Click &quot;Regenerate from attributes&quot; to create variations based on the options above.</div>
             </div>
           ) : (
-            <VariationsTable variations={form.variations} onEdit={setEditIdx} onUpdate={updateVariation} onBulk={applyBulk} />
+            <VariationsTable variations={form.variations} onEdit={setEditIdx} onUpdate={updateVariation} onBulk={applyBulk} onBulkDelete={bulkDelete} />
           )}
         </div>
       )}
