@@ -58,21 +58,21 @@ const OPTIONS: {
 export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background border-border">
-        <div className="px-8 pt-8 pb-6">
-          <div className="flex justify-center mb-5">
-            <div className="h-12 w-12 rounded-xl bg-indigo-100/70 flex items-center justify-center">
-              <PackagePlus className="h-5 w-5 text-indigo-600" strokeWidth={2.2} />
+      <DialogContent className="max-w-xl p-0 overflow-hidden bg-background border-border">
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="h-9 w-9 rounded-lg bg-indigo-100/70 flex items-center justify-center">
+              <PackagePlus className="h-4 w-4 text-indigo-600" strokeWidth={2.2} />
             </div>
           </div>
-          <h2 className="text-center text-2xl font-bold tracking-tight text-foreground">
+          <h2 className="text-center text-base font-bold tracking-tight text-foreground">
             What type of product are you adding?
           </h2>
-          <p className="text-center text-sm text-muted-foreground mt-2">
+          <p className="text-center text-xs text-muted-foreground mt-1">
             Choose the best option that fits your product
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-7">
+          <div className="grid grid-cols-2 gap-3 mt-4">
             {OPTIONS.map((opt) => {
               const BadgeIcon = opt.badgeIcon;
               return (
@@ -81,26 +81,26 @@ export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
                   type="button"
                   onClick={() => onSelect(opt.type)}
                   className={cn(
-                    "group relative flex flex-col items-center text-center rounded-2xl p-6 pb-5",
+                    "group relative flex flex-col items-center text-center rounded-xl p-3 pb-3",
                     "border border-border/60 bg-card hover:border-foreground/20",
-                    "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+                    "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30",
                   )}
                 >
                   <div className={cn(
-                    "relative w-full aspect-[4/3] rounded-xl flex items-center justify-center overflow-hidden mb-5",
+                    "relative w-full aspect-[4/3] rounded-lg flex items-center justify-center overflow-hidden mb-3",
                     opt.bgTint,
                   )}>
                     <div className={cn(
-                      "absolute inset-x-6 inset-y-4 rounded-full blur-2xl opacity-60",
+                      "absolute inset-x-4 inset-y-3 rounded-full blur-xl opacity-60",
                       opt.blobTint,
                     )} />
-                    <div className="relative w-full h-full flex items-center justify-center p-4">
+                    <div className="relative w-full h-full flex items-center justify-center p-2">
                       <Image
                         src={opt.image}
                         alt={opt.title}
-                        width={280}
-                        height={210}
+                        width={170}
+                        height={128}
                         className="object-contain max-h-full w-auto drop-shadow-sm"
                         priority
                       />
@@ -108,23 +108,23 @@ export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
                   </div>
 
                   <div className={cn(
-                    "h-11 w-11 rounded-full flex items-center justify-center mb-3 -mt-1",
+                    "h-7 w-7 rounded-full flex items-center justify-center mb-2 -mt-1",
                     opt.badgeBg,
                   )}>
-                    <BadgeIcon className={cn("h-5 w-5", opt.badgeColor)} strokeWidth={2.2} />
+                    <BadgeIcon className={cn("h-3.5 w-3.5", opt.badgeColor)} strokeWidth={2.2} />
                   </div>
 
-                  <h3 className="text-lg font-bold text-foreground mb-1.5">{opt.title}</h3>
-                  <p className="text-[13px] leading-relaxed text-muted-foreground max-w-[240px] mb-4">
+                  <h3 className="text-sm font-bold text-foreground mb-1">{opt.title}</h3>
+                  <p className="text-[11px] leading-snug text-muted-foreground max-w-[180px] mb-3">
                     {opt.description}
                   </p>
 
                   <div className={cn(
-                    "h-10 w-10 rounded-full flex items-center justify-center transition-all",
+                    "h-7 w-7 rounded-full flex items-center justify-center transition-all",
                     opt.arrowBg, opt.arrowColor, opt.arrowHoverBg,
                     "group-hover:scale-110",
                   )}>
-                    <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
+                    <ArrowRight className="h-3 w-3" strokeWidth={2.4} />
                   </div>
                 </button>
               );
