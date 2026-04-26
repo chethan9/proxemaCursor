@@ -116,7 +116,7 @@ function TemplatesInner() {
                         <h2 className="text-sm font-semibold">Sample templates</h2>
                         <span className="text-xs text-muted-foreground">— ready to use or customize</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                         {samples.map((t) => (
                           <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} onSetDefault={() => setDefaultMutation.mutate({ id: t.id, type: t.type as "invoice" | "pickslip" })} forking={forkMutation.isPending} />
                         ))}
@@ -137,7 +137,7 @@ function TemplatesInner() {
                         <Button size="sm" variant="outline" onClick={() => router.push(`/templates/new?type=${type}`)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Build from scratch</Button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                         {custom.map((t) => (
                           <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} onSetDefault={() => setDefaultMutation.mutate({ id: t.id, type: t.type as "invoice" | "pickslip" })} forking={forkMutation.isPending} />
                         ))}
@@ -156,21 +156,21 @@ function TemplatesInner() {
 
 function TemplateCard({ t, onUse, onFork, onDelete, onSetDefault, forking }: { t: TemplateRow; onUse: () => void; onFork: () => void; onDelete: () => void; onSetDefault: () => void; forking: boolean }) {
   return (
-    <div className="group rounded-lg border border-border bg-card hover:border-foreground/20 hover:shadow-sm transition-all overflow-hidden">
-      <div className="aspect-[4/3] bg-muted/40 flex items-center justify-center border-b border-border relative">
-        <FileText className="h-10 w-10 text-muted-foreground/40" />
+    <div className="group rounded-md border border-border bg-card hover:border-foreground/20 hover:shadow-sm transition-all overflow-hidden">
+      <div className="aspect-[4/5] bg-muted/40 flex items-center justify-center border-b border-border relative">
+        <FileText className="h-6 w-6 text-muted-foreground/40" />
         {t.is_default_for_type && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-medium">
-            <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" /> Default
+          <div className="absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-medium">
+            <Star className="h-2 w-2 fill-amber-500 text-amber-500" /> Default
           </div>
         )}
       </div>
-      <div className="p-3">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="text-sm font-semibold truncate">{t.name}</h3>
+      <div className="p-2">
+        <div className="flex items-start justify-between gap-1 mb-0.5">
+          <h3 className="text-xs font-semibold truncate leading-tight">{t.name}</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1 -mt-1 shrink-0"><MoreVertical className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 -mt-0.5 shrink-0"><MoreVertical className="h-3 w-3" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {t.is_sample ? (
@@ -186,16 +186,16 @@ function TemplateCard({ t, onUse, onFork, onDelete, onSetDefault, forking }: { t
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex items-center gap-1.5 mb-3">
-          {t.is_sample ? <Badge variant="outline" className="h-5 text-[10px] gap-1 border-amber-300 text-amber-800 bg-amber-50"><Sparkles className="h-2.5 w-2.5" /> Sample</Badge> : <Badge variant="outline" className="h-5 text-[10px]">Custom</Badge>}
-          <span className="text-[10px] text-muted-foreground">{format(new Date(t.updated_at), "MMM d")}</span>
+        <div className="flex items-center gap-1 mb-2">
+          {t.is_sample ? <Badge variant="outline" className="h-4 text-[9px] gap-0.5 px-1 border-amber-300 text-amber-800 bg-amber-50"><Sparkles className="h-2 w-2" /> Sample</Badge> : <Badge variant="outline" className="h-4 text-[9px] px-1">Custom</Badge>}
+          <span className="text-[9px] text-muted-foreground">{format(new Date(t.updated_at), "MMM d")}</span>
         </div>
         {t.is_sample ? (
-          <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={onFork} disabled={forking}>
+          <Button size="sm" variant="outline" className="w-full h-6 text-[10px]" onClick={onFork} disabled={forking}>
             {forking ? "Copying…" : "Customize"}
           </Button>
         ) : (
-          <Button size="sm" className="w-full h-8 text-xs" onClick={onUse}>Edit template</Button>
+          <Button size="sm" className="w-full h-6 text-[10px]" onClick={onUse}>Edit</Button>
         )}
       </div>
     </div>

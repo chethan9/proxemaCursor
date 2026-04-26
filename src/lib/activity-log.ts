@@ -1,5 +1,4 @@
 import type { NextApiRequest } from "next";
-import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ActorType = "user" | "admin" | "system" | "api";
@@ -50,20 +49,27 @@ function computeDiff(before?: Record<string, unknown> | null, after?: Record<str
 
 export async function logActivity(input: LogActivityInput): Promise<void> {
   try {
+    const isServer = typeof window === "undefined";
     let actorUserId: string | null = null;
     let actorEmail: string | null = null;
+    let admin: typeof import("@/integrations/supabase/admin").supabaseAdmin | null = null;
 
-    if (input.req) {
+    if (isServer) {
+      const mod = await import("@/integrations/supabase/admin");
+      admin = mod.supabaseAdmin;
+    }
+
+    if (input.req && admin) {
       const authHeader = input.req.headers.authorization;
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.slice(7);
-        const { data } = await supabaseAdmin.auth.getUser(token);
+        const { data } = await admin.auth.getUser(token);
         if (data.user) {
           actorUserId = data.user.id;
           actorEmail = data.user.email || null;
         }
       }
-    } else if (typeof window !== "undefined") {
+    } else if (!isServer) {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
         actorUserId = data.user.id;
@@ -80,10 +86,10 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
     };
 
     let clientId: string | null = input.clientId || null;
-    if (!clientId && typeof window === "undefined") {
+    if (!clientId && isServer && admin) {
       const storeId = (input.metadata?.store_id as string | undefined) || null;
       if (storeId) {
-        const { data: store } = await supabaseAdmin
+        const { data: store } = await admin
           .from("stores")
           .select("client_id")
           .eq("id", storeId)
@@ -104,7 +110,7 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
       metadata: Object.keys(metadata).length > 0 ? metadata : null,
     };
 
-    const client = typeof window === "undefined" ? supabaseAdmin : supabase;
+    const client = isServer && admin ? admin : supabase;
     const { error } = await client.from("activity_log" as never).insert(row as never);
     if (error && process.env.NODE_ENV !== "production") {
       console.warn("[activity-log] insert failed:", error.message);
