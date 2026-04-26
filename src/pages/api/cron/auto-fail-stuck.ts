@@ -13,8 +13,8 @@ const BULK_STUCK_THRESHOLD_MINUTES = 90;
 
 const CRITICAL_ASPECTS = ["products", "orders", "customers", "categories", "tags", "coupons"];
 
-async function unlockStoreInitialSync(supabase: ReturnType<typeof createClient>, storeId: string) {
-  await supabase
+async function unlockStoreInitialSync(client: any, storeId: string) {
+  await client
     .from("stores")
     .update({ initial_sync_completed_at: new Date().toISOString() })
     .eq("id", storeId)

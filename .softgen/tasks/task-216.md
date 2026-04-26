@@ -1,11 +1,11 @@
 ---
 title: Sync engine resilience for large stores + accurate counts + pagination
-status: todo
+status: done
 priority: urgent
 type: bug
-tags: [sync, sync-engine, live-preview, pagination, ux, data-explorer]
+tags: [sync, heartbeat, counts, pagination, large-stores]
 created_by: agent
-created_at: 2026-04-26T13:30:00Z
+created_at: 2026-04-26T10:30:00Z
 position: 216
 ---
 
