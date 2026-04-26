@@ -1,6 +1,6 @@
 ---
 title: Advanced product editor — stepper, status pill, and variable-product flow
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, ux, advanced-shell]
