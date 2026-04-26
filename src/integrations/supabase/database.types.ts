@@ -2028,6 +2028,174 @@ export type Database = {
           },
         ]
       }
+      template_renders: {
+        Row: {
+          client_id: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          output_format: string
+          output_size_bytes: number | null
+          output_url: string | null
+          rendered_at: string
+          rendered_by: string | null
+          template_id: string
+          version_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          output_format?: string
+          output_size_bytes?: number | null
+          output_url?: string | null
+          rendered_at?: string
+          rendered_by?: string | null
+          template_id: string
+          version_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          output_format?: string
+          output_size_bytes?: number | null
+          output_url?: string | null
+          rendered_at?: string
+          rendered_by?: string | null
+          template_id?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_renders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_renders_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_renders_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_versions: {
+        Row: {
+          change_note: string | null
+          created_at: string
+          created_by: string | null
+          document: Json
+          id: string
+          styles: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          change_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          document?: Json
+          id?: string
+          styles?: Json
+          template_id: string
+          version_number?: number
+        }
+        Update: {
+          change_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          document?: Json
+          id?: string
+          styles?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          current_version_id: string | null
+          description: string | null
+          id: string
+          is_default_for_type: boolean
+          is_sample: boolean
+          name: string
+          print_mode: string
+          thumbnail_url: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_version_id?: string | null
+          description?: string | null
+          id?: string
+          is_default_for_type?: boolean
+          is_sample?: boolean
+          name: string
+          print_mode?: string
+          thumbnail_url?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_version_id?: string | null
+          description?: string | null
+          id?: string
+          is_default_for_type?: boolean
+          is_sample?: boolean
+          name?: string
+          print_mode?: string
+          thumbnail_url?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "templates_current_version_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_notifications: {
         Row: {
           body: string | null
