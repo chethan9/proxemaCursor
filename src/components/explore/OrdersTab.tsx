@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, type LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTemplates } from "@/services/templateService";
@@ -70,6 +70,7 @@ import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
+import { PrintInvoicesDialog } from "./PrintInvoicesDialog";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via" | "actions";
 
@@ -195,6 +196,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<{ type: "update_status"; status: string } | { type: "delete" } | null>(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -914,6 +916,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 )}
               </div>
               <div className="flex-1" />
+              <Button size="sm" variant="default" className="h-8 text-xs gap-1.5" onClick={() => setPrintDialogOpen(true)} disabled={overLimit}>
+                <Printer className="h-3.5 w-3.5" />
+                Print invoices
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit}>
@@ -930,14 +936,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       {s}
                     </DropdownMenuItem>
                   ))}
-                  <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setTimeout(() => setBulkAction({ type: "delete" }), 0)} disabled={overLimit}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => setSelectedIds(new Set())}>
-                    <X className="h-3.5 w-3.5" />
-                    Clear
-                  </Button>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setTimeout(() => setBulkAction({ type: "delete" }), 0)} disabled={overLimit}>
@@ -1276,6 +1274,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <PrintInvoicesDialog
+        open={printDialogOpen}
+        onOpenChange={setPrintDialogOpen}
+        storeId={storeId}
+        orderIds={Array.from(selectedIds)}
+        onQueued={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }

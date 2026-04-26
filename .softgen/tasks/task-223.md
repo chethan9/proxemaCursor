@@ -1,6 +1,6 @@
 ---
 title: Bulk print invoices from orders list
-status: todo
+status: done
 priority: high
 type: feature
 tags: [orders, templates, bulk-jobs, pdf]
@@ -38,17 +38,17 @@ UX details:
 
 ## Checklist
 
-- [ ] Row-level checkbox column in orders explorer with header "select all on current page" and tri-state behavior.
-- [ ] Selection state hook tracking selected order ids across pagination, with "Clear selection" and "X selected" indicator.
-- [ ] Sticky bulk action bar above the table when ≥1 row selected, with "Print invoices" primary button and a count badge.
-- [ ] Print invoices dialog: template picker (defaults to client default for type=invoice), output mode radio (Single PDF / ZIP of PDFs), confirm + cancel, soft warning above 100 orders.
-- [ ] New bulk-job kind `print_invoices_bulk` enqueued with `{ store_id, order_ids, template_id, output_mode }` payload.
-- [ ] Worker handler resolves orders, renders each invoice via the existing template pipeline, merges to single PDF (pdf-lib) or zips per-order PDFs (jszip).
-- [ ] Produced artifact uploaded to private `bulk-invoices` storage bucket keyed by `client_id/job_id.{pdf|zip}`.
-- [ ] `/api/bulk-jobs/[id]/download` endpoint returns a signed URL and serves the artifact; auto-cleanup after 24h.
-- [ ] `BulkJobsToast` shows Download action when a print job completes.
-- [ ] Activity log entry `orders.bulk_invoice_printed` with order count, template name, output mode, job id.
-- [ ] Hard cap of 500 orders per batch, soft confirmation above 100.
+- [x] Row-level checkbox column in orders explorer with header "select all on current page" and tri-state behavior.
+- [x] Selection state hook tracking selected order ids across pagination, with "Clear selection" and "X selected" indicator.
+- [x] Sticky bulk action bar above the table when ≥1 row selected, with "Print invoices" primary button and a count badge.
+- [x] Print invoices dialog: template picker (defaults to client default for type=invoice), output mode radio (Single PDF / ZIP of PDFs), confirm + cancel, soft warning above 100 orders.
+- [x] New bulk-job kind `print_invoices_bulk` enqueued with `{ store_id, order_ids, template_id, output_mode }` payload.
+- [x] Worker handler resolves orders, renders each invoice via the existing template pipeline, merges to single PDF (pdf-lib) or zips per-order PDFs (jszip).
+- [x] Produced artifact uploaded to private `bulk-invoices` storage bucket keyed by `client_id/job_id.{pdf|zip}`.
+- [x] `/api/bulk-jobs/[id]/download` endpoint returns a signed URL and serves the artifact; auto-cleanup after 24h.
+- [x] `BulkJobsToast` shows Download action when a print job completes.
+- [x] Activity log entry `orders.bulk_invoice_printed` with order count, template name, output mode, job id.
+- [x] Hard cap of 500 orders per batch, soft confirmation above 100.
 
 ## Acceptance
 

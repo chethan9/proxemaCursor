@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listActiveBulkJobs, listBulkJobs, subscribeToStoreBulkJobs, type BulkJob } from "@/services/bulkJobService";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useActiveBulkJobs() {
   return useQuery({
@@ -39,4 +40,28 @@ export function useStoreBulkJobs(storeId: string | null | undefined, limit = 50)
   }, [storeId, qc]);
 
   return query;
+}
+
+export function useRecentCompletedPrintJobs() {
+  return useQuery({
+    queryKey: ["bulk-jobs", "completed-print"],
+    queryFn: async (): Promise<BulkJob[]> => {
+      const since = new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString();
+      const { data, error } = await supabase
+        .from("bulk_jobs")
+        .select("*")
+        .eq("job_type", "print_invoices_bulk")
+        .eq("status", "completed")
+        .gte("completed_at", since)
+        .order("completed_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []).filter((j) => {
+        const p = j.payload as { artifact_path?: string } | null;
+        return !!p?.artifact_path;
+      });
+    },
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
 }
