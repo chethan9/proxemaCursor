@@ -107,9 +107,11 @@ export function PrintInvoicesDialog({
       onQueued?.();
       onOpenChange(false);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : (typeof err === "object" && err !== null ? JSON.stringify(err) : String(err));
+      console.error("Print job queue failed:", err);
       toast({
         title: "Failed to queue print job",
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: msg || "Unknown error",
         variant: "destructive",
       });
     } finally {
