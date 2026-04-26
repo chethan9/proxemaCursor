@@ -28,7 +28,11 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, type LucideIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { listTemplates } from "@/services/templateService";
+import { updateOrderStatus } from "@/services/orderService";
 import { DateRangeFilter } from "./DateRangeFilter";
 import {
   getCustomerName,
@@ -54,7 +58,7 @@ import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
-import { useStore } from "@/hooks/queries/useStores";
+import { useStore } from "@/hooks/queries/useStore";
 import { formatStoreDateTime } from "@/lib/format-store-date";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
@@ -68,7 +72,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 
-type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
+type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via" | "actions";
 
 const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: OrderSortField }[] = [
   { key: "id", label: "Internal ID", group: "Order" },
@@ -96,6 +100,7 @@ const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: OrderS
   { key: "discount", label: "Discount", group: "Payment & Amounts" },
   { key: "payment", label: "Payment title", group: "Payment & Amounts" },
   { key: "payment_method", label: "Payment method", group: "Payment & Amounts" },
+  { key: "actions", label: "Actions", group: "Actions" },
 ];
 
 const SORT_OPTIONS: { field: OrderSortField; direction: SortDirection; label: string }[] = [
@@ -161,6 +166,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
       items: true, line_items_summary: false, total: true, subtotal: false, tax: false,
       shipping: false, discount: false, currency: false, payment: true, payment_method: false,
       date_created: true, date_modified: false, synced_at: false, source: false, created_via: false,
+      actions: true,
     };
     if (typeof window !== "undefined") {
       try {
@@ -191,6 +197,57 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<{ type: "update_status"; status: string } | { type: "delete" } | null>(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: invoiceTemplates = [] } = useQuery({
+    queryKey: ["templates", "invoice"],
+    queryFn: () => listTemplates("invoice"),
+    staleTime: 60_000,
+  });
+  const { data: pickslipTemplates = [] } = useQuery({
+    queryKey: ["templates", "pickslip"],
+    queryFn: () => listTemplates("pickslip"),
+    staleTime: 60_000,
+  });
+
+  const resolveDefaultTemplate = useCallback((list: typeof invoiceTemplates) => {
+    if (!list.length) return null;
+    const def = list.find((t) => t.is_default_for_type && !t.is_sample);
+    if (def) return def;
+    const userTpl = list.find((t) => !t.is_sample);
+    if (userTpl) return userTpl;
+    return list[0];
+  }, []);
+
+  const defaultInvoice = useMemo(() => resolveDefaultTemplate(invoiceTemplates), [invoiceTemplates, resolveDefaultTemplate]);
+  const defaultPickslip = useMemo(() => resolveDefaultTemplate(pickslipTemplates), [pickslipTemplates, resolveDefaultTemplate]);
+
+  const handleMarkComplete = useCallback(async (orderId: string) => {
+    setCompletingId(orderId);
+    try {
+      await updateOrderStatus(orderId, "completed");
+      toast({ title: "Order marked complete" });
+      await queryClient.invalidateQueries({ queryKey: ["orders", storeId] });
+    } catch (err) {
+      toast({ title: "Failed to update", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setCompletingId(null);
+    }
+  }, [queryClient, storeId, toast]);
+
+  const handlePrintTemplate = useCallback((templateId: string | undefined, orderId: string, type: "invoice" | "pickslip") => {
+    if (!templateId) {
+      toast({
+        title: `No ${type} template`,
+        description: "Create one in Templates to enable quick print.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const url = `/api/templates/${templateId}/render?format=pdf&store_id=${storeId}&order_id=${orderId}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [storeId, toast]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
