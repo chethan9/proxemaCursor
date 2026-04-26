@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
@@ -29,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, FileArchive, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, type LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTemplates } from "@/services/templateService";
@@ -196,10 +195,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<{ type: "update_status"; status: string } | { type: "delete" } | null>(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
-  const [printDialogOpen, setPrintDialogOpen] = useState(false);
-  const [printTemplateId, setPrintTemplateId] = useState<string>("");
-  const [printOutputMode, setPrintOutputMode] = useState<"single-pdf" | "zip">("single-pdf");
-  const [printSubmitting, setPrintSubmitting] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -225,13 +220,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
   const defaultInvoice = useMemo(() => resolveDefaultTemplate(invoiceTemplates), [invoiceTemplates, resolveDefaultTemplate]);
   const defaultPickslip = useMemo(() => resolveDefaultTemplate(pickslipTemplates), [pickslipTemplates, resolveDefaultTemplate]);
-
-  useEffect(() => {
-    if (!printTemplateId && invoiceTemplates.length > 0) {
-      const def = invoiceTemplates.find((t) => t.is_default_for_type && !t.is_sample) ?? invoiceTemplates.find((t) => !t.is_sample) ?? invoiceTemplates[0];
-      setPrintTemplateId(def.id);
-    }
-  }, [invoiceTemplates, printTemplateId]);
 
   const handleMarkComplete = useCallback(async (orderId: string) => {
     setCompletingId(orderId);
@@ -271,38 +259,101 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
 
-  const submitPrint = useCallback(async () => {
-    if (!printTemplateId || selectedIds.size === 0 || overLimit) return;
-    const orderIds = orders.filter((o) => selectedIds.has(o.id)).map((o) => o.id);
+  // Clear selection when data/filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [storeId, debouncedSearch, statusFilter, paymentFilter, totalMin, totalMax, page, pageSize]);
+
+  const visibleColList = useMemo(
+    () => columnOrder
+      .map((k) => COLUMNS.find((c) => c.key === k))
+      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
+    [visibleCols, columnOrder]
+  );
+
+  const dateBounds = useMemo(() => {
+    const now = new Date();
+    const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+    const endOfDay = (d: Date) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+    if (dateRange === "today") return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+    if (dateRange === "yesterday") { const y = new Date(now); y.setDate(y.getDate() - 1); return { from: startOfDay(y).toISOString(), to: endOfDay(y).toISOString() }; }
+    if (dateRange === "7d") { const f = new Date(now); f.setDate(f.getDate() - 7); return { from: f.toISOString(), to: now.toISOString() }; }
+    if (dateRange === "30d") { const f = new Date(now); f.setDate(f.getDate() - 30); return { from: f.toISOString(), to: now.toISOString() }; }
+    if (dateRange === "90d") { const f = new Date(now); f.setDate(f.getDate() - 90); return { from: f.toISOString(), to: now.toISOString() }; }
+    if (dateRange === "custom") {
+      return {
+        from: customFrom ? startOfDay(customFrom).toISOString() : undefined,
+        to: customTo ? endOfDay(customTo).toISOString() : undefined,
+      };
+    }
+    return { from: undefined, to: undefined };
+  }, [dateRange, customFrom, customTo]);
+
+  const { data: ordersResult, isLoading: loading, isFetching, isPlaceholderData } = useOrders({
+    storeId,
+    page,
+    pageSize,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+    statusFilter,
+    paymentMethodFilter: paymentFilter,
+    totalMin: totalMin ? parseFloat(totalMin) : undefined,
+    totalMax: totalMax ? parseFloat(totalMax) : undefined,
+    dateFrom: dateBounds.from,
+    dateTo: dateBounds.to,
+  });
+  const orders = ordersResult?.data ?? [];
+  const orderCount = ordersResult?.count ?? 0;
+  void isPlaceholderData;
+  const showRefetchOverlay = isFetching && !loading && orders.length > 0;
+  useLoadingEffect(isFetching);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useExplorerKeyboard({
+    searchRef: searchInputRef,
+    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if ((page + 1) * pageSize < orderCount && !isFetching) setPage((p) => p + 1); },
+  });
+
+  const submitBulk = useCallback(async () => {
+    if (!bulkAction || selectedIds.size === 0 || overLimit) return;
+    const orderIds = orders
+      .filter((o) => selectedIds.has(o.id))
+      .map((o) => o.woo_id);
     if (orderIds.length === 0) {
-      toast({ title: "Nothing to print", description: "Selected orders not on this page", variant: "destructive" });
+      toast({ title: "Nothing to process", description: "Selected orders not found on this page", variant: "destructive" });
       return;
     }
-    setPrintSubmitting(true);
+    setBulkSubmitting(true);
     try {
+      const payload = bulkAction.type === "update_status"
+        ? { type: "update_order_status" as const, order_ids: orderIds, new_status: bulkAction.status }
+        : { type: "delete_orders" as const, order_ids: orderIds };
+      const jobType = bulkAction.type === "update_status" ? "update_order_status" : "delete_orders";
       await createBulkJob({
         store_id: storeId,
-        job_type: "print_invoices_bulk",
+        job_type: jobType,
         total: orderIds.length,
-        payload: {
-          type: "print_invoices_bulk",
-          order_ids: orderIds,
-          template_id: printTemplateId,
-          output_mode: printOutputMode,
-        },
+        payload,
       });
       toast({
-        title: "Print job queued",
-        description: `Generating ${orderIds.length} invoice${orderIds.length === 1 ? "" : "s"}. Download will appear when ready.`,
+        title: "Bulk job queued",
+        description: `Processing ${orderIds.length} orders in the background. Check progress in the bulk jobs panel.`,
       });
       setSelectedIds(new Set());
-      setPrintDialogOpen(false);
+      setBulkAction(null);
     } catch (err) {
-      toast({ title: "Failed to queue print job", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+      toast({
+        title: "Failed to queue bulk job",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
-      setPrintSubmitting(false);
+      setBulkSubmitting(false);
     }
-  }, [printTemplateId, selectedIds, orders, overLimit, storeId, printOutputMode, toast]);
+  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
+
+  const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
 
   const handleExportCsv = useCallback(() => {
     if (orders.length === 0) return;
@@ -863,10 +914,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 )}
               </div>
               <div className="flex-1" />
-              <Button size="sm" className="h-8 text-xs gap-1.5" onClick={() => setPrintDialogOpen(true)} disabled={overLimit || invoiceTemplates.length === 0}>
-                <Printer className="h-3.5 w-3.5" />
-                Print invoices
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit}>
@@ -1225,85 +1272,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               variant={bulkAction?.type === "delete" ? "destructive" : "default"}
             >
               {bulkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : "Queue job"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={printDialogOpen} onOpenChange={(v) => { if (!printSubmitting) setPrintDialogOpen(v); }}>
-        <DialogContent className="max-w-md" onPointerDownOutside={(e) => printSubmitting && e.preventDefault()} onEscapeKeyDown={(e) => printSubmitting && e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Print {selectedIds.size} invoice{selectedIds.size === 1 ? "" : "s"}</DialogTitle>
-            <DialogDescription>
-              Generates invoices in the background. Closing this page won&apos;t cancel the job — the download will appear in the bulk-jobs toast.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Invoice template</Label>
-              <Select value={printTemplateId} onValueChange={setPrintTemplateId}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Choose a template…" /></SelectTrigger>
-                <SelectContent>
-                  {invoiceTemplates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                      {t.is_default_for_type && !t.is_sample ? " · default" : ""}
-                      {t.is_sample ? " · sample" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Output</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPrintOutputMode("single-pdf")}
-                  className={cn(
-                    "flex flex-col items-start gap-1 p-3 rounded-md border text-left transition-colors",
-                    printOutputMode === "single-pdf" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:bg-muted/40",
-                  )}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Receipt className="h-3.5 w-3.5" />
-                    <span className="text-xs font-semibold">Single PDF</span>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">Merged into one file</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrintOutputMode("zip")}
-                  className={cn(
-                    "flex flex-col items-start gap-1 p-3 rounded-md border text-left transition-colors",
-                    printOutputMode === "zip" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:bg-muted/40",
-                  )}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <FileArchive className="h-3.5 w-3.5" />
-                    <span className="text-xs font-semibold">ZIP archive</span>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">One PDF per order</span>
-                </button>
-              </div>
-            </div>
-
-            {selectedIds.size > 100 && (
-              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 p-2.5">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                <div className="text-[11px] text-amber-900 dark:text-amber-200">
-                  Generating {selectedIds.size} invoices may take {Math.ceil(selectedIds.size * 1.5 / 60)}–{Math.ceil(selectedIds.size * 3 / 60)} minutes. Hard cap: {MAX_BULK} per batch.
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPrintDialogOpen(false)} disabled={printSubmitting}>Cancel</Button>
-            <Button onClick={submitPrint} disabled={!printTemplateId || printSubmitting}>
-              {printSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : <>Queue print job</>}
             </Button>
           </DialogFooter>
         </DialogContent>
