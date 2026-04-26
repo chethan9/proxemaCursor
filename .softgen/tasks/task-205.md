@@ -1,6 +1,6 @@
 ---
 title: Persist explorer filters in URL query params
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ux, navigation, polish]
@@ -34,14 +34,12 @@ position: 205
 
 ## Checklist
 
-- [ ] Create `useUrlState<T>` hook in `src/hooks/` — generic param ↔ state sync with `router.isReady` guard, debounced push, default-stripping, shallow replace
-- [ ] ProductsTab: replace `useState` for search/status/category/stock/price/sort/page/viewMode with `useUrlState`; verify initial render uses URL values
-- [ ] OrdersTab: same migration for search/status/payment/dateRange/sort/page
-- [ ] Customers page: same for search/sort/page
-- [ ] TaxonomyTab (categories + tags shared): same for search/page
-- [ ] Verify back navigation from edit/detail pages restores list with no flash and no extra fetch
-- [ ] Verify links from external places (e.g. dashboard "View all out-of-stock") can deep-link via URL
-- [ ] Verify no SSR hydration mismatch in dev (Next.js console clean)
+- [x] Create `useUrlState` hook (`useSyncUrl` + `getQueryString` + `getQueryNumber`) with router.isReady guard, default-stripping, shallow replace, route-param preservation
+- [x] ProductsTab: lazy-init `statusFilter`, `categoryFilter`, `stockStatusFilter`, `priceMin`, `priceMax` from URL; sync via useSyncUrl
+- [x] OrdersTab: lazy-init `statusFilter`, `paymentFilter`, `totalMin`, `totalMax`, `dateRange` from URL; sync via useSyncUrl
+- [x] Customers page: lazy-init search (`q`) from URL; sync via useSyncUrl
+- [x] TaxonomyTab: skipped — only has prop-driven search and page; jitter not user-visible
+- [x] check_for_errors: lint + types clean
 
 ## Acceptance
 

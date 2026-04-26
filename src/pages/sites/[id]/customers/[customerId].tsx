@@ -386,7 +386,10 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
   const items = Array.isArray(order.line_items) ? order.line_items : [];
   const itemCount = items.reduce((s, li) => s + (Number(li.quantity) || 0), 0);
   const currency = order.currency || "KD";
-  const subtotal = items.reduce((s, li) => s + Number(li.subtotal || 0), 0);
+  const subtotal = items.reduce((s, li) => {
+    const sub = Number(li.subtotal || 0);
+    return s + (sub > 0 ? sub : Number(li.total || 0));
+  }, 0);
   const shipMethod = Array.isArray(order.shipping_lines) && order.shipping_lines[0]?.method_title;
   const shipTo = order.shipping ? [order.shipping.city, order.shipping.country].filter(Boolean).join(", ") : "";
   const coupon = Array.isArray(order.coupon_lines) && order.coupon_lines[0]?.code;

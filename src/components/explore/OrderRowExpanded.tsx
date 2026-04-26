@@ -37,7 +37,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   };
   const shipping = (order.shipping || {}) as typeof billing;
   const lineItems = Array.isArray(order.line_items) ? (order.line_items as Array<{
-    name?: string; sku?: string; quantity?: number; price?: number | string; total?: string; image?: { src?: string };
+    name?: string; sku?: string; quantity?: number; price?: number | string; subtotal?: string; total?: string; image?: { src?: string };
   }>) : [];
   const coupons = Array.isArray(order.coupon_lines) ? (order.coupon_lines as Array<{ code?: string; discount?: string }>) : [];
   const shippingLines = Array.isArray(order.shipping_lines) ? (order.shipping_lines as Array<{ method_title?: string; total?: string }>) : [];
@@ -45,6 +45,10 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
   const custName = getCustomerName(order.billing);
   const custEmail = getCustomerEmail(order.billing);
   const currency = order.currency || "KWD";
+  const computedSubtotal = lineItems.reduce((s, li) => {
+    const sub = Number(li.subtotal || 0);
+    return s + (sub > 0 ? sub : Number(li.total || 0));
+  }, 0);
 
   const { data: linkedCustomer } = useQuery({
     queryKey: ["order-customer-link", order.store_id, order.customer_id, custEmail],
@@ -161,7 +165,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
         <div className="space-y-1 pt-2 border-t border-border text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Subtotal</span>
-            <span className="font-mono">{order.subtotal ?? "—"} {currency}</span>
+            <span className="font-mono">{computedSubtotal.toFixed(2)} {currency}</span>
           </div>
           {order.total_tax != null && (
             <div className="flex justify-between text-muted-foreground">

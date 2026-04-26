@@ -152,7 +152,11 @@ export default function OrderDetailsPage() {
 
   const billing = (order?.billing || {}) as { first_name?: string; last_name?: string; email?: string; phone?: string; address_1?: string; address_2?: string; city?: string; state?: string; postcode?: string; country?: string };
   const shipping = (order?.shipping || {}) as typeof billing;
-  const lineItems = Array.isArray(order?.line_items) ? (order!.line_items as Array<{ name?: string; sku?: string; quantity?: number; price?: number | string; total?: string; image?: { src?: string }; meta_data?: Array<{ key?: string; value?: string; display_key?: string; display_value?: string }> }>) : [];
+  const lineItems = Array.isArray(order?.line_items) ? (order!.line_items as Array<{ name?: string; sku?: string; quantity?: number; price?: number | string; subtotal?: string; total?: string; image?: { src?: string }; meta_data?: Array<{ key?: string; value?: string; display_key?: string; display_value?: string }> }>) : [];
+  const computedSubtotal = lineItems.reduce((s, li) => {
+    const sub = Number(li.subtotal || 0);
+    return s + (sub > 0 ? sub : Number(li.total || 0));
+  }, 0);
   const coupons = Array.isArray(order?.coupon_lines) ? (order!.coupon_lines as Array<{ code?: string; discount?: string }>) : [];
   const shippingLines = Array.isArray(order?.shipping_lines) ? (order!.shipping_lines as Array<{ method_title?: string; total?: string }>) : [];
   const currency = order?.currency || "KWD";
@@ -334,7 +338,7 @@ export default function OrderDetailsPage() {
 
                     {/* Totals */}
                     <div className="mt-4 space-y-1.5 text-sm max-w-sm ml-auto">
-                      <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="font-mono">{order.subtotal ?? "—"} {currency}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="font-mono">{computedSubtotal.toFixed(2)} {currency}</span></div>
                       {coupons.map((c, i) => (
                         <div key={i} className="flex justify-between text-muted-foreground"><span className="flex items-center gap-1.5"><Tag className="h-3 w-3" />Coupon <Badge variant="outline" className="h-5 font-mono text-[10px]">{c.code}</Badge></span><span className="font-mono">-{c.discount ?? "0"} {currency}</span></div>
                       ))}
