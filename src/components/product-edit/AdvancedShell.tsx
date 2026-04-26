@@ -65,8 +65,8 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
       <Card>
         <CardContent className="p-0">
           {/* Tabs */}
-          <div className="flex items-center gap-1 px-3 pt-3 border-b border-border overflow-x-auto">
-            {steps.map((step) => {
+          <div className="flex items-center gap-1 px-2 pt-1 border-b border-border overflow-x-auto">
+            {steps.map((step, i) => {
               const isActive = step.key === activeTab;
               const completed = canAdvance(step.key);
               return (
@@ -75,21 +75,25 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
                   type="button"
                   onClick={() => { setErrors(null); setActiveTab(step.key); }}
                   className={cn(
-                    "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-md transition-colors whitespace-nowrap",
-                    isActive
-                      ? "text-foreground bg-background border-x border-t border-border -mb-px"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    "group relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap focus:outline-none",
+                    isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
+                  <span className={cn(
+                    "h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 transition-colors",
+                    completed
+                      ? "bg-success/15 text-success"
+                      : isActive
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15"
+                  )}>
+                    {completed ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
+                  </span>
                   <span>{step.label}</span>
-                  {completed && (
-                    <span className={cn(
-                      "h-4 w-4 rounded-full flex items-center justify-center shrink-0",
-                      isActive ? "bg-success text-success-foreground" : "bg-success/15 text-success"
-                    )}>
-                      <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
-                    </span>
-                  )}
+                  <span className={cn(
+                    "absolute left-2 right-2 -bottom-px h-0.5 rounded-full transition-all",
+                    isActive ? "bg-foreground" : "bg-transparent"
+                  )} />
                 </button>
               );
             })}
