@@ -28,16 +28,22 @@ function Inner() {
     const base = emptyProductForm();
     return initialType === "variable" ? { ...base, type: "variable" } : base;
   });
+  const [initialFormJson, setInitialFormJson] = useState<string>(() => {
+    const base = emptyProductForm();
+    return JSON.stringify(initialType === "variable" ? { ...base, type: "variable" } : base);
+  });
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
-  const dirty = !savedOnce && (form.name.trim().length > 0 || form.description.trim().length > 0 || form.regular_price.trim().length > 0 || form.sku.trim().length > 0 || form.images.length > 0 || form.categories.length > 0 || form.tags.length > 0 || form.attributes.length > 0);
+  const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
   useUnsavedChangesGuard(dirty);
 
   useEffect(() => {
     if (!router.isReady) return;
     if (router.query.type === "variable" && form.type !== "variable") {
       setForm((p) => ({ ...p, type: "variable" }));
+      const base = emptyProductForm();
+      setInitialFormJson(JSON.stringify({ ...base, type: "variable" }));
       setMode("advanced");
       setActiveTab("basic");
     }
