@@ -1162,6 +1162,58 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                             if (c.key === "synced_at") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.synced_at ? formatStoreDateTime(o.synced_at, storeTz) : "—"}</TableCell>;
                             }
+                            if (c.key === "actions") {
+                              const status = o.status || "";
+                              const isFinalState = status === "completed" || status === "cancelled" || status === "refunded";
+                              const isCompleting = completingId === o.id;
+                              return (
+                                <TableCell key={c.key} className="hidden md:table-cell sticky right-0 bg-background/95 backdrop-blur z-10" onClick={(e) => e.stopPropagation()}>
+                                  <TooltipProvider delayDuration={150}>
+                                    <div className="inline-flex items-center gap-1">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            disabled={isFinalState || isCompleting}
+                                            onClick={() => handleMarkComplete(o.id)}
+                                            className="inline-flex items-center justify-center h-7 w-7 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            {isCompleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>{isFinalState ? `Already ${status}` : "Mark complete"}</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            disabled={!defaultInvoice}
+                                            onClick={() => handlePrintTemplate(defaultInvoice?.id, o.id, "invoice")}
+                                            className="inline-flex items-center justify-center h-7 w-7 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            <Receipt className="h-3.5 w-3.5" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>{defaultInvoice ? "Print invoice" : "No invoice template"}</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            disabled={!defaultPickslip}
+                                            onClick={() => handlePrintTemplate(defaultPickslip?.id, o.id, "pickslip")}
+                                            className="inline-flex items-center justify-center h-7 w-7 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            <ClipboardList className="h-3.5 w-3.5" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>{defaultPickslip ? "Print pick slip" : "No pick slip template"}</TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </TooltipProvider>
+                                </TableCell>
+                              );
+                            }
                             return <TableCell key={c.key}>—</TableCell>;
                           })}
                         </TableRow>
