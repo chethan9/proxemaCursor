@@ -4,6 +4,7 @@ import { getStoreCreds, wooRequest, type WooStoreCreds } from "@/lib/woo-client"
 import type { Json } from "@/integrations/supabase/database.types";
 import type { TablesUpdate } from "@/integrations/supabase/helpers";
 import { WooApiError } from "@/lib/sync-error";
+import { renderInvoicePdfForOrder } from "@/lib/templates/render-invoice";
 
 // Budget per invocation: leave headroom under Vercel's function timeout.
 const MAX_RUNTIME_MS = 50_000;
@@ -220,6 +221,10 @@ async function deleteProduct(store: WooStoreCreds, productId: number, force = fa
 // --- Main processor --------------------------------------------------------
 
 async function processJob(job: JobRow, deadline: number): Promise<"done" | "partial" | "cancelled"> {
+  if (job.job_type === "print_invoices_bulk") {
+    return processPrintInvoicesJob(job, deadline);
+  }
+
   const store = await getStoreCreds(job.store_id);
   if (!store) {
     const payload: BulkJobUpdate = {
@@ -335,6 +340,190 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
   await supabaseAdmin.from("bulk_jobs").update(completedPayload).eq("id", job.id);
 
   return "done";
+}
+
+// --- Print invoices bulk handler ------------------------------------------
+
+async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"done" | "partial" | "cancelled"> {
+  const payload = job.payload as Record<string, unknown>;
+  const orderIds = (payload.order_ids as string[]) ?? [];
+  const templateId = payload.template_id as string;
+  const outputMode = (payload.output_mode as string) || "single-pdf";
+
+  if (!templateId) {
+    const p: BulkJobUpdate = { status: "failed", completed_at: new Date().toISOString(), error_message: "Missing template_id" };
+    await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
+    return "done";
+  }
+
+  const { data: store, error: storeErr } = await supabaseAdmin
+    .from("stores")
+    .select("client_id")
+    .eq("id", job.store_id)
+    .maybeSingle();
+  if (storeErr || !store?.client_id) {
+    const p: BulkJobUpdate = { status: "failed", completed_at: new Date().toISOString(), error_message: "Store or client missing" };
+    await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
+    return "done";
+  }
+  const clientId = store.client_id as string;
+
+  if (job.status === "pending") {
+    const p: BulkJobUpdate = { status: "running", started_at: new Date().toISOString() };
+    await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
+  }
+
+  let processed = job.processed;
+  let succeeded = job.succeeded;
+  let failed = job.failed;
+  const existingErrors: ItemError[] = Array.isArray(job.errors) ? (job.errors as unknown as ItemError[]) : [];
+  const errors: ItemError[] = [...existingErrors];
+
+  const remaining = orderIds.slice(processed);
+  const partsPrefix = `${clientId}/${job.id}/parts`;
+
+  // Render PDFs serially (puppeteer is heavy; concurrency 1 is safest)
+  for (let i = 0; i < remaining.length; i++) {
+    if (Date.now() > deadline) {
+      await saveProgress(job.id, processed, succeeded, failed, errors);
+      return "partial";
+    }
+    if (await checkCancelled(job.id)) {
+      await saveProgress(job.id, processed, succeeded, failed, errors);
+      return "cancelled";
+    }
+
+    const orderId = remaining[i];
+    try {
+      const { pdf } = await renderInvoicePdfForOrder(supabaseAdmin, {
+        storeId: job.store_id,
+        orderId,
+        templateId,
+      });
+      const partPath = `${partsPrefix}/${orderId}.pdf`;
+      const { error: upErr } = await supabaseAdmin.storage
+        .from("bulk-invoices")
+        .upload(partPath, pdf, { contentType: "application/pdf", upsert: true });
+      if (upErr) throw upErr;
+      succeeded++;
+    } catch (e) {
+      failed++;
+      errors.push({ id: orderId, error: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      processed++;
+    }
+    await saveProgress(job.id, processed, succeeded, failed, errors);
+  }
+
+  // Finalize once all orders processed
+  if (succeeded === 0) {
+    const p: BulkJobUpdate = {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      processed,
+      succeeded,
+      failed,
+      errors: toJson(errors),
+      error_message: `All ${failed} order${failed === 1 ? "" : "s"} failed${errors[0]?.error ? `: ${errors[0].error}` : ""}`,
+    };
+    await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
+    return "done";
+  }
+
+  let artifactPath: string;
+  try {
+    artifactPath = await finalizeBulkInvoiceArtifact(clientId, job.id, orderIds, outputMode);
+  } catch (e) {
+    const p: BulkJobUpdate = {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      processed,
+      succeeded,
+      failed,
+      errors: toJson(errors),
+      error_message: `Finalize failed: ${e instanceof Error ? e.message : "Unknown error"}`,
+    };
+    await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
+    return "done";
+  }
+
+  const newPayload = { ...payload, artifact_path: artifactPath };
+  const finalUpdate: BulkJobUpdate = {
+    status: "completed",
+    completed_at: new Date().toISOString(),
+    processed,
+    succeeded,
+    failed,
+    errors: toJson(errors),
+    payload: newPayload as unknown as Json,
+  };
+  await supabaseAdmin.from("bulk_jobs").update(finalUpdate).eq("id", job.id);
+  return "done";
+}
+
+async function finalizeBulkInvoiceArtifact(
+  clientId: string,
+  jobId: string,
+  orderIds: string[],
+  outputMode: string,
+): Promise<string> {
+  const partsPrefix = `${clientId}/${jobId}/parts`;
+  const ext = outputMode === "zip" ? "zip" : "pdf";
+  const finalKey = `${clientId}/${jobId}.${ext}`;
+
+  type Part = { id: string; data: Buffer };
+  const parts: Part[] = [];
+  for (const id of orderIds) {
+    const { data, error } = await supabaseAdmin.storage.from("bulk-invoices").download(`${partsPrefix}/${id}.pdf`);
+    if (!error && data) {
+      const buf = Buffer.from(await data.arrayBuffer());
+      parts.push({ id, data: buf });
+    }
+  }
+
+  let finalBuf: Buffer;
+  let contentType: string;
+  if (outputMode === "zip") {
+    const JSZip = (await import("jszip")).default;
+    const zip = new JSZip();
+    for (const p of parts) {
+      zip.file(`invoice-${p.id}.pdf`, p.data);
+    }
+    finalBuf = await zip.generateAsync({ type: "nodebuffer" });
+    contentType = "application/zip";
+  } else {
+    const { PDFDocument } = await import("pdf-lib");
+    const merged = await PDFDocument.create();
+    for (const p of parts) {
+      try {
+        const src = await PDFDocument.load(p.data);
+        const pages = await merged.copyPages(src, src.getPageIndices());
+        pages.forEach((pg) => merged.addPage(pg));
+      } catch {
+        // skip corrupt part
+      }
+    }
+    finalBuf = Buffer.from(await merged.save());
+    contentType = "application/pdf";
+  }
+
+  const { error: upErr } = await supabaseAdmin.storage
+    .from("bulk-invoices")
+    .upload(finalKey, finalBuf, { contentType, upsert: true });
+  if (upErr) throw upErr;
+
+  // Best-effort cleanup of parts
+  try {
+    const { data: list } = await supabaseAdmin.storage.from("bulk-invoices").list(`${clientId}/${jobId}/parts`);
+    if (list && list.length > 0) {
+      const paths = list.map((f) => `${clientId}/${jobId}/parts/${f.name}`);
+      await supabaseAdmin.storage.from("bulk-invoices").remove(paths);
+    }
+  } catch {
+    /* non-fatal */
+  }
+
+  return finalKey;
 }
 
 // --- Handler ---------------------------------------------------------------
