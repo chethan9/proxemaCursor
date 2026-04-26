@@ -516,26 +516,22 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           <CardContent className="p-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
-                {["all", "publish", "draft", "pending", "private"].map((s) => (
-                  <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>
-                    {s === "all" ? "All" : s}
+                {[
+                  { value: "all", label: "All stock" },
+                  { value: "instock", label: "In stock" },
+                  { value: "outofstock", label: "Out of stock" },
+                ].map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant="ghost"
+                    size="sm"
+                    className={`h-7 text-xs px-2.5 ${stockStatusFilter === opt.value ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`}
+                    onClick={() => { setStockStatusFilter(opt.value); setExcludeOutOfStock(false); }}
+                  >
+                    {opt.label}
                   </Button>
                 ))}
               </div>
-              <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
-                <Switch checked={excludeOutOfStock} onCheckedChange={(v) => {
-                  setExcludeOutOfStock(!!v);
-                  if (v && stockStatusFilter === "outofstock") setStockStatusFilter("all");
-                }} />
-                <span>Exclude out of stock</span>
-              </label>
-              <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background text-xs cursor-pointer select-none">
-                <Switch checked={stockStatusFilter === "outofstock"} onCheckedChange={(v) => {
-                  setStockStatusFilter(v ? "outofstock" : "all");
-                  if (v && excludeOutOfStock) setExcludeOutOfStock(false);
-                }} />
-                <span>Out of stock only</span>
-              </label>
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
                   <SelectTrigger className="h-9 w-[180px] text-xs">

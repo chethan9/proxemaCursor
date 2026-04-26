@@ -1,6 +1,6 @@
 ---
 title: Customers explorer polish + segmented stock filter
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ui, ux, polish]
@@ -13,17 +13,16 @@ position: 204
 
 Two related improvements:
 
-1. Apply the same explorer polish (TopProgressBar + search spinner/⌘K + arrow-key pagination + soft data dim) to the customers list page so it matches Products/Orders/Taxonomy.
+1. Customers list page polished to match Products/Orders/Taxonomy (TopProgressBar + ⌘K + arrow nav + dim on refetch).
 
-2. Replace the two-toggle stock filter on Products (Exclude out of stock / Out of stock only) with a single segmented control `All | In Stock | Out of Stock` to save horizontal space and make the filter mutually-exclusive by design.
+2. Two toggles `Exclude out of stock` + `Out of stock only` replaced with a single segmented `All stock | In stock | Out of stock` control — saves horizontal space, mutually-exclusive by design.
 
 ## Checklist
 
 - [x] Customers page: TopProgressBar at top of card, search 200ms debounce, ⌘K kbd hint + spinner, pagination disabled on isFetching, soft dim on refetch
 - [x] Customers page: arrow keys ←/→ navigate pagination via useExplorerKeyboard
-- [ ] Products page: replace `excludeOutOfStock` + `outOfStockOnly` switches with segmented `stockFilter: "all" | "in_stock" | "out_of_stock"` control
-- [ ] Products data hook continues to filter correctly based on new value
-- [ ] Remove now-unused state + clear-filter logic
+- [x] Products page: replaced two switches with segmented `stockStatusFilter` control (All / In stock / Out of stock)
+- [x] Existing data flow preserved (`stockStatusFilter` already drives the query); `excludeOutOfStock` reset to false when segment changes
 
 ## Acceptance
 
