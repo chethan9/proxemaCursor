@@ -1,6 +1,6 @@
 ---
 title: Variations grouping + enhanced bulk actions
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, ux]

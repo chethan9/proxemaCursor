@@ -1,6 +1,6 @@
 ---
 title: Advanced mode — tabbed nav with completion ticks
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, ux]

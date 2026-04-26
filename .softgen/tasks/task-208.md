@@ -1,6 +1,6 @@
 ---
 title: Simple product single-screen + attribute support
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, ux]

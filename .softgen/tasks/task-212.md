@@ -1,6 +1,6 @@
 ---
 title: Unsaved changes guard on product editor
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, ux, safety]
