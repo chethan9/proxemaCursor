@@ -28,11 +28,21 @@ function trim(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function toNumeric(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (!t) return null;
+    const n = parseFloat(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 function priceIsPositive(s: unknown): boolean {
-  const t = trim(s);
-  if (!t) return false;
-  const n = parseFloat(t);
-  return !Number.isNaN(n) && n > 0;
+  const n = toNumeric(s);
+  return n !== null && n > 0;
 }
 
 async function checkSkuConflict(storeId: string, sku: string): Promise<string | null> {
@@ -96,7 +106,6 @@ async function validateCreatePayload(
     }
     normalizeStockFields(payload);
   } else if (type === "variable") {
-    // Strip parent price — rule: variable parent must not carry price
     delete payload.regular_price;
     delete payload.sale_price;
     delete payload.price;
@@ -146,7 +155,6 @@ async function validateCreatePayload(
     errors.push({ field: "type", message: `Unsupported product type: ${type}` });
   }
 
-  // Image validation
   if (Array.isArray(payload.images)) {
     for (const img of payload.images as Record<string, unknown>[]) {
       if (!img.id && !trim(img.src)) {
@@ -156,7 +164,6 @@ async function validateCreatePayload(
     }
   }
 
-  // Server-side SKU uniqueness (parent)
   if (payload.sku) {
     const conflict = await checkSkuConflict(storeId, payload.sku as string);
     if (conflict) errors.push({ field: "sku", message: conflict });
@@ -223,79 +230,75 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const createdVars = Array.isArray(batchRes?.create) ? batchRes.create : [];
         if (createdVars.length > 0) {
           const now = new Date().toISOString();
-          const { data: parentRow } = await supabaseAdmin
+          // Insert parent first so variations have a parent_id to reference
+          const parentInsertRow = buildProductInsertRow(storeId, created);
+          const { data: parentInserted, error: parentErr } = await supabaseAdmin
             .from("products")
+            .upsert(parentInsertRow as never, { onConflict: "store_id,woo_id" })
             .select("id")
-            .eq("store_id", storeId)
-            .eq("woo_id", wooId)
-            .maybeSingle();
-          if (parentRow?.id) {
-            const varRows = createdVars.map((v) => {
-              const rp = v.regular_price as string | undefined;
-              const sp = v.sale_price as string | undefined;
-              const pr = v.price as string | undefined;
-              const dims = (v.dimensions as { length?: string; width?: string; height?: string } | undefined) || {};
-              return {
-                store_id: storeId,
-                product_id: parentRow.id,
-                woo_parent_id: wooId,
-                woo_id: v.id as number,
-                sku: (v.sku as string) || null,
-                regular_price: rp ? parseFloat(rp) : null,
-                sale_price: sp ? parseFloat(sp) : null,
-                price: pr ? parseFloat(pr) : null,
-                stock_quantity: (v.stock_quantity as number | null) ?? null,
-                stock_status: (v.stock_status as string) || null,
-                manage_stock: !!v.manage_stock,
-                status: (v.status as string) || "publish",
-                virtual: !!v.virtual,
-                downloadable: !!v.downloadable,
-                tax_class: (v.tax_class as string) || null,
-                weight: (v.weight as string) || null,
-                dimensions: JSON.parse(JSON.stringify(dims)) as Json,
-                description: (v.description as string) || null,
-                attributes: JSON.parse(JSON.stringify(v.attributes || [])) as Json,
-                image: v.image ? (JSON.parse(JSON.stringify(v.image)) as Json) : null,
-                gallery: [] as unknown as Json,
-                menu_order: (v.menu_order as number) || 0,
-                raw_data: JSON.parse(JSON.stringify(v)) as Json,
-                synced_at: now,
-              };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabaseAdmin as any)
-              .from("product_variations")
-              .upsert(varRows, { onConflict: "store_id,woo_id" });
+            .single();
+          if (parentErr) throw new Error(`DB upsert (parent) failed: ${parentErr.message} [code=${parentErr.code}] [details=${parentErr.details}]`);
+          const parentId = parentInserted!.id;
+
+          const varRows = createdVars.map((v) => ({
+            store_id: storeId,
+            product_id: parentId,
+            woo_parent_id: wooId,
+            woo_id: v.id as number,
+            sku: (v.sku as string) || null,
+            regular_price: toNumeric(v.regular_price),
+            sale_price: toNumeric(v.sale_price),
+            price: toNumeric(v.price),
+            stock_quantity: (v.stock_quantity as number | null) ?? null,
+            stock_status: (v.stock_status as string) || null,
+            manage_stock: !!v.manage_stock,
+            status: (v.status as string) || "publish",
+            virtual: !!v.virtual,
+            downloadable: !!v.downloadable,
+            tax_class: (v.tax_class as string) || null,
+            weight: (v.weight as string) || null,
+            dimensions: JSON.parse(JSON.stringify((v.dimensions as object) || {})) as Json,
+            description: (v.description as string) || null,
+            attributes: JSON.parse(JSON.stringify(v.attributes || [])) as Json,
+            image: v.image ? (JSON.parse(JSON.stringify(v.image)) as Json) : null,
+            gallery: [] as unknown as Json,
+            menu_order: (v.menu_order as number) || 0,
+            raw_data: JSON.parse(JSON.stringify(v)) as Json,
+            synced_at: now,
+          }));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: varErr } = await (supabaseAdmin as any)
+            .from("product_variations")
+            .upsert(varRows, { onConflict: "store_id,woo_id" });
+          if (varErr) {
+            console.error("[product-create][variations-upsert]", varErr);
           }
+
+          const { data: finalRow } = await supabaseAdmin
+            .from("products")
+            .select("*")
+            .eq("id", parentId)
+            .single();
+
+          void logActivity({
+            action: "product.create",
+            entityType: "product",
+            entityId: parentId,
+            after: (finalRow ?? parentInsertRow) as Record<string, unknown>,
+            metadata: { woo_id: wooId, store_id: storeId, type: "variable" },
+            req,
+          });
+
+          return res.status(200).json(finalRow ?? parentInsertRow);
         }
       } catch (ve) {
-        console.error("[variations-batch]", ve);
+        console.error("[product-create][variations-batch]", ve);
+        const message = ve instanceof Error ? ve.message : "Variation batch failed";
+        return res.status(500).json({ error: "Failed to create variations", message });
       }
     }
 
-    const insertRow = {
-      store_id: storeId,
-      woo_id: wooId,
-      name: (created.name as string) ?? null,
-      slug: (created.slug as string) ?? null,
-      sku: (created.sku as string) ?? null,
-      price: created.price ? parseFloat(created.price as string) : null,
-      regular_price: created.regular_price ? parseFloat(created.regular_price as string) : null,
-      sale_price: created.sale_price ? parseFloat(created.sale_price as string) : null,
-      manage_stock: (created.manage_stock as boolean | null) ?? null,
-      stock_quantity: (created.stock_quantity as number) ?? null,
-      stock_status: (created.stock_status as string) ?? null,
-      status: (created.status as string) ?? null,
-      type: (created.type as string) ?? null,
-      description: (created.description as string) ?? null,
-      short_description: (created.short_description as string) ?? null,
-      categories: created.categories ?? [],
-      tags: created.tags ?? [],
-      images: created.images ?? [],
-      attributes: created.attributes ?? [],
-      raw_data: created,
-      synced_at: new Date().toISOString(),
-    };
+    const insertRow = buildProductInsertRow(storeId, created);
     const { data: inserted, error: insertErr } = await supabaseAdmin
       .from("products")
       .upsert(insertRow as never, { onConflict: "store_id,woo_id" })
@@ -304,18 +307,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (insertErr) {
       console.error("[product-create][db-upsert]", insertErr);
+      return res.status(500).json({
+        error: "Product created in WooCommerce but failed to save locally",
+        message: insertErr.message,
+        code: insertErr.code,
+        details: insertErr.details,
+        woo_id: wooId,
+      });
     }
 
     void logActivity({
       action: "product.create",
       entityType: "product",
-      entityId: inserted?.id ?? `woo-${wooId}`,
-      after: (inserted ?? insertRow) as Record<string, unknown>,
+      entityId: inserted.id,
+      after: inserted as Record<string, unknown>,
       metadata: { woo_id: wooId, store_id: storeId },
       req,
     });
 
-    return res.status(200).json(inserted || { ...insertRow, id: `woo-${wooId}` });
+    return res.status(200).json(inserted);
   } catch (e) {
     console.error("[product-create]", e);
     const message = e instanceof Error ? e.message : "Create failed";
@@ -329,4 +339,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       blocking_hint: ctx?.blocking_hint,
     });
   }
+}
+
+function buildProductInsertRow(storeId: string, created: Record<string, unknown>) {
+  return {
+    store_id: storeId,
+    woo_id: created.id as number,
+    name: (created.name as string) ?? null,
+    slug: (created.slug as string) ?? null,
+    sku: (created.sku as string) ?? null,
+    price: toNumeric(created.price),
+    regular_price: toNumeric(created.regular_price),
+    sale_price: toNumeric(created.sale_price),
+    manage_stock: (created.manage_stock as boolean | null) ?? null,
+    stock_quantity: (created.stock_quantity as number) ?? null,
+    stock_status: (created.stock_status as string) ?? null,
+    status: (created.status as string) ?? null,
+    type: (created.type as string) ?? null,
+    description: (created.description as string) ?? null,
+    short_description: (created.short_description as string) ?? null,
+    categories: (created.categories ?? []) as Json,
+    tags: (created.tags ?? []) as Json,
+    images: (created.images ?? []) as Json,
+    attributes: (created.attributes ?? []) as Json,
+    raw_data: created as Json,
+    synced_at: new Date().toISOString(),
+  };
 }
