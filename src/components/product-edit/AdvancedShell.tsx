@@ -42,7 +42,6 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
     ? ALL_STEPS.filter((s) => s.key !== "pricing")
     : ALL_STEPS;
 
-  // Clamp activeTab when type toggles and current tab is no longer in steps
   useEffect(() => {
     if (!steps.find((s) => s.key === activeTab)) {
       setActiveTab(steps[0].key);
@@ -52,14 +51,9 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
 
   const currentIdx = Math.max(0, steps.findIndex((t) => t.key === activeTab));
   const isLast = currentIdx === steps.length - 1;
-  const activeLabel = steps[currentIdx]?.label ?? "";
   const currentStatus = STATUS_OPTIONS.find((s) => s.value === form.status) ?? STATUS_OPTIONS[0];
 
   const goNext = () => {
-    if (!canAdvance(activeTab)) {
-      setErrors(`Please complete the required fields in ${activeLabel} before continuing.`);
-      return;
-    }
     setErrors(null);
     if (!isLast) setActiveTab(steps[currentIdx + 1].key);
   };
@@ -72,76 +66,59 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
       <Card>
-        <CardContent className="p-6 space-y-6">
-          {/* Stepper */}
-          <div className="flex items-center justify-between gap-1.5 pt-1">
-            {steps.map((step, i) => {
-              const stepIdx = i;
-              const isActive = stepIdx === currentIdx;
-              const completed = canAdvance(step.key) && !isActive;
-              const isLastStep = stepIdx === steps.length - 1;
-              const nextCompleted = !isLastStep && canAdvance(steps[stepIdx + 1].key) && stepIdx + 1 !== currentIdx;
-              const connectorDone = completed && (nextCompleted || stepIdx + 1 === currentIdx);
-
+        <CardContent className="p-0">
+          {/* Tabs */}
+          <div className="flex items-center gap-1 px-3 pt-3 border-b border-border overflow-x-auto">
+            {steps.map((step) => {
+              const isActive = step.key === activeTab;
+              const completed = canAdvance(step.key);
               return (
-                <div key={step.key} className={cn("flex items-center", isLastStep ? "" : "flex-1")}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab(step.key)}
-                    className="group flex flex-col items-center gap-2 outline-none"
-                  >
-                    <div
-                      className={cn(
-                        "h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all",
-                        isActive && "bg-primary text-primary-foreground border-primary ring-4 ring-primary/15 shadow-sm",
-                        completed && "bg-success text-success-foreground border-success",
-                        !isActive && !completed && "bg-muted text-muted-foreground border-border group-hover:border-foreground/30"
-                      )}
-                    >
-                      {completed ? <Check className="h-4 w-4" strokeWidth={3} /> : stepIdx + 1}
-                    </div>
-                    <div className={cn(
-                      "text-[11px] font-medium whitespace-nowrap transition-colors",
-                      isActive && "text-foreground",
-                      completed && "text-success",
-                      !isActive && !completed && "text-muted-foreground"
-                    )}>
-                      {step.label}
-                    </div>
-                  </button>
-                  {!isLastStep && (
-                    <div className={cn(
-                      "h-0.5 flex-1 mx-2 -mt-5 rounded-full transition-colors",
-                      connectorDone ? "bg-success" : "bg-border"
-                    )} />
+                <button
+                  key={step.key}
+                  type="button"
+                  onClick={() => { setErrors(null); setActiveTab(step.key); }}
+                  className={cn(
+                    "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-md transition-colors whitespace-nowrap",
+                    isActive
+                      ? "text-foreground bg-background border-x border-t border-border -mb-px"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
-                </div>
+                >
+                  <span>{step.label}</span>
+                  {completed && (
+                    <span className={cn(
+                      "h-4 w-4 rounded-full flex items-center justify-center shrink-0",
+                      isActive ? "bg-success text-success-foreground" : "bg-success/15 text-success"
+                    )}>
+                      <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
 
-          <div className="border-t border-border" />
+          <div className="p-6 space-y-6">
+            <div>{tabContent[activeTab]}</div>
 
-          <div>{tabContent[activeTab]}</div>
+            {errors && <div className="text-sm text-destructive">{errors}</div>}
 
-          {errors && <div className="text-sm text-destructive">{errors}</div>}
-
-          <div className="flex items-center justify-between pt-3 border-t">
-            <Button variant="ghost" onClick={onCancel} className="text-muted-foreground">Cancel</Button>
-            <div className="flex items-center gap-2">
-              {currentIdx > 0 && (
-                <Button variant="outline" onClick={goBack} className="rounded-full"><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Button>
-              )}
-              {!isLast ? (
-                <Button onClick={goNext} className="rounded-full bg-foreground text-background hover:bg-foreground/90">
-                  Next Step <ArrowRight className="h-4 w-4 ml-1.5" />
-                </Button>
-              ) : (
-                <Button onClick={onPublish} disabled={saving || !form.name.trim()} className="rounded-full bg-foreground text-background hover:bg-foreground/90">
-                  {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save Changes" : "Publish Product")}
-                  {!saving && <ArrowRight className="h-4 w-4 ml-1.5" />}
-                </Button>
-              )}
+            <div className="flex items-center justify-between pt-3 border-t">
+              <Button variant="ghost" onClick={onCancel} className="text-muted-foreground">Cancel</Button>
+              <div className="flex items-center gap-2">
+                {currentIdx > 0 && (
+                  <Button variant="outline" onClick={goBack} className="rounded-full"><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Button>
+                )}
+                {!isLast ? (
+                  <Button onClick={goNext} className="rounded-full bg-foreground text-background hover:bg-foreground/90">
+                    Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                  </Button>
+                ) : (
+                  <Button onClick={onPublish} disabled={saving || !form.name.trim()} className="rounded-full bg-foreground text-background hover:bg-foreground/90">
+                    {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save Changes" : "Publish Product")}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
