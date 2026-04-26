@@ -109,7 +109,7 @@ const SORT_OPTIONS: { field: OrderSortField; direction: SortDirection; label: st
 ];
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000, 2500, 5000];
-const ORDER_STATUSES = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
+const ORDER_STATUSES = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
 const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIcon }> = {
   completed: { wrap: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900", dot: "bg-emerald-500", Icon: CheckCircle2 },
