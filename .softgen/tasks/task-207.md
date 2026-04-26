@@ -1,6 +1,6 @@
 ---
 title: Global top progress bar
-status: todo
+status: done
 priority: high
 type: feature
 tags: [ui, ux, loading]
