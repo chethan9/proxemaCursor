@@ -1,5 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
-import bwipjs from "bwip-js";
+import bwipjs from "bwip-js/node";
 import QRCode from "qrcode";
 
 function escape(s: string): string {
