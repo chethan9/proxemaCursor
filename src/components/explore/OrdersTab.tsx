@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
@@ -232,39 +233,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     }
   }, [invoiceTemplates, printTemplateId]);
 
-  const submitPrint = useCallback(async () => {
-    if (!printTemplateId || selectedIds.size === 0 || overLimit) return;
-    const orderIds = orders.filter((o) => selectedIds.has(o.id)).map((o) => o.id);
-    if (orderIds.length === 0) {
-      toast({ title: "Nothing to print", description: "Selected orders not on this page", variant: "destructive" });
-      return;
-    }
-    setPrintSubmitting(true);
-    try {
-      await createBulkJob({
-        store_id: storeId,
-        job_type: "print_invoices_bulk",
-        total: orderIds.length,
-        payload: {
-          type: "print_invoices_bulk",
-          order_ids: orderIds,
-          template_id: printTemplateId,
-          output_mode: printOutputMode,
-        },
-      });
-      toast({
-        title: "Print job queued",
-        description: `Generating ${orderIds.length} invoice${orderIds.length === 1 ? "" : "s"}. Download will appear when ready.`,
-      });
-      setSelectedIds(new Set());
-      setPrintDialogOpen(false);
-    } catch (err) {
-      toast({ title: "Failed to queue print job", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setPrintSubmitting(false);
-    }
-  }, [printTemplateId, selectedIds, orders, overLimit, storeId, printOutputMode, toast]);
-
   const handleMarkComplete = useCallback(async (orderId: string) => {
     setCompletingId(orderId);
     try {
@@ -303,101 +271,38 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
 
-  // Clear selection when data/filters change
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [storeId, debouncedSearch, statusFilter, paymentFilter, totalMin, totalMax, page, pageSize]);
-
-  const visibleColList = useMemo(
-    () => columnOrder
-      .map((k) => COLUMNS.find((c) => c.key === k))
-      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
-    [visibleCols, columnOrder]
-  );
-
-  const dateBounds = useMemo(() => {
-    const now = new Date();
-    const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
-    const endOfDay = (d: Date) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
-    if (dateRange === "today") return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
-    if (dateRange === "yesterday") { const y = new Date(now); y.setDate(y.getDate() - 1); return { from: startOfDay(y).toISOString(), to: endOfDay(y).toISOString() }; }
-    if (dateRange === "7d") { const f = new Date(now); f.setDate(f.getDate() - 7); return { from: f.toISOString(), to: now.toISOString() }; }
-    if (dateRange === "30d") { const f = new Date(now); f.setDate(f.getDate() - 30); return { from: f.toISOString(), to: now.toISOString() }; }
-    if (dateRange === "90d") { const f = new Date(now); f.setDate(f.getDate() - 90); return { from: f.toISOString(), to: now.toISOString() }; }
-    if (dateRange === "custom") {
-      return {
-        from: customFrom ? startOfDay(customFrom).toISOString() : undefined,
-        to: customTo ? endOfDay(customTo).toISOString() : undefined,
-      };
-    }
-    return { from: undefined, to: undefined };
-  }, [dateRange, customFrom, customTo]);
-
-  const { data: ordersResult, isLoading: loading, isFetching, isPlaceholderData } = useOrders({
-    storeId,
-    page,
-    pageSize,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-    statusFilter,
-    paymentMethodFilter: paymentFilter,
-    totalMin: totalMin ? parseFloat(totalMin) : undefined,
-    totalMax: totalMax ? parseFloat(totalMax) : undefined,
-    dateFrom: dateBounds.from,
-    dateTo: dateBounds.to,
-  });
-  const orders = ordersResult?.data ?? [];
-  const orderCount = ordersResult?.count ?? 0;
-  void isPlaceholderData;
-  const showRefetchOverlay = isFetching && !loading && orders.length > 0;
-  useLoadingEffect(isFetching);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  useExplorerKeyboard({
-    searchRef: searchInputRef,
-    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < orderCount && !isFetching) setPage((p) => p + 1); },
-  });
-
-  const submitBulk = useCallback(async () => {
-    if (!bulkAction || selectedIds.size === 0 || overLimit) return;
-    const orderIds = orders
-      .filter((o) => selectedIds.has(o.id))
-      .map((o) => o.woo_id);
+  const submitPrint = useCallback(async () => {
+    if (!printTemplateId || selectedIds.size === 0 || overLimit) return;
+    const orderIds = orders.filter((o) => selectedIds.has(o.id)).map((o) => o.id);
     if (orderIds.length === 0) {
-      toast({ title: "Nothing to process", description: "Selected orders not found on this page", variant: "destructive" });
+      toast({ title: "Nothing to print", description: "Selected orders not on this page", variant: "destructive" });
       return;
     }
-    setBulkSubmitting(true);
+    setPrintSubmitting(true);
     try {
-      const payload = bulkAction.type === "update_status"
-        ? { type: "update_order_status" as const, order_ids: orderIds, new_status: bulkAction.status }
-        : { type: "delete_orders" as const, order_ids: orderIds };
-      const jobType = bulkAction.type === "update_status" ? "update_order_status" : "delete_orders";
       await createBulkJob({
         store_id: storeId,
-        job_type: jobType,
+        job_type: "print_invoices_bulk",
         total: orderIds.length,
-        payload,
+        payload: {
+          type: "print_invoices_bulk",
+          order_ids: orderIds,
+          template_id: printTemplateId,
+          output_mode: printOutputMode,
+        },
       });
       toast({
-        title: "Bulk job queued",
-        description: `Processing ${orderIds.length} orders in the background. Check progress in the bulk jobs panel.`,
+        title: "Print job queued",
+        description: `Generating ${orderIds.length} invoice${orderIds.length === 1 ? "" : "s"}. Download will appear when ready.`,
       });
       setSelectedIds(new Set());
-      setBulkAction(null);
+      setPrintDialogOpen(false);
     } catch (err) {
-      toast({
-        title: "Failed to queue bulk job",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to queue print job", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
     } finally {
-      setBulkSubmitting(false);
+      setPrintSubmitting(false);
     }
-  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
-
-  const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
+  }, [printTemplateId, selectedIds, orders, overLimit, storeId, printOutputMode, toast]);
 
   const handleExportCsv = useCallback(() => {
     if (orders.length === 0) return;
