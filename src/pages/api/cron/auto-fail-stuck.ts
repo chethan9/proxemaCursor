@@ -176,16 +176,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("status", "running")
         .limit(1);
 
-      const updates: Record<string, unknown> = { is_initial_sync_pending: false };
-      if (!anyRunning || anyRunning.length === 0) {
-        updates.status = "connected";
-        updates.last_sync_at = new Date().toISOString();
-      }
+      await unlockStoreInitialSync(supabase, sid);
 
-      await supabase
-        .from("stores")
-        .update(updates)
-        .eq("id", sid);
+      if (!anyRunning || anyRunning.length === 0) {
+        await supabase
+          .from("stores")
+          .update({ status: "connected", last_sync_at: new Date().toISOString() })
+          .eq("id", sid);
+      }
     }
 
     // Bulk jobs cleanup (unchanged)
