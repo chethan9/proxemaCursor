@@ -1,6 +1,6 @@
 ---
 title: PDF + HTML renderers and variable interpolation engine
-status: todo
+status: done
 priority: high
 type: feature
 tags: [templates, render, pdf, react-pdf]
