@@ -23,6 +23,7 @@ import { useActiveSync } from "@/hooks/queries/useActiveSync";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { HistoryWindowCard } from "@/components/site/HistoryWindowCard";
 import { DefaultTemplatesCard } from "@/components/site/DefaultTemplatesCard";
+import { StoreProfileCard } from "@/components/site/StoreProfileCard";
 
 const SYNC_INTERVALS = [
   { value: "0", label: "Manual only" },
@@ -236,7 +237,7 @@ function SettingsInner() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* LEFT COLUMN: Branding + Connection */}
+        {/* LEFT COLUMN: Branding + Connection + Store Profile + Default Templates */}
         <div className="space-y-4">
           {/* Site Logo */}
           <Card>
@@ -301,9 +302,13 @@ function SettingsInner() {
               </div>
             </CardContent>
           </Card>
+
+          <StoreProfileCard store={store} onSaved={() => { getStore(store.id).then((s) => s && setStore(s)); }} />
+
+          <DefaultTemplatesCard clientId={(store as { client_id?: string | null }).client_id || null} />
         </div>
 
-        {/* RIGHT COLUMN: Scheduled Sync + Danger Zone */}
+        {/* RIGHT COLUMN: Scheduled Sync + Historical + Danger Zone */}
         <div className="space-y-4">
           {/* Scheduled Sync */}
           <Card>
@@ -357,10 +362,8 @@ function SettingsInner() {
             storeId={store.id}
             clientId={(store as { client_id?: string | null }).client_id || null}
             ordersHistoryFrom={(store as { orders_history_from?: string | null }).orders_history_from || null}
-            onSaved={() => { getStore(store.id).then(setStore); }}
+            onSaved={() => { getStore(store.id).then((s) => s && setStore(s)); }}
           />
-          
-          <DefaultTemplatesCard clientId={(store as { client_id?: string | null }).client_id || null} />
 
           {/* Danger Zone */}
           <Card className="border-destructive/40">
