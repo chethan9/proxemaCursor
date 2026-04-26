@@ -767,7 +767,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (selectedIds.size > 0) toggleSelect(p.id);
                               else if (!locked) setQuickEditProduct(p);
                             }}
-                            className={`group relative border rounded-lg overflow-hidden bg-card hover:shadow-md transition ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                            className={`group relative border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
                             title={locked ? "Editing is disabled during initial sync" : undefined}
                           >
                             <div
@@ -815,7 +815,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             if (selectedIds.size > 0) toggleSelect(p.id);
                             else if (!locked) setQuickEditProduct(p);
                           }}
-                          className={`group border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                          className={`group relative border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
                           title={locked ? "Editing is disabled during initial sync" : undefined}
                         >
                           <div
@@ -1027,164 +1027,227 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 return (
                                   <TableCell key={c.key} className="max-w-[320px]">
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <div className="font-medium truncate">{p.name || "—"}</div>
-                                      <SyncPill entityType="product" entityId={p.id} />
+                                      <span className="truncate">{p.name || "—"}</span>
                                     </div>
-                                    {p.type && p.type !== "simple" && (
-                                      <div className="text-[10px] text-muted-foreground uppercase mt-0.5">{p.type}</div>
-                                    )}
                                   </TableCell>
                                 );
                               }
                               if (c.key === "status") {
-                                const statusColor: Record<string, string> = {
-                                  publish: "bg-success/10 text-success border-success/20",
-                                  draft: "bg-muted text-muted-foreground border-border",
-                                  pending: "bg-warning/10 text-warning border-warning/20",
-                                  private: "bg-secondary text-secondary-foreground border-border",
-                                };
-                                const cls = statusColor[p.status || ""] || "bg-muted text-muted-foreground border-border";
                                 return (
                                   <TableCell key={c.key}>
-                                    <Badge variant="outline" className={`capitalize text-[10px] ${cls}`}>
-                                      {p.status === "publish" ? "Active" : p.status || "—"}
-                                    </Badge>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-medium">{statusLabel}</span>
+                                      <div className="flex items-center gap-0.5">
+                                        <Button variant="ghost" size="sm" className={`h-6 w-6 p-0 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={(e) => { e.stopPropagation(); if (!locked) router.push(`/sites/${storeId}/products/edit/${p.id}`); }} title={locked ? "Available after initial sync completes" : "Edit product"}>
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                        <Switch
+                                          checked={p.status === "publish"}
+                                          onCheckedChange={(v) => {
+                                            if (!v) {
+                                              setBulkDialog("status");
+                                              setNewProductStatus("draft");
+                                            } else {
+                                              setBulkDialog("status");
+                                              setNewProductStatus("publish");
+                                            }
+                                          }}
+                                          disabled={locked}
+                                          aria-label={`Toggle product ${p.name || "—"} status`}
+                                        />
+                                      </div>
+                                    </div>
                                   </TableCell>
                                 );
                               }
-                              if (c.key === "sku") return <TableCell key={c.key} className="font-mono text-sm text-muted-foreground">{p.sku || "—"}</TableCell>;
+                              if (c.key === "sku") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.sku || "—"}</span>
+                                  </TableCell>
+                                );
+                              }
                               if (c.key === "price") {
                                 return (
-                                  <TableCell key={c.key} className="font-mono text-sm text-right">
-                                    {p.sale_price && p.sale_price !== p.regular_price ? (
-                                      <div>
-                                        <span>{p.sale_price}</span>
-                                        <span className="ml-1.5 line-through text-muted-foreground text-xs">{p.regular_price}</span>
-                                      </div>
-                                    ) : (p.price || "—")}
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{fmtPrice(p.price)}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "regular_price") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{fmtPrice(p.regular_price)}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "sale_price") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{fmtPrice(p.sale_price)}</span>
                                   </TableCell>
                                 );
                               }
                               if (c.key === "stock") {
-                                const qty = p.stock_quantity;
-                                const status = p.stock_status;
                                 return (
-                                  <TableCell key={c.key} className="text-sm text-right">
-                                    {qty != null ? (
-                                      <span className={qty === 0 ? "text-destructive" : qty < 5 ? "text-warning" : ""}>{qty} in stock</span>
-                                    ) : status === "instock" ? (
-                                      <span className="text-success">In stock</span>
-                                    ) : status === "outofstock" ? (
-                                      <span className="text-destructive">Out of stock</span>
-                                    ) : "—"}
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.stock_quantity ?? "—"}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "stock_status") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.stock_status}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "manage_stock") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{String((p.raw_data?.manage_stock as boolean | string) ?? "")}</span>
                                   </TableCell>
                                 );
                               }
                               if (c.key === "category") {
-                                const cats = getCategoryNames(p.categories);
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{cats || "—"}</TableCell>;
-                              }
-                              if (c.key === "sales") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.synced_at ? new Date(p.synced_at).toLocaleString() : "—"}</TableCell>;
-                              if (c.key === "created") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}</TableCell>;
-                              if (c.key === "updated") return <TableCell key={c.key} className="text-xs text-muted-foreground">{p.updated_at ? new Date(p.updated_at).toLocaleString() : "—"}</TableCell>;
-                              if (c.key === "regular_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.regular_price || "—"}</TableCell>;
-                              if (c.key === "sale_price") return <TableCell key={c.key} className="font-mono text-sm text-right">{p.sale_price || "—"}</TableCell>;
-                              if (c.key === "stock_status") {
-                                const s = p.stock_status;
                                 return (
-                                  <TableCell key={c.key} className="text-xs">
-                                    <span className={s === "instock" ? "text-success" : s === "outofstock" ? "text-destructive" : "text-muted-foreground"}>{s || "—"}</span>
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{getCategoryNames(p.categories)}</span>
                                   </TableCell>
                                 );
                               }
-                              if (c.key === "type") return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{p.type || "—"}</TableCell>;
-                              if (c.key === "slug") return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground max-w-[200px] truncate">{p.slug || "—"}</TableCell>;
-                              if (c.key === "wooId") return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{p.woo_id ?? "—"}</TableCell>;
+                              if (c.key === "type") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.type}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "slug") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.slug}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "wooId") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.woo_id ?? "—"}</span>
+                                  </TableCell>
+                                );
+                              }
                               if (c.key === "parent_id") {
-                                const pid = p.raw_data?.parent_id as number | undefined;
-                                return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{pid || "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.raw_data?.parent_id as number) ?? "—"}</span>
+                                  </TableCell>
+                                );
                               }
                               if (c.key === "permalink") {
-                                const link = p.raw_data?.permalink as string | undefined;
-                                return <TableCell key={c.key} className="text-xs max-w-[220px] truncate">{link ? <a href={link} target="_blank" rel="noreferrer" className="text-primary hover:underline">{link}</a> : "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.raw_data?.permalink as string) || "—"}</span>
+                                  </TableCell>
+                                );
                               }
-                              if (c.key === "tax_status") return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{(p.raw_data?.tax_status as string) || "—"}</TableCell>;
-                              if (c.key === "tax_class") return <TableCell key={c.key} className="text-xs text-muted-foreground">{(p.raw_data?.tax_class as string) || "—"}</TableCell>;
+                              if (c.key === "tax_status") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.raw_data?.tax_status as string) || "—"}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "tax_class") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.raw_data?.tax_class as string) || "—"}</span>
+                                  </TableCell>
+                                );
+                              }
                               if (c.key === "shipping_required") {
-                                const sr = p.raw_data?.shipping_required;
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground">{sr === true ? "Yes" : sr === false ? "No" : "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{String((p.raw_data?.shipping_required as boolean) ?? "")}</span>
+                                  </TableCell>
+                                );
                               }
-                              if (c.key === "images_count") return <TableCell key={c.key} className="text-xs text-muted-foreground text-right">{Array.isArray(p.images) ? p.images.length : 0}</TableCell>;
+                              if (c.key === "images_count") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{Array.isArray(p.images) ? p.images.length : 0}</span>
+                                  </TableCell>
+                                );
+                              }
                               if (c.key === "short_desc") {
-                                const txt = (p.short_description || "").replace(/<[^>]+>/g, "");
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate">{txt || "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200)}</span>
+                                  </TableCell>
+                                );
                               }
                               if (c.key === "description") {
-                                const txt = (p.description || "").replace(/<[^>]+>/g, "");
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[320px] truncate">{txt || "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.description || "").replace(/<[^>]+>/g, "").slice(0, 500)}</span>
+                                  </TableCell>
+                                );
                               }
                               if (c.key === "attributes") {
-                                const attrs = Array.isArray(p.attributes) ? p.attributes : [];
-                                const summary = attrs.map((a: unknown) => {
-                                  const obj = a as { name?: string; options?: string[] };
-                                  return obj.name ? `${obj.name}${obj.options?.length ? `: ${obj.options.slice(0, 2).join(", ")}` : ""}` : "";
-                                }).filter(Boolean).join(" • ");
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[260px] truncate">{summary || "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{JSON.stringify(p.attributes || [])}</span>
+                                  </TableCell>
+                                );
                               }
                               if (c.key === "date_created") {
-                                const d = p.raw_data?.date_created as string | undefined;
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground">{d ? new Date(d).toLocaleString() : "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.raw_data?.date_created as string) || "—"}</span>
+                                  </TableCell>
+                                );
                               }
                               if (c.key === "date_modified") {
-                                const d = p.raw_data?.date_modified as string | undefined;
-                                return <TableCell key={c.key} className="text-xs text-muted-foreground">{d ? new Date(d).toLocaleString() : "—"}</TableCell>;
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{(p.raw_data?.date_modified as string) || "—"}</span>
+                                  </TableCell>
+                                );
                               }
-                              return <TableCell key={c.key}>—</TableCell>;
+                              if (c.key === "sales") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.synced_at || "—"}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "created") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.created_at || "—"}</span>
+                                  </TableCell>
+                                );
+                              }
+                              if (c.key === "updated") {
+                                return (
+                                  <TableCell key={c.key}>
+                                    <span className="text-xs font-mono truncate">{p.updated_at || "—"}</span>
+                                  </TableCell>
+                                );
+                              }
+                              return null;
                             })}
-                          </TableRow>
-                          {isExpanded && (
-                            <TableRow className="bg-muted/30 hover:bg-muted/30" data-expanded-row={p.id}>
-                              <TableCell colSpan={visibleColList.length + 1} className="p-0 border-t border-border">
-                                <div onClick={(e) => e.stopPropagation()}>
-                                  <ProductRowExpanded
-                                    product={p}
-                                    storeUrl={storeUrl}
-                                    onClose={() => setExpandedRowId(null)}
-                                    onSaved={() => {
-                                      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-                                    }}
-                                  />
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
+                          </TableCell>
                         </React.Fragment>
                       );
-                    })
-                  )}
-                </TableBody>
+                    })}
+                  </TableBody>
+                </Table>
               </Table>
             </div>
           )}
         </CardContent>
-        <TableLoadingOverlay show={showRefetchOverlay} />
       </Card>
-
-      <ProductQuickEdit
-        product={quickEditProduct}
-        open={!!quickEditProduct}
-        onOpenChange={(o) => !o && setQuickEditProduct(null)}
-        siteName={storeName}
-      />
-
-      <ProductTypeDialog
-        open={typeDialogOpen}
-        onOpenChange={setTypeDialogOpen}
-        onSelect={(type) => {
-          setTypeDialogOpen(false);
-          router.push(`/sites/${storeId}/products/new?type=${type}`);
-        }}
-      />
     </div>
   );
 }
