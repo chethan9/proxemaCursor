@@ -10,7 +10,6 @@ export type AdvancedTabKey = "basic" | "pricing" | "inventory" | "variants";
 
 const ALL_STEPS: { key: AdvancedTabKey; label: string }[] = [
   { key: "basic", label: "Basics" },
-  { key: "pricing", label: "Pricing" },
   { key: "inventory", label: "Inventory" },
   { key: "variants", label: "Variants" },
 ];
@@ -38,9 +37,7 @@ type Props = {
 export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit }: Props) {
   const [errors, setErrors] = useState<string | null>(null);
 
-  const steps = form.type === "variable"
-    ? ALL_STEPS.filter((s) => s.key !== "pricing")
-    : ALL_STEPS;
+  const steps = ALL_STEPS;
 
   useEffect(() => {
     if (!steps.find((s) => s.key === activeTab)) {

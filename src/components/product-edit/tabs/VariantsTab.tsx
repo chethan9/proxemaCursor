@@ -16,11 +16,11 @@ type Props = {
 };
 
 export function VariantsTab({ storeId, productId, form, setForm }: Props) {
-  const [productMode, setProductMode] = useState<"simple" | "variable">(form.type === "variable" ? "variable" : "simple");
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadedFromWoo, setLoadedFromWoo] = useState(false);
   const fetchedRef = useRef(false);
+  const productMode: "simple" | "variable" = form.type === "variable" ? "variable" : "simple";
 
   const loadVariations = async (refresh = false) => {
     if (!productId || productMode !== "variable") return;
@@ -50,15 +50,6 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     void loadVariations(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, productMode]);
-
-  const setMode = (m: "simple" | "variable") => {
-    setProductMode(m);
-    setForm((p) => ({ ...p, type: m === "variable" ? "variable" : "simple" }));
-    if (m === "variable" && productId && !fetchedRef.current) {
-      fetchedRef.current = true;
-      void loadVariations(false);
-    }
-  };
 
   const regenerate = () => {
     const fresh = generateMatrix(form.attributes);
@@ -134,17 +125,6 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-0 rounded-full bg-muted/50 p-1">
-        <button type="button" onClick={() => setMode("simple")} className={cn("py-2 text-sm rounded-full transition-colors", productMode === "simple" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Simple Product</button>
-        <button type="button" onClick={() => setMode("variable")} className={cn("py-2 text-sm rounded-full transition-colors", productMode === "variable" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Variable Product</button>
-      </div>
-
-      {productMode === "simple" && (
-        <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4">
-          Simple product — no variations needed. Optionally add non-varying attributes (e.g. Material) for display on the product page.
-        </div>
-      )}
-
       <div className="text-sm font-medium text-primary">Attributes</div>
       <AttributeEditor storeId={storeId} form={form} setForm={setForm} productMode={productMode} />
 
