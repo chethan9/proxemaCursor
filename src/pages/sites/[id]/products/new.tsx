@@ -14,7 +14,7 @@ import { ArrowLeft, AlertCircle, X } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
-import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useUnsavedChangesGuard, UnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 function Inner() {
   const router = useRouter();
