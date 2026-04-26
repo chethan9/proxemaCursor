@@ -45,6 +45,7 @@ import { LogsPanel, type CronLog } from "@/components/project/LogsPanel";
 import { DeletedRecordsArchive } from "@/components/project/DeletedRecordsArchive";
 import { formatDate, formatDuration, formatRelativeTime, formatCurrency } from "@/components/project/formatters";
 import { SYNC_INTERVALS } from "@/components/project/constants";
+import { useSiteLiveCounts } from "@/hooks/queries/useSiteLiveCounts";
 
 interface SyncProgress { current: number; total: number; aspect: string; }
 
@@ -65,9 +66,10 @@ export default function SiteWorkspacePage() {
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const syncAbortRef = useRef(false);
 
-  const [dataCounts, setDataCounts] = useState<Record<string, number>>({
-    products: 0, orders: 0, customers: 0, categories: 0, tags: 0, coupons: 0,
-  });
+  const { data: liveCountsData } = useSiteLiveCounts(typeof id === "string" ? id : undefined, { isSyncing: syncing });
+  const dataCounts = liveCountsData || { products: 0, orders: 0, customers: 0, categories: 0, tags: 0, coupons: 0 };
+
+  const [historyVisible, setHistoryVisible] = useState(25);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -115,13 +117,11 @@ export default function SiteWorkspacePage() {
         getStore(id), getSyncRunsByStore(id), getWebhooksByStore(id),
         getWebhookEventsByStore(id, 50), getWebhookStats(id),
       ]);
-      const counts = await getExtendedDataCounts(id);
       setStore(storeData);
       setSyncRuns(runsData);
       setWebhooks(webhooksData);
       setWebhookEvents(eventsData);
       setWebhookStats(stats);
-      setDataCounts(counts);
       setSyncInterval(storeData?.sync_interval?.toString() || "0");
       if (storeData) siteCache.set(id, { data: storeData, timestamp: Date.now() });
 
