@@ -1,6 +1,6 @@
 ---
 title: Dark mode rollout
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [theming, ui, dark-mode]
@@ -30,17 +30,17 @@ Add full dark mode without changing light mode visuals. `next-themes` v0.4 + Tai
 - [x] Render `<ThemeSwitch />` in a fixed position so the user can test before sidebar integration
 
 ### Phase 2 — placement + modern preset
-- [ ] Move `<ThemeSwitch />` from floating into the sidebar user menu (read `src/components/layout/AppSidebar.tsx` first)
-- [ ] Add `.dark[data-theme-preset="modern"]` overrides for the ~10 hardcoded HSL literals in globals.css (table headers, sidebar borders, skeleton fill, group labels, focus shadows)
-- [ ] Verify the dropdown/select highlight backgrounds (`background-color: hsl(220 14% 94%) !important`) work in dark — replace with token reference
+- [x] Move `<ThemeSwitch />` from floating into the sidebar user menu (read `src/components/layout/AppSidebar.tsx` first)
+- [x] Add `.dark[data-theme-preset="modern"]` overrides for the ~10 hardcoded HSL literals in globals.css (table headers, sidebar borders, skeleton fill, group labels, focus shadows)
+- [x] Verify the dropdown/select highlight backgrounds (`background-color: hsl(220 14% 94%) !important`) work in dark — replace with token reference
 
 ### Phase 3 — component sweep (risky surfaces)
-- [ ] Grep all `bg-white\|text-black\|text-gray-\|bg-gray-\|border-gray-` and convert to tokens
-- [ ] Check Quill editor `.ql-toolbar`, `.ql-container`, `.ql-tooltip` — already references tokens but verify dropdown visibility
-- [ ] Check sync log status pills, sync progress banner, bulk jobs toast colors
-- [ ] Check pricing page, checkout page, billing pages — verify cards/buttons/inputs all flip
-- [ ] Check explore tabs (Products, Orders, Taxonomy) — large data tables
-- [ ] Check site home dashboard charts (Recharts) — pass theme color via CSS var
+- [x] Grep all `bg-white\|text-black\|text-gray-\|bg-gray-\|border-gray-` and convert to tokens
+- [x] Check Quill editor `.ql-toolbar`, `.ql-container`, `.ql-tooltip` — already references tokens but verify dropdown visibility
+- [x] Check sync log status pills, sync progress banner, bulk jobs toast colors
+- [x] Check pricing page, checkout page, billing pages — verify cards/buttons/inputs all flip
+- [x] Check explore tabs (Products, Orders, Taxonomy) — large data tables
+- [x] Check site home dashboard charts (Recharts) — pass theme color via CSS var
 
 ## Acceptance
 
