@@ -438,7 +438,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     if (prefsLoaded.current) return;
     fetchPreferences("orders").then((remote) => {
       if (remote) {
-        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
+        if (Array.isArray(remote.columnOrder)) {
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = (remote.columnOrder as ColumnKey[]).filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          setColumnOrder([...valid, ...missing]);
+        }
         if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
