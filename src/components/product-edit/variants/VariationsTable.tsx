@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Edit2, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { Variation } from "@/services/productEditService";
 import { variationLabel } from "./utils";
 
@@ -12,12 +12,15 @@ type Props = {
   onEdit: (idx: number) => void;
   onUpdate: (idx: number, patch: Partial<Variation>) => void;
   onBulk: (patch: Partial<Variation>, onlySelected: boolean, selectedIds: Set<string>) => void;
+  onBulkDelete?: (keys: Set<string>) => void;
 };
 
-export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props) {
+export function VariationsTable({ variations, onEdit, onUpdate, onBulk, onBulkDelete }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkValue, setBulkValue] = useState("");
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
+  const [groupBy, setGroupBy] = useState<string>("");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const toggleAll = () => {
     if (selected.size === variations.length) setSelected(new Set());
@@ -52,6 +55,51 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
     onBulk({ enabled }, selected.size > 0, selected);
   };
 
+  const deleteSelected = () => {
+    if (!onBulkDelete || selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} variation${selected.size === 1 ? "" : "s"}? This cannot be undone.`)) return;
+    onBulkDelete(new Set(selected));
+    setSelected(new Set());
+  };
+
+  const attrNames = useMemo(() => {
+    const names = new Set<string>();
+    variations.forEach((v) => v.attributes?.forEach((a) => names.add(a.name)));
+    return Array.from(names);
+  }, [variations]);
+
+  const groups = useMemo(() => {
+    if (!groupBy) return null;
+    const map = new Map<string, { rows: { v: Variation; idx: number }[]; label: string }>();
+    variations.forEach((v, idx) => {
+      const attr = v.attributes?.find((a) => a.name.toLowerCase() === groupBy.toLowerCase());
+      const label = attr?.option || "—";
+      if (!map.has(label)) map.set(label, { rows: [], label });
+      map.get(label)!.rows.push({ v, idx });
+    });
+    return Array.from(map.values());
+  }, [variations, groupBy]);
+
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups((s) => {
+      const n = new Set(s);
+      if (n.has(label)) n.delete(label);
+      else n.add(label);
+      return n;
+    });
+  };
+
+  const toggleGroupSelect = (rows: { v: Variation; idx: number }[]) => {
+    const keys = rows.map((r) => r.v.key);
+    const allSelected = keys.every((k) => selected.has(k));
+    setSelected((s) => {
+      const n = new Set(s);
+      if (allSelected) keys.forEach((k) => n.delete(k));
+      else keys.forEach((k) => n.add(k));
+      return n;
+    });
+  };
+
   const cellInput = "h-9 border-0 bg-muted/40 rounded-md text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background placeholder:text-muted-foreground/50";
 
   return (
@@ -67,8 +115,17 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
             <DropdownMenuItem onClick={() => setBulkMode("regular_price")}>Set regular price</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setBulkMode("sale_price")}>Set sale price</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setBulkMode("stock_quantity")}>Set stock quantity</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAllEnabled(true)}>Enable all</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAllEnabled(false)}>Disable all</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setAllEnabled(true)}>Enable {selected.size > 0 ? "selected" : "all"}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAllEnabled(false)}>Disable {selected.size > 0 ? "selected" : "all"}</DropdownMenuItem>
+            {onBulkDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={selected.size === 0} onClick={deleteSelected} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5 mr-2" />Delete selected
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {bulkMode && (
@@ -77,6 +134,15 @@ export function VariationsTable({ variations, onEdit, onUpdate, onBulk }: Props)
             <Button size="sm" type="button" onClick={applyBulk} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply {selected.size > 0 ? `to ${selected.size}` : "to all"}</Button>
             <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); }}>Cancel</Button>
           </>
+        )}
+        {attrNames.length > 1 && (
+          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Group by</span>
+            <select className="h-9 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
+              <option value="">None</option>
+              {attrNames.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
         )}
       </div>
 
