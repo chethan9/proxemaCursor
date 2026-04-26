@@ -115,22 +115,20 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       </div>
                     </div>
                   </div>
-                  {(productMode === "variable" || onPromoteToVariable) && (
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox checked={attr.variation} onCheckedChange={(v) => {
-                        const checked = !!v;
-                        setForm((p) => {
-                          const a = [...p.attributes];
-                          a[idx] = { ...a[idx], variation: checked };
-                          const anyVariation = a.some((x) => x.variation);
-                          const nextType = anyVariation ? "variable" : (p.type === "variable" ? "simple" : p.type);
-                          return { ...p, attributes: a, type: nextType };
-                        });
-                        if (checked && productMode === "simple" && onPromoteToVariable) onPromoteToVariable();
-                      }} />
-                      Use for variations
-                    </label>
-                  )}
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox checked={attr.variation} onCheckedChange={(v) => {
+                      const checked = !!v;
+                      setForm((p) => {
+                        const a = [...p.attributes];
+                        a[idx] = { ...a[idx], variation: checked };
+                        const anyVariation = a.some((x) => x.variation);
+                        const nextType = anyVariation ? "variable" : (p.type === "variable" ? "simple" : p.type);
+                        return { ...p, attributes: a, type: nextType };
+                      });
+                      if (checked && productMode === "simple" && onPromoteToVariable) onPromoteToVariable();
+                    }} />
+                    Use for variations
+                  </label>
                   <div className="flex items-center justify-between pt-2">
                     <Button type="button" variant="outline" onClick={() => deleteAttribute(idx)} className="text-destructive border-destructive/30 hover:bg-destructive/5">Delete</Button>
                     <Button type="button" onClick={() => setEditingAttr(null)} className="bg-foreground text-background hover:bg-foreground/90">Save Attribute</Button>
