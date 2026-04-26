@@ -1,11 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { renderTemplatePdf } from "@/lib/templates/render-pdf";
-import { renderDocumentToHtml } from "@/lib/templates/render-html";
+import { renderTemplateHtml } from "@/lib/templates/render-html";
+import { renderHtmlToPdf } from "@/lib/templates/render-pdf";
 import { resolveOrderData } from "@/lib/templates/resolve-order";
-import { sampleInvoiceData } from "@/lib/templates/sample-data";
-import { defaultStyles } from "@/lib/templates/document";
-import type { TemplateDocument, DocumentStyles } from "@/lib/templates/document";
+import type { JSONContent } from "@tiptap/core";
+
+const sampleInvoiceData = {
+  order: {
+    number: "1024",
+    date: "May 22, 2024",
+    total: "$88.80",
+    subtotal: "$78.00",
+    shipping: "$8.00",
+    tax: "$7.80",
+    discount: "-$5.00",
+    currency: "USD",
+    items: [
+      { name: "Cap", sku: "woo-cap", quantity: 2, price: "$18.00", total: "$36.00" },
+      { name: "Hoodie", sku: "woo-hoodie", quantity: 1, price: "$42.00", total: "$42.00" },
+    ],
+    billing: { first_name: "John", last_name: "Doe", address_1: "123 Street Name", address_2: "Apartment 4B", city: "New York", state: "NY", postcode: "10001", country: "United States" },
+    shipping_address: { first_name: "John", last_name: "Doe", address_1: "456 Park Avenue", address_2: "Apartment 4B", city: "New York", state: "NY", postcode: "10001", country: "United States" },
+  },
+  customer: { name: "John Doe", email: "john@example.com" },
+  store: { name: "Proxema", email: "support@proxema.com" },
+};
 
 export const config = { api: { bodyParser: { sizeLimit: "1mb" }, responseLimit: false } };
 
@@ -21,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { data: tpl, error: tplErr } = await supabaseAdmin
       .from("templates")
-      .select("id, name, type, current_version_id, client_id, is_sample")
+      .select("id, name, type, current_version_id")
       .eq("id", templateId)
       .maybeSingle();
     if (tplErr || !tpl) return res.status(404).json({ error: "Template not found" });
@@ -29,13 +48,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: ver, error: verErr } = await supabaseAdmin
       .from("template_versions")
-      .select("id, document, styles")
+      .select("id, document")
       .eq("id", tpl.current_version_id)
       .maybeSingle();
     if (verErr || !ver) return res.status(404).json({ error: "Template version not found" });
 
-    const doc = ver.document as unknown as TemplateDocument;
-    const styles = (ver.styles as unknown as DocumentStyles) || defaultStyles();
+    const document = ver.document as unknown as JSONContent;
 
     let data: Record<string, unknown>;
     if (useSample) {
@@ -46,16 +64,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Provide store_id+order_id or sample=1" });
     }
 
+    const html = await renderTemplateHtml(document, data);
+
     if (format === "html") {
-      const html = renderDocumentToHtml(doc, data, styles);
-      const wrapped = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tpl.name}</title></head><body style="margin:0;background:#f3f4f6;padding:24px;"><div style="max-width:800px;margin:0 auto;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.1);">${html}</div></body></html>`;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.status(200).send(wrapped);
+      res.status(200).send(html);
       void logRender(templateId, ver.id, "html", orderId);
       return;
     }
 
-    const buffer = await renderTemplatePdf(doc, styles, data);
+    const buffer = await renderHtmlToPdf(html);
     const filename = `${tpl.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${orderId || "sample"}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
@@ -68,12 +86,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function logRender(templateId: string, versionId: string, format: string, orderId: string) {
+async function logRender(templateId: string, versionId: string, fmt: string, orderId: string) {
   try {
     await supabaseAdmin.from("template_renders").insert({
       template_id: templateId,
       version_id: versionId,
-      output_format: format,
+      output_format: fmt,
       entity_type: orderId ? "order" : "sample",
       entity_id: orderId || null,
     });
