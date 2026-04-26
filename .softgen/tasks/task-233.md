@@ -1,51 +1,63 @@
 ---
-title: Variable product variations corrupt on save (storefront shows parent price, editor shows duplicate-combo warning on reopen)
+title: Variable product variations save without option binding (storefront shows parent price)
 status: todo
 priority: urgent
 type: bug
-tags: [variations, products, woo-sync, data-integrity]
+tags: [products, variations, woocommerce, integration]
 created_by: agent
-created_at: 2026-04-26
+created_at: 2026-04-26T22:00:00Z
 position: 233
 ---
 
 ## Notes
 
-User reports two symptoms that share one root cause:
+**Confirmed root cause** (verified via WooCommerce admin — variation rows show "Any Color…" instead of a concrete option):
 
-1. **Editor**: Reopening a variable product (e.g. SKU `7777` with Color: blue/green/red, all priced 33) shows "Duplicate attribute combinations detected at rows 2, 3." The SKUs `7777-RED`, `7777-GREEN`, `7777-BLUE` look distinct in the table, but the duplicate-detector compares `attributes` arrays, not SKUs.
-2. **Storefront**: Variable product on the live website displays the parent base price (0.00 / empty) and parent stock for all variations instead of each variation's own price + stock.
+When a user types an attribute name in `src/components/product-edit/variants/AttributeEditor.tsx` and that name matches a pre-existing **global** Woo attribute (`pa_color`, etc.), the editor assigns the global attribute's ID to the form attribute (`AttributeEditor.tsx:14-22`, via `useWooAttributes`). User then freely types option strings like "blue", "Green", "Red" — but those are NOT registered as **terms** of the global attribute in Woo.
 
-### Root cause hypothesis
+On save, we send to Woo:
+- Parent: `{id: 234, name: "Color", options: ["blue", "Green", "Red"], variation: true}` — Woo accepts the options as strings
+- Variation: `{id: 234, name: "Color", option: "blue"}` — **Woo cannot bind `"blue"` because it isn't a registered term of attribute #234** → variation is created with no attribute selection → "Any Color…" in admin
 
-When the editor submits a variable product, each variation in `form.variations` carries an `attributes` array like `[{name: "Color", option: "Red"}]`. Suspect a corruption in the path between the form and the WooCommerce variations batch endpoint:
+This causes the cascade:
+1. All variations look identical to Woo (no option set) → effective duplicates
+2. Storefront has nothing to differentiate them → falls back to parent price/stock for every variant
+3. On reopen in our app, our `product_variations.attributes` JSONB is whatever Woo returned (often empty `[]` or default placeholders), so all rows hash to the same dedup key → "Duplicate attribute combinations detected at rows 2, 3" warning
 
-- `src/services/productValidation.ts::buildWooPayload` → `payload.variations[i].attributes = v.attributes` — should be unique per row.
-- `src/pages/api/stores/[storeId]/products/create.ts` lines ~190–215 — strips variations from parent payload, then sends `products/{wooId}/variations/batch` with the `create:` array. The mapping there builds the row from `v` (form variation), but **does it preserve `v.attributes` correctly?** Confirm by logging the exact array sent to Woo.
+Custom (non-global, `id: 0`) attributes work fine — Woo treats `option` strings literally for those.
 
-If Woo receives all 3 variations with the same `attributes` array (or empty), it creates 3 rows but they all map to the same attribute combo → effectively one variation → storefront falls back to parent price. Our DB then stores 3 rows with identical `attributes`, triggering the duplicate-combo warning on reopen.
+**Fix strategy** (server-side, before the Woo POST):
 
-Secondary suspect: parent `attributes` array lacks `variation: true` flag for the Color attribute, so Woo doesn't treat any options as variation-eligible and ignores the variation rows' attribute selections.
+In `src/pages/api/stores/[storeId]/products/create.ts` and `src/pages/api/stores/[storeId]/products/[productId].ts` (update endpoint), add a "term reconciliation" step:
 
-### Investigation steps
+1. Walk the parent `attributes` payload. For each entry where `id > 0` (global attribute), fetch its existing terms: `GET /wp-json/wc/v3/products/attributes/{id}/terms?per_page=100` (paginate if needed).
+2. Diff `attribute.options` (parent) ∪ all `variation.attributes[].option` values used → registered term names. Case-insensitive match on `name` and `slug`.
+3. For each missing term, `POST /wp-json/wc/v3/products/attributes/{id}/terms` with `{name: option}`. Capture the resulting term `slug`.
+4. For each variation in the batch payload, normalize `attributes[].option` to the registered term **slug** (Woo accepts either name or slug, but slug is the canonical form and avoids casing/whitespace mismatch).
+5. Then proceed with the existing `products/{wooId}/variations/batch` create call.
 
-- Open `src/pages/api/stores/[storeId]/products/create.ts` and add a `console.log("[woo-variations-payload]", JSON.stringify(createPayload, null, 2))` right before the `wooRequest(..., "products/${wooId}/variations/batch", { create: createPayload })` call. Have the user create a variable product and capture the server log.
-- Inspect the parent `attributes` payload sent to Woo — confirm `variation: true` is set on the Color attribute. The form has `attributes[i].variation` boolean; verify `buildWooPayload` includes it.
-- Inspect each `createPayload[i].attributes` — must be `[{name: "Color", option: "Red"}]` for row 0, `{... "Green"}` for row 1, etc. If all empty or all identical, the bug is in the form→payload mapping.
-- After save, query `product_variations` table for the test product and confirm each row's `attributes` JSONB column holds the unique option.
+Custom attributes (`id == 0`) skip this entirely — they pass through as free-form text.
+
+**Logging** (already added in last iteration): keep `[woo-variations-create]` / `[woo-variations-response]` console blocks. Add a `[woo-terms-reconcile]` block showing `{attributeId, existingTerms, missingTerms, createdTerms}` for diagnostics.
+
+**Preserve existing behavior:**
+- Bulk update flows that touch variations (`/api/cron/process-bulk-jobs.ts` — `assign_product_categories` etc.) don't need this fix; they don't create variations from scratch.
+- `update.ts` flow that re-creates variations on save needs the same reconciliation.
 
 ## Checklist
 
-- [ ] Add structured logging in `create.ts` variations block: log the full `createPayload` array sent to Woo and the `batchRes.create` response. Log to server console with a prefix like `[woo-variations-create]`. User will reproduce and share logs.
-- [ ] Verify `buildWooPayload` in `productValidation.ts` propagates `variation: true` on parent attributes when the user has ticked "Use for variations" in the editor. If lost, fix the mapping.
-- [ ] Verify each variation's `attributes` array reaches Woo with the unique option string (`"Red"`, `"Green"`, `"Blue"`). If form state has them but payload drops them, fix the build step.
-- [ ] After Woo responds, confirm our DB upsert in `create.ts` writes the unique attributes JSONB per variation row. If Woo sends them back, the upsert should preserve them — verify with a SELECT after a test create.
-- [ ] Same audit for the update path: `src/pages/api/stores/[storeId]/products/[productId].ts` variations block. Saving an existing variable product shouldn't flatten the attributes either.
-- [ ] On the storefront side: a properly-configured variable product in Woo will automatically show per-variation price/stock when the customer picks an option. No frontend code change needed if the variations are saved correctly. Confirm by visiting the live product page after the fix and checking the variant dropdown updates the displayed price.
-- [ ] On reopen, "Duplicate attribute combinations detected" warning should disappear because each row now has a unique `attributes` array.
+- [ ] Server-side term reconciliation helper: build `reconcileAttributeTerms(creds, attributes, variations)` in `src/lib/woocommerce-auth.ts` or a new `src/lib/woo-terms.ts` that fetches existing terms per global attribute, creates missing terms, returns a mapping `{attributeId → {optionName → registeredSlug}}`.
+- [ ] Wire reconciliation into `create.ts` for variable products before the variations batch POST. Replace each `variation.attributes[].option` with the canonical slug from the mapping.
+- [ ] Wire same reconciliation into `[productId].ts` (update endpoint) for the variations sync block.
+- [ ] Persist `tax_status`, `tax_class`, `sold_individually`, `virtual`, `downloadable` to DB columns from the Woo response (already done in last iteration — verify it shipped).
+- [ ] Edit page load (`src/pages/sites/[id]/products/edit/[productId].tsx`) reads tax fields with `raw_data` fallback (already done — verify it shipped).
+- [ ] Add `[woo-terms-reconcile]` console.log block with structured payload for QA.
+- [ ] Reproduce with attribute "Color" and options "Red"/"Green"/"Blue" against a real Woo store. Verify Woo admin shows the variation rows with concrete options selected (not "Any Color…").
+- [ ] Verify storefront: each variation shows its own price + stock, not parent fallback.
+- [ ] Verify reopen: "Duplicate attribute combinations" warning is gone; each row's options column shows its option.
 
 ## Acceptance
 
-- Create a variable product with 3 color variations at different prices. Live website shows the variant-specific price + stock when each color is selected (not the parent price for all).
-- Reopen the same product in the editor. Variations tab shows 3 rows with their distinct attribute options. No duplicate-combo warning.
-- Database `product_variations` rows for the product each have a unique `attributes` JSONB.
+- Creating a variable product with 3 color variations writes 3 distinct, fully-bound variations to Woo (admin shows specific options, not "Any …").
+- Storefront product page shows per-variant price + stock once a variant is selected.
+- Reopening the product in our editor shows variations with correct options and no false duplicate warning.

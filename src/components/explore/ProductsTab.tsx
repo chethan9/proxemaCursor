@@ -1237,12 +1237,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               }
                               return null;
                             })}
-                          </TableCell>
+                          </TableRow>
                         </React.Fragment>
                       );
-                    })}
-                  </TableBody>
-                </Table>
+                    })
+                  )}
+                </TableBody>
               </Table>
             </div>
           )}
