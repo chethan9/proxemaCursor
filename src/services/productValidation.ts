@@ -181,26 +181,6 @@ export function validateProductForm(form: ProductFormState): ValidationResult {
           errors.push(...validateVariation(v, form.attributes));
         }
       }
-      // Cross-variation SKU uniqueness within the form
-      const skus = new Map<string, string>();
-      for (const v of form.variations) {
-        if (!v.sku) continue;
-        const k = v.sku.toLowerCase();
-        if (skus.has(k)) {
-          errors.push({
-            field: `variation:${v.key}:sku`,
-            message: `Duplicate SKU within variations: ${v.sku}`,
-          });
-        } else {
-          skus.set(k, v.key);
-        }
-      }
-    }
-  }
-
-  if (publishing) {
-    if (!trim(form.sku)) {
-      errors.push({ field: "sku", message: "SKU is required" });
     }
   }
 

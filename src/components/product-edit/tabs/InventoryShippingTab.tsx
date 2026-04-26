@@ -53,7 +53,7 @@ export function InventoryShippingTab({ form, setForm }: Props) {
         <div className="text-sm font-medium text-primary mb-2">Inventory</div>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs" required>SKU</Label>
+            <Label className="text-xs">SKU</Label>
             <div className="flex gap-2">
               <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} />
               <Button type="button" variant="outline" onClick={autoSku} className="gap-1.5 shrink-0">
