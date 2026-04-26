@@ -1232,6 +1232,162 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           )}
         </CardContent>
       </Card>
+
+      <ProductTypeDialog open={typeDialogOpen} onOpenChange={setTypeDialogOpen} storeId={storeId} />
+
+      <ProductQuickEdit
+        product={quickEditProduct}
+        open={!!quickEditProduct}
+        onOpenChange={(o) => { if (!o) setQuickEditProduct(null); }}
+        storeId={storeId}
+      />
+
+      <Dialog open={!!bulkDialog} onOpenChange={(o) => { if (!o) setBulkDialog(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkDialog === "price" && "Update price"}
+              {bulkDialog === "stock" && "Update stock"}
+              {bulkDialog === "status" && "Update status"}
+              {bulkDialog === "category" && "Update categories"}
+              {bulkDialog === "delete" && "Delete products"}
+            </DialogTitle>
+            <DialogDescription>
+              {bulkDialog === "delete"
+                ? `Permanently delete ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? This cannot be undone.`
+                : `Apply this change to ${selectedIds.size} selected product${selectedIds.size === 1 ? "" : "s"}.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bulkDialog === "price" && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Operation</Label>
+                <Select value={priceOp} onValueChange={(v) => setPriceOp(v as typeof priceOp)}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="set">Set regular price to</SelectItem>
+                    <SelectItem value="set_sale">Set sale price to</SelectItem>
+                    <SelectItem value="increase_pct">Increase by %</SelectItem>
+                    <SelectItem value="decrease_pct">Decrease by %</SelectItem>
+                    <SelectItem value="increase_fixed">Increase by fixed amount</SelectItem>
+                    <SelectItem value="decrease_fixed">Decrease by fixed amount</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Value</Label>
+                <Input type="number" step="0.01" value={priceValue} onChange={(e) => setPriceValue(e.target.value)} className="mt-1" placeholder="0.00" />
+              </div>
+            </div>
+          )}
+
+          {bulkDialog === "stock" && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Operation</Label>
+                <Select value={stockOp} onValueChange={(v) => setStockOp(v as typeof stockOp)}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="set">Set quantity to</SelectItem>
+                    <SelectItem value="adjust">Adjust quantity by</SelectItem>
+                    <SelectItem value="set_status">Set stock status</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {stockOp === "set_status" ? (
+                <div>
+                  <Label className="text-xs">Stock status</Label>
+                  <Select value={stockStatusVal} onValueChange={(v) => setStockStatusVal(v as typeof stockStatusVal)}>
+                    <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="instock">In stock</SelectItem>
+                      <SelectItem value="outofstock">Out of stock</SelectItem>
+                      <SelectItem value="onbackorder">On backorder</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-xs">Quantity</Label>
+                  <Input type="number" value={stockValue} onChange={(e) => setStockValue(e.target.value)} className="mt-1" placeholder="0" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {bulkDialog === "status" && (
+            <div>
+              <Label className="text-xs">New status</Label>
+              <Select value={newProductStatus} onValueChange={(v) => setNewProductStatus(v as typeof newProductStatus)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="publish">Published</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {bulkDialog === "category" && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Mode</Label>
+                <Select value={categoryMode} onValueChange={(v) => setCategoryMode(v as typeof categoryMode)}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add">Add categories</SelectItem>
+                    <SelectItem value="remove">Remove categories</SelectItem>
+                    <SelectItem value="replace">Replace with</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Categories</Label>
+                <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border p-2 space-y-1">
+                  {categoryOptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No categories available</p>
+                  ) : categoryOptions.map((name) => {
+                    const id = name;
+                    const checked = bulkCategoryIds.has(id as unknown as number);
+                    return (
+                      <label key={name} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 p-1 rounded">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            setBulkCategoryIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(id as unknown as number);
+                              else next.delete(id as unknown as number);
+                              return next;
+                            });
+                          }}
+                        />
+                        <span>{name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkDialog(null)} disabled={bulkSubmitting}>Cancel</Button>
+            <Button
+              onClick={submitBulk}
+              disabled={bulkSubmitting}
+              className={bulkDialog === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {bulkSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              {bulkDialog === "delete" ? "Delete" : "Apply"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
