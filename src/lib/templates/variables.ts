@@ -73,7 +73,5 @@ export function getVariableCatalog(type: TemplateType): VariableDef[] {
   switch (type) {
     case "invoice": return INVOICE_CATALOG;
     case "pickslip": return PICKSLIP_CATALOG;
-    case "email": return INVOICE_CATALOG;
-    case "report": return STORE_VARS;
   }
 }
