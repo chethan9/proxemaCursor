@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Save, Pencil, Loader2, RefreshCw, Star, Code2, Eye, Copy as CopyIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Save, Pencil, Loader2, RefreshCw, Star, Code2, Eye, Copy as CopyIcon, ChevronDown, ChevronRight, FileDown } from "lucide-react";
 import { getTemplate, saveNewVersion, renameTemplate, createTemplate, setDefaultForType } from "@/services/templateService";
 import { blankInvoiceHtml, blankPickslipHtml, type TemplateConfig } from "@/lib/templates/document";
 import { useToast } from "@/hooks/use-toast";
@@ -231,6 +231,10 @@ function BuilderInner() {
             <Button size="sm" variant="outline" onClick={() => setPreviewKey((k) => k + 1)}>
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               Refresh preview
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => window.open(`/api/templates/${id}/render?format=pdf&sample=1`, "_blank")} disabled={dirty}>
+              <FileDown className="h-3.5 w-3.5 mr-1.5" />
+              Download PDF
             </Button>
             <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !dirty || isSample}>
               {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
