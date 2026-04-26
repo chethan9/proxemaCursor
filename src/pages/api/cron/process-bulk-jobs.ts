@@ -361,12 +361,12 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
     .select("client_id")
     .eq("id", job.store_id)
     .maybeSingle();
-  if (storeErr || !store?.client_id) {
-    const p: BulkJobUpdate = { status: "failed", completed_at: new Date().toISOString(), error_message: "Store or client missing" };
+  if (storeErr || !store) {
+    const p: BulkJobUpdate = { status: "failed", completed_at: new Date().toISOString(), error_message: "Store not found" };
     await supabaseAdmin.from("bulk_jobs").update(p).eq("id", job.id);
     return "done";
   }
-  const clientId = store.client_id as string;
+  const pathScope = (store.client_id as string | null) ?? `store-${job.store_id}`;
 
   if (job.status === "pending") {
     const p: BulkJobUpdate = { status: "running", started_at: new Date().toISOString() };
@@ -380,7 +380,7 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
   const errors: ItemError[] = [...existingErrors];
 
   const remaining = orderIds.slice(processed);
-  const partsPrefix = `${clientId}/${job.id}/parts`;
+  const partsPrefix = `${pathScope}/${job.id}/parts`;
 
   // Render PDFs serially (puppeteer is heavy; concurrency 1 is safest)
   for (let i = 0; i < remaining.length; i++) {
@@ -432,7 +432,7 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
 
   let artifactPath: string;
   try {
-    artifactPath = await finalizeBulkInvoiceArtifact(clientId, job.id, orderIds, outputMode);
+    artifactPath = await finalizeBulkInvoiceArtifact(pathScope, job.id, orderIds, outputMode);
   } catch (e) {
     const p: BulkJobUpdate = {
       status: "failed",
@@ -462,14 +462,14 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
 }
 
 async function finalizeBulkInvoiceArtifact(
-  clientId: string,
+  pathScope: string,
   jobId: string,
   orderIds: string[],
   outputMode: string,
 ): Promise<string> {
-  const partsPrefix = `${clientId}/${jobId}/parts`;
+  const partsPrefix = `${pathScope}/${jobId}/parts`;
   const ext = outputMode === "zip" ? "zip" : "pdf";
-  const finalKey = `${clientId}/${jobId}.${ext}`;
+  const finalKey = `${pathScope}/${jobId}.${ext}`;
 
   type Part = { id: string; data: Buffer };
   const parts: Part[] = [];
@@ -514,9 +514,9 @@ async function finalizeBulkInvoiceArtifact(
 
   // Best-effort cleanup of parts
   try {
-    const { data: list } = await supabaseAdmin.storage.from("bulk-invoices").list(`${clientId}/${jobId}/parts`);
+    const { data: list } = await supabaseAdmin.storage.from("bulk-invoices").list(`${pathScope}/${jobId}/parts`);
     if (list && list.length > 0) {
-      const paths = list.map((f) => `${clientId}/${jobId}/parts/${f.name}`);
+      const paths = list.map((f) => `${pathScope}/${jobId}/parts/${f.name}`);
       await supabaseAdmin.storage.from("bulk-invoices").remove(paths);
     }
   } catch {
