@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { WooApiError } from "@/lib/sync-error";
 import type { Json } from "@/integrations/supabase/database.types";
 import { logActivity } from "@/lib/activity-log";
 import { quotaErrorPayload } from "@/lib/quota";
@@ -317,6 +318,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(inserted || { ...insertRow, id: `woo-${wooId}` });
   } catch (e) {
     console.error("[product-create]", e);
-    return res.status(500).json({ error: e instanceof Error ? e.message : "Create failed" });
+    const message = e instanceof Error ? e.message : "Create failed";
+    const ctx = e instanceof WooApiError ? e.context : undefined;
+    return res.status(ctx?.status && ctx.status >= 400 && ctx.status < 500 ? ctx.status : 500).json({
+      error: "Failed to create product",
+      message,
+      woo_status: ctx?.status,
+      woo_body: ctx?.body,
+      blocking_service: ctx?.blocking_service,
+      blocking_hint: ctx?.blocking_hint,
+    });
   }
 }
