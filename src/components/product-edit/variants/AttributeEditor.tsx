@@ -119,7 +119,13 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <Checkbox checked={attr.variation} onCheckedChange={(v) => {
                         const checked = !!v;
-                        setForm((p) => { const a = [...p.attributes]; a[idx] = { ...a[idx], variation: checked }; return { ...p, attributes: a }; });
+                        setForm((p) => {
+                          const a = [...p.attributes];
+                          a[idx] = { ...a[idx], variation: checked };
+                          const anyVariation = a.some((x) => x.variation);
+                          const nextType = anyVariation ? "variable" : (p.type === "variable" ? "simple" : p.type);
+                          return { ...p, attributes: a, type: nextType };
+                        });
                         if (checked && productMode === "simple" && onPromoteToVariable) onPromoteToVariable();
                       }} />
                       Use for variations
