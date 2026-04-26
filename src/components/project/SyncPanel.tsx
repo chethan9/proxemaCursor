@@ -60,15 +60,20 @@ export function SyncPanel({
                   ) : <span>Never synced</span>}
                 </div>
               </div>
-              {syncing && syncProgress && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{syncProgress.aspect}</span>
-                    <span className="font-medium">{Math.min(100, Math.round((syncProgress.current / syncProgress.total) * 100))}%</span>
+              {syncing && syncProgress && (() => {
+                const pct = Math.min(100, Math.round((syncProgress.current / syncProgress.total) * 100));
+                const isFinalizing = pct >= 99;
+                const labelOverride = isFinalizing ? "Finalizing — wrapping up post-processing…" : syncProgress.aspect;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{labelOverride}</span>
+                      <span className="font-medium">{pct}%</span>
+                    </div>
+                    <Progress value={Math.min(100, (syncProgress.current / syncProgress.total) * 100)} className="h-2" />
                   </div>
-                  <Progress value={Math.min(100, (syncProgress.current / syncProgress.total) * 100)} className="h-2" />
-                </div>
-              )}
+                );
+              })()}
             </div>
             <TooltipProvider>
               <div className="grid grid-cols-6 gap-4 lg:gap-6">
@@ -153,7 +158,7 @@ export function SyncPanel({
               {syncRuns.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No sync runs yet. Click &quot;Sync All Data&quot; to start.</TableCell></TableRow>
               ) : (
-                syncRuns.slice(0, 15).map((run) => (
+                syncRuns.slice(0, 25).map((run) => (
                   <TableRow key={run.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectRun(run)}>
                     <TableCell className="pl-6 py-3.5">
                       <div className="flex items-center gap-2.5">
