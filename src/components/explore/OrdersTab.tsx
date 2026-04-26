@@ -62,7 +62,7 @@ import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect } from "@/contexts/LoadingProvider";
+import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
@@ -613,7 +613,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           </div>
         </div>
       )}
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur">
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-2 bg-background/85 backdrop-blur relative">
         <Card>
           <CardContent className="p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -838,6 +838,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           </div>
           </CardContent>
         </Card>
+        <ProgressSlot />
       </div>
 
       <Card className="relative">
