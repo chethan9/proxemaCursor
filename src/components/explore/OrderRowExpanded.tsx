@@ -167,19 +167,19 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
             <span>Subtotal</span>
             <span className="font-mono">{computedSubtotal.toFixed(2)} {currency}</span>
           </div>
-          {order.total_tax != null && (
+          {order.total_tax != null && Number(order.total_tax) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Tax</span>
               <span className="font-mono">{order.total_tax} {currency}</span>
             </div>
           )}
-          {order.shipping_total != null && (
+          {order.shipping_total != null && Number(order.shipping_total) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Shipping</span>
               <span className="font-mono">{order.shipping_total} {currency}</span>
             </div>
           )}
-          {order.discount_total && Number(order.discount_total) > 0 && (
+          {Number(order.discount_total) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Discount</span>
               <span className="font-mono">-{order.discount_total} {currency}</span>
