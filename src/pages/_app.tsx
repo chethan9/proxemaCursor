@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "../../sentry.client.config";
 import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
