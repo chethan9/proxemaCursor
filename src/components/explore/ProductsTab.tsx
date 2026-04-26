@@ -51,6 +51,7 @@ import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
+import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -129,6 +130,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [priceOp, setPriceOp] = useState<"set" | "increase_pct" | "decrease_pct" | "increase_fixed" | "decrease_fixed" | "set_sale">("set");
   const [priceValue, setPriceValue] = useState("");
@@ -499,7 +501,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <span className="text-xs">Export</span>
             </Button>
             <Link href={`/sites/${storeId}/products/new`} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
-              <Button size="sm" className="h-9 gap-1.5">
+              <Button size="sm" className="h-9 gap-1.5" onClick={(e) => { if (!locked) { e.preventDefault(); setTypeDialogOpen(true); } }}>
                 <Plus className="h-4 w-4" />
                 Add product
               </Button>
@@ -1175,139 +1177,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         siteName={storeName}
       />
 
-      <Dialog open={!!bulkDialog} onOpenChange={(v) => !v && setBulkDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="capitalize">
-              {bulkDialog === "delete" ? `Delete ${selectedIds.size} products?` : `Bulk ${bulkDialog} · ${selectedIds.size} products`}
-            </DialogTitle>
-            <DialogDescription>
-              This queues a background job. Processing {selectedIds.size} products may take {Math.ceil(selectedIds.size * 1.5 / 60)}–{Math.ceil(selectedIds.size * 3 / 60)} minutes.
-            </DialogDescription>
-          </DialogHeader>
-          {bulkDialog === "price" && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Operation</Label>
-                <Select value={priceOp} onValueChange={(v) => setPriceOp(v as typeof priceOp)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="set">Set regular price to</SelectItem>
-                    <SelectItem value="increase_pct">Increase by %</SelectItem>
-                    <SelectItem value="decrease_pct">Decrease by %</SelectItem>
-                    <SelectItem value="increase_fixed">Increase by fixed</SelectItem>
-                    <SelectItem value="decrease_fixed">Decrease by fixed</SelectItem>
-                    <SelectItem value="set_sale">Set sale price to</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Value</Label>
-                <Input type="number" step="0.01" value={priceValue} onChange={(e) => setPriceValue(e.target.value)} placeholder="0.00" />
-              </div>
-            </div>
-          )}
-          {bulkDialog === "stock" && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Operation</Label>
-                <Select value={stockOp} onValueChange={(v) => setStockOp(v as typeof stockOp)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="set">Set quantity to</SelectItem>
-                    <SelectItem value="adjust">Adjust by (±)</SelectItem>
-                    <SelectItem value="set_status">Set stock status</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {stockOp === "set_status" ? (
-                <div className="space-y-1.5">
-                  <Label>Stock status</Label>
-                  <Select value={stockStatusVal} onValueChange={(v) => setStockStatusVal(v as typeof stockStatusVal)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="instock">In stock</SelectItem>
-                      <SelectItem value="outofstock">Out of stock</SelectItem>
-                      <SelectItem value="onbackorder">On backorder</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label>{stockOp === "adjust" ? "Delta (use negative to reduce)" : "Quantity"}</Label>
-                  <Input type="number" value={stockValue} onChange={(e) => setStockValue(e.target.value)} placeholder="0" />
-                </div>
-              )}
-            </div>
-          )}
-          {bulkDialog === "status" && (
-            <div className="space-y-1.5">
-              <Label>New status</Label>
-              <Select value={newProductStatus} onValueChange={(v) => setNewProductStatus(v as typeof newProductStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="publish">Publish</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {bulkDialog === "category" && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Mode</Label>
-                <Select value={categoryMode} onValueChange={(v) => setCategoryMode(v as typeof categoryMode)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="add">Add categories</SelectItem>
-                    <SelectItem value="remove">Remove categories</SelectItem>
-                    <SelectItem value="replace">Replace with these</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Categories (choose at least one)</Label>
-                <div className="max-h-48 overflow-y-auto border border-border rounded-md p-2 space-y-1">
-                  {categoryOptions.length === 0 ? (
-                    <div className="text-xs text-muted-foreground">No categories found</div>
-                  ) : categoryOptions.map((name) => {
-                    const id = Number(name);
-                    const useId = Number.isFinite(id) && String(id) === name;
-                    if (!useId) return null;
-                    return (
-                      <label key={name} className="flex items-center gap-2 text-xs cursor-pointer px-1 py-1 hover:bg-muted rounded">
-                        <Checkbox
-                          checked={bulkCategoryIds.has(id)}
-                          onCheckedChange={(v) => {
-                            setBulkCategoryIds((prev) => {
-                              const next = new Set(prev);
-                              if (v) next.add(id); else next.delete(id);
-                              return next;
-                            });
-                          }}
-                        />
-                        <span>{name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <p className="text-[10px] text-muted-foreground">Note: category list uses category IDs. If empty, sync categories first.</p>
-              </div>
-            </div>
-          )}
-          {bulkDialog === "delete" && (
-            <div className="text-sm text-muted-foreground">Products will be moved to trash in WooCommerce. This can be undone from the Woo admin.</div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkDialog(null)} disabled={bulkSubmitting}>Cancel</Button>
-            <Button onClick={submitBulk} disabled={bulkSubmitting} variant={bulkDialog === "delete" ? "destructive" : "default"}>
-              {bulkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : "Queue job"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductTypeDialog
+        open={typeDialogOpen}
+        onOpenChange={setTypeDialogOpen}
+        onSelect={(type) => {
+          setTypeDialogOpen(false);
+          router.push(`/sites/${storeId}/products/new?type=${type}`);
+        }}
+      />
     </div>
   );
 }

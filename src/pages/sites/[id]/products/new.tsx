@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
@@ -22,13 +22,27 @@ function Inner() {
   const router = useRouter();
   const { id, store, loading } = useSiteFromRoute();
   const { locked: syncLocked, ready: syncReady } = useSyncLocked(id);
-  const [mode, setMode] = useState<"basic" | "advanced">("basic");
-  const [form, setForm] = useState<ProductFormState>(emptyProductForm());
-  const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
+  const initialType = router.query.type === "variable" ? "variable" : "simple";
+  const [mode, setMode] = useState<"basic" | "advanced">(initialType === "variable" ? "advanced" : "basic");
+  const [form, setForm] = useState<ProductFormState>(() => {
+    const base = emptyProductForm();
+    return initialType === "variable" ? { ...base, type: "variable" } : base;
+  });
+  const [activeTab, setActiveTab] = useState<AdvancedTabKey>(initialType === "variable" ? "variants" : "basic");
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
   const dirty = !savedOnce && (form.name.trim().length > 0 || form.description.trim().length > 0 || form.regular_price.trim().length > 0 || form.sku.trim().length > 0 || form.images.length > 0 || form.categories.length > 0 || form.tags.length > 0 || form.attributes.length > 0);
   useUnsavedChangesGuard(dirty);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.type === "variable" && form.type !== "variable") {
+      setForm((p) => ({ ...p, type: "variable" }));
+      setMode("advanced");
+      setActiveTab("variants");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.type]);
 
   const create = useSiteMutation<{ id?: string }, void>({
     mutationFn: () => createProduct(id, form),
@@ -116,6 +130,7 @@ function Inner() {
       ) : (
         <AdvancedShell
           form={form}
+          setForm={setForm}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           canAdvance={canAdvance}
