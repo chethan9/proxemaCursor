@@ -1,12 +1,16 @@
 import bwipjs from "bwip-js/node";
 import QRCode from "qrcode";
-import type Handlebars from "handlebars";
+
+interface HandlebarsLike {
+  registerHelper: (name: string, fn: (...args: unknown[]) => unknown) => void;
+  SafeString: new (str: string) => { toString(): string };
+}
 
 interface HelperOptions {
   hash?: Record<string, unknown>;
 }
 
-export function registerHelpers(hb: typeof Handlebars) {
+export function registerHelpers(hb: HandlebarsLike) {
   hb.registerHelper("currency", function (amount: unknown, currency?: unknown) {
     const n = Number(amount);
     if (isNaN(n)) return "";
