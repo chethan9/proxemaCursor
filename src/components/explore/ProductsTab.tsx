@@ -419,6 +419,18 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
               <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
             </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter} disabled={locked}>
+              <SelectTrigger className="h-9 w-[140px] text-xs">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="publish">Published</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="private">Private</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[360px]">
@@ -532,6 +544,18 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   </Button>
                 ))}
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter} disabled={locked}>
+                <SelectTrigger className="h-9 w-[140px] text-xs">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="publish">Published</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                </SelectContent>
+              </Select>
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
                   <SelectTrigger className="h-9 w-[180px] text-xs">
