@@ -878,7 +878,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   <span className="text-destructive font-semibold whitespace-nowrap">Out of stock</span>
                                 ) : p.stock_quantity != null ? (
                                   <span className="whitespace-nowrap">
-                                    Stock: <span className={p.stock_quantity < 5 ? "text-warning font-semibold" : "text-foreground font-semibold"}>{p.stock_quantity}</span>
+                                    Stock: <span className={p.stock_quantity < 5 ? "text-warning" : ""}>{p.stock_quantity}</span>
                                   </span>
                                 ) : p.stock_status === "instock" ? (
                                   <span className="text-success font-semibold whitespace-nowrap">In stock</span>
