@@ -1,6 +1,6 @@
 ---
 title: Product type chooser + Status field parity in Advanced editor
-status: todo
+status: done
 priority: high
 type: feature
 tags: [product-edit, ux, advanced-editor, add-product]

@@ -1,6 +1,6 @@
 ---
 title: Stray "0" below shipping in order expand widget
-status: todo
+status: done
 priority: high
 type: bug
 tags: [orders, explore, ui-bug]

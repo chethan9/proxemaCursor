@@ -156,7 +156,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
             <div className="flex flex-wrap gap-1.5">
               {coupons.map((c, i) => (
                 <Badge key={i} variant="outline" className="font-mono text-[11px]">
-                  {c.code} {c.discount && <span className="ml-1 text-muted-foreground">-{c.discount}</span>}
+                  {c.code} {Boolean(c.discount) && Number(c.discount) > 0 && <span className="ml-1 text-muted-foreground">-{c.discount}</span>}
                 </Badge>
               ))}
             </div>

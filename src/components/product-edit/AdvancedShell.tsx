@@ -121,15 +121,9 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
       <div className="lg:sticky lg:top-4 h-fit space-y-4">
         {setForm && (
           <Card>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-muted-foreground">Status</div>
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("h-2 w-2 rounded-full", currentStatus.dot)} />
-                  <span className="text-xs text-foreground">{currentStatus.label}</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
+            <CardContent className="p-4 space-y-2.5">
+              <div className="text-xs font-medium text-muted-foreground">Status</div>
+              <div className="grid grid-cols-4 gap-1">
                 {STATUS_OPTIONS.map((s) => {
                   const selected = form.status === s.value;
                   return (
@@ -138,9 +132,9 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, status: s.value }))}
                       className={cn(
-                        "px-3 py-2 text-xs rounded-md border font-medium transition-all",
+                        "px-2 py-1.5 text-[11px] rounded-full border font-medium transition-all whitespace-nowrap",
                         selected
-                          ? "bg-foreground text-background border-foreground ring-2 ring-foreground/15 ring-offset-1 ring-offset-background shadow-sm"
+                          ? "bg-foreground text-background border-foreground shadow-sm"
                           : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                       )}
                     >
