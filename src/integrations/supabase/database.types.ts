@@ -1410,6 +1410,7 @@ export type Database = {
           categories: Json | null
           created_at: string | null
           description: string | null
+          downloadable: boolean | null
           id: string
           images: Json | null
           manage_stock: boolean | null
@@ -1421,14 +1422,18 @@ export type Database = {
           short_description: string | null
           sku: string | null
           slug: string | null
+          sold_individually: boolean | null
           status: string | null
           stock_quantity: number | null
           stock_status: string | null
           store_id: string
           synced_at: string | null
           tags: Json
+          tax_class: string | null
+          tax_status: string | null
           type: string | null
           updated_at: string | null
+          virtual: boolean | null
           woo_id: number
         }
         Insert: {
@@ -1436,6 +1441,7 @@ export type Database = {
           categories?: Json | null
           created_at?: string | null
           description?: string | null
+          downloadable?: boolean | null
           id?: string
           images?: Json | null
           manage_stock?: boolean | null
@@ -1447,14 +1453,18 @@ export type Database = {
           short_description?: string | null
           sku?: string | null
           slug?: string | null
+          sold_individually?: boolean | null
           status?: string | null
           stock_quantity?: number | null
           stock_status?: string | null
           store_id: string
           synced_at?: string | null
           tags?: Json
+          tax_class?: string | null
+          tax_status?: string | null
           type?: string | null
           updated_at?: string | null
+          virtual?: boolean | null
           woo_id: number
         }
         Update: {
@@ -1462,6 +1472,7 @@ export type Database = {
           categories?: Json | null
           created_at?: string | null
           description?: string | null
+          downloadable?: boolean | null
           id?: string
           images?: Json | null
           manage_stock?: boolean | null
@@ -1473,14 +1484,18 @@ export type Database = {
           short_description?: string | null
           sku?: string | null
           slug?: string | null
+          sold_individually?: boolean | null
           status?: string | null
           stock_quantity?: number | null
           stock_status?: string | null
           store_id?: string
           synced_at?: string | null
           tags?: Json
+          tax_class?: string | null
+          tax_status?: string | null
           type?: string | null
           updated_at?: string | null
+          virtual?: boolean | null
           woo_id?: number
         }
         Relationships: [

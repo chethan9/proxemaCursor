@@ -221,12 +221,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       try {
         type WooVarBatch = { create?: Array<Record<string, unknown>> };
+        console.log("[woo-variations-create] payload:", JSON.stringify({
+          wooId,
+          parentAttributes: parentPayload.attributes,
+          variationCount: createPayload.length,
+          createPayload,
+        }, null, 2));
         const batchRes = await wooRequest<WooVarBatch>(
           creds,
           "POST",
           `products/${wooId}/variations/batch`,
           { create: createPayload }
         );
+        console.log("[woo-variations-response]", JSON.stringify({
+          wooId,
+          createdCount: Array.isArray(batchRes?.create) ? batchRes.create.length : 0,
+          firstAttributes: Array.isArray(batchRes?.create) && batchRes.create[0]
+            ? (batchRes.create[0] as Record<string, unknown>).attributes
+            : null,
+        }, null, 2));
         const createdVars = Array.isArray(batchRes?.create) ? batchRes.create : [];
         if (createdVars.length > 0) {
           const now = new Date().toISOString();
@@ -358,6 +371,11 @@ function buildProductInsertRow(storeId: string, created: Record<string, unknown>
     type: (created.type as string) ?? null,
     description: (created.description as string) ?? null,
     short_description: (created.short_description as string) ?? null,
+    tax_status: (created.tax_status as string) ?? null,
+    tax_class: (created.tax_class as string) ?? null,
+    sold_individually: (created.sold_individually as boolean | null) ?? null,
+    virtual: (created.virtual as boolean | null) ?? null,
+    downloadable: (created.downloadable as boolean | null) ?? null,
     categories: (created.categories ?? []) as Json,
     tags: (created.tags ?? []) as Json,
     images: (created.images ?? []) as Json,

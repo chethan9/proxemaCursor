@@ -33,6 +33,7 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
   const [groupBy, setGroupBy] = useState<string>("");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [bulkError, setBulkError] = useState<string>("");
   const emptySkuCount = variations.filter((v) => !v.sku?.trim()).length;
 
   const toggleAll = () => {
@@ -52,6 +53,25 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
     if (!bulkMode) return;
     const val = bulkValue.trim();
     if (!val && bulkMode !== "stock_quantity") return;
+    const targets = selected.size > 0 ? variations.filter((v) => selected.has(v.key)) : variations;
+    if (bulkMode === "sale_price" && val) {
+      const sale = parseFloat(val);
+      if (!Number.isNaN(sale) && sale > 0) {
+        const offending: string[] = [];
+        targets.forEach((v, i) => {
+          const reg = parseFloat(v.regular_price || "0");
+          if (reg > 0 && sale >= reg) {
+            const label = (v.attributes || []).map((a) => a.option).filter(Boolean).join(" / ") || `Row ${i + 1}`;
+            offending.push(`${label} (regular ${reg})`);
+          }
+        });
+        if (offending.length > 0) {
+          setBulkError(`Sale price ${sale} is ≥ regular price for: ${offending.slice(0, 5).join(", ")}${offending.length > 5 ? `, +${offending.length - 5} more` : ""}`);
+          return;
+        }
+      }
+    }
+    setBulkError("");
     const patch: Partial<Variation> = {};
     if (bulkMode === "regular_price") patch.regular_price = val;
     if (bulkMode === "sale_price") patch.sale_price = val;
@@ -162,9 +182,9 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
         </DropdownMenu>
         {bulkMode && (
           <>
-            <Input className="h-9 w-40" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
+            <Input className="h-9 w-40" value={bulkValue} onChange={(e) => { setBulkValue(e.target.value); setBulkError(""); }} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
             <Button size="sm" type="button" onClick={applyBulk} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply {selected.size > 0 ? `to ${selected.size}` : "to all"}</Button>
-            <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); }}>Cancel</Button>
+            <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
           </>
         )}
         {attrNames.length > 1 && (
@@ -191,6 +211,9 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
           </Button>
         </div>
       </div>
+      {bulkError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{bulkError}</div>
+      )}
 
       <div className="rounded-xl border border-border overflow-hidden bg-background">
         <div className="grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
@@ -215,7 +238,21 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
               </div>
               <Input className={cellInput} value={v.sku} onChange={(e) => onUpdate(i, { sku: e.target.value })} placeholder="—" />
               <Input className={`${cellInput} ${priceMissing ? "ring-1 ring-destructive/30" : ""}`} value={v.regular_price} onChange={(e) => onUpdate(i, { regular_price: e.target.value })} placeholder="—" />
-              <Input className={cellInput} value={v.sale_price} onChange={(e) => onUpdate(i, { sale_price: e.target.value })} placeholder="—" />
+              <Input
+                className={`${cellInput} ${(() => {
+                  const reg = parseFloat(v.regular_price || "0");
+                  const sale = parseFloat(v.sale_price || "0");
+                  return reg > 0 && sale > 0 && sale >= reg ? "ring-1 ring-destructive/40 text-destructive" : "";
+                })()}`}
+                value={v.sale_price}
+                onChange={(e) => onUpdate(i, { sale_price: e.target.value })}
+                placeholder="—"
+                title={(() => {
+                  const reg = parseFloat(v.regular_price || "0");
+                  const sale = parseFloat(v.sale_price || "0");
+                  return reg > 0 && sale >= reg ? "Sale price must be less than regular price" : undefined;
+                })()}
+              />
               <Input
                 className={`${cellInput} ${!v.manage_stock ? "bg-muted/30 text-muted-foreground cursor-not-allowed" : ""}`}
                 type="number"

@@ -128,6 +128,11 @@ export function validateVariation(
   if (v.manage_stock && v.stock_quantity != null && v.stock_quantity < 0) {
     errs.push({ field: `variation:${v.key}:stock_quantity`, message: "Stock quantity cannot be negative" });
   }
+  const reg = parseFloat(v.regular_price || "0");
+  const sale = parseFloat(v.sale_price || "0");
+  if (reg > 0 && sale > 0 && sale >= reg) {
+    errs.push({ field: `variation:${v.key}:sale_price`, message: "Sale price must be less than regular price" });
+  }
   return errs;
 }
 
