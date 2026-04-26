@@ -15,6 +15,7 @@ type Props = {
   form: ProductFormState;
   setForm: (u: (p: ProductFormState) => ProductFormState) => void;
   productMode: "simple" | "variable";
+  onPromoteToVariable?: () => void;
 };
 
 function AttributeValueChips({
@@ -158,7 +159,7 @@ function AttributeValueChips({
   );
 }
 
-export function AttributeEditor({ storeId, form, setForm, productMode }: Props) {
+export function AttributeEditor({ storeId, form, setForm, productMode, onPromoteToVariable }: Props) {
   const [editingAttr, setEditingAttr] = useState<number | null>(null);
   const [newAttrName, setNewAttrName] = useState("");
   const [newValueInput, setNewValueInput] = useState<Record<number, string>>({});
@@ -257,9 +258,13 @@ export function AttributeEditor({ storeId, form, setForm, productMode }: Props) 
                       </div>
                     </div>
                   </div>
-                  {productMode === "variable" && (
+                  {(productMode === "variable" || onPromoteToVariable) && (
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox checked={attr.variation} onCheckedChange={(v) => setForm((p) => { const a = [...p.attributes]; a[idx] = { ...a[idx], variation: !!v }; return { ...p, attributes: a }; })} />
+                      <Checkbox checked={attr.variation} onCheckedChange={(v) => {
+                        const checked = !!v;
+                        setForm((p) => { const a = [...p.attributes]; a[idx] = { ...a[idx], variation: checked }; return { ...p, attributes: a }; });
+                        if (checked && productMode === "simple" && onPromoteToVariable) onPromoteToVariable();
+                      }} />
                       Use for variations
                     </label>
                   )}
