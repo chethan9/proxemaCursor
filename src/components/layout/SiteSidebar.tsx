@@ -18,6 +18,7 @@ import { fetchProducts } from "@/services/productService";
 import { fetchOrders } from "@/services/orderService";
 import { fetchCategories, fetchTags } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
+import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 
 type Props = { siteId: string };
 
@@ -58,6 +59,18 @@ export function SiteSidebar({ siteId }: Props) {
     return buildInitialSiteTree(siteId, can);
   });
   const queryClient = useQueryClient();
+
+  const { data: bulkJobs = [] } = useStoreBulkJobs(siteId, 50);
+  const bulkJobsCounts = useMemo(() => {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    let pending = 0;
+    let recent = 0;
+    for (const j of bulkJobs) {
+      if (j.status === "pending" || j.status === "running") pending++;
+      else if (j.status === "completed" && j.completed_at && new Date(j.completed_at).getTime() > oneHourAgo) recent++;
+    }
+    return { pending, recent };
+  }, [bulkJobs]);
 
   const currentSite = useMemo(() => sites.find((s) => s.id === siteId), [sites, siteId]);
 
@@ -150,6 +163,9 @@ export function SiteSidebar({ siteId }: Props) {
     if (node.type !== "item" || !node.href) return null;
     const active = isItemActive(node.href);
     const Icon = resolveIcon(node.icon);
+    const isBulkJobs = node.href.endsWith("/bulk-jobs");
+    const showPending = isBulkJobs && bulkJobsCounts.pending > 0;
+    const showRecent = isBulkJobs && bulkJobsCounts.recent > 0;
     return (
       <li key={node.id}>
         <Link
@@ -169,7 +185,23 @@ export function SiteSidebar({ siteId }: Props) {
             <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />
           )}
           <Icon className={cn("h-4 w-4 shrink-0", active ? "text-foreground" : "text-foreground/60")} style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden />
-          <span className="truncate">{node.label}</span>
+          <span className="truncate flex-1">{node.label}</span>
+          {showPending && (
+            <span
+              title={`${bulkJobsCounts.pending} job${bulkJobsCounts.pending === 1 ? "" : "s"} running`}
+              className="inline-flex items-center justify-center min-w-[1.25rem] h-[1.125rem] px-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] font-semibold tabular-nums"
+            >
+              {bulkJobsCounts.pending}
+            </span>
+          )}
+          {showRecent && !showPending && (
+            <span
+              title={`${bulkJobsCounts.recent} recently completed`}
+              className="inline-flex items-center justify-center min-w-[1.25rem] h-[1.125rem] px-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold tabular-nums"
+            >
+              {bulkJobsCounts.recent}
+            </span>
+          )}
         </Link>
       </li>
     );
