@@ -65,8 +65,8 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
       <Card>
         <CardContent className="p-0">
           {/* Tabs */}
-          <div className="flex items-center gap-1 px-2 pt-1 border-b border-border overflow-x-auto">
-            {steps.map((step, i) => {
+          <div className="flex items-center gap-6 px-6 border-b border-border overflow-x-auto">
+            {steps.map((step) => {
               const isActive = step.key === activeTab;
               const completed = canAdvance(step.key);
               return (
@@ -75,23 +75,16 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
                   type="button"
                   onClick={() => { setErrors(null); setActiveTab(step.key); }}
                   className={cn(
-                    "group relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap focus:outline-none",
+                    "relative flex items-center gap-1.5 py-3.5 text-sm font-medium transition-colors whitespace-nowrap focus:outline-none",
                     isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <span className={cn(
-                    "h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 transition-colors",
-                    completed
-                      ? "bg-success/15 text-success"
-                      : isActive
-                        ? "bg-foreground text-background"
-                        : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15"
-                  )}>
-                    {completed ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
-                  </span>
                   <span>{step.label}</span>
+                  {completed && (
+                    <Check className={cn("h-3.5 w-3.5", isActive ? "text-success" : "text-success/70")} strokeWidth={3} />
+                  )}
                   <span className={cn(
-                    "absolute left-2 right-2 -bottom-px h-0.5 rounded-full transition-all",
+                    "absolute inset-x-0 -bottom-px h-0.5 transition-all",
                     isActive ? "bg-foreground" : "bg-transparent"
                   )} />
                 </button>
