@@ -65,6 +65,8 @@ import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/router";
+import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via";
 
@@ -122,6 +124,7 @@ const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIco
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
+  const router = useRouter();
   const { data: store } = useStore(storeId);
   const storeTz = store?.timezone ?? null;
   const [page, setPage] = useState(0);
@@ -133,11 +136,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
   const search = searchProp ?? "";
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [paymentFilter, setPaymentFilter] = useState<string>("all");
-  const [totalMin, setTotalMin] = useState("");
-  const [totalMax, setTotalMax] = useState("");
-  const [dateRange, setDateRange] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => getQueryString(router.query, "status") ?? "all");
+  const [paymentFilter, setPaymentFilter] = useState<string>(() => getQueryString(router.query, "pay") ?? "all");
+  const [totalMin, setTotalMin] = useState(() => getQueryString(router.query, "tmin") ?? "");
+  const [totalMax, setTotalMax] = useState(() => getQueryString(router.query, "tmax") ?? "");
+  const [dateRange, setDateRange] = useState<string>(() => getQueryString(router.query, "range") ?? "all");
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
@@ -407,6 +410,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     }, 200);
     return () => clearTimeout(t);
   }, [search]);
+
+  useSyncUrl(
+    { status: statusFilter, pay: paymentFilter, tmin: totalMin, tmax: totalMax, range: dateRange },
+    { status: "all", pay: "all", tmin: "", tmax: "", range: "all" },
+  );
 
   return (
     <div className="space-y-3">

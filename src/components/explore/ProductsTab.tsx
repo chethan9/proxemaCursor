@@ -50,6 +50,7 @@ import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
+import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 
 type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
 
@@ -111,6 +112,7 @@ interface ProductsTabProps {
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
   const queryClient = useQueryClient();
   const { locked } = useSyncLocked(storeId);
+  const router = useRouter();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -186,12 +188,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
 
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => getQueryString(router.query, "status") ?? "all");
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>(() => getQueryString(router.query, "cat") ?? "all");
+  const [stockStatusFilter, setStockStatusFilter] = useState<string>(() => getQueryString(router.query, "stock") ?? "all");
+  const [priceMin, setPriceMin] = useState(() => getQueryString(router.query, "pmin") ?? "");
+  const [priceMax, setPriceMax] = useState(() => getQueryString(router.query, "pmax") ?? "");
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
 
   useEffect(() => {
@@ -394,8 +396,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
-
-  const router = useRouter();
 
   return (
     <div className="space-y-2">

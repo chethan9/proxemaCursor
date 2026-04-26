@@ -57,6 +57,7 @@ import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
+import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 
 type ColumnKey =
   | "name"
@@ -184,8 +185,8 @@ function CustomersInner() {
   const { toast } = useToast();
   const { locked } = useSyncLocked(storeId);
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(() => getQueryString(router.query, "q") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(() => getQueryString(router.query, "q") ?? "");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
@@ -196,6 +197,8 @@ function CustomersInner() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const prefsLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useSyncUrl({ q: debouncedSearch }, { q: "" });
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 200);
