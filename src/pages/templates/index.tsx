@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import AppLayout from "@/components/layout/AppLayout";
-import AuthGuard from "@/components/AuthGuard";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { AuthGuard } from "@/components/AuthGuard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { TemplateType, TemplateRow } from "@/lib/templates/document";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import SEO from "@/components/SEO";
+import { SEO } from "@/components/SEO";
 
 const TYPE_META: Record<"invoice" | "pickslip", { label: string; icon: typeof FileText; description: string }> = {
   invoice: { label: "Invoices", icon: Receipt, description: "Customer-facing PDFs sent or downloaded with orders." },

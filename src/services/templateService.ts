@@ -6,19 +6,20 @@ export async function listTemplates(type?: TemplateType): Promise<TemplateRow[]>
   if (type) q = q.eq("type", type);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as TemplateRow[];
+  return (data ?? []) as unknown as TemplateRow[];
 }
 
 export async function getTemplate(id: string): Promise<{ template: TemplateRow; version: TemplateVersionRow | null }> {
   const { data: tpl, error: e1 } = await supabase.from("templates").select("*").eq("id", id).single();
   if (e1) throw e1;
   let version: TemplateVersionRow | null = null;
-  if (tpl.current_version_id) {
-    const { data: ver, error: e2 } = await supabase.from("template_versions").select("*").eq("id", tpl.current_version_id).single();
+  const tplRow = tpl as unknown as TemplateRow;
+  if (tplRow.current_version_id) {
+    const { data: ver, error: e2 } = await supabase.from("template_versions").select("*").eq("id", tplRow.current_version_id).single();
     if (e2) throw e2;
-    version = ver as TemplateVersionRow;
+    version = ver as unknown as TemplateVersionRow;
   }
-  return { template: tpl as TemplateRow, version };
+  return { template: tplRow, version };
 }
 
 export async function createTemplate(input: { name: string; type: TemplateType; description?: string; clientId: string; document?: TemplateDocument; styles?: DocumentStyles }): Promise<string> {
@@ -30,15 +31,17 @@ export async function createTemplate(input: { name: string; type: TemplateType; 
     is_sample: false,
   }).select("*").single();
   if (e1) throw e1;
-  const { data: ver, error: e2 } = await supabase.from("template_versions").insert({
-    template_id: tpl.id,
+  const tplId = (tpl as { id: string }).id;
+  const verPayload = {
+    template_id: tplId,
     version_number: 1,
-    document: input.document ?? emptyDocument(),
-    styles: input.styles ?? defaultStyles(),
-  }).select("*").single();
+    document: (input.document ?? emptyDocument()) as unknown as Record<string, unknown>,
+    styles: (input.styles ?? defaultStyles()) as unknown as Record<string, unknown>,
+  };
+  const { data: ver, error: e2 } = await supabase.from("template_versions").insert(verPayload as never).select("*").single();
   if (e2) throw e2;
-  await supabase.from("templates").update({ current_version_id: ver.id }).eq("id", tpl.id);
-  return tpl.id as string;
+  await supabase.from("templates").update({ current_version_id: (ver as { id: string }).id }).eq("id", tplId);
+  return tplId;
 }
 
 export async function forkSampleTemplate(sampleId: string, clientId: string, newName?: string): Promise<string> {
@@ -56,17 +59,18 @@ export async function forkSampleTemplate(sampleId: string, clientId: string, new
 
 export async function saveNewVersion(templateId: string, document: TemplateDocument, styles: DocumentStyles, changeNote?: string): Promise<string> {
   const { data: latest } = await supabase.from("template_versions").select("version_number").eq("template_id", templateId).order("version_number", { ascending: false }).limit(1).maybeSingle();
-  const nextVersion = (latest?.version_number ?? 0) + 1;
-  const { data: ver, error } = await supabase.from("template_versions").insert({
+  const nextVersion = ((latest as { version_number?: number } | null)?.version_number ?? 0) + 1;
+  const verPayload = {
     template_id: templateId,
     version_number: nextVersion,
-    document,
-    styles,
+    document: document as unknown as Record<string, unknown>,
+    styles: styles as unknown as Record<string, unknown>,
     change_note: changeNote ?? null,
-  }).select("*").single();
+  };
+  const { data: ver, error } = await supabase.from("template_versions").insert(verPayload as never).select("*").single();
   if (error) throw error;
-  await supabase.from("templates").update({ current_version_id: ver.id, updated_at: new Date().toISOString() }).eq("id", templateId);
-  return ver.id as string;
+  await supabase.from("templates").update({ current_version_id: (ver as { id: string }).id, updated_at: new Date().toISOString() }).eq("id", templateId);
+  return (ver as { id: string }).id;
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
