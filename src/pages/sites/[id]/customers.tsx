@@ -32,6 +32,7 @@ import {
   UserPlus,
   Eye,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import {
   useCustomers,
@@ -53,6 +54,9 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
+import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
+import { cn } from "@/lib/utils";
 
 type ColumnKey =
   | "name"
@@ -194,7 +198,7 @@ function CustomersInner() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 300);
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 200);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -280,6 +284,12 @@ function CustomersInner() {
   const customers = result?.data ?? [];
   const count = result?.count ?? 0;
   const showRefetchOverlay = isFetching && !isLoading && customers.length > 0;
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useExplorerKeyboard({
+    searchRef: searchInputRef,
+    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if ((page + 1) * pageSize < count && !isFetching) setPage((p) => p + 1); },
+  });
 
   const hasActiveFilters = !!search;
 
@@ -345,7 +355,13 @@ function CustomersInner() {
             <div className="w-full max-w-[320px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input placeholder="Search customers…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+                <Input ref={searchInputRef} placeholder="Search customers…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-12 h-9" />
+                {!search && (
+                  <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground pointer-events-none">⌘K</kbd>
+                )}
+                {isFetching && search && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />
+                )}
               </div>
             </div>
           </div>
@@ -422,8 +438,8 @@ function CustomersInner() {
                       {page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {count.toLocaleString()}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count}><ChevronRight className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count || isFetching}><ChevronRight className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>
                 </>
@@ -440,8 +456,9 @@ function CustomersInner() {
       </div>
 
       <Card className="relative">
+        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !isLoading && customers.length > 0 && "opacity-70")}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
