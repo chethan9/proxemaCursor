@@ -1040,28 +1040,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "status") {
                                 return (
                                   <TableCell key={c.key}>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs font-medium">{statusLabel}</span>
-                                      <div className="flex items-center gap-0.5">
-                                        <Button variant="ghost" size="sm" className={`h-6 w-6 p-0 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={(e) => { e.stopPropagation(); if (!locked) router.push(`/sites/${storeId}/products/edit/${p.id}`); }} title={locked ? "Available after initial sync completes" : "Edit product"}>
-                                          <Pencil className="h-3 w-3" />
-                                        </Button>
-                                        <Switch
-                                          checked={p.status === "publish"}
-                                          onCheckedChange={(v) => {
-                                            if (!v) {
-                                              setBulkDialog("status");
-                                              setNewProductStatus("draft");
-                                            } else {
-                                              setBulkDialog("status");
-                                              setNewProductStatus("publish");
-                                            }
-                                          }}
-                                          disabled={locked}
-                                          aria-label={`Toggle product ${p.name || "—"} status`}
-                                        />
-                                      </div>
-                                    </div>
+                                    <span className="text-xs font-medium">{statusLabel}</span>
                                   </TableCell>
                                 );
                               }
