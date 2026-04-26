@@ -762,12 +762,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             key={p.id}
                             onClick={() => {
                               if (selectedIds.size > 0) toggleSelect(p.id);
-                              else setQuickEditProduct(p);
+                              else if (!locked) setQuickEditProduct(p);
                             }}
-                            className={`group relative border rounded-lg overflow-hidden bg-card hover:shadow-md transition cursor-pointer ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                            className={`group relative border rounded-lg overflow-hidden bg-card hover:shadow-md transition ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                            title={locked ? "Editing is disabled during initial sync" : undefined}
                           >
                             <div
-                              onClick={(e) => { e.stopPropagation(); toggleSelect(p.id); }}
+                              onClick={(e) => { e.stopPropagation(); if (!locked) toggleSelect(p.id); }}
                               className={`absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                             >
                               <Checkbox checked={selectedIds.has(p.id)} className="pointer-events-none" />
@@ -809,12 +810,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           key={p.id}
                           onClick={() => {
                             if (selectedIds.size > 0) toggleSelect(p.id);
-                            else setQuickEditProduct(p);
+                            else if (!locked) setQuickEditProduct(p);
                           }}
-                          className={`group border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col cursor-pointer ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                          className={`group border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                          title={locked ? "Editing is disabled during initial sync" : undefined}
                         >
                           <div
-                            onClick={(e) => { e.stopPropagation(); toggleSelect(p.id); }}
+                            onClick={(e) => { e.stopPropagation(); if (!locked) toggleSelect(p.id); }}
                             className={`absolute top-2.5 left-2.5 z-10 h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                           >
                             <Checkbox checked={selectedIds.has(p.id)} className="pointer-events-none" />
@@ -847,8 +849,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
-                              className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+                              onClick={(e) => { e.stopPropagation(); if (!locked) router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
+                              disabled={locked}
+                              title={locked ? "Available after initial sync completes" : "Edit product"}
+                              className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:cursor-not-allowed disabled:opacity-0"
                             >
                               <Pencil className="h-3 w-3" />
                               Edit
