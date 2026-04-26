@@ -54,7 +54,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useLoadingEffect } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
@@ -287,6 +287,7 @@ function CustomersInner() {
   const customers = result?.data ?? [];
   const count = result?.count ?? 0;
   const showRefetchOverlay = isFetching && !isLoading && customers.length > 0;
+  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
@@ -459,7 +460,6 @@ function CustomersInner() {
       </div>
 
       <Card className="relative">
-        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
           <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !isLoading && customers.length > 0 && "opacity-70")}>
             <Table>

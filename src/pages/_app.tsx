@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { BrandingProvider } from "@/contexts/BrandingProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
 import { RecentMutationsProvider } from "@/contexts/RecentMutationsProvider";
+import { LoadingProvider } from "@/contexts/LoadingProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
@@ -16,6 +17,7 @@ import { IncompleteOnboardingPrompt } from "@/components/IncompleteOnboardingPro
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { TopProgressBar } from "@/components/ui/top-progress-bar";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 
@@ -83,10 +85,13 @@ function Providers({ children }: { children: React.ReactNode }) {
         <CacheBuster />
         <BrandingProvider>
           <RecentMutationsProvider>
-            <Shell>{children}</Shell>
-            <BulkJobsToast />
-            <GlobalScrollButton />
-            <IncompleteOnboardingPrompt />
+            <LoadingProvider>
+              <TopProgressBar />
+              <Shell>{children}</Shell>
+              <BulkJobsToast />
+              <GlobalScrollButton />
+              <IncompleteOnboardingPrompt />
+            </LoadingProvider>
           </RecentMutationsProvider>
         </BrandingProvider>
       </AuthProvider>

@@ -47,7 +47,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useLoadingEffect } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
@@ -234,6 +234,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
   const showRefetchOverlay = isFetching && !loading && products.length > 0;
+  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
@@ -672,7 +673,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       </div>
 
       <Card className="relative">
-        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
           {selectedIds.size > 0 && (
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
@@ -1165,7 +1165,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       <ProductQuickEdit
         product={quickEditProduct}
         open={!!quickEditProduct}
-        onOpenChange={(o) => { if (!o) setQuickEditProduct(null); }}
+        onOpenChange={(o) => !o && setQuickEditProduct(null)}
         siteName={storeName}
       />
 

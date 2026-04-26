@@ -62,7 +62,7 @@ import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useLoadingEffect } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
@@ -252,6 +252,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const orderCount = ordersResult?.count ?? 0;
   void isPlaceholderData;
   const showRefetchOverlay = isFetching && !loading && orders.length > 0;
+  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
@@ -840,7 +841,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
       </div>
 
       <Card className="relative">
-        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
           {selectedIds.size > 0 && (
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>

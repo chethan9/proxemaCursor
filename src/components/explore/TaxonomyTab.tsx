@@ -21,7 +21,7 @@ import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { TopProgressBar } from "@/components/ui/top-progress-bar";
+import { useLoadingEffect } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +64,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   const total = pageRes?.count || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const showRefetchOverlay = isFetching && !isLoading && items.length > 0;
+  useLoadingEffect(isFetching);
   const parentPool = mode === "categories"
     ? (allCats || []).map((t) => ({ ...t, parent_woo_id: (t as { parent_id?: number }).parent_id ?? null }))
     : [];
@@ -186,7 +187,6 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
       </div>
 
       <Card className="relative">
-        <TopProgressBar active={isFetching} />
         <CardContent className="p-0">
           <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !isLoading && items.length > 0 && "opacity-70")}>
             <Table>
