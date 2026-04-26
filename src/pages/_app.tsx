@@ -1,5 +1,4 @@
 import "@/styles/globals.css";
-import "../../sentry.client.config";
 import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -27,6 +26,10 @@ function PostHogPageviews() {
   const router = useRouter();
   useEffect(() => {
     initPostHog();
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    import("../../sentry.client.config").catch(() => {});
   }, []);
   useEffect(() => {
     const handle = (url: string) => capturePostHogPageView(url);
