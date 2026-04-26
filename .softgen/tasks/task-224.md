@@ -1,6 +1,6 @@
 ---
 title: Server-only import guards (server-only pkg + ESLint)
-status: todo
+status: done
 priority: urgent
 type: chore
 tags: [security, build, dx]

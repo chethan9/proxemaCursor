@@ -1,3 +1,4 @@
+import "server-only";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Tables, TablesInsert } from "@/integrations/supabase/helpers";
 
