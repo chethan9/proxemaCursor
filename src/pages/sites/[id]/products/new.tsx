@@ -15,10 +15,13 @@ import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useUnsavedChangesGuard, UnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSyncLocked } from "@/components/site/SyncLockBanner";
+import { Loader2 as Spinner } from "lucide-react";
 
 function Inner() {
   const router = useRouter();
   const { id, store, loading } = useSiteFromRoute();
+  const { locked: syncLocked, ready: syncReady } = useSyncLocked(id);
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const [form, setForm] = useState<ProductFormState>(emptyProductForm());
   const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
@@ -47,6 +50,26 @@ function Inner() {
 
   if (loading) return <SiteLoadingSkeleton />;
   if (!store) return <div className="p-6">Store not found</div>;
+  if (syncReady && syncLocked) {
+    return (
+      <div className="p-6 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-3 mb-4">
+          <Button variant="ghost" size="sm" asChild><Link href={`/sites/${id}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
+        </div>
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-8 text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-warning/15 mb-4">
+            <Spinner className="h-6 w-6 text-warning animate-spin" />
+          </div>
+          <h2 className="text-lg font-semibold mb-2">Adding products is locked while we finish importing</h2>
+          <p className="text-sm text-muted-foreground mb-1">
+            Your store is still doing its initial sync. To avoid data conflicts, creating new products is disabled until the import finishes — usually just a few minutes.
+          </p>
+          <p className="text-sm text-muted-foreground mb-5">You can keep browsing in live preview mode in the meantime.</p>
+          <Button asChild variant="outline"><Link href={`/sites/${id}/products`}>Back to products</Link></Button>
+        </div>
+      </div>
+    );
+  }
 
   const canAdvance = (tab: AdvancedTabKey) => {
     if (tab === "basic") return form.name.trim().length > 0;

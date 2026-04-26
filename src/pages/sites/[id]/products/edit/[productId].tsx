@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { useUnsavedChangesGuard, UnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSyncLocked } from "@/components/site/SyncLockBanner";
+import { Loader2 as Spinner } from "lucide-react";
 
 type ProductRow = Record<string, unknown>;
 
@@ -27,6 +29,7 @@ function Inner() {
   const { toast } = useToast();
   const { id: storeId, store, loading: storeLoading } = useSiteFromRoute();
   const productId = typeof router.query.productId === "string" ? router.query.productId : "";
+  const { locked: syncLocked, ready: syncReady } = useSyncLocked(storeId);
 
   const [form, setForm] = useState<ProductFormState | null>(null);
   const [initialFormJson, setInitialFormJson] = useState<string>("");
@@ -155,6 +158,26 @@ function Inner() {
 
   if (storeLoading || loading) return <ProductEditSkeleton />;
   if (!store || !form) return <div className="p-6">Product not found</div>;
+  if (syncReady && syncLocked) {
+    return (
+      <div className="p-6 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-3 mb-4">
+          <Button variant="ghost" size="sm" asChild><Link href={`/sites/${storeId}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
+        </div>
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-8 text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-warning/15 mb-4">
+            <Spinner className="h-6 w-6 text-warning animate-spin" />
+          </div>
+          <h2 className="text-lg font-semibold mb-2">Editing is locked while we finish importing</h2>
+          <p className="text-sm text-muted-foreground mb-1">
+            Your store is still doing its initial sync. To avoid data conflicts, product edits are disabled until the import finishes — usually just a few minutes.
+          </p>
+          <p className="text-sm text-muted-foreground mb-5">You can keep browsing in live preview mode in the meantime.</p>
+          <Button asChild variant="outline"><Link href={`/sites/${storeId}/products`}>Back to products</Link></Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
