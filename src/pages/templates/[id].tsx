@@ -16,8 +16,6 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { wooExtensions } from "@/lib/templates/nodes";
 import { WooBlocksToolbar } from "@/components/template-builder/WooBlocksToolbar";
 
-import "@maily-to/core/style.css";
-
 const MailyEditor = dynamic(
   () => import("@maily-to/core").then((m) => m.Editor),
   { ssr: false, loading: () => <div className="flex-1 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> }
