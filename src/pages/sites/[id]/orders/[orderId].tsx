@@ -43,6 +43,7 @@ import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
@@ -115,6 +116,7 @@ export default function OrderDetailsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState("");
+  const [noteIsCustomer, setNoteIsCustomer] = useState(false);
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [localNotes, setLocalNotes] = useState<Array<{ note: string; date_created: string; author?: string }>>([]);
 
@@ -127,6 +129,18 @@ export default function OrderDetailsPage() {
       return data as unknown as OrderRow | null;
     },
     enabled: !!orderId,
+  });
+
+  type WooNote = { id: number; note: string; date_created: string; author: string; customer_note: boolean };
+  const { data: wooNotes, isLoading: notesLoading, refetch: refetchNotes } = useQuery<WooNote[]>({
+    queryKey: ["order-notes", storeId, orderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/stores/${storeId}/orders/${orderId}/notes`);
+      if (!res.ok) throw new Error("Failed to load notes");
+      return res.json();
+    },
+    enabled: !!(storeId && orderId && order),
+    staleTime: 30_000,
   });
 
   const custEmailForLookup = order ? getCustomerEmail(order.billing) : "";
@@ -169,7 +183,9 @@ export default function OrderDetailsPage() {
     transaction_id?: string;
   };
   const persistedNotes = Array.isArray(raw.order_notes) ? raw.order_notes : [];
-  const allNotes = [...localNotes, ...persistedNotes.map((n) => ({ note: n.note || "", date_created: n.date_created || "", author: n.author }))];
+  const allNotes = wooNotes && wooNotes.length > 0
+    ? wooNotes.map((n) => ({ note: n.note || "", date_created: n.date_created, author: n.author, customer_note: n.customer_note }))
+    : persistedNotes.map((n) => ({ note: n.note || "", date_created: n.date_created || "", author: n.author, customer_note: false }));
   const statusStyle = order ? STATUS_STYLES[order.status || "pending"] || STATUS_STYLES.pending : STATUS_STYLES.pending;
 
   const statusMutation = useSiteMutation<OrderRow, string>({
@@ -191,11 +207,28 @@ export default function OrderDetailsPage() {
     statusMutation.mutate(newStatus);
   };
 
+  const addNoteMutation = useSiteMutation<unknown, void>({
+    mutationFn: async () => {
+      const res = await fetch(`/api/stores/${storeId}/orders/${orderId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: noteText.trim(), customer_note: noteIsCustomer }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to add note");
+      }
+      return res.json();
+    },
+    invalidateKeys: [["order-notes", storeId, orderId]],
+    siteName: store?.name,
+    successToast: () => (noteIsCustomer ? "Note sent to customer" : "Private note added"),
+    onSuccessExtra: () => { setNoteText(""); setNoteIsCustomer(false); refetchNotes(); },
+  });
+
   const handleAddNote = () => {
     if (!noteText.trim()) return;
-    setLocalNotes((prev) => [{ note: noteText.trim(), date_created: new Date().toISOString(), author: "You" }, ...prev]);
-    setNoteText("");
-    toast({ title: "Note added locally", description: "Syncing to WooCommerce will be available soon." });
+    addNoteMutation.mutate();
   };
 
   const formatAddress = (a: typeof billing) => [
@@ -378,7 +411,7 @@ export default function OrderDetailsPage() {
                         <Send className="h-3.5 w-3.5" /><span>Resend new order notification</span><span className="ml-auto">→</span>
                       </button>
                       {store?.url && (
-                        <a href={`${store.url.replace(/\/$/, "")}/wp-admin/post.php?post=${order.woo_id}&action=edit`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
+                        <a href={`${store.url.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${order.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
                           <ExternalLink className="h-3.5 w-3.5" /><span>Open in WP admin</span><span className="ml-auto text-muted-foreground">→</span>
                         </a>
                       )}
@@ -408,21 +441,29 @@ export default function OrderDetailsPage() {
 
                 <Card>
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3"><FileText className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Order Notes</h3></div>
+                    <div className="flex items-center gap-2 mb-3"><FileText className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Order Notes {wooNotes ? <span className="text-xs text-muted-foreground font-normal">({wooNotes.length})</span> : null}</h3></div>
                     <div className="space-y-2 mb-3 max-h-[280px] overflow-y-auto">
-                      {allNotes.length === 0 && <div className="text-xs text-muted-foreground italic">No notes yet</div>}
+                      {notesLoading && <div className="text-xs text-muted-foreground">Loading notes…</div>}
+                      {!notesLoading && allNotes.length === 0 && <div className="text-xs text-muted-foreground italic">No notes yet</div>}
                       {allNotes.map((n, i) => (
-                        <div key={i} className="rounded-md bg-muted/40 p-2.5 border border-border">
-                          <div className="text-xs leading-relaxed whitespace-pre-wrap">{n.note}</div>
-                          <div className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                        <div key={i} className={cn("rounded-md p-2.5 border", n.customer_note ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900" : "bg-muted/40 border-border")}>
+                          <div className="text-xs leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: n.note }} />
+                          <div className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1.5 flex-wrap">
                             <span>{fmtDateTime(n.date_created)}</span>
                             {n.author && <span className="text-muted-foreground/60">· {n.author}</span>}
+                            {n.customer_note && <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">Sent to customer</span>}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note..." className="text-xs resize-none min-h-[80px]" />
-                    <Button size="sm" className="w-full mt-2" disabled={!noteText.trim()} onClick={handleAddNote}>Add note</Button>
+                    <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note..." className="text-xs resize-none min-h-[80px]" disabled={addNoteMutation.isPending} />
+                    <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer">
+                      <Checkbox checked={noteIsCustomer} onCheckedChange={(v) => setNoteIsCustomer(!!v)} disabled={addNoteMutation.isPending} />
+                      <span>Send to customer (email)</span>
+                    </label>
+                    <Button size="sm" className="w-full mt-2" disabled={!noteText.trim() || addNoteMutation.isPending} onClick={handleAddNote}>
+                      {addNoteMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</> : "Add note"}
+                    </Button>
                   </CardContent>
                 </Card>
               </div>

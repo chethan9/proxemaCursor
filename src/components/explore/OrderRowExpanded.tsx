@@ -281,7 +281,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
               </a>
             )}
             {storeUrl && (
-              <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/post.php?post=${order.woo_id}&action=edit`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
+              <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${order.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <ExternalLink className="h-2.5 w-2.5" />
                 <span>WP admin</span>
                 <span className="ml-auto text-muted-foreground">→</span>
