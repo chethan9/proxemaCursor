@@ -681,13 +681,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 <Badge variant="secondary" className="font-mono text-xs">{selectedIds.size}</Badge>
                 <span className="text-xs font-medium">selected</span>
                 {overLimit && <span className="text-[11px] text-destructive ml-1">(max {MAX_BULK} per job)</span>}
+                {locked && <span className="text-[11px] text-warning ml-1">Bulk actions disabled during initial sync</span>}
               </div>
               <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("price")}><DollarSign className="h-3.5 w-3.5" />Price</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("price")}><DollarSign className="h-3.5 w-3.5" />Price</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit || locked} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />Clear</Button>
             </div>
           )}
