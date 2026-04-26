@@ -1,11 +1,11 @@
 ---
 title: Downloads page per site (invoices, reports, exports)
-status: todo
+status: done
 priority: high
 type: feature
-tags: [downloads, bulk-invoices, ui, sidebar]
+tags: [downloads, ui, site-page]
 created_by: agent
-created_at: 2026-04-26T20:10:00Z
+created_at: 2026-04-26
 position: 231
 ---
 

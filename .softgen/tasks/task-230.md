@@ -1,11 +1,11 @@
 ---
 title: PDF compression + 1-week auto-cleanup for bulk invoices
-status: todo
-priority: medium
+status: done
+priority: high
 type: feature
-tags: [bulk-invoices, pdf, storage, cron]
+tags: [pdf, storage, cron]
 created_by: agent
-created_at: 2026-04-26T19:55:00Z
+created_at: 2026-04-26
 position: 230
 ---
 

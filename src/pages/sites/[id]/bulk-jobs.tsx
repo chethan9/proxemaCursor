@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ import {
   Filter,
   RefreshCw,
   RotateCcw,
+  Download,
 } from "lucide-react";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 import { cancelBulkJob, retryFailedBulkJobItems, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
@@ -132,15 +134,23 @@ function BulkJobsInner() {
           <h1 className="text-2xl font-semibold">Bulk Jobs</h1>
           <p className="text-sm text-muted-foreground">Background jobs for {store.name}</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => qc.invalidateQueries({ queryKey: ["bulk-jobs"] })}
-          disabled={isFetching}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/sites/${id}/downloads`}>
+              <Download className="h-4 w-4 mr-2" />
+              View downloads
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => qc.invalidateQueries({ queryKey: ["bulk-jobs"] })}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
