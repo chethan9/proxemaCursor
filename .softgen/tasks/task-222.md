@@ -1,6 +1,6 @@
 ---
 title: Plan-driven initial-sync window for orders + customers
-status: todo
+status: done
 priority: high
 type: feature
 tags: [sync, billing, performance]
@@ -59,15 +59,15 @@ position: 222
 
 ## Checklist
 
-- [ ] DB migration: `ALTER TABLE plans ADD COLUMN max_initial_history_days int` (nullable).
-- [ ] `getEffectiveHistoryFrom(storeId)` server helper that computes `max(planFloor, site.orders_history_from)`.
-- [ ] Sync API reads effective date and passes `?after=<iso>` to Woo for orders + customers on non-incremental runs.
-- [ ] Site settings page: "Historical data window" card with effective date display, date input, plan ceiling banner, Save + Backfill buttons.
-- [ ] Backfill button triggers orders + customers sync via existing sync endpoint and toasts + links to sync-runs.
-- [ ] Plan editor exposes "Max initial history (days)" field with NULL = unlimited.
-- [ ] Activity log entries for `store.history_window_changed` and `plan.history_limit_changed`.
-- [ ] Site-settings client-side clamp prevents picking a date older than plan allows; shows upgrade CTA if user tries.
-- [ ] Loading + empty states wired (no plan = treat as unlimited; no subscription = treat as unlimited for now).
+- [x] DB migration: `ALTER TABLE plans ADD COLUMN max_initial_history_days int` (nullable).
+- [x] `getEffectiveHistoryFrom(storeId)` server helper that computes `max(planFloor, site.orders_history_from)`.
+- [x] Sync API reads effective date and passes `?after=<iso>` to Woo for orders + customers on non-incremental runs.
+- [x] Site settings page: "Historical data window" card with effective date display, date input, plan ceiling banner, Save + Backfill buttons.
+- [x] Backfill button triggers orders + customers sync via existing sync endpoint and toasts + links to sync-runs.
+- [x] Plan editor exposes "Max initial history (days)" field with NULL = unlimited.
+- [x] Activity log entries for `store.history_window_changed` and `plan.history_limit_changed`.
+- [x] Site-settings client-side clamp prevents picking a date older than plan allows; shows upgrade CTA if user tries.
+- [x] Loading + empty states wired (no plan = treat as unlimited; no subscription = treat as unlimited for now).
 
 ## Acceptance
 
