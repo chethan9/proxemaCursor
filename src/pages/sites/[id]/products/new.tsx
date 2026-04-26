@@ -57,6 +57,7 @@ function Inner() {
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
+      <UnsavedChangesGuard dirty={dirty} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={`/sites/${id}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
