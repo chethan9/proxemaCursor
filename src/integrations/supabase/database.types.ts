@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1220,6 +1220,54 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_config: {
+        Row: {
+          additional_config: Json | null
+          api_key_encrypted: string | null
+          api_secret_encrypted: string | null
+          created_at: string | null
+          enabled: boolean | null
+          gateway: string
+          id: string
+          last_test_at: string | null
+          last_test_error: string | null
+          last_test_status: string | null
+          mode: string
+          updated_at: string | null
+          webhook_secret_encrypted: string | null
+        }
+        Insert: {
+          additional_config?: Json | null
+          api_key_encrypted?: string | null
+          api_secret_encrypted?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          gateway: string
+          id?: string
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_status?: string | null
+          mode?: string
+          updated_at?: string | null
+          webhook_secret_encrypted?: string | null
+        }
+        Update: {
+          additional_config?: Json | null
+          api_key_encrypted?: string | null
+          api_secret_encrypted?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          gateway?: string
+          id?: string
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_status?: string | null
+          mode?: string
+          updated_at?: string | null
+          webhook_secret_encrypted?: string | null
+        }
+        Relationships: []
+      }
       payment_gateway_settings: {
         Row: {
           country_overrides: string[] | null
@@ -1292,6 +1340,33 @@ export type Database = {
           key?: string
           label?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      payment_region_routing: {
+        Row: {
+          country_code: string
+          created_at: string | null
+          enabled: boolean | null
+          gateway: string
+          id: string
+          priority: number | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string | null
+          enabled?: boolean | null
+          gateway: string
+          id?: string
+          priority?: number | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string | null
+          enabled?: boolean | null
+          gateway?: string
+          id?: string
+          priority?: number | null
         }
         Relationships: []
       }
@@ -2558,6 +2633,14 @@ export type Database = {
       can_bootstrap_super_admin: { Args: never; Returns: boolean }
       current_user_client_id: { Args: never; Returns: string }
       current_user_role: { Args: never; Returns: string }
+      decrypt_credential: {
+        Args: { encrypted_credential: string; key_env_var?: string }
+        Returns: string
+      }
+      encrypt_credential: {
+        Args: { credential: string; key_env_var?: string }
+        Returns: string
+      }
       get_site_home_stats:
         | { Args: { p_store_id: string; p_tz?: string }; Returns: Json }
         | {
