@@ -11,8 +11,15 @@ function trim(s: string | undefined | null): string {
 function isPositivePriceString(s: string | undefined | null): boolean {
   const t = trim(s);
   if (!t) return false;
+  if (!/^\d+(\.\d+)?$/.test(t)) return false;
   const n = parseFloat(t);
   return !Number.isNaN(n) && n > 0;
+}
+
+function isValidPriceString(s: string | undefined | null): boolean {
+  const t = trim(s);
+  if (!t) return true;
+  return /^\d+(\.\d+)?$/.test(t);
 }
 
 function clampNonNeg(n: number | null | undefined): number | null {
