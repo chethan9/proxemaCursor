@@ -16,7 +16,7 @@ async function checkAdminAuth(req: NextApiRequest) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Admin access required");
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") throw new Error("Admin access required");
   return user;
 }
 
