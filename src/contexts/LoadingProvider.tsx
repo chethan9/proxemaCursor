@@ -120,7 +120,7 @@ export function ProgressSlot({ className }: { className?: string }) {
   );
 }
 
-function BlockingOverlay() {
+export function BlockingOverlay() {
   const { blockingActive, blockingLabel } = useGlobalLoading();
   useEffect(() => {
     if (!blockingActive) return;
