@@ -1,7 +1,7 @@
 <![CDATA[
 ---
 title: Brands — full parity with Categories (sync, persist, display)
-status: todo
+status: done
 
 ...
 xpanded order detail / customer detail) — confirm or wire as missing.

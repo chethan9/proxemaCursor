@@ -1,8 +1,7 @@
 <![CDATA[
 ---
 title: Numeric input audit — strict price + stock validation everywhere
-status: todo
-priori
+status: done
 ...
 ad to crashes or `NaN` saves; the server returns a clear validation error if reached via curl/raw API.
 ]]>

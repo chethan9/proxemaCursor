@@ -1,7 +1,7 @@
 <![CDATA[
 ---
 title: Tax default off for new products + persistence audit
-status: todo
+status: done
 priority: medi
 ...
 en re-fetch the same product → still shows "no tax". (Tied to existing task 234 work — verify it shipped.)
