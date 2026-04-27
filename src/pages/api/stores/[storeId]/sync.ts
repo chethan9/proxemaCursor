@@ -66,6 +66,7 @@ const ASPECTS: Record<string, AspectConfig> = {
       short_description: p.short_description,
       categories: toJson(p.categories), images: toJson(p.images),
       tags: toJson(p.tags || []),
+      brands: toJson(p.brands || []),
       attributes: toJson(p.attributes || []), raw_data: toJson(p), synced_at: now,
     }),
   },
@@ -130,6 +131,18 @@ const ASPECTS: Record<string, AspectConfig> = {
       store_id: store.id, woo_id: t.id, name: t.name, slug: t.slug,
       description: t.description || "", count: t.count || 0,
       raw_data: toJson(t), synced_at: now,
+    }),
+  },
+  brands: {
+    endpoint: "products/brands",
+    table: "brands",
+    supportsModifiedAfter: false,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toRow: (b: any, store, now) => ({
+      store_id: store.id, woo_id: b.id, name: b.name, slug: b.slug,
+      description: b.description || "", count: b.count || 0,
+      image: toJson(b.image || null),
+      raw_data: toJson(b), synced_at: now,
     }),
   },
   coupons: {

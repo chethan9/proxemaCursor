@@ -392,6 +392,59 @@ export type Database = {
         }
         Relationships: []
       }
+      brands: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image: Json | null
+          name: string
+          raw_data: Json | null
+          slug: string | null
+          store_id: string
+          synced_at: string | null
+          updated_at: string | null
+          woo_id: number
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image?: Json | null
+          name: string
+          raw_data?: Json | null
+          slug?: string | null
+          store_id: string
+          synced_at?: string | null
+          updated_at?: string | null
+          woo_id: number
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image?: Json | null
+          name?: string
+          raw_data?: Json | null
+          slug?: string | null
+          store_id?: string
+          synced_at?: string | null
+          updated_at?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brands_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulk_jobs: {
         Row: {
           completed_at: string | null
@@ -1416,6 +1469,7 @@ export type Database = {
       products: {
         Row: {
           attributes: Json | null
+          brands: Json | null
           categories: Json | null
           created_at: string | null
           description: string | null
@@ -1450,6 +1504,7 @@ export type Database = {
         }
         Insert: {
           attributes?: Json | null
+          brands?: Json | null
           categories?: Json | null
           created_at?: string | null
           description?: string | null
@@ -1484,6 +1539,7 @@ export type Database = {
         }
         Update: {
           attributes?: Json | null
+          brands?: Json | null
           categories?: Json | null
           created_at?: string | null
           description?: string | null

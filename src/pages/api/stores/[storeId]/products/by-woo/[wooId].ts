@@ -48,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       categories: p.categories,
       images: p.images,
       attributes: p.attributes,
+      brands: p.brands,
       raw_data: p,
       synced_at: new Date().toISOString(),
     };

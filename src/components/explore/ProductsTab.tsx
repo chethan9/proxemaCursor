@@ -777,6 +777,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     {products.map((p) => {
                       const thumb = getProductThumbnail(p.images);
                       const cats = getCategoryNames(p.categories);
+                      const brandList = Array.isArray(p.brands) ? (p.brands as { name?: string }[]).map((b) => b.name).filter(Boolean) : [];
                       const stockLow = p.stock_quantity != null && p.stock_quantity > 0 && p.stock_quantity < 5;
                       const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
                       const priceHtml = (p.raw_data?.price_html as string) || "";
@@ -910,6 +911,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           <div className="p-3 space-y-1.5 flex-1 flex flex-col">
                             <div className="text-sm font-medium leading-tight line-clamp-2 min-h-[36px]">{p.name || "—"}</div>
                             <div className="text-[11px] text-muted-foreground truncate">{cats || "Uncategorized"}</div>
+                            {brandList.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {brandList.slice(0, 2).map((b) => (
+                                  <span key={b} className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">{b}</span>
+                                ))}
+                                {brandList.length > 2 && (
+                                  <span className="text-[10px] text-muted-foreground">+{brandList.length - 2}</span>
+                                )}
+                              </div>
+                            )}
                             <div className="pt-2 mt-auto border-t border-border/60 space-y-1.5">
                               <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground font-mono uppercase tracking-wide">
                                 <span className="truncate">{p.sku ? `SKU: ${p.sku}` : p.woo_id ? `ID: ${p.woo_id}` : "—"}</span>

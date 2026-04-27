@@ -92,6 +92,7 @@ function buildProductRow(storeId: string, p: Record<string, unknown>) {
     categories: toJson(p.categories),
     images: toJson(p.images),
     attributes: toJson(p.attributes || []),
+    brands: toJson(p.brands || []),
     raw_data: toJson(p),
     synced_at: now,
   };

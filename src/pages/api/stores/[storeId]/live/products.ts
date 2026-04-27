@@ -22,6 +22,7 @@ async function warmWriteProducts(storeId: string, items: Record<string, unknown>
       categories: (p.categories ?? null) as TablesInsert<"products">["categories"],
       images: (p.images ?? null) as TablesInsert<"products">["images"],
       attributes: (p.attributes ?? null) as TablesInsert<"products">["attributes"],
+      brands: (p.brands ?? null) as TablesInsert<"products">["brands"],
       raw_data: p as TablesInsert<"products">["raw_data"],
       synced_at: new Date().toISOString(),
     }));

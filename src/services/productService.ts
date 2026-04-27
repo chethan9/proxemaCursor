@@ -19,6 +19,7 @@ export interface ProductRow {
   categories: unknown;
   images: unknown;
   attributes: unknown;
+  brands?: unknown;
   raw_data: Record<string, unknown> | null;
   synced_at: string | null;
   created_at: string | null;
@@ -67,6 +68,7 @@ function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRo
     categories: p.categories,
     images: p.images,
     attributes: p.attributes,
+    brands: p.brands,
     raw_data: p,
     synced_at: null,
     created_at: (p.date_created as string) ?? null,
