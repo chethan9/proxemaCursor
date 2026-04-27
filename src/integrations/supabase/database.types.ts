@@ -1313,6 +1313,60 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_logs: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          currency: string | null
+          error_message: string | null
+          event_type: string
+          gateway: string
+          id: string
+          ip_address: string | null
+          mode: string
+          processed_at: string | null
+          reference_id: string | null
+          request_body: Json | null
+          response_body: Json | null
+          status: string
+          user_agent: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          currency?: string | null
+          error_message?: string | null
+          event_type: string
+          gateway: string
+          id?: string
+          ip_address?: string | null
+          mode: string
+          processed_at?: string | null
+          reference_id?: string | null
+          request_body?: Json | null
+          response_body?: Json | null
+          status: string
+          user_agent?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          currency?: string | null
+          error_message?: string | null
+          event_type?: string
+          gateway?: string
+          id?: string
+          ip_address?: string | null
+          mode?: string
+          processed_at?: string | null
+          reference_id?: string | null
+          request_body?: Json | null
+          response_body?: Json | null
+          status?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           created_at: string | null
