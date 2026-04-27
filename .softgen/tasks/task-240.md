@@ -1,6 +1,6 @@
 ---
 title: Auto-refresh customer record when order is marked completed
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [orders, customers, sync]

@@ -5,6 +5,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import type { TablesUpdate } from "@/integrations/supabase/helpers";
 import { WooApiError } from "@/lib/sync-error";
 import { renderInvoicePdfForOrder } from "@/lib/templates/render-invoice";
+import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 
 // Budget per invocation: leave headroom under Vercel's function timeout.
 const MAX_RUNTIME_MS = 50_000;
@@ -86,6 +87,20 @@ async function updateOrderStatus(
     .update({ status: newStatus, synced_at: new Date().toISOString() })
     .eq("store_id", store.id)
     .eq("woo_id", orderId);
+
+  // If transitioning to completed, refresh the customer record from Woo
+  if (newStatus === "completed") {
+    const { data: orderRow } = await supabaseAdmin
+      .from("orders")
+      .select("customer_id")
+      .eq("store_id", store.id)
+      .eq("woo_id", orderId)
+      .maybeSingle();
+    const customerId = orderRow?.customer_id;
+    if (typeof customerId === "number" && customerId > 0) {
+      void refreshCustomerForOrder(store.id, customerId);
+    }
+  }
 }
 
 async function deleteOrder(store: WooStoreCreds, orderId: number, force = false) {

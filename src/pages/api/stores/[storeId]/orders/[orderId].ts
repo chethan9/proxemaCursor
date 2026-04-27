@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
+import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -143,6 +144,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: { woo_id: localOrder.woo_id, store_id: storeId },
       req,
     });
+
+    if (
+      updated.status === "completed" &&
+      localOrder.status !== "completed" &&
+      typeof updated.customer_id === "number" &&
+      updated.customer_id > 0
+    ) {
+      void refreshCustomerForOrder(storeId, updated.customer_id);
+    }
 
     return res.status(200).json(saved);
   } catch (err) {
