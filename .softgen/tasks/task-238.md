@@ -1,6 +1,6 @@
 ---
 title: Pending-operation lock + in-flight save freeze (concurrency safety)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [products, orders, bulk-jobs, ux, safety]
