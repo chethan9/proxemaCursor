@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { supabaseAdmin } from "@/integrations/supabase/admin";
 
-// Unified endpoint: ?kind=categories|tags|brands with GET list / POST create
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { storeId: raw, kind } = req.query;
   const storeId = Array.isArray(raw) ? raw[0] : raw;
@@ -20,7 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     tags: "products/tags",
     brands: "products/brands",
   };
+  const tableMap: Record<string, "categories" | "tags" | "brands"> = {
+    categories: "categories",
+    tags: "tags",
+    brands: "brands",
+  };
   const endpoint = endpointMap[kindStr];
+  const table = tableMap[kindStr];
 
   try {
     if (req.method === "GET") {
@@ -28,13 +34,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(data);
     }
     if (req.method === "POST") {
-      const data = await wooRequest(store, "POST", endpoint, req.body);
+      const data = await wooRequest(store, "POST", endpoint, req.body) as Record<string, unknown>;
+      const wooId = data.id as number | undefined;
+      if (wooId) {
+        const row = {
+          store_id: storeId,
+          woo_id: wooId,
+          name: (data.name as string) ?? "",
+          slug: (data.slug as string) ?? "",
+          description: (data.description as string) ?? null,
+          count: (data.count as number) ?? 0,
+          parent_id: kindStr === "categories" ? ((data.parent as number) ?? null) : null,
+          raw_data: data as unknown as import("@/integrations/supabase/types").Database["public"]["Tables"]["categories"]["Row"]["raw_data"],
+          synced_at: new Date().toISOString(),
+        };
+        const { parent_id, ...rest } = row;
+        const insertRow = kindStr === "categories" ? row : rest;
+        await supabaseAdmin
+          .from(table)
+          .upsert(insertRow, { onConflict: "store_id,woo_id" })
+          .select()
+          .maybeSingle();
+      }
       return res.status(200).json(data);
     }
     return res.status(405).json({ error: "Method not allowed" });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed";
-    // Brands plugin may not be installed - surface 404 clearly
     if (kindStr === "brands" && msg.includes("404")) {
       return res.status(404).json({ error: "Brands plugin not installed on this store", brandsUnavailable: true });
     }

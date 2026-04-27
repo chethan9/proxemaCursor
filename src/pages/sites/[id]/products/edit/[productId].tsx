@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Trash2, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, AlertCircle, X, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
@@ -39,6 +39,7 @@ function Inner() {
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
+  const [wooId, setWooId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!storeId || !productId) return;
@@ -54,6 +55,8 @@ function Inner() {
         const base = emptyProductForm();
         const toNumStr = (v: unknown) => (v == null ? "" : String(v));
         const productType = (p.product_type as string) || (p.type as string) || "simple";
+        const wooIdVal = (p.woo_id as number) ?? (p.id as number) ?? null;
+        setWooId(typeof wooIdVal === "number" ? wooIdVal : null);
         const dims = (p.dimensions as { length?: string; width?: string; height?: string } | null) || {};
         const images = Array.isArray(p.images) ? (p.images as { id?: number; src: string; alt?: string }[]) : [];
         const categories = Array.isArray(p.categories) ? (p.categories as { id: number; name?: string }[]) : [];
@@ -210,6 +213,18 @@ function Inner() {
           <h1 className="text-xl font-semibold">Edit product</h1>
         </div>
         <div className="flex items-center gap-2">
+          {wooId && store?.url && (
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={`${(store.url as string).replace(/\/$/, "")}/wp-admin/post.php?post=${wooId}&action=edit`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4 mr-1.5" />
+                View on store
+              </a>
+            </Button>
+          )}
           <div className="flex items-center gap-0 rounded-full bg-muted/60 p-1">
             <button onClick={() => setMode("basic")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "basic" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Basic</button>
             <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Advanced</button>

@@ -65,7 +65,7 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
       <Card>
         <CardContent className="p-0">
           {/* Tabs */}
-          <div className="flex items-center gap-6 px-6 border-b border-border overflow-x-auto">
+          <div className="flex items-center gap-6 px-6 border-b border-border overflow-x-auto scrollbar-none">
             {steps.map((step) => {
               const isActive = step.key === activeTab;
               const completed = canAdvance(step.key);

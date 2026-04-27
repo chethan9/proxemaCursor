@@ -1,7 +1,7 @@
 import { useState, Fragment, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,8 @@ import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Props = {
   storeId: string;
@@ -48,11 +50,14 @@ const SORT_OPTIONS: { field: TaxonomySortField; direction: TaxonomySortDirection
 
 export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader, storeName, storeUrl }: Props) {
   const router = useRouter();
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { data: pageRes, isLoading, isFetching } = useTaxonomyRows(storeId, mode, search, page, pageSize, sort.field, sort.direction);
   const { data: allCats } = useAllCategories(storeId, mode === "categories");
@@ -88,6 +93,26 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
       ],
       `${mode}-${storeName || storeId}`
     );
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      const res = await fetch(`/api/stores/${storeId}/wc/sync-taxonomy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: mode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Refresh failed (${res.status})`);
+      toast({ title: `Synced ${data.synced ?? 0} ${mode}` });
+      await qc.invalidateQueries({ queryKey: ["taxonomy", storeId, mode] });
+      await qc.invalidateQueries({ queryKey: ["taxonomy-all-categories", storeId] });
+    } catch (e) {
+      toast({ title: "Refresh failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";
@@ -146,6 +171,10 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
             <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={items.length === 0} onClick={handleExport} title="Export CSV">
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">Export</span>
+            </Button>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={refreshing} onClick={handleRefresh} title="Refresh from WooCommerce">
+              <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+              <span className="text-xs">{refreshing ? "Refreshing…" : "Refresh"}</span>
             </Button>
             <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
