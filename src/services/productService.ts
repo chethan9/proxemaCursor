@@ -23,6 +23,9 @@ export interface ProductRow {
   synced_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  pending_action?: string | null;
+  pending_job_id?: string | null;
+  pending_at?: string | null;
 }
 
 export type ProductSortField = "name" | "created_at" | "updated_at" | "synced_at" | "price" | "stock_quantity" | "woo_date_created";

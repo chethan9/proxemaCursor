@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
 
 type LoadingContextValue = {
   active: boolean;
@@ -6,6 +7,10 @@ type LoadingContextValue = {
   stop: () => void;
   slotEl: HTMLElement | null;
   setSlotEl: (el: HTMLElement | null) => void;
+  blockingActive: boolean;
+  blockingLabel: string;
+  blockingStart: (label?: string) => void;
+  blockingStop: () => void;
 };
 
 const LoadingContext = createContext<LoadingContextValue | null>(null);
@@ -13,11 +18,33 @@ const LoadingContext = createContext<LoadingContextValue | null>(null);
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const [count, setCount] = useState(0);
   const [slotEl, setSlotEl] = useState<HTMLElement | null>(null);
+  const [blockingCount, setBlockingCount] = useState(0);
+  const [blockingLabel, setBlockingLabel] = useState("Saving…");
+
   const start = useCallback(() => setCount((c) => c + 1), []);
   const stop = useCallback(() => setCount((c) => Math.max(0, c - 1)), []);
+  const blockingStart = useCallback((label?: string) => {
+    if (label) setBlockingLabel(label);
+    setBlockingCount((c) => c + 1);
+  }, []);
+  const blockingStop = useCallback(() => setBlockingCount((c) => Math.max(0, c - 1)), []);
+
   return (
-    <LoadingContext.Provider value={{ active: count > 0, start, stop, slotEl, setSlotEl }}>
+    <LoadingContext.Provider
+      value={{
+        active: count > 0,
+        start,
+        stop,
+        slotEl,
+        setSlotEl,
+        blockingActive: blockingCount > 0,
+        blockingLabel,
+        blockingStart,
+        blockingStop,
+      }}
+    >
       {children}
+      <BlockingOverlay />
     </LoadingContext.Provider>
   );
 }
@@ -25,7 +52,17 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 export function useGlobalLoading() {
   const ctx = useContext(LoadingContext);
   if (!ctx) {
-    return { active: false, start: () => {}, stop: () => {}, slotEl: null, setSlotEl: () => {} };
+    return {
+      active: false,
+      start: () => {},
+      stop: () => {},
+      slotEl: null,
+      setSlotEl: () => {},
+      blockingActive: false,
+      blockingLabel: "",
+      blockingStart: () => {},
+      blockingStop: () => {},
+    };
   }
   return ctx;
 }
@@ -51,6 +88,27 @@ export function useLoadingEffect(active: boolean) {
   }, [active, ctx]);
 }
 
+export function useBlockingEffect(active: boolean, label?: string) {
+  const ctx = useContext(LoadingContext);
+  const wasActive = useRef(false);
+  useEffect(() => {
+    if (!ctx) return;
+    if (active && !wasActive.current) {
+      ctx.blockingStart(label);
+      wasActive.current = true;
+    } else if (!active && wasActive.current) {
+      ctx.blockingStop();
+      wasActive.current = false;
+    }
+    return () => {
+      if (wasActive.current && ctx) {
+        ctx.blockingStop();
+        wasActive.current = false;
+      }
+    };
+  }, [active, label, ctx]);
+}
+
 export function ProgressSlot({ className }: { className?: string }) {
   const { setSlotEl } = useGlobalLoading();
   return (
@@ -59,5 +117,33 @@ export function ProgressSlot({ className }: { className?: string }) {
       className={className ?? "absolute left-0 right-0 -bottom-px h-[3px] overflow-hidden pointer-events-none z-30"}
       aria-hidden="true"
     />
+  );
+}
+
+function BlockingOverlay() {
+  const { blockingActive, blockingLabel } = useGlobalLoading();
+  useEffect(() => {
+    if (!blockingActive) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [blockingActive]);
+  if (!blockingActive) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={blockingLabel}
+    >
+      <div className="flex flex-col items-center gap-3 rounded-lg border bg-card px-6 py-5 shadow-lg">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <div className="text-sm font-medium text-foreground">{blockingLabel}</div>
+        <div className="text-xs text-muted-foreground">Please wait — do not close this tab</div>
+      </div>
+    </div>
   );
 }

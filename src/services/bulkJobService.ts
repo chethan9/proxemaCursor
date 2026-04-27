@@ -17,6 +17,33 @@ export type BulkJobType =
 
 export type BulkJobError = { id: number | string; error: string };
 
+function jobTypeToAction(t: BulkJobType): string | null {
+  switch (t) {
+    case "update_order_status":
+    case "update_product_status": return "status_change";
+    case "delete_orders":
+    case "delete_products": return "delete";
+    case "update_product_price": return "price_update";
+    case "update_product_stock": return "stock_update";
+    case "assign_product_categories": return "category_update";
+    case "print_invoices_bulk": return null;
+  }
+}
+
+function entityFromJobType(t: BulkJobType): "products" | "orders" | null {
+  if (t === "update_order_status" || t === "delete_orders") return "orders";
+  if (t.startsWith("update_product") || t === "delete_products" || t === "assign_product_categories") return "products";
+  return null;
+}
+
+function extractWooIds(payload: BulkJobPayload): number[] {
+  if ("product_ids" in payload && Array.isArray(payload.product_ids)) return payload.product_ids;
+  if ("order_ids" in payload && Array.isArray(payload.order_ids) && payload.order_ids.length > 0 && typeof payload.order_ids[0] === "number") {
+    return payload.order_ids as number[];
+  }
+  return [];
+}
+
 export type BulkJobPayload =
   | { type: "update_order_status"; order_ids: number[]; new_status: string }
   | { type: "delete_orders"; order_ids: number[]; force?: boolean }
@@ -44,6 +71,27 @@ export async function createBulkJob(args: {
   };
   const { data, error } = await supabase.from("bulk_jobs").insert(insert).select("*").single();
   if (error) throw error;
+
+  try {
+    const action = jobTypeToAction(args.job_type);
+    const entity = entityFromJobType(args.job_type);
+    const ids = extractWooIds(args.payload);
+    if (action && entity && ids.length > 0) {
+      await supabase
+        .from(entity)
+        .update({
+          pending_action: action,
+          pending_job_id: data.id,
+          pending_at: new Date().toISOString(),
+        })
+        .eq("store_id", args.store_id)
+        .in("woo_id", ids)
+        .is("pending_action", null);
+    }
+  } catch (lockErr) {
+    console.warn("[bulkJob] failed to set pending locks:", lockErr);
+  }
+
   return data;
 }
 

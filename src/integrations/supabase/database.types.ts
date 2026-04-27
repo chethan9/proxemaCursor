@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1082,6 +1082,9 @@ export type Database = {
           order_number: string | null
           payment_method: string | null
           payment_method_title: string | null
+          pending_action: string | null
+          pending_at: string | null
+          pending_job_id: string | null
           raw_data: Json | null
           shipping: Json | null
           shipping_lines: Json | null
@@ -1109,6 +1112,9 @@ export type Database = {
           order_number?: string | null
           payment_method?: string | null
           payment_method_title?: string | null
+          pending_action?: string | null
+          pending_at?: string | null
+          pending_job_id?: string | null
           raw_data?: Json | null
           shipping?: Json | null
           shipping_lines?: Json | null
@@ -1136,6 +1142,9 @@ export type Database = {
           order_number?: string | null
           payment_method?: string | null
           payment_method_title?: string | null
+          pending_action?: string | null
+          pending_at?: string | null
+          pending_job_id?: string | null
           raw_data?: Json | null
           shipping?: Json | null
           shipping_lines?: Json | null
@@ -1415,6 +1424,9 @@ export type Database = {
           images: Json | null
           manage_stock: boolean | null
           name: string
+          pending_action: string | null
+          pending_at: string | null
+          pending_job_id: string | null
           price: number | null
           raw_data: Json | null
           regular_price: number | null
@@ -1446,6 +1458,9 @@ export type Database = {
           images?: Json | null
           manage_stock?: boolean | null
           name: string
+          pending_action?: string | null
+          pending_at?: string | null
+          pending_job_id?: string | null
           price?: number | null
           raw_data?: Json | null
           regular_price?: number | null
@@ -1477,6 +1492,9 @@ export type Database = {
           images?: Json | null
           manage_stock?: boolean | null
           name?: string
+          pending_action?: string | null
+          pending_at?: string | null
+          pending_job_id?: string | null
           price?: number | null
           raw_data?: Json | null
           regular_price?: number | null
