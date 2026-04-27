@@ -154,10 +154,13 @@ export default function PaymentGatewaysPage() {
     },
   });
 
-  if (profile?.role !== "admin") {
-    useEffect(() => {
+  useEffect(() => {
+    if (profile && profile.role !== "admin") {
       router.push("/");
-    }, []);
+    }
+  }, [profile, router]);
+
+  if (profile && profile.role !== "admin") {
     return null;
   }
 
