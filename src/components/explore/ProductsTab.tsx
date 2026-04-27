@@ -37,7 +37,7 @@ import { queryKeys } from "@/lib/query-client";
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
 import { createBulkJob } from "@/services/bulkJobService";
-import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2 } from "lucide-react";
+import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
@@ -52,8 +52,7 @@ import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
-
-type ColumnKey = "image" | "id" | "name" | "status" | "sku" | "price" | "regular_price" | "sale_price" | "stock" | "stock_status" | "manage_stock" | "category" | "type" | "slug" | "wooId" | "parent_id" | "permalink" | "tax_status" | "tax_class" | "shipping_required" | "images_count" | "short_desc" | "description" | "attributes" | "sales" | "date_created" | "date_modified" | "created" | "updated";
+import { useToast } from "@/hooks/use-toast";
 
 const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: ProductSortField }[] = [
   { key: "image", label: "Image", group: "Basic" },
@@ -142,6 +141,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [bulkCategoryIds, setBulkCategoryIds] = useState<Set<number>>(new Set());
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
+  const isPending = (p: ProductRow) => !!p.pending_action;
+  const { toast } = useToast();
+  const showLockedToast = useCallback((p: ProductRow) => {
+    toast({ title: pendingLabel(p.pending_action), description: "This product is queued in a bulk job. Edits are disabled until it finishes." });
+  }, [toast]);
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -246,8 +250,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   const submitBulk = useCallback(async () => {
     if (!bulkDialog || selectedIds.size === 0 || overLimit) return;
-    const wooIds = products.filter((p) => selectedIds.has(p.id)).map((p) => p.woo_id).filter((id): id is number => id != null);
-    if (wooIds.length === 0) return;
+    const eligibleProducts = products.filter((p) => selectedIds.has(p.id) && !isPending(p));
+    const skippedCount = selectedIds.size - eligibleProducts.length;
+    const wooIds = eligibleProducts.map((p) => p.woo_id).filter((id): id is number => id != null);
+    if (wooIds.length === 0) {
+      toast({ title: "No eligible products", description: "All selected products are already queued in another bulk job.", variant: "destructive" });
+      return;
+    }
+    if (skippedCount > 0) {
+      toast({ title: `${skippedCount} product${skippedCount === 1 ? "" : "s"} skipped`, description: "Already queued in another bulk job." });
+    }
     setBulkSubmitting(true);
     try {
       if (bulkDialog === "price") {
@@ -759,22 +771,29 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
                       const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
                       const isVariable = p.type === "variable";
+                      const pending = isPending(p);
                       if (isCompact) {
                         return (
                           <div
                             key={p.id}
                             onClick={() => {
+                              if (pending) { showLockedToast(p); return; }
                               if (selectedIds.size > 0) toggleSelect(p.id);
                               else if (!locked) setQuickEditProduct(p);
                             }}
-                            className={`group relative border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
-                            title={locked ? "Editing is disabled during initial sync" : undefined}
+                            className={`group relative border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${pending ? "opacity-60 cursor-not-allowed" : (locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer")} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                            title={pending ? pendingLabel(p.pending_action) : (locked ? "Editing is disabled during initial sync" : undefined)}
                           >
+                            {pending && (
+                              <div className="absolute top-1.5 right-1.5 z-20 inline-flex items-center gap-1 rounded-full bg-warning/95 px-1.5 py-0.5 text-[9px] font-semibold text-warning-foreground shadow-sm uppercase tracking-wide">
+                                <Lock className="h-2.5 w-2.5" />Pending
+                              </div>
+                            )}
                             <div
-                              onClick={(e) => { e.stopPropagation(); if (!locked) toggleSelect(p.id); }}
+                              onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
                               className={`absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                             >
-                              <Checkbox checked={selectedIds.has(p.id)} className="pointer-events-none" />
+                              <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
                             </div>
                             <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                               {thumb ? (
@@ -812,17 +831,23 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         <div
                           key={p.id}
                           onClick={() => {
+                            if (pending) { showLockedToast(p); return; }
                             if (selectedIds.size > 0) toggleSelect(p.id);
                             else if (!locked) setQuickEditProduct(p);
                           }}
-                          className={`group relative border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer"} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
-                          title={locked ? "Editing is disabled during initial sync" : undefined}
+                          className={`group relative border rounded-xl overflow-hidden hover:shadow-lg transition-all bg-card flex flex-col ${pending ? "opacity-60 cursor-not-allowed" : (locked && selectedIds.size === 0 ? "cursor-default" : "cursor-pointer")} ${selectedIds.has(p.id) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                          title={pending ? pendingLabel(p.pending_action) : (locked ? "Editing is disabled during initial sync" : undefined)}
                         >
+                          {pending && (
+                            <div className="absolute top-2.5 right-2.5 z-20 inline-flex items-center gap-1.5 rounded-full bg-warning/95 backdrop-blur px-2.5 py-1 text-[10px] font-semibold text-warning-foreground shadow-sm uppercase tracking-wide">
+                              <Lock className="h-3 w-3" />{pendingLabel(p.pending_action)}
+                            </div>
+                          )}
                           <div
-                            onClick={(e) => { e.stopPropagation(); if (!locked) toggleSelect(p.id); }}
+                            onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
                             className={`absolute top-2.5 left-2.5 z-10 h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                           >
-                            <Checkbox checked={selectedIds.has(p.id)} className="pointer-events-none" />
+                            <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
                           </div>
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                             {thumb ? (
@@ -852,9 +877,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); if (!locked) router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
-                              disabled={locked}
-                              title={locked ? "Available after initial sync completes" : "Edit product"}
+                              onClick={(e) => { e.stopPropagation(); if (!locked && !pending) router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
+                              disabled={locked || pending}
+                              title={locked ? "Available after initial sync completes" : pending ? "This product is queued in a bulk job. Edits are disabled until it finishes." : "Edit product"}
                               className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:cursor-not-allowed disabled:opacity-0"
                             >
                               <Pencil className="h-3 w-3" />
@@ -1007,11 +1032,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
                       const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
                       const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
+                      const pending = isPending(p);
                       return (
                         <React.Fragment key={p.id}>
-                          <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === p.id ? null : p.id))}>
+                          <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(p); return; } setExpandedRowId((cur) => (cur === p.id ? null : p.id)); }}>
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox checked={isSelected} disabled={locked} onCheckedChange={() => { if (!locked) toggleSelect(p.id); }} />
+                              <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (!locked && !pending) toggleSelect(p.id); }} />
                             </TableCell>
                             {visibleColList.map((c) => {
                               if (c.key === "image") {
