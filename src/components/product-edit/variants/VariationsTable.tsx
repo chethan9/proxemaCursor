@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2, Wand2 } from "lucide-react";
 import { Variation } from "@/services/productEditService";
 import { variationLabel } from "./utils";
+import { NumberInput } from "@/components/ui/number-input";
 
 type Props = {
   variations: Variation[];
@@ -182,7 +183,7 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
         </DropdownMenu>
         {bulkMode && (
           <>
-            <Input className="h-9 w-40" value={bulkValue} onChange={(e) => { setBulkValue(e.target.value); setBulkError(""); }} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
+            <NumberInput className="h-9 w-40" value={bulkValue} onValueChange={(v) => { setBulkValue(v); setBulkError(""); }} integer={bulkMode === "stock_quantity"} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
             <Button size="sm" type="button" onClick={applyBulk} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply {selected.size > 0 ? `to ${selected.size}` : "to all"}</Button>
             <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
           </>

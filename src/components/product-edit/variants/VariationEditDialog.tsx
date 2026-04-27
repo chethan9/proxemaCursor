@@ -10,6 +10,7 @@ import { Trash2, Plus, X, ImageIcon, ArrowRight, Image as ImageIco } from "lucid
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { Variation, variationLabel } from "./utils";
 import { cn } from "@/lib/utils";
+import { NumberInput } from "@/components/ui/number-input";
 
 interface Props {
   open: boolean;
@@ -50,14 +51,11 @@ export function VariationEditDialog({ open, onOpenChange, variation, onUpdate, o
 
   const priceField = (value: string, onChange: (v: string) => void, invalid?: boolean) => (
     <div className="relative">
-      <Input
+      <NumberInput
         className={cn("h-9 pr-12", invalid && "border-destructive")}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onValueChange={onChange}
         placeholder="0.00"
-        type="number"
-        min="0"
-        step="0.01"
       />
       {currency && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">{currency}</span>}
     </div>
@@ -155,12 +153,11 @@ export function VariationEditDialog({ open, onOpenChange, variation, onUpdate, o
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-[11px] font-medium text-muted-foreground">Quantity</Label>
-                <Input
+                <NumberInput
                   className={`h-9 ${!variation.manage_stock ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
-                  type="number"
-                  min="0"
+                  integer
                   value={variation.manage_stock ? (variation.stock_quantity ?? "") : ""}
-                  onChange={(e) => setQty(e.target.value)}
+                  onValueChange={(v) => setQty(v)}
                   placeholder={variation.manage_stock ? "—" : "Enable Manage Stock"}
                   disabled={!variation.manage_stock}
                   title={!variation.manage_stock ? "Tick Manage Stock to track quantity" : undefined}
