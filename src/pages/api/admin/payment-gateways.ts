@@ -1,61 +1,117 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { createClient } from "@supabase/supabase-js";
-import { clearGatewayConfigCache } from "@/lib/payments/config";
+import {
+  listGatewayConfigs,
+  upsertGatewayConfig,
+  testGatewayConnection,
+  regenerateWebhookSecret,
+  listRegionRouting,
+  updateRegionRouting,
+} from "@/services/paymentGatewayService.server";
+import { logActivity } from "@/lib/activity-log";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const token = (req.headers.authorization || "").replace("Bearer ", "");
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: ud } = await sb.auth.getUser();
-  if (!ud?.user) return res.status(401).json({ error: "Unauthorized" });
+async function checkAdminAuth(req: NextApiRequest) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new Error("Unauthorized");
+  }
+  const token = authHeader.substring(7);
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("role")
-    .eq("id", ud.user.id)
-    .maybeSingle();
-  if (!profile || profile.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+    .eq("id", user.id)
+    .single();
 
-  if (req.method === "GET") {
-    const { data, error } = await supabaseAdmin
-      .from("payment_gateway_settings")
-      .select("*")
-      .order("gateway_name");
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json({ items: data || [] });
-  }
+  if (profile?.role !== "admin") throw new Error("Admin access required");
+  return user;
+}
 
-  if (req.method === "PUT") {
-    const { gateway_name, enabled, mode, publishable_key, secret_key, webhook_secret, country_overrides, extra_config } = req.body || {};
-    if (!gateway_name) return res.status(400).json({ error: "gateway_name required" });
-    if (!["myfatoorah", "razorpay", "tap"].includes(gateway_name)) {
-      return res.status(400).json({ error: "Invalid gateway_name" });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const user = await checkAdminAuth(req);
+
+    if (req.method === "GET") {
+      const { action } = req.query;
+      if (action === "routing") {
+        const routing = await listRegionRouting();
+        return res.json(routing);
+      }
+      const configs = await listGatewayConfigs();
+      const masked = configs.map((c) => ({
+        ...c,
+        api_key_encrypted: c.api_key_encrypted ? "***" : null,
+        api_secret_encrypted: c.api_secret_encrypted ? "***" : null,
+        webhook_secret_encrypted: c.webhook_secret_encrypted ? "***" : null,
+      }));
+      return res.json(masked);
     }
 
-    const update: Record<string, unknown> = { updated_by: ud.user.id };
-    if (typeof enabled === "boolean") update.enabled = enabled;
-    if (mode === "test" || mode === "live") update.mode = mode;
-    if (typeof publishable_key === "string") update.publishable_key = publishable_key || null;
-    if (typeof secret_key === "string" && secret_key !== "********") update.secret_key = secret_key || null;
-    if (typeof webhook_secret === "string" && webhook_secret !== "********") update.webhook_secret = webhook_secret || null;
-    if (Array.isArray(country_overrides)) update.country_overrides = country_overrides.map((c: string) => c.toUpperCase());
-    if (extra_config && typeof extra_config === "object") update.extra_config = extra_config;
+    if (req.method === "POST") {
+      const { action, gateway, mode, credentials, country_code, enabled, priority } = req.body;
 
-    const { data, error } = await supabaseAdmin
-      .from("payment_gateway_settings")
-      .update(update as never)
-      .eq("gateway_name", gateway_name)
-      .select()
-      .single();
-    if (error) return res.status(500).json({ error: error.message });
+      if (action === "test") {
+        const result = await testGatewayConnection(gateway, mode);
+        await logActivity({
+          action: "payment_gateway.test_connection",
+          entityType: "payment_gateway",
+          entityId: `${gateway}_${mode}`,
+          metadata: { gateway, mode, success: result.success },
+        });
+        return res.json(result);
+      }
 
-    clearGatewayConfigCache(gateway_name);
-    return res.status(200).json(data);
+      if (action === "regenerate_webhook") {
+        const newSecret = await regenerateWebhookSecret(gateway, mode);
+        await logActivity({
+          action: "payment_gateway.regenerate_webhook",
+          entityType: "payment_gateway",
+          entityId: `${gateway}_${mode}`,
+          metadata: { gateway, mode },
+        });
+        return res.json({ webhook_secret: newSecret });
+      }
+
+      if (action === "update_routing") {
+        const result = await updateRegionRouting(country_code, gateway, enabled, priority);
+        await logActivity({
+          action: "payment_gateway.update_routing",
+          entityType: "payment_region_routing",
+          entityId: result.id,
+          metadata: { country_code, gateway, enabled, priority },
+        });
+        return res.json(result);
+      }
+
+      const existing = await supabaseAdmin
+        .from("payment_gateway_config")
+        .select("*")
+        .eq("gateway", gateway)
+        .eq("mode", mode)
+        .single();
+
+      const config = await upsertGatewayConfig(gateway, mode, credentials);
+      
+      await logActivity({
+        action: existing.data ? "payment_gateway.update" : "payment_gateway.create",
+        entityType: "payment_gateway",
+        entityId: config.id,
+        metadata: {
+          gateway,
+          mode,
+          enabled: credentials.enabled,
+          fields_updated: Object.keys(credentials),
+        },
+      });
+
+      return res.json({ ...config, api_key_encrypted: "***", api_secret_encrypted: "***", webhook_secret_encrypted: "***" });
+    }
+
+    res.status(405).json({ error: "Method not allowed" });
+  } catch (error) {
+    console.error("Payment gateway API error:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
   }
-
-  return res.status(405).json({ error: "Method not allowed" });
 }
