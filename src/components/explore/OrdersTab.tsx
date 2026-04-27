@@ -1197,7 +1197,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                                             type="button"
                                             disabled={isFinalState || isCompleting}
                                             onClick={() => handleMarkComplete(o.id)}
-                                            className="inline-flex items-center justify-center h-7 w-7 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            className={cn(
+                                              "inline-flex items-center justify-center h-7 w-7 rounded border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                                              isFinalState
+                                                ? "border-border bg-background text-muted-foreground"
+                                                : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/40",
+                                            )}
                                           >
                                             {isCompleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                                           </button>
