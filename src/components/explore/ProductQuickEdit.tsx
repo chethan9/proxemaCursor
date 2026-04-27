@@ -94,6 +94,8 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
 
   if (!product) return null;
 
+  const isVariable = (product as Product & { type?: string | null }).type === "variable";
+
   const clampNonNeg = (v: string): string => {
     if (v === "" || v === "-") return "";
     const n = parseFloat(v);
@@ -181,15 +183,38 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground" required={status === "publish"}>Regular price</Label>
-              <Input type="number" min="0.01" step="0.01" value={regular} onChange={(e) => setRegular(clampNonNeg(e.target.value))} className="h-8 text-sm" />
+              <Label className="text-[11px] text-muted-foreground" required={status === "publish" && !isVariable}>Regular price</Label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={isVariable ? "" : regular}
+                onChange={(e) => setRegular(clampNonNeg(e.target.value))}
+                className="h-8 text-sm"
+                disabled={isVariable}
+                placeholder={isVariable ? "Per variation" : ""}
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-[11px] text-muted-foreground">Sale price</Label>
-              <Input type="number" min="0.01" step="0.01" value={sale} onChange={(e) => setSale(clampNonNeg(e.target.value))} className="h-8 text-sm" />
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={isVariable ? "" : sale}
+                onChange={(e) => setSale(clampNonNeg(e.target.value))}
+                className="h-8 text-sm"
+                disabled={isVariable}
+                placeholder={isVariable ? "Per variation" : ""}
+              />
             </div>
           </div>
-          <div className="space-y-2 rounded-md border bg-muted/30 p-2.5">
+          {isVariable && (
+            <p className="text-[10px] text-muted-foreground -mt-1.5">
+              This is a variable product — set prices per variation in the full editor.
+            </p>
+          )}
+          <div className="space-y-2 rounded-md border bg-muted/30 p-2.5 mt-1 border-t-2 border-t-border/60">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium">Manage stock</Label>
               <Switch checked={manageStock} onCheckedChange={setManageStock} />
@@ -219,15 +244,21 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
             <span>{product.synced_at ? new Date(product.synced_at).toLocaleDateString() : "—"}</span>
           </div>
         </div>
-        <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 pt-1">
-          <Link
-            href={`/sites/${product.store_id}/products/edit/${product.id}`}
-            onClick={() => onOpenChange(false)}
-            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+        <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 pt-2 border-t mt-1">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
           >
-            <Pencil className="h-3 w-3" />
-            Edit full product
-          </Link>
+            <Link
+              href={`/sites/${product.store_id}/products/edit/${product.id}`}
+              onClick={() => onOpenChange(false)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit full product
+            </Link>
+          </Button>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>Cancel</Button>
             <Button size="sm" onClick={handleSave} disabled={mutation.isPending}>

@@ -26,6 +26,10 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
   const currency = "KWD";
   const permalink = (product.raw_data as Record<string, unknown>)?.permalink as string | undefined;
   const brandList = Array.isArray(product.brands) ? (product.brands as { name?: string }[]).map((b) => b.name).filter(Boolean) : [];
+  const isVariable = ((product as ProductRow & { type?: string | null }).type) === "variable";
+  const minP = (product as ProductRow & { min_price?: number | null }).min_price;
+  const maxP = (product as ProductRow & { max_price?: number | null }).max_price;
+  const showRange = isVariable && minP != null && maxP != null && minP !== maxP;
 
   const hasChanges =
     regularPrice !== (product.regular_price?.toString() || "") ||
@@ -77,6 +81,12 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
           {brandList.map((b) => (
             <span key={b} className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:text-indigo-300">{b}</span>
           ))}
+        </div>
+      )}
+      {showRange && (
+        <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-muted/40 px-2.5 py-1 text-xs">
+          <span className="text-muted-foreground">Variation price range:</span>
+          <span className="font-mono font-medium">{currency} {Number(minP).toFixed(2)} – {Number(maxP).toFixed(2)}</span>
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

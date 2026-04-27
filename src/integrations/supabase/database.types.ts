@@ -1477,6 +1477,8 @@ export type Database = {
           id: string
           images: Json | null
           manage_stock: boolean | null
+          max_price: number | null
+          min_price: number | null
           name: string
           pending_action: string | null
           pending_at: string | null
@@ -1512,6 +1514,8 @@ export type Database = {
           id?: string
           images?: Json | null
           manage_stock?: boolean | null
+          max_price?: number | null
+          min_price?: number | null
           name: string
           pending_action?: string | null
           pending_at?: string | null
@@ -1547,6 +1551,8 @@ export type Database = {
           id?: string
           images?: Json | null
           manage_stock?: boolean | null
+          max_price?: number | null
+          min_price?: number | null
           name?: string
           pending_action?: string | null
           pending_at?: string | null
