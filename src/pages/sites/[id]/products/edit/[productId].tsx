@@ -162,7 +162,21 @@ function Inner() {
   const canAdvance = (tab: AdvancedTabKey) => {
     if (!form) return false;
     if (tab === "basic") return form.name.trim().length > 0;
-    return true;
+    if (tab === "inventory") {
+      if (form.type === "variable") return false;
+      const n = parseFloat((form.regular_price || "").trim());
+      return !isNaN(n) && n > 0;
+    }
+    if (tab === "variants") {
+      if (form.type !== "variable") return false;
+      const vars = form.variations || [];
+      if (vars.length === 0) return false;
+      return vars.every((v) => {
+        const n = parseFloat((v.regular_price || "").trim());
+        return !isNaN(n) && n > 0;
+      });
+    }
+    return false;
   };
 
   if (storeLoading || loading) return <ProductEditSkeleton />;

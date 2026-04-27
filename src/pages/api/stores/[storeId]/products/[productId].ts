@@ -104,7 +104,6 @@ async function validateUpdatePayload(
       const variationAttrs = parentAttrs.filter((a) => a.variation === true && Array.isArray(a.options));
       const parentNames = new Set(variationAttrs.map((a) => trimStr(a.name).toLowerCase()));
       const comboSeen = new Map<string, number>();
-      const skuSeen = new Set<string>();
       variations.forEach((v, idx) => {
         const enabled = v.enabled !== false;
         if (enabled && v.regular_price !== undefined && !pricePositive(v.regular_price)) {
@@ -130,12 +129,6 @@ async function validateUpdatePayload(
         }
         if (v.manage_stock && typeof v.stock_quantity === "number" && (v.stock_quantity as number) < 0) {
           errors.push({ field: `variation[${idx}].stock_quantity`, message: `Variation ${idx + 1}: stock cannot be negative` });
-        }
-        const vsku = trimStr(v.sku);
-        if (vsku) {
-          const k = vsku.toLowerCase();
-          if (skuSeen.has(k)) errors.push({ field: `variation[${idx}].sku`, message: `Variation ${idx + 1}: duplicate SKU within product` });
-          else skuSeen.add(k);
         }
       });
     }
