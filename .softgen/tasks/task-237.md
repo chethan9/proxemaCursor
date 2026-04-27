@@ -1,6 +1,6 @@
 ---
 title: Attribute picker shows existing global attributes + their terms before product publish
-status: todo
+status: done
 priority: high
 type: feature
 tags: [products, variations, ux, woocommerce]

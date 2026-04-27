@@ -1,6 +1,6 @@
 ---
 title: Variable product variations save without option binding (storefront shows parent price)
-status: todo
+status: done
 priority: urgent
 type: bug
 tags: [products, variations, woocommerce, integration]
