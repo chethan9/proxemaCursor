@@ -14,7 +14,6 @@ import { ArrowLeft, AlertCircle, X } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
-import { useUnsavedChangesGuard, UnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
 
@@ -36,7 +35,6 @@ function Inner() {
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
-  useUnsavedChangesGuard(dirty);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -104,7 +102,6 @@ function Inner() {
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
-      <UnsavedChangesGuard dirty={dirty} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={`/sites/${id}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>

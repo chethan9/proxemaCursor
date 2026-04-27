@@ -18,7 +18,6 @@ import { ArrowLeft, Loader2, Trash2, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
-import { useUnsavedChangesGuard, UnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
 
@@ -117,7 +116,6 @@ function Inner() {
   }, [storeId, productId, toast]);
 
   const dirty = !!form && !savedOnce && initialFormJson !== "" && JSON.stringify(form) !== initialFormJson;
-  useUnsavedChangesGuard(dirty);
 
   const save = useSiteMutation<unknown, void>({
     mutationFn: () => updateProduct(storeId, productId, form!),
@@ -184,7 +182,6 @@ function Inner() {
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
-      <UnsavedChangesGuard dirty={dirty} />
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={`/sites/${storeId}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
