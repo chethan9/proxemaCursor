@@ -102,10 +102,14 @@ export async function getBulkJob(id: string): Promise<BulkJob | null> {
 }
 
 export async function listBulkJobs(storeId: string, limit = 50): Promise<BulkJob[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return [];
   const { data, error } = await supabase
     .from("bulk_jobs")
     .select("*")
     .eq("store_id", storeId)
+    .eq("user_id", uid)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -113,9 +117,13 @@ export async function listBulkJobs(storeId: string, limit = 50): Promise<BulkJob
 }
 
 export async function listActiveBulkJobs(): Promise<BulkJob[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return [];
   const { data, error } = await supabase
     .from("bulk_jobs")
     .select("*")
+    .eq("user_id", uid)
     .in("status", ["pending", "running"])
     .order("created_at", { ascending: false });
   if (error) throw error;

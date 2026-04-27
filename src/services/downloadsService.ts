@@ -23,10 +23,14 @@ const JOB_TYPE_TO_FILE_TYPE: Record<string, DownloadFileType> = {
 };
 
 export async function listSiteDownloads(storeId: string): Promise<DownloadFile[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return [];
   const { data, error } = await supabase
     .from("bulk_jobs")
     .select("id, store_id, job_type, payload, status, completed_at, total")
     .eq("store_id", storeId)
+    .eq("user_id", uid)
     .eq("status", "completed")
     .in("job_type", Object.keys(JOB_TYPE_TO_FILE_TYPE))
     .order("completed_at", { ascending: false })

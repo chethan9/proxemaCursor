@@ -12,7 +12,6 @@ import { RecentMutationsProvider } from "@/contexts/RecentMutationsProvider";
 import { LoadingProvider } from "@/contexts/LoadingProvider";
 import { BlockingOverlay } from "@/contexts/LoadingProvider";
 import { Toaster } from "@/components/ui/toaster";
-import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
 import { IncompleteOnboardingPrompt } from "@/components/IncompleteOnboardingPrompt";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -110,7 +109,6 @@ function Providers({ children }: { children: React.ReactNode }) {
             <LoadingProvider>
               <TopProgressBar />
               <Shell>{children}</Shell>
-              <BulkJobsToast />
               <GlobalScrollButton />
               <IncompleteOnboardingPrompt />
               <BlockingOverlay />

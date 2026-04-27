@@ -46,10 +46,14 @@ export function useRecentCompletedPrintJobs() {
   return useQuery({
     queryKey: ["bulk-jobs", "completed-print"],
     queryFn: async (): Promise<BulkJob[]> => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return [];
       const since = new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString();
       const { data, error } = await supabase
         .from("bulk_jobs")
         .select("*")
+        .eq("user_id", uid)
         .eq("job_type", "print_invoices_bulk")
         .eq("status", "completed")
         .gte("completed_at", since)

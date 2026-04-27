@@ -1,6 +1,6 @@
 ---
 title: Remove bulk-jobs toast + scope jobs/downloads to current user
-status: todo
+status: done
 priority: high
 type: bug
 tags: [bulk-jobs, downloads, multi-user, ux]
