@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { WooApiError } from "@/lib/sync-error";
 import { logActivity } from "@/lib/activity-log";
+import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -296,6 +297,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const validation = await validateUpdatePayload(storeId, productId, wooPayload, variations);
     if (validation.errors.length > 0) {
       return res.status(400).json({ error: "Validation failed", errors: validation.errors });
+    }
+
+    if (Array.isArray(wooPayload.attributes) && Array.isArray(variations) && variations.length > 0) {
+      try {
+        const reconciled = await reconcileAttributeTerms(
+          store,
+          wooPayload.attributes as Array<{ id?: number; name: string; options?: string[]; variation?: boolean }>,
+          variations as Array<{ attributes?: { id?: number; name: string; option: string }[] }>
+        );
+        wooPayload.attributes = reconciled.parentAttributes as unknown as Json;
+        for (let i = 0; i < variations.length; i++) {
+          variations[i] = { ...variations[i], attributes: reconciled.variations[i].attributes as unknown as Record<string, unknown>[] };
+        }
+      } catch (e) {
+        console.error("[product-update][attr-reconcile]", e);
+      }
     }
 
     const updated = await wooRequest<WooProduct>(

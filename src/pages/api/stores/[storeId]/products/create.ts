@@ -6,6 +6,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { logActivity } from "@/lib/activity-log";
 import { quotaErrorPayload } from "@/lib/quota";
 import { canAddProductServer } from "@/lib/quota.server";
+import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
 
 type WooVariationInput = {
   id?: number;
@@ -197,6 +198,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const validation = await validateCreatePayload(storeId, parentPayload, variations);
     if (validation.errors.length > 0) {
       return res.status(400).json({ error: "Validation failed", errors: validation.errors });
+    }
+
+    if (Array.isArray(parentPayload.attributes) && variations.length > 0) {
+      try {
+        const reconciled = await reconcileAttributeTerms(
+          creds,
+          parentPayload.attributes as Array<{ id?: number; name: string; options?: string[]; variation?: boolean }>,
+          variations as unknown as Array<{ attributes?: { id?: number; name: string; option: string }[] }>
+        );
+        parentPayload.attributes = reconciled.parentAttributes as unknown as Json;
+        for (let i = 0; i < variations.length; i++) {
+          variations[i] = { ...variations[i], attributes: reconciled.variations[i].attributes as { name: string; option: string }[] };
+        }
+      } catch (e) {
+        console.error("[product-create][attr-reconcile]", e);
+      }
     }
 
     const created = await wooRequest<Record<string, unknown>>(creds, "POST", "products", parentPayload);
