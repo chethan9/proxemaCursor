@@ -24,16 +24,16 @@ type PaymentLog = {
 
 export default function PaymentLogsPage() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [gatewayFilter, setGatewayFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
-    if (profile && profile.role !== "admin") {
+    if (profile && !isSuperAdmin && profile.role !== "admin") {
       router.push("/");
     }
-  }, [profile, router]);
+  }, [profile, isSuperAdmin, router]);
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["payment-logs"],
@@ -49,7 +49,7 @@ export default function PaymentLogsPage() {
     enabled: profile?.role === "admin",
   });
 
-  if (profile && profile.role !== "admin") {
+  if (profile && !isSuperAdmin && profile.role !== "admin") {
     return null;
   }
 

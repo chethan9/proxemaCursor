@@ -59,7 +59,7 @@ const MENA_COUNTRIES = [
 export default function PaymentGatewaysPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Record<string, { api_key?: string; api_secret?: string; webhook_secret?: string; enabled?: boolean }>>({});
@@ -75,7 +75,7 @@ export default function PaymentGatewaysPage() {
       if (!response.ok) throw new Error("Failed to fetch gateway configs");
       return response.json() as Promise<GatewayConfig[]>;
     },
-    enabled: profile?.role === "admin",
+    enabled: !!profile && (isSuperAdmin || profile.role === "admin"),
   });
 
   const { data: routing = [] } = useQuery({
@@ -89,7 +89,7 @@ export default function PaymentGatewaysPage() {
       if (!response.ok) throw new Error("Failed to fetch routing");
       return response.json() as Promise<RegionRouting[]>;
     },
-    enabled: profile?.role === "admin",
+    enabled: !!profile && (isSuperAdmin || profile.role === "admin"),
   });
 
   const saveMutation = useMutation({
@@ -155,12 +155,12 @@ export default function PaymentGatewaysPage() {
   });
 
   useEffect(() => {
-    if (profile && profile.role !== "admin") {
+    if (profile && !isSuperAdmin && profile.role !== "admin") {
       router.push("/");
     }
-  }, [profile, router]);
+  }, [profile, isSuperAdmin, router]);
 
-  if (profile && profile.role !== "admin") {
+  if (profile && !isSuperAdmin && profile.role !== "admin") {
     return null;
   }
 
