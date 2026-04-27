@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
+import { refreshOrderFromWoo } from "@/lib/order-refresh";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -152,6 +153,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updated.customer_id > 0
     ) {
       void refreshCustomerForOrder(storeId, updated.customer_id);
+    }
+
+    if (updated.status === "completed" && localOrder.status !== "completed") {
+      void refreshOrderFromWoo(storeId, localOrder.woo_id);
     }
 
     return res.status(200).json(saved);

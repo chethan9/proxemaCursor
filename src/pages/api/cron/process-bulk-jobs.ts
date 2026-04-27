@@ -6,6 +6,7 @@ import type { TablesUpdate } from "@/integrations/supabase/helpers";
 import { WooApiError } from "@/lib/sync-error";
 import { renderInvoicePdfForOrder } from "@/lib/templates/render-invoice";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
+import { refreshOrderFromWoo } from "@/lib/order-refresh";
 
 // Budget per invocation: leave headroom under Vercel's function timeout.
 const MAX_RUNTIME_MS = 50_000;
@@ -88,8 +89,9 @@ async function updateOrderStatus(
     .eq("store_id", store.id)
     .eq("woo_id", orderId);
 
-  // If transitioning to completed, refresh the customer record from Woo
+  // If transitioning to completed, refresh full order + customer from Woo
   if (newStatus === "completed") {
+    void refreshOrderFromWoo(store.id, orderId);
     const { data: orderRow } = await supabaseAdmin
       .from("orders")
       .select("customer_id")

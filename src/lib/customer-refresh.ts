@@ -72,7 +72,6 @@ export async function refreshCustomerForOrder(
       orders_count: wc.orders_count ?? 0,
       total_spent: wc.total_spent ? Number(wc.total_spent) : 0,
       date_created: wc.date_created ?? null,
-      date_modified: wc.date_modified ?? null,
       raw_data: toJson(wc),
       synced_at: new Date().toISOString(),
     };
