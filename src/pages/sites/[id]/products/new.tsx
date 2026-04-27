@@ -37,8 +37,6 @@ function Inner() {
   const [savedOnce, setSavedOnce] = useState(false);
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
 
-  useBlockingEffect(create.isPending, "Creating product…");
-
   useEffect(() => {
     if (!router.isReady) return;
     if (router.query.type === "variable" && form.type !== "variable") {
@@ -72,6 +70,8 @@ function Inner() {
       setServerErrors(e.validationErrors || []);
     },
   });
+
+  useBlockingEffect(create.isPending, "Creating product…");
 
   if (loading) return <SiteLoadingSkeleton />;
   if (!store) return <div className="p-6">Store not found</div>;
