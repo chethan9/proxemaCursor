@@ -1,6 +1,6 @@
 ---
 title: Variant SKU validation + tab checkmark fixes
-status: todo
+status: done
 priority: high
 type: bug
 tags: [products, validation, ui]

@@ -458,6 +458,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       downloadable: (updated as unknown as { downloadable?: boolean }).downloadable ?? null,
       categories: toJson(updated.categories),
       tags: toJson(updated.tags || []),
+      brands: toJson((updated as unknown as { brands?: unknown[] }).brands || []),
       images: toJson(updated.images),
       attributes: toJson(updated.attributes || []),
       raw_data: toJson(updated),

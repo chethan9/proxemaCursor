@@ -388,6 +388,7 @@ function buildProductInsertRow(storeId: string, created: Record<string, unknown>
     downloadable: (created.downloadable as boolean | null) ?? null,
     categories: (created.categories ?? []) as Json,
     tags: (created.tags ?? []) as Json,
+    brands: (created.brands ?? []) as Json,
     images: (created.images ?? []) as Json,
     attributes: (created.attributes ?? []) as Json,
     raw_data: created as Json,
