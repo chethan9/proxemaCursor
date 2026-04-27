@@ -7,7 +7,6 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 export function useProducts(opts: FetchProductsOptions) {
   const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
-  const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
     queryKey: [...queryKeys.products(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "live" : "db"] as const,
     queryFn: async () => {
@@ -23,8 +22,8 @@ export function useProducts(opts: FetchProductsOptions) {
     },
     placeholderData: keepPreviousData,
     enabled: !!opts.storeId && syncStatus !== undefined,
-    refetchOnWindowFocus: true,
-    refetchInterval: anySyncRunning ? 8000 : false,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
     retry: 1,
   });
 }
