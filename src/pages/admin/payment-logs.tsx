@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,12 @@ export default function PaymentLogsPage() {
   const [gatewayFilter, setGatewayFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  useEffect(() => {
+    if (profile && profile.role !== "admin") {
+      router.push("/");
+    }
+  }, [profile, router]);
+
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["payment-logs"],
     queryFn: async () => {
@@ -43,8 +49,7 @@ export default function PaymentLogsPage() {
     enabled: profile?.role === "admin",
   });
 
-  if (profile?.role !== "admin") {
-    router.push("/");
+  if (profile && profile.role !== "admin") {
     return null;
   }
 
