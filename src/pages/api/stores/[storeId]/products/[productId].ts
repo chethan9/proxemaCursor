@@ -10,6 +10,18 @@ function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
+function toNumeric(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (!t) return null;
+    const n = parseFloat(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 type ValidationIssue = { field: string; message: string };
 
 function trimStr(v: unknown): string {
@@ -395,9 +407,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 woo_parent_id: localProduct.woo_id,
                 woo_id: v.id as number,
                 sku: (v.sku as string) || null,
-                regular_price: v.regular_price ? parseFloat(v.regular_price as string) : null,
-                sale_price: v.sale_price ? parseFloat(v.sale_price as string) : null,
-                price: v.price ? parseFloat(v.price as string) : null,
+                regular_price: toNumeric(v.regular_price),
+                sale_price: toNumeric(v.sale_price),
+                price: toNumeric(v.price),
                 stock_quantity: (v.stock_quantity as number) ?? null,
                 stock_status: (v.stock_status as string) || null,
                 manage_stock: !!v.manage_stock,
@@ -436,9 +448,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: updated.name,
       slug: updated.slug,
       sku: updated.sku || null,
-      price: updated.price ? parseFloat(updated.price) : null,
-      regular_price: updated.regular_price ? parseFloat(updated.regular_price) : null,
-      sale_price: updated.sale_price ? parseFloat(updated.sale_price) : null,
+      price: toNumeric(updated.price),
+      regular_price: toNumeric(updated.regular_price),
+      sale_price: toNumeric(updated.sale_price),
       manage_stock: (updated as unknown as { manage_stock?: boolean }).manage_stock ?? null,
       stock_quantity: updated.stock_quantity,
       stock_status: updated.stock_status,

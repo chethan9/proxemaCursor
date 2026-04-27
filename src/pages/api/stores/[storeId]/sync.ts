@@ -50,6 +50,18 @@ function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
+function toNumeric(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (!t) return null;
+    const n = parseFloat(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 const ASPECTS: Record<string, AspectConfig> = {
   products: {
     endpoint: "products",
@@ -58,9 +70,9 @@ const ASPECTS: Record<string, AspectConfig> = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     toRow: (p: any, store, now) => ({
       store_id: store.id, woo_id: p.id, name: p.name, slug: p.slug, sku: p.sku || null,
-      price: p.price ? parseFloat(p.price) : null,
-      regular_price: p.regular_price ? parseFloat(p.regular_price) : null,
-      sale_price: p.sale_price ? parseFloat(p.sale_price) : null,
+      price: toNumeric(p.price),
+      regular_price: toNumeric(p.regular_price),
+      sale_price: toNumeric(p.sale_price),
       stock_quantity: p.stock_quantity, stock_status: p.stock_status,
       status: p.status, type: p.type, description: p.description,
       short_description: p.short_description,
@@ -78,9 +90,9 @@ const ASPECTS: Record<string, AspectConfig> = {
     toRow: (o: any, store, now) => ({
       store_id: store.id, woo_id: o.id, order_number: o.number,
       status: o.status, currency: o.currency,
-      total: o.total ? parseFloat(o.total) : null,
-      discount_total: o.discount_total ? parseFloat(o.discount_total) : null,
-      shipping_total: o.shipping_total ? parseFloat(o.shipping_total) : null,
+      total: toNumeric(o.total),
+      discount_total: toNumeric(o.discount_total),
+      shipping_total: toNumeric(o.shipping_total),
       customer_id: o.customer_id || null,
       payment_method: o.payment_method || null,
       payment_method_title: o.payment_method_title || null,
@@ -106,7 +118,7 @@ const ASPECTS: Record<string, AspectConfig> = {
       avatar_url: c.avatar_url || null,
       is_paying_customer: c.is_paying_customer || false,
       orders_count: c.orders_count || 0,
-      total_spent: c.total_spent ? parseFloat(c.total_spent) : null,
+      total_spent: toNumeric(c.total_spent),
       raw_data: toJson(c), date_created: c.date_created, synced_at: now,
     }),
   },
@@ -152,7 +164,7 @@ const ASPECTS: Record<string, AspectConfig> = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     toRow: (c: any, store, now) => ({
       store_id: store.id, woo_id: c.id, code: c.code,
-      amount: c.amount ? parseFloat(c.amount) : null,
+      amount: toNumeric(c.amount),
       discount_type: c.discount_type, description: c.description || "",
       date_expires: c.date_expires, usage_count: c.usage_count || 0,
       individual_use: c.individual_use || false,
@@ -160,8 +172,8 @@ const ASPECTS: Record<string, AspectConfig> = {
       excluded_product_ids: toJson(c.excluded_product_ids || []),
       usage_limit: c.usage_limit, usage_limit_per_user: c.usage_limit_per_user,
       free_shipping: c.free_shipping || false,
-      minimum_amount: c.minimum_amount ? parseFloat(c.minimum_amount) : null,
-      maximum_amount: c.maximum_amount ? parseFloat(c.maximum_amount) : null,
+      minimum_amount: toNumeric(c.minimum_amount),
+      maximum_amount: toNumeric(c.maximum_amount),
       raw_data: toJson(c), date_created: c.date_created, synced_at: now,
     }),
   },
