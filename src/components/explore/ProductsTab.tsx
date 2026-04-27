@@ -71,7 +71,7 @@ type ColumnKey =
   | "price" | "regular_price" | "sale_price"
   | "stock" | "stock_status" | "manage_stock"
   | "tax_status" | "tax_class" | "shipping_required"
-  | "category" | "attributes" | "images_count"
+  | "category" | "brands" | "attributes" | "images_count"
   | "short_desc" | "description"
   | "date_created" | "date_modified" | "sales" | "created" | "updated";
 
@@ -96,6 +96,7 @@ const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: Produc
   { key: "tax_class", label: "Tax class", group: "Tax & Shipping" },
   { key: "shipping_required", label: "Shipping required", group: "Tax & Shipping" },
   { key: "category", label: "Categories", group: "Taxonomy" },
+  { key: "brands", label: "Brands", group: "Taxonomy" },
   { key: "attributes", label: "Attributes", group: "Taxonomy" },
   { key: "images_count", label: "Images count", group: "Taxonomy" },
   { key: "short_desc", label: "Short description", group: "Content" },
@@ -183,7 +184,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     const defaults: Record<ColumnKey, boolean> = {
       image: true, id: false, name: true, status: true, sku: true, price: true,
       regular_price: false, sale_price: false, stock: true, stock_status: false,
-      manage_stock: false, category: true, type: false, slug: false, wooId: false,
+      manage_stock: false, category: true, brands: false, type: false, slug: false, wooId: false,
       parent_id: false, permalink: false, tax_status: false, tax_class: false,
       shipping_required: false, images_count: false, short_desc: false, description: false,
       attributes: false, sales: false, date_created: false, date_modified: false,

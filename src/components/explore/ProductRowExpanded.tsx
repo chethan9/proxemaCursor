@@ -25,6 +25,7 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
 
   const currency = "KWD";
   const permalink = (product.raw_data as Record<string, unknown>)?.permalink as string | undefined;
+  const brandList = Array.isArray(product.brands) ? (product.brands as { name?: string }[]).map((b) => b.name).filter(Boolean) : [];
 
   const hasChanges =
     regularPrice !== (product.regular_price?.toString() || "") ||
@@ -70,6 +71,14 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
 
   return (
     <div className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
+      {brandList.length > 0 && (
+        <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mr-1">Brands</span>
+          {brandList.map((b) => (
+            <span key={b} className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:text-indigo-300">{b}</span>
+          ))}
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Price */}
         <div className="space-y-3">

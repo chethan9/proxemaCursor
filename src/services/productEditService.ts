@@ -65,7 +65,7 @@ export function emptyProductForm(): ProductFormState {
     type: "simple",
     regular_price: "",
     sale_price: "",
-    tax_status: "taxable",
+    tax_status: "none",
     tax_class: "",
     manage_stock: false,
     stock_quantity: null,
