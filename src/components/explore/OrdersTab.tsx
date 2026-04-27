@@ -72,6 +72,15 @@ import { useRouter } from "next/router";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { PrintInvoicesDialog } from "./PrintInvoicesDialog";
 
+const PENDING_LABELS: Record<string, string> = {
+  delete: "Scheduled for deletion",
+  status_change: "Scheduled for status change",
+};
+function pendingLabel(action?: string | null) {
+  if (!action) return "";
+  return PENDING_LABELS[action] || `Scheduled: ${action}`;
+}
+
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via" | "actions";
 
 const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: OrderSortField }[] = [
@@ -260,6 +269,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
 
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
+  const isPending = (o: OrderRow) => !!(o as OrderRow & { pending_action?: string | null }).pending_action;
+  const showLockedToast = useCallback((o: OrderRow) => {
+    const action = (o as OrderRow & { pending_action?: string | null }).pending_action;
+    toast({ title: pendingLabel(action), description: "This order is queued in a bulk job. Edits are disabled until it finishes." });
+  }, [toast]);
 
   // Clear selection when data/filters change
   useEffect(() => {
@@ -320,11 +334,16 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const submitBulk = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0 || overLimit) return;
     const orderIds = orders
-      .filter((o) => selectedIds.has(o.id))
+      .filter((o) => selectedIds.has(o.id) && !isPending(o))
       .map((o) => o.woo_id);
+    const skipped = selectedIds.size - orderIds.length;
     if (orderIds.length === 0) {
-      toast({ title: "Nothing to process", description: "Selected orders not found on this page", variant: "destructive" });
+      toast({ title: "No eligible orders", description: "All selected orders are already queued in another bulk job.", variant: "destructive" });
+      setBulkSubmitting(false);
       return;
+    }
+    if (skipped > 0) {
+      toast({ title: `${skipped} order${skipped === 1 ? "" : "s"} skipped`, description: "Already queued in another bulk job." });
     }
     setBulkSubmitting(true);
     try {
@@ -353,7 +372,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     } finally {
       setBulkSubmitting(false);
     }
-  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast]);
+  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast, isPending, showLockedToast]);
 
   const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
 
@@ -1021,10 +1040,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                                   const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
                                   setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
                                 }}
-                                className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                                className={`inline-flex items-center justify-center h-3.5 w-3.5 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
                               >
-                                {c.label}
-                                <SortIcon className="h-3 w-3" />
+                                {sort.direction === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
                               </button>
                             ) : (
                               <span className="text-xs font-medium">{c.label}</span>
@@ -1040,11 +1058,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                   {orders.map((o) => {
                     const isExpanded = expandedRowId === o.id;
                     const isSelected = selectedIds.has(o.id);
+                    const pending = isPending(o);
                     return (
                       <React.Fragment key={o.id}>
-                        <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""}`} onClick={() => setExpandedRowId((cur) => (cur === o.id ? null : o.id))}>
+                        <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(o); return; } setExpandedRowId((cur) => (cur === o.id ? null : o.id)); }}>
                           <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox checked={isSelected} disabled={locked} onCheckedChange={() => { if (!locked) toggleSelect(o.id); }} />
+                            <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (locked || pending) return; toggleSelect(o.id); }} />
                           </TableCell>
                           {visibleColList.map((c) => {
                             if (c.key === "id") {

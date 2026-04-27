@@ -10,6 +10,7 @@ import { BrandingProvider } from "@/contexts/BrandingProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
 import { RecentMutationsProvider } from "@/contexts/RecentMutationsProvider";
 import { LoadingProvider } from "@/contexts/LoadingProvider";
+import { BlockingOverlay } from "@/contexts/LoadingProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { BulkJobsToast } from "@/components/BulkJobsToast";
 import { ScrollToEdgeButton } from "@/components/layout/ScrollToEdgeButton";
@@ -112,6 +113,7 @@ function Providers({ children }: { children: React.ReactNode }) {
               <BulkJobsToast />
               <GlobalScrollButton />
               <IncompleteOnboardingPrompt />
+              <BlockingOverlay />
             </LoadingProvider>
           </RecentMutationsProvider>
         </BrandingProvider>

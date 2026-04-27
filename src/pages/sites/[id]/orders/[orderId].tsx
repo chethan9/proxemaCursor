@@ -45,6 +45,7 @@ import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
+import { useBlockingEffect } from "@/contexts/LoadingProvider";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
@@ -207,6 +208,7 @@ export default function OrderDetailsPage() {
     if (!order || newStatus === order.status) return;
     statusMutation.mutate(newStatus);
   };
+  useBlockingEffect(statusMutation.isPending, "Updating order status…");
 
   const addNoteMutation = useSiteMutation<unknown, void>({
     mutationFn: async () => {
