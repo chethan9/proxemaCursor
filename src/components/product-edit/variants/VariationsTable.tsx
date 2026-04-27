@@ -3,8 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2, Wand2 } from "lucide-react";
-import { Variation } from "@/services/productEditService";
+import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2, Wand2, Star } from "lucide-react";
+import { Variation, variationMatchesDefault } from "@/services/productEditService";
 import { variationLabel } from "./utils";
 import { NumberInput } from "@/components/ui/number-input";
 
@@ -12,6 +12,8 @@ type Props = {
   variations: Variation[];
   parentSku?: string;
   parentName?: string;
+  defaultAttrs?: { name: string; option: string }[];
+  onSetDefault?: (idx: number) => void;
   onEdit: (idx: number) => void;
   onUpdate: (idx: number, patch: Partial<Variation>) => void;
   onBulk: (patch: Partial<Variation>, onlySelected: boolean, selectedIds: Set<string>) => void;
@@ -28,7 +30,7 @@ function slugify(input: string): string {
     .slice(0, 24);
 }
 
-export function VariationsTable({ variations, parentSku, parentName, onEdit, onUpdate, onBulk, onBulkDelete }: Props) {
+export function VariationsTable({ variations, parentSku, parentName, defaultAttrs, onSetDefault, onEdit, onUpdate, onBulk, onBulkDelete }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkValue, setBulkValue] = useState("");
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
@@ -217,8 +219,9 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
       )}
 
       <div className="rounded-xl border border-border overflow-hidden bg-background">
-        <div className="grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
+        <div className="grid grid-cols-[32px_28px_2fr_1.2fr_90px_90px_80px_32px] gap-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
           <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} />
+          <div></div>
           <div>Options</div>
           <div>SKU</div>
           <div>Price <span className="text-destructive">*</span></div>
@@ -229,11 +232,21 @@ export function VariationsTable({ variations, parentSku, parentName, onEdit, onU
         {variations.map((v, i) => {
           const isDisabled = v.enabled === false;
           const priceMissing = v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0);
+          const isDefault = variationMatchesDefault(v, defaultAttrs);
           return (
-            <div key={v.key} className={`grid grid-cols-[32px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""}`}>
+            <div key={v.key} className={`grid grid-cols-[32px_28px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""} ${isDefault ? "border-l-4 border-l-primary bg-primary/5" : ""}`}>
               <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} />
+              <button
+                type="button"
+                onClick={() => onSetDefault?.(i)}
+                title={isDefault ? "Default variation (click to clear)" : "Set as default variation"}
+                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors ${isDefault ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground/40 hover:text-amber-500 hover:bg-muted"}`}
+              >
+                <Star className={`h-4 w-4 ${isDefault ? "fill-amber-500" : ""}`} />
+              </button>
               <div className="truncate flex items-center gap-2 font-medium">
                 <span className="truncate">{variationLabel(v)}</span>
+                {isDefault && <span className="text-[9px] uppercase bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium shrink-0">Default</span>}
                 {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal shrink-0">off</span>}
                 {priceMissing && <span className="text-[9px] uppercase bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-medium shrink-0">no price</span>}
               </div>

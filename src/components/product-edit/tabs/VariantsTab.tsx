@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ProductFormState, Variation, fetchProductVariations } from "@/services/productEditService";
+import {
+  ProductFormState,
+  Variation,
+  fetchProductVariations,
+  defaultAttributesFromVariation,
+  variationMatchesDefault,
+} from "@/services/productEditService";
 import { AttributeEditor } from "@/components/product-edit/variants/AttributeEditor";
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
@@ -77,10 +83,12 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     setForm((p) => {
       const v = p.variations[idx];
       const deleted = v.id ? [...(p.deletedVariationIds || []), v.id] : (p.deletedVariationIds || []);
+      const wasDefault = variationMatchesDefault(v, p.default_attributes);
       return {
         ...p,
         variations: p.variations.filter((_, i) => i !== idx),
         deletedVariationIds: deleted,
+        default_attributes: wasDefault ? [] : p.default_attributes,
       };
     });
     setEditIdx(null);
@@ -96,11 +104,24 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   const bulkDelete = (keys: Set<string>) => {
     setForm((p) => {
       const removedIds = p.variations.filter((v) => keys.has(v.key) && v.id).map((v) => v.id!) as number[];
+      const removed = p.variations.filter((v) => keys.has(v.key));
+      const stillDefault = removed.every((v) => !variationMatchesDefault(v, p.default_attributes));
       return {
         ...p,
         variations: p.variations.filter((v) => !keys.has(v.key)),
         deletedVariationIds: [...(p.deletedVariationIds || []), ...removedIds],
+        default_attributes: stillDefault ? p.default_attributes : [],
       };
+    });
+  };
+
+  const setDefaultVariation = (idx: number) => {
+    setForm((p) => {
+      const v = p.variations[idx];
+      if (!v) return p;
+      const isAlready = variationMatchesDefault(v, p.default_attributes);
+      if (isAlready) return { ...p, default_attributes: [] };
+      return { ...p, default_attributes: defaultAttributesFromVariation(v, p.attributes) };
     });
   };
 
@@ -180,6 +201,8 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               variations={form.variations}
               parentSku={form.sku}
               parentName={form.name}
+              defaultAttrs={form.default_attributes}
+              onSetDefault={setDefaultVariation}
               onEdit={setEditIdx}
               onUpdate={updateVariation}
               onBulk={applyBulk}
@@ -199,6 +222,8 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
           onSaveAndNext={() => setEditIdx((i) => (i !== null && i < form.variations.length - 1 ? i + 1 : null))}
           onUpdate={(patch) => updateVariation(editIdx, patch)}
           onRemove={() => removeVariation(editIdx)}
+          isDefault={variationMatchesDefault(form.variations[editIdx], form.default_attributes)}
+          onToggleDefault={() => setDefaultVariation(editIdx)}
         />
       )}
     </div>

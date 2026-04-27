@@ -54,6 +54,7 @@ export type ProductFormState = {
   variations: Variation[];
   deletedVariationIds?: number[];
   meta_data?: { key: string; value: unknown }[];
+  default_attributes?: { id?: number; name: string; option: string }[];
 };
 
 export function emptyProductForm(): ProductFormState {
@@ -81,7 +82,39 @@ export function emptyProductForm(): ProductFormState {
     attributes: [],
     variations: [],
     deletedVariationIds: [],
+    default_attributes: [],
   };
+}
+
+export function variationMatchesDefault(
+  variation: Variation,
+  defaultAttrs: { name: string; option: string }[] | undefined,
+): boolean {
+  if (!defaultAttrs || defaultAttrs.length === 0) return false;
+  if (variation.attributes.length === 0) return false;
+  return defaultAttrs.every((d) =>
+    variation.attributes.some(
+      (va) =>
+        va.name.trim().toLowerCase() === d.name.trim().toLowerCase() &&
+        va.option.trim().toLowerCase() === d.option.trim().toLowerCase(),
+    ),
+  );
+}
+
+export function defaultAttributesFromVariation(
+  v: Variation,
+  parentAttributes: ProductAttribute[],
+): { id?: number; name: string; option: string }[] {
+  const variableNames = new Set(parentAttributes.filter((a) => a.variation).map((a) => a.name.toLowerCase()));
+  const nameToId = new Map<string, number | undefined>();
+  parentAttributes.forEach((a) => nameToId.set(a.name.toLowerCase(), a.id));
+  return v.attributes
+    .filter((a) => variableNames.size === 0 || variableNames.has(a.name.toLowerCase()))
+    .map((a) => ({
+      ...(nameToId.get(a.name.toLowerCase()) ? { id: nameToId.get(a.name.toLowerCase()) } : {}),
+      name: a.name,
+      option: a.option,
+    }));
 }
 
 export function compositeVariationKey(attrs: { name: string; option: string }[]): string {
@@ -132,6 +165,9 @@ export function formToWooPayload(form: ProductFormState): Record<string, unknown
   }
   if (form.brands && form.brands.length) payload.brands = form.brands.map((b) => ({ id: b.id }));
   if (form.meta_data) payload.meta_data = form.meta_data;
+  if (form.type === "variable" && form.default_attributes && form.default_attributes.length > 0) {
+    payload.default_attributes = form.default_attributes;
+  }
   if (form.type === "variable" && form.variations.length > 0) {
     payload.variations = form.variations.map((v) => ({
       id: v.id,

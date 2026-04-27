@@ -22,9 +22,11 @@ interface Props {
   hasNext?: boolean;
   storeId: string;
   currency?: string;
+  isDefault?: boolean;
+  onToggleDefault?: () => void;
 }
 
-export function VariationEditDialog({ open, onOpenChange, variation, onUpdate, onRemove, onSaveAndNext, hasNext, storeId, currency = "" }: Props) {
+export function VariationEditDialog({ open, onOpenChange, variation, onUpdate, onRemove, onSaveAndNext, hasNext, storeId, currency = "", isDefault, onToggleDefault }: Props) {
   const [imageOpen, setImageOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
@@ -216,6 +218,12 @@ export function VariationEditDialog({ open, onOpenChange, variation, onUpdate, o
                 <Checkbox checked={variation.manage_stock} onCheckedChange={(v) => onUpdate({ manage_stock: !!v })} />
                 Manage Stock
               </label>
+              {onToggleDefault && (
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox checked={!!isDefault} onCheckedChange={() => onToggleDefault()} />
+                  Set as default for this product
+                </label>
+              )}
             </div>
           </div>
         </div>
