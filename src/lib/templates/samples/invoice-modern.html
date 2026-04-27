@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Inter, -apple-system, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
+    .container { max-width: 800px; margin: 40px auto; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; }
+    .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
+    .header .invoice-id { margin-top: 8px; opacity: 0.9; font-size: 14px; }
+    .content { padding: 40px; }
+    .info-row { display: flex; gap: 40px; margin-bottom: 40px; }
+    .info-col { flex: 1; }
+    .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8b8b8b; margin-bottom: 8px; font-weight: 600; }
+    .badge { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+    thead { background: #f8f9fa; }
+    th { padding: 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+    td { padding: 16px 12px; border-bottom: 1px solid #f0f0f0; }
+    .item-name { font-weight: 500; color: #1a1a1a; }
+    .item-meta { font-size: 12px; color: #8b8b8b; margin-top: 4px; }
+    .summary { background: #f8f9fa; padding: 24px; margin-top: 30px; border-radius: 8px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+    .summary-total { font-size: 20px; font-weight: 700; border-top: 2px solid #667eea; padding-top: 12px; margin-top: 8px; }
+    .footer { padding: 30px 40px; background: #f8f9fa; text-align: center; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{{store.name}}</h1>
+      <div class="invoice-id">Invoice #{{order.number}} • {{formatDate order.date_created "MMMM dd, yyyy"}}</div>
+    </div>
+
+    <div class="content">
+      <div class="badge">{{order.status}}</div>
+
+      <div class="info-row">
+        <div class="info-col">
+          <div class="label">Billed To</div>
+          <div>{{order.billing.first_name}} {{order.billing.last_name}}</div>
+          {{#if order.billing.company}}<div style="color: #666; font-size: 14px;">{{order.billing.company}}</div>{{/if}}
+          <div style="margin-top: 8px; color: #666; font-size: 14px;">
+            {{order.billing.address_1}}<br>
+            {{order.billing.city}}, {{order.billing.state}} {{order.billing.postcode}}<br>
+            {{order.billing.email}}
+          </div>
+        </div>
+        <div class="info-col">
+          <div class="label">Shipped To</div>
+          <div>{{order.shipping.first_name}} {{order.shipping.last_name}}</div>
+          {{#if order.shipping.company}}<div style="color: #666; font-size: 14px;">{{order.shipping.company}}</div>{{/if}}
+          <div style="margin-top: 8px; color: #666; font-size: 14px;">
+            {{order.shipping.address_1}}<br>
+            {{order.shipping.city}}, {{order.shipping.state}} {{order.shipping.postcode}}
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th style="width: 80px; text-align: center;">Quantity</th>
+            <th style="width: 120px; text-align: right;">Price</th>
+            <th style="width: 120px; text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each order.line_items}}
+          <tr>
+            <td>
+              <div class="item-name">{{this.name}}</div>
+              {{#if this.sku}}<div class="item-meta">SKU: {{this.sku}}</div>{{/if}}
+            </td>
+            <td style="text-align: center;">{{this.quantity}}</td>
+            <td style="text-align: right;">{{formatCurrency this.price}}</td>
+            <td style="text-align: right; font-weight: 500;">{{formatCurrency this.total}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="summary">
+        <div class="summary-row"><span>Subtotal</span><span>{{formatCurrency order.totals.subtotal}}</span></div>
+        {{#if order.totals.shipping}}
+        <div class="summary-row"><span>Shipping</span><span>{{formatCurrency order.totals.shipping}}</span></div>
+        {{/if}}
+        {{#if order.totals.tax}}
+        <div class="summary-row"><span>Tax</span><span>{{formatCurrency order.totals.tax}}</span></div>
+        {{/if}}
+        {{#if order.totals.discount}}
+        <div class="summary-row"><span>Discount</span><span style="color: #2e7d32;">-{{formatCurrency order.totals.discount}}</span></div>
+        {{/if}}
+        <div class="summary-row summary-total"><span>Total</span><span>{{formatCurrency order.total}}</span></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Thank you for your purchase!</div>
+      <div style="margin-top: 8px;">{{store.name}}{{#if store.address}} • {{store.address}}{{/if}}</div>
+    </div>
+  </div>
+</body>
+</html>

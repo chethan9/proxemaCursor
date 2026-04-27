@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 40px; color: #333; }
+    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+    .header h1 { margin: 0; color: #2563eb; font-size: 28px; }
+    .header .invoice-meta { float: right; text-align: right; }
+    .info-grid { display: table; width: 100%; margin-bottom: 30px; }
+    .info-col { display: table-cell; width: 50%; vertical-align: top; }
+    .info-col h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    thead { background: #f3f4f6; }
+    th { padding: 12px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #666; }
+    td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    .totals { float: right; width: 300px; }
+    .totals table { margin-bottom: 0; }
+    .totals td { border: none; padding: 8px 12px; }
+    .totals .total-row { font-weight: bold; font-size: 18px; border-top: 2px solid #2563eb; }
+    .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>{{store.name}}</h1>
+    <div class="invoice-meta">
+      <div style="font-size: 24px; font-weight: bold; color: #666;">INVOICE</div>
+      <div>{{order.number}}</div>
+      <div>{{formatDate order.date_created "MMMM dd, yyyy"}}</div>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-col">
+      <h3>Bill To</h3>
+      <div>{{order.billing.first_name}} {{order.billing.last_name}}</div>
+      {{#if order.billing.company}}<div>{{order.billing.company}}</div>{{/if}}
+      <div>{{order.billing.address_1}}</div>
+      {{#if order.billing.address_2}}<div>{{order.billing.address_2}}</div>{{/if}}
+      <div>{{order.billing.city}}, {{order.billing.state}} {{order.billing.postcode}}</div>
+      <div>{{order.billing.country}}</div>
+      {{#if order.billing.email}}<div>{{order.billing.email}}</div>{{/if}}
+      {{#if order.billing.phone}}<div>{{order.billing.phone}}</div>{{/if}}
+    </div>
+    <div class="info-col">
+      <h3>Ship To</h3>
+      <div>{{order.shipping.first_name}} {{order.shipping.last_name}}</div>
+      {{#if order.shipping.company}}<div>{{order.shipping.company}}</div>{{/if}}
+      <div>{{order.shipping.address_1}}</div>
+      {{#if order.shipping.address_2}}<div>{{order.shipping.address_2}}</div>{{/if}}
+      <div>{{order.shipping.city}}, {{order.shipping.state}} {{order.shipping.postcode}}</div>
+      <div>{{order.shipping.country}}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th style="width: 80px; text-align: right;">Qty</th>
+        <th style="width: 120px; text-align: right;">Unit Price</th>
+        <th style="width: 120px; text-align: right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each order.line_items}}
+      <tr>
+        <td>
+          <div style="font-weight: 500;">{{this.name}}</div>
+          {{#if this.sku}}<div style="font-size: 11px; color: #999;">SKU: {{this.sku}}</div>{{/if}}
+        </td>
+        <td style="text-align: right;">{{this.quantity}}</td>
+        <td style="text-align: right;">{{formatCurrency this.price}}</td>
+        <td style="text-align: right;">{{formatCurrency this.total}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tr><td>Subtotal</td><td style="text-align: right;">{{formatCurrency order.totals.subtotal}}</td></tr>
+      {{#if order.totals.shipping}}
+      <tr><td>Shipping</td><td style="text-align: right;">{{formatCurrency order.totals.shipping}}</td></tr>
+      {{/if}}
+      {{#if order.totals.tax}}
+      <tr><td>Tax</td><td style="text-align: right;">{{formatCurrency order.totals.tax}}</td></tr>
+      {{/if}}
+      {{#if order.totals.discount}}
+      <tr><td>Discount</td><td style="text-align: right;">-{{formatCurrency order.totals.discount}}</td></tr>
+      {{/if}}
+      <tr class="total-row"><td>Total</td><td style="text-align: right;">{{formatCurrency order.total}}</td></tr>
+    </table>
+  </div>
+
+  <div style="clear: both;"></div>
+
+  <div class="footer">
+    <div>{{store.name}}</div>
+    {{#if store.address}}<div>{{store.address}}</div>{{/if}}
+    <div>Thank you for your business!</div>
+  </div>
+</body>
+</html>
