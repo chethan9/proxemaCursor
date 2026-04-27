@@ -54,6 +54,18 @@ import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 import { useToast } from "@/hooks/use-toast";
 
+const PENDING_LABELS: Record<string, string> = {
+  delete: "Scheduled for deletion",
+  status_change: "Scheduled for status change",
+  price_update: "Scheduled for price update",
+  stock_update: "Scheduled for stock update",
+  category_update: "Scheduled for category update",
+};
+function pendingLabel(action?: string | null) {
+  if (!action) return "";
+  return PENDING_LABELS[action] || `Scheduled: ${action}`;
+}
+
 type ColumnKey =
   | "image" | "id" | "wooId" | "name" | "slug" | "sku" | "type" | "status" | "permalink" | "parent_id"
   | "price" | "regular_price" | "sale_price"
