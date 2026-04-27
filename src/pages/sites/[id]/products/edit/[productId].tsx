@@ -72,6 +72,9 @@ function Inner() {
 
         const taxStatus = ((p.tax_status as ProductFormState["tax_status"]) ?? (raw.tax_status as ProductFormState["tax_status"]) ?? "taxable") as ProductFormState["tax_status"];
         const taxClass = ((p.tax_class as string | null | undefined) ?? (raw.tax_class as string | null | undefined) ?? "") || "";
+        const defaultAttrs = Array.isArray(raw.default_attributes)
+          ? (raw.default_attributes as { id?: number; name: string; option: string }[])
+          : [];
 
         setForm({
           ...base,
@@ -101,6 +104,7 @@ function Inner() {
           brands: brandsSrc.map((b) => ({ id: b.id, name: b.name || "" })),
           tags,
           attributes,
+          default_attributes: defaultAttrs,
         });
         setInitialFormJson(JSON.stringify({
           ...base,
