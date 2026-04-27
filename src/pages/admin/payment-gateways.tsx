@@ -64,11 +64,6 @@ export default function PaymentGatewaysPage() {
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Record<string, { api_key?: string; api_secret?: string; webhook_secret?: string; enabled?: boolean }>>({});
 
-  if (profile?.role !== "admin") {
-    router.push("/");
-    return null;
-  }
-
   const { data: configs = [], isLoading } = useQuery({
     queryKey: ["payment-gateways"],
     queryFn: async () => {
@@ -80,6 +75,7 @@ export default function PaymentGatewaysPage() {
       if (!response.ok) throw new Error("Failed to fetch gateway configs");
       return response.json() as Promise<GatewayConfig[]>;
     },
+    enabled: profile?.role === "admin",
   });
 
   const { data: routing = [] } = useQuery({
@@ -93,6 +89,7 @@ export default function PaymentGatewaysPage() {
       if (!response.ok) throw new Error("Failed to fetch routing");
       return response.json() as Promise<RegionRouting[]>;
     },
+    enabled: profile?.role === "admin",
   });
 
   const saveMutation = useMutation({
@@ -156,6 +153,11 @@ export default function PaymentGatewaysPage() {
       });
     },
   });
+
+  if (profile?.role !== "admin") {
+    router.push("/");
+    return null;
+  }
 
   const getConfig = (gateway: string, mode: "test" | "live") =>
     configs.find((c) => c.gateway === gateway && c.mode === mode);
