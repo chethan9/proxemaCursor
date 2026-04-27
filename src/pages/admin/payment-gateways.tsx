@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -155,7 +155,9 @@ export default function PaymentGatewaysPage() {
   });
 
   if (profile?.role !== "admin") {
-    router.push("/");
+    useEffect(() => {
+      router.push("/");
+    }, []);
     return null;
   }
 
