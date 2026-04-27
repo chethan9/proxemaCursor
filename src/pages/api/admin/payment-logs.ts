@@ -1,40 +1,43 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET") return res.status(405).end();
-
+async function checkAdminAuth(req: NextApiRequest) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) return res.status(401).json({ error: "Unauthorized" });
-  const token = authHeader.slice(7);
-  const { data: ud, error: ue } = await supabaseAdmin.auth.getUser(token);
-  if (ue || !ud.user) return res.status(401).json({ error: "Unauthorized" });
-
-  const tab = (req.query.tab as string) || "attempts";
-  const gateway = req.query.gateway as string | undefined;
-  const limit = Math.min(parseInt((req.query.limit as string) || "50", 10), 200);
-
-  let q = supabaseAdmin
-    .from("activity_log")
-    .select("id, action, entity_type, entity_id, actor_email, actor_type, client_id, metadata, created_at")
-    .eq("entity_type", "payment_gateway")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (tab === "attempts") {
-    q = q.like("action", "%.charge.%");
-  } else if (tab === "webhooks") {
-    q = q.like("action", "%.webhook.%");
-  } else if (tab === "errors") {
-    q = q.or("action.like.%.failed,action.like.%.invalid,action.like.%.error");
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new Error("Unauthorized");
   }
+  const token = authHeader.substring(7);
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) throw new Error("Unauthorized");
 
-  if (gateway && gateway !== "all") {
-    q = q.like("action", `${gateway}.%`);
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin") throw new Error("Admin access required");
+  return user;
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    await checkAdminAuth(req);
+
+    if (req.method === "GET") {
+      const { data, error } = await supabaseAdmin
+        .from("payment_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    res.status(405).json({ error: "Method not allowed" });
+  } catch (error) {
+    console.error("Payment logs API error:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
   }
-
-  const { data, error } = await q;
-  if (error) return res.status(500).json({ error: error.message });
-
-  return res.status(200).json({ items: data || [] });
 }
