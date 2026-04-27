@@ -16,6 +16,7 @@ import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
+import { useBlockingEffect } from "@/contexts/LoadingProvider";
 
 function Inner() {
   const router = useRouter();
@@ -35,6 +36,8 @@ function Inner() {
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
+
+  useBlockingEffect(create.isPending, "Creating product…");
 
   useEffect(() => {
     if (!router.isReady) return;

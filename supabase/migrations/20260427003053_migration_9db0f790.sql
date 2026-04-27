@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS trg_clear_pending_locks ON bulk_jobs; CREATE TRIGGER trg_clear_pending_locks AFTER UPDATE ON bulk_jobs FOR EACH ROW EXECUTE FUNCTION public.clear_pending_locks_on_job_terminal();

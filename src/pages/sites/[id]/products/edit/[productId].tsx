@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
+import { useBlockingEffect } from "@/contexts/LoadingProvider";
 
 type ProductRow = Record<string, unknown>;
 
@@ -144,6 +145,9 @@ function Inner() {
     onSuccessExtra: () => router.push(`/sites/${storeId}/products`),
     onErrorExtra: () => setDeleteOpen(false),
   });
+
+  useBlockingEffect(save.isPending, "Saving product…");
+  useBlockingEffect(remove.isPending, "Deleting product…");
 
   const onPublish = useCallback(() => {
     if (!form) return;
