@@ -7,7 +7,7 @@ import { Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
-import { updateCategory, deleteCategory, updateTag, deleteTag } from "@/services/taxonomyService";
+import { updateCategory, deleteCategory, updateTag, deleteTag, updateBrand, deleteBrand } from "@/services/taxonomyService";
 
 type Taxonomy = {
   id: string;
@@ -22,7 +22,7 @@ type Taxonomy = {
 
 type Props = {
   item: Taxonomy;
-  mode: "categories" | "tags";
+  mode: "categories" | "tags" | "brands";
   storeId: string;
   onClose: () => void;
 };
@@ -34,10 +34,11 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
   const [description, setDescription] = useState(item.description || "");
 
   const updateMut = useSiteMutation<Taxonomy, { name: string; slug: string; description: string }>({
-    mutationFn: (vars) =>
-      mode === "categories"
-        ? updateCategory(storeId, item.id, vars) as Promise<Taxonomy>
-        : updateTag(storeId, item.id, vars) as Promise<Taxonomy>,
+    mutationFn: (vars) => {
+      if (mode === "categories") return updateCategory(storeId, item.id, vars) as Promise<Taxonomy>;
+      if (mode === "tags") return updateTag(storeId, item.id, vars) as Promise<Taxonomy>;
+      return updateBrand(storeId, item.id, vars) as Promise<Taxonomy>;
+    },
     invalidateKeys: [queryKeys.taxonomy(storeId, mode)],
     successToast: "Synced to WooCommerce",
   });
@@ -45,14 +46,15 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
   const deleteMut = useSiteMutation<void, void>({
     mutationFn: async () => {
       if (mode === "categories") await deleteCategory(storeId, item.id);
-      else await deleteTag(storeId, item.id);
+      else if (mode === "tags") await deleteTag(storeId, item.id);
+      else await deleteBrand(storeId, item.id);
     },
     invalidateKeys: [queryKeys.taxonomy(storeId, mode)],
     successToast: "Deleted from WooCommerce",
     onSuccessExtra: () => onClose(),
   });
 
-  const singular = mode === "categories" ? "category" : "tag";
+  const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";
   const dirty = name !== item.name || slug !== (item.slug || "") || description !== (item.description || "");
 
   async function handleDelete() {

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
-import { createCategory, createTag } from "@/services/taxonomyService";
+import { createCategory, createTag, createBrand } from "@/services/taxonomyService";
 
 type ParentOption = { id: string; woo_id: number | null; name: string };
 
@@ -17,7 +17,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   storeId: string;
   siteName?: string;
-  mode: "categories" | "tags";
+  mode: "categories" | "tags" | "brands";
   parentOptions?: ParentOption[];
 };
 
@@ -48,14 +48,16 @@ export function TaxonomyDialog({ open, onOpenChange, storeId, siteName, mode, pa
     if (!slugTouched) setSlug(slugify(name));
   }, [name, slugTouched]);
 
-  const singular = mode === "categories" ? "category" : "tag";
+  const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";
 
   const create = useSiteMutation<void, { name: string; slug?: string; description?: string; parent?: number }>({
     mutationFn: async (payload) => {
       if (mode === "categories") {
         await createCategory(storeId, payload);
-      } else {
+      } else if (mode === "tags") {
         await createTag(storeId, { name: payload.name, slug: payload.slug, description: payload.description });
+      } else {
+        await createBrand(storeId, { name: payload.name, slug: payload.slug, description: payload.description });
       }
     },
     invalidateKeys: [queryKeys.taxonomy(storeId, mode), ["woo", "taxonomy", storeId, mode]],

@@ -16,7 +16,7 @@ import type { RoleKey } from "@/services/menuConfigService";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchProducts } from "@/services/productService";
 import { fetchOrders } from "@/services/orderService";
-import { fetchCategories, fetchTags } from "@/services/taxonomyService";
+import { fetchCategories, fetchTags, fetchBrands } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 
@@ -130,8 +130,8 @@ export function SiteSidebar({ siteId }: Props) {
   };
 
   const prefetchForHref = (href: string) => {
-    // Match /sites/:id/(products|orders|categories|tags)
-    const m = href.match(/^\/sites\/([^/]+)\/(products|orders|categories|tags)$/);
+    // Match /sites/:id/(products|orders|categories|tags|brands)
+    const m = href.match(/^\/sites\/([^/]+)\/(products|orders|categories|tags|brands)$/);
     if (!m) return;
     const [, sid, section] = m;
     if (section === "products") {
@@ -155,6 +155,11 @@ export function SiteSidebar({ siteId }: Props) {
       queryClient.prefetchQuery({
         queryKey: ["taxonomy", "tags", sid, "", 0, 50] as const,
         queryFn: () => fetchTags(sid, "", 0, 50),
+      });
+    } else if (section === "brands") {
+      queryClient.prefetchQuery({
+        queryKey: ["taxonomy", "brands", sid, "", 0, 50] as const,
+        queryFn: () => fetchBrands(sid, "", 0, 50),
       });
     }
   };

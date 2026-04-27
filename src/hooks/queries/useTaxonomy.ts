@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchCategories, fetchTags, fetchAllCategories, type TaxonomySortField, type TaxonomySortDirection } from "@/services/taxonomyService";
+import { fetchCategories, fetchTags, fetchBrands, fetchAllCategories, type TaxonomySortField, type TaxonomySortDirection } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 export function useTaxonomyRows(
   storeId: string,
-  mode: "categories" | "tags",
+  mode: "categories" | "tags" | "brands",
   search: string,
   page: number,
   pageSize: number,
@@ -15,11 +15,12 @@ export function useTaxonomyRows(
   const { data: syncStatus } = useStoreSyncStatus(storeId);
   const anySyncRunning = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
   return useQuery({
-    queryKey: [...queryKeys.taxonomy(storeId, mode), "rows", search, page, pageSize, sortField, sortDirection] as const,
-    queryFn: () => (mode === "categories"
-      ? fetchCategories(storeId, search, page, pageSize, sortField, sortDirection)
-      : fetchTags(storeId, search, page, pageSize, sortField, sortDirection)
-    ),
+    queryKey: ["taxonomy", mode, storeId, "rows", search, page, pageSize, sortField, sortDirection] as const,
+    queryFn: () => {
+      if (mode === "categories") return fetchCategories(storeId, search, page, pageSize, sortField, sortDirection);
+      if (mode === "tags") return fetchTags(storeId, search, page, pageSize, sortField, sortDirection);
+      return fetchBrands(storeId, search, page, pageSize, sortField, sortDirection);
+    },
     enabled: !!storeId,
     staleTime: 60_000,
     refetchInterval: anySyncRunning ? 5000 : false,

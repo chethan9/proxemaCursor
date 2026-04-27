@@ -4,7 +4,7 @@ import {
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
   Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles, Compass,
-  Download,
+  Download, Award,
   type LucideIcon,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
@@ -36,7 +36,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
   Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles, Compass,
-  Download,
+  Download, Award,
 };
 
 export function resolveIcon(name: string): LucideIcon {
@@ -85,7 +85,8 @@ export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-customers", defaultLabel: "Customers", defaultIcon: "Users", path: "/customers", defaultGroup: "Main", defaultOrder: 3 },
   { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 4 },
   { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 5 },
-  { id: "site-downloads", defaultLabel: "Downloads", defaultIcon: "Download", path: "/downloads", defaultGroup: "Main", defaultOrder: 6 },
+  { id: "site-brands", defaultLabel: "Brands", defaultIcon: "Award", path: "/brands", defaultGroup: "Main", defaultOrder: 6, permission: "manage_products" as const },
+  { id: "site-downloads", defaultLabel: "Downloads", defaultIcon: "Download", path: "/downloads", defaultGroup: "Main", defaultOrder: 7 },
   { id: "site-bulk-jobs", defaultLabel: "Bulk Jobs", defaultIcon: "Layers", path: "/bulk-jobs", defaultGroup: "Manage", defaultOrder: 0 },
   { id: "site-settings", defaultLabel: "Configuration", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 1 },
 ];

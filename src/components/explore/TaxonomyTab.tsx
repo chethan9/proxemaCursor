@@ -1,7 +1,7 @@
 import { useState, Fragment, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   storeId: string;
-  mode: "categories" | "tags";
+  mode: "categories" | "tags" | "brands";
   search: string;
   onSearchChange: (v: string) => void;
   embedHeader?: boolean;
@@ -90,8 +90,8 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
     );
   }
 
-  const singular = mode === "categories" ? "category" : "tag";
-  const Icon = mode === "categories" ? FolderTree : TagIcon;
+  const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";
+  const Icon = mode === "categories" ? FolderTree : mode === "tags" ? TagIcon : Award;
 
   return (
     <div className="space-y-3">
