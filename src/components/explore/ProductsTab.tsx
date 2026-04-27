@@ -54,6 +54,15 @@ import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 import { useToast } from "@/hooks/use-toast";
 
+type ColumnKey =
+  | "image" | "id" | "wooId" | "name" | "slug" | "sku" | "type" | "status" | "permalink" | "parent_id"
+  | "price" | "regular_price" | "sale_price"
+  | "stock" | "stock_status" | "manage_stock"
+  | "tax_status" | "tax_class" | "shipping_required"
+  | "category" | "attributes" | "images_count"
+  | "short_desc" | "description"
+  | "date_created" | "date_modified" | "sales" | "created" | "updated";
+
 const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: ProductSortField }[] = [
   { key: "image", label: "Image", group: "Basic" },
   { key: "id", label: "ID", group: "Basic" },
