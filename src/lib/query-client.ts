@@ -30,6 +30,6 @@ export const queryKeys = {
   webhooks: (storeId: string) => ["stores", storeId, "webhooks"] as const,
   clients: ["clients"] as const,
   client: (id: string) => ["clients", id] as const,
-  taxonomy: (storeId: string, type: "categories" | "tags") => ["stores", storeId, "taxonomy", type] as const,
+  taxonomy: (storeId: string, type: "categories" | "tags" | "brands") => ["stores", storeId, "taxonomy", type] as const,
   viewPrefs: (key: string) => ["view-prefs", key] as const,
 };
