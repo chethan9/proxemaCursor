@@ -785,6 +785,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
                       const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
                       const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
+                      const minP = (p as ProductRow & { min_price?: number | null }).min_price;
+                      const maxP = (p as ProductRow & { max_price?: number | null }).max_price;
+                      const hasRange = p.type === "variable" && minP != null && maxP != null && minP !== maxP;
+                      const rangeText = hasRange ? `${currency ? currency + " " : ""}${Number(minP).toFixed(2)}–${Number(maxP).toFixed(2)}` : null;
                       const dotColor: Record<string, string> = {
                         publish: "bg-success",
                         draft: "bg-muted-foreground/50",
@@ -843,7 +847,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             <div className="px-2 py-1.5 border-t border-border/60">
                               <div className="text-[11px] font-medium leading-tight line-clamp-1">{p.name || "—"}</div>
                               <div className="flex items-center justify-between gap-1 mt-0.5">
-                                <span className="text-[11px] font-semibold font-mono">{fmtPrice(p.price)}</span>
+                                <span className="text-[11px] font-semibold font-mono">{rangeText ?? fmtPrice(p.price)}</span>
                                 <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dot}`} title={statusLabel} />
                               </div>
                             </div>
@@ -939,7 +943,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                               <div className="flex items-baseline justify-between gap-2">
                                 <div className="flex items-baseline gap-1.5">
-                                  {p.sale_price && p.sale_price !== p.regular_price ? (
+                                  {rangeText ? (
+                                    <span className="text-base font-semibold font-mono text-foreground">{rangeText}</span>
+                                  ) : p.sale_price && p.sale_price !== p.regular_price ? (
                                     <>
                                       <span className="text-base font-semibold font-mono text-foreground">{fmtPrice(p.sale_price)}</span>
                                       <span className="ml-1.5 line-through text-muted-foreground text-xs">{fmtPrice(p.regular_price)}</span>
@@ -1066,6 +1072,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
                       const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
                       const pending = isPending(p);
+                      const minPRow = (p as ProductRow & { min_price?: number | null }).min_price;
+                      const maxPRow = (p as ProductRow & { max_price?: number | null }).max_price;
+                      const hasRangeRow = p.type === "variable" && minPRow != null && maxPRow != null && minPRow !== maxPRow;
+                      const rangeTextRow = hasRangeRow ? `${currency ? currency + " " : ""}${Number(minPRow).toFixed(2)}–${Number(maxPRow).toFixed(2)}` : null;
                       return (
                         <React.Fragment key={p.id}>
                           <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(p); return; } setExpandedRowId((cur) => (cur === p.id ? null : p.id)); }}>
@@ -1113,7 +1123,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "price") {
                                 return (
                                   <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{fmtPrice(p.price)}</span>
+                                    <span className="text-xs font-mono truncate">{rangeTextRow ?? fmtPrice(p.price)}</span>
                                   </TableCell>
                                 );
                               }
