@@ -100,7 +100,7 @@ function TemplatesInner() {
               <div className="flex items-center justify-between mb-4">
                 <div className="text-xs text-muted-foreground">{TYPE_META[type].description}</div>
                 <div className="relative w-72">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                   <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" className="pl-8 h-9" />
                 </div>
               </div>
