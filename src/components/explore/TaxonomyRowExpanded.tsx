@@ -39,7 +39,7 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
       if (mode === "tags") return updateTag(storeId, item.id, vars) as Promise<Taxonomy>;
       return updateBrand(storeId, item.id, vars) as Promise<Taxonomy>;
     },
-    invalidateKeys: [queryKeys.taxonomy(storeId, mode)],
+    invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode)],
     successToast: "Synced to WooCommerce",
   });
 
@@ -49,7 +49,7 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
       else if (mode === "tags") await deleteTag(storeId, item.id);
       else await deleteBrand(storeId, item.id);
     },
-    invalidateKeys: [queryKeys.taxonomy(storeId, mode)],
+    invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode)],
     successToast: "Deleted from WooCommerce",
     onSuccessExtra: () => onClose(),
   });

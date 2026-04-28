@@ -60,7 +60,7 @@ export function TaxonomyDialog({ open, onOpenChange, storeId, siteName, mode, pa
         await createBrand(storeId, { name: payload.name, slug: payload.slug, description: payload.description });
       }
     },
-    invalidateKeys: [queryKeys.taxonomy(storeId, mode), ["woo", "taxonomy", storeId, mode]],
+    invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode), ["woo", "taxonomy", storeId, mode]],
     siteName,
     successToast: `${singular.charAt(0).toUpperCase() + singular.slice(1)} created`,
     onSuccessExtra: () => onOpenChange(false),
