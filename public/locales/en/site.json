@@ -1,29 +1,482 @@
 {
+  "tabs": {
+    "home": "Home",
+    "products": "Products",
+    "orders": "Orders",
+    "customers": "Customers",
+    "categories": "Categories",
+    "tags": "Tags",
+    "brands": "Brands",
+    "downloads": "Downloads",
+    "bulkJobs": "Bulk jobs",
+    "settings": "Settings"
+  },
   "home": {
-    "refresh": "Refresh",
-    "errorTitle": "Unable to load dashboard stats",
-    "errorBody": "Something went wrong fetching site statistics.",
-    "retry": "Retry",
-    "emptyTitle": "Your dashboard is waiting for its first order",
-    "emptyBody": "Once customers start placing orders on your store, sales trends, top products, and activity will all populate automatically right here.",
-    "multiCurrency": "Multi-currency store",
-    "viewingIn": "Viewing sales in",
-    "noSalesInCurrency": "No sales in {{currency}} in the last 30 days. Try another currency above.",
+    "title": "Store overview",
+    "subtitle": "Snapshot of recent activity and key metrics",
     "stats": {
-      "ordersToday": "Orders Today",
-      "ordersInProgress": "Orders in Progress",
-      "todaySales": "Today Sales",
-      "weeklySales": "Weekly Sales",
-      "monthlySales": "Monthly Sales",
-      "avgOrder": "Avg Order (30d)"
-    },
-    "spark": {
-      "sales": "Sales",
       "revenue": "Revenue",
-      "ordersInCurrency": "orders in {{currency}} (30d)",
-      "ordersLast30d": "orders last 30d",
-      "vsPrev30d": "vs prev 30d",
-      "last30d": "last 30d"
+      "orders": "Orders",
+      "customers": "Customers",
+      "products": "Products",
+      "avgOrderValue": "Avg order value",
+      "conversionRate": "Conversion rate"
+    },
+    "ranges": {
+      "today": "Today",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "ytd": "Year to date",
+      "custom": "Custom range"
+    },
+    "salesTrend": {
+      "title": "Sales trend",
+      "subtitle": "Daily revenue and order count",
+      "noData": "No sales data for this period yet."
+    },
+    "orderStatus": {
+      "title": "Order status",
+      "subtitle": "Distribution across statuses",
+      "empty": "No orders yet."
+    },
+    "recentOrders": {
+      "title": "Recent orders",
+      "viewAll": "View all",
+      "empty": "No recent orders.",
+      "orderNumber": "Order #{{number}}",
+      "noNumber": "Untitled order"
+    },
+    "topProducts": {
+      "title": "Top products",
+      "subtitle": "Best sellers in the selected window",
+      "empty": "No sales recorded yet.",
+      "unitsSold": "{{count}} sold"
+    },
+    "currency": {
+      "switchTo": "View in {{currency}}",
+      "store": "Store currency"
     }
+  },
+  "products": {
+    "title": "Products",
+    "search": "Search products by name, SKU, ID…",
+    "filters": {
+      "status": "Status",
+      "type": "Type",
+      "stock": "Stock",
+      "category": "Category",
+      "tag": "Tag",
+      "brand": "Brand",
+      "all": "All",
+      "publish": "Published",
+      "draft": "Draft",
+      "private": "Private",
+      "pending": "Pending review",
+      "simple": "Simple",
+      "variable": "Variable",
+      "grouped": "Grouped",
+      "external": "External",
+      "inStock": "In stock",
+      "outOfStock": "Out of stock",
+      "onBackorder": "On backorder"
+    },
+    "columns": {
+      "image": "Image",
+      "name": "Name",
+      "sku": "SKU",
+      "price": "Price",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "stock": "Stock",
+      "status": "Status",
+      "type": "Type",
+      "categories": "Categories",
+      "tags": "Tags",
+      "brand": "Brand",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
+    },
+    "actions": {
+      "addProduct": "Add product",
+      "import": "Import",
+      "export": "Export",
+      "bulkEdit": "Bulk edit",
+      "bulkDelete": "Bulk delete",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "openInWoo": "Open in WooCommerce"
+    },
+    "selection": {
+      "selected": "{{count}} selected",
+      "selectAll": "Select all",
+      "clear": "Clear selection"
+    },
+    "empty": {
+      "title": "No products yet",
+      "description": "Run an initial sync from settings, or add products manually."
+    },
+    "delete": {
+      "title": "Delete {{count}} product(s)?",
+      "description": "This will remove the product(s) from your store and from WooCommerce. This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    }
+  },
+  "productEdit": {
+    "title": "Edit product",
+    "newTitle": "New product",
+    "tabs": {
+      "basicInfo": "Basic info",
+      "pricingTax": "Pricing & tax",
+      "inventoryShipping": "Inventory & shipping",
+      "variants": "Variants",
+      "advanced": "Advanced"
+    },
+    "fields": {
+      "name": "Name",
+      "slug": "Slug",
+      "shortDescription": "Short description",
+      "description": "Description",
+      "sku": "SKU",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "stockQuantity": "Stock quantity",
+      "manageStock": "Manage stock",
+      "stockStatus": "Stock status",
+      "weight": "Weight",
+      "dimensions": "Dimensions",
+      "length": "Length",
+      "width": "Width",
+      "height": "Height",
+      "categories": "Categories",
+      "tags": "Tags",
+      "brand": "Brand",
+      "featured": "Featured product",
+      "virtual": "Virtual",
+      "downloadable": "Downloadable"
+    },
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saveAndClose": "Save & close",
+    "cancel": "Cancel",
+    "discardWarning": "You have unsaved changes. Discard them?",
+    "savedToast": "Product saved",
+    "saveFailedToast": "Save failed",
+    "preview": {
+      "title": "Live preview",
+      "subtitle": "How this product looks in your storefront"
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "search": "Search by order #, customer, email…",
+    "filters": {
+      "status": "Status",
+      "dateRange": "Date range",
+      "paymentMethod": "Payment method",
+      "all": "All",
+      "pending": "Pending payment",
+      "processing": "Processing",
+      "onHold": "On hold",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "failed": "Failed"
+    },
+    "columns": {
+      "orderNumber": "Order",
+      "customer": "Customer",
+      "status": "Status",
+      "total": "Total",
+      "items": "Items",
+      "paymentMethod": "Payment",
+      "createdAt": "Date",
+      "updatedAt": "Updated"
+    },
+    "actions": {
+      "viewDetails": "View details",
+      "printInvoices": "Print invoices",
+      "markCompleted": "Mark completed",
+      "markProcessing": "Mark processing",
+      "refund": "Refund",
+      "cancel": "Cancel order",
+      "export": "Export"
+    },
+    "empty": {
+      "title": "No orders yet",
+      "description": "Orders sync automatically from WooCommerce."
+    }
+  },
+  "orderDetail": {
+    "title": "Order #{{number}}",
+    "createdOn": "Created on {{date}}",
+    "sections": {
+      "summary": "Summary",
+      "lineItems": "Line items",
+      "billingAddress": "Billing address",
+      "shippingAddress": "Shipping address",
+      "customer": "Customer",
+      "payment": "Payment",
+      "shipping": "Shipping",
+      "fees": "Fees",
+      "taxes": "Taxes",
+      "notes": "Order notes",
+      "history": "Activity"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "discount": "Discount",
+      "total": "Total",
+      "refunded": "Refunded"
+    },
+    "notes": {
+      "addPrivate": "Add private note",
+      "addCustomer": "Add note to customer",
+      "placeholder": "Write a note…",
+      "post": "Post note",
+      "private": "Private",
+      "customer": "Customer-facing"
+    },
+    "actions": {
+      "edit": "Edit order",
+      "print": "Print invoice",
+      "openInWoo": "Open in WooCommerce",
+      "refund": "Issue refund",
+      "changeStatus": "Change status"
+    }
+  },
+  "customers": {
+    "title": "Customers",
+    "search": "Search by name, email, phone…",
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "orders": "Orders",
+      "totalSpent": "Total spent",
+      "lastOrder": "Last order",
+      "createdAt": "Joined",
+      "role": "Role"
+    },
+    "actions": {
+      "addCustomer": "Add customer",
+      "viewProfile": "View profile",
+      "edit": "Edit",
+      "delete": "Delete",
+      "export": "Export"
+    },
+    "empty": {
+      "title": "No customers yet",
+      "description": "Customers will appear here as orders are placed."
+    }
+  },
+  "customerDetail": {
+    "title": "Customer profile",
+    "sections": {
+      "profile": "Profile",
+      "addresses": "Addresses",
+      "orders": "Orders",
+      "spending": "Spending",
+      "notes": "Notes"
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "billingAddress": "Billing address",
+      "shippingAddress": "Shipping address"
+    },
+    "stats": {
+      "totalOrders": "Total orders",
+      "totalSpent": "Total spent",
+      "averageOrder": "Average order",
+      "lastOrder": "Last order"
+    }
+  },
+  "taxonomy": {
+    "categoriesTitle": "Categories",
+    "tagsTitle": "Tags",
+    "brandsTitle": "Brands",
+    "search": "Search…",
+    "addCategory": "Add category",
+    "addTag": "Add tag",
+    "addBrand": "Add brand",
+    "columns": {
+      "name": "Name",
+      "slug": "Slug",
+      "parent": "Parent",
+      "count": "Items",
+      "description": "Description"
+    },
+    "dialog": {
+      "create": "Create",
+      "edit": "Edit",
+      "name": "Name",
+      "slug": "Slug",
+      "description": "Description",
+      "parent": "Parent (optional)",
+      "image": "Image",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "empty": "Nothing here yet."
+  },
+  "downloads": {
+    "title": "Downloads",
+    "subtitle": "Digital files attached to downloadable products",
+    "search": "Search files…",
+    "columns": {
+      "file": "File",
+      "product": "Product",
+      "size": "Size",
+      "downloads": "Downloads",
+      "expires": "Expires"
+    },
+    "empty": {
+      "title": "No downloadable files",
+      "description": "Mark products as downloadable to manage their files here."
+    }
+  },
+  "bulkJobs": {
+    "title": "Bulk jobs",
+    "subtitle": "Background tasks: imports, exports, mass edits",
+    "columns": {
+      "type": "Type",
+      "status": "Status",
+      "progress": "Progress",
+      "createdAt": "Started",
+      "duration": "Duration",
+      "rows": "Rows"
+    },
+    "actions": {
+      "newJob": "New bulk job",
+      "download": "Download result",
+      "retry": "Retry",
+      "cancel": "Cancel job",
+      "viewLog": "View log"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "title": "No bulk jobs",
+      "description": "Bulk operations like CSV imports or mass edits will appear here."
+    }
+  },
+  "settings": {
+    "title": "Site settings",
+    "tabs": {
+      "general": "General",
+      "connection": "Connection",
+      "syncing": "Syncing",
+      "webhooks": "Webhooks",
+      "danger": "Danger zone"
+    },
+    "general": {
+      "name": "Display name",
+      "url": "Store URL",
+      "description": "Description",
+      "save": "Save changes"
+    },
+    "connection": {
+      "title": "WooCommerce connection",
+      "consumerKey": "Consumer key",
+      "consumerSecret": "Consumer secret",
+      "test": "Test connection",
+      "lastChecked": "Last checked: {{time}}",
+      "healthy": "Connection healthy",
+      "failed": "Connection failed",
+      "diagnose": "Run diagnostic"
+    },
+    "syncing": {
+      "title": "Sync configuration",
+      "interval": "Cron interval",
+      "intervals": {
+        "5m": "Every 5 minutes",
+        "15m": "Every 15 minutes",
+        "30m": "Every 30 minutes",
+        "1h": "Every hour",
+        "6h": "Every 6 hours",
+        "24h": "Once a day"
+      },
+      "aspects": "Aspects to sync",
+      "products": "Products",
+      "orders": "Orders",
+      "customers": "Customers",
+      "categories": "Categories",
+      "tags": "Tags",
+      "coupons": "Coupons",
+      "runNow": "Run sync now",
+      "running": "Running…",
+      "lastSync": "Last sync: {{time}}",
+      "neverSynced": "Never synced"
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Real-time updates from WooCommerce",
+      "register": "Register webhooks",
+      "test": "Send test ping",
+      "repair": "Repair all",
+      "status": "Status",
+      "lastDelivery": "Last delivery",
+      "events": "Events",
+      "empty": "No webhooks registered."
+    },
+    "danger": {
+      "title": "Danger zone",
+      "deleteSite": "Delete this site",
+      "deleteWarning": "This permanently removes the site and all its synced data. WooCommerce data is not affected.",
+      "delete": "Delete site",
+      "confirmText": "Type the site name to confirm",
+      "cannotUndo": "This action cannot be undone."
+    }
+  },
+  "banners": {
+    "initialSync": {
+      "title": "Initial sync in progress",
+      "subtitle": "We're importing your store data. You can keep using the app — this banner will disappear when sync completes.",
+      "progress": "{{done}} of {{total}} items"
+    },
+    "syncLock": {
+      "title": "Sync is currently locked",
+      "subtitle": "Editing is disabled while a critical sync runs."
+    },
+    "blocked": {
+      "title": "Site connection blocked",
+      "subtitle": "We can't reach your WooCommerce store. Check credentials and firewall settings."
+    },
+    "incomplete": {
+      "title": "Site setup incomplete",
+      "subtitle": "Finish onboarding to start syncing data.",
+      "continue": "Continue setup"
+    }
+  },
+  "common": {
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "noResults": "No results match your filters.",
+    "tryClearing": "Try clearing filters or searching with different terms.",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "viewMore": "View more",
+    "viewLess": "View less",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}} of {{total}}",
+    "rowsPerPage": "Rows per page",
+    "showingResults": "Showing {{from}}–{{to}} of {{total}}"
   }
 }

@@ -105,7 +105,7 @@ function extractActiveSiteId(asPath: string): string | null {
 
 export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
   const router = useRouter();
-  const { brandName, logoUrl } = useBranding();
+  const { brandName, logoUrl, enabledLocales } = useBranding();
   const qc = useQueryClient();
   const { theme: currentTheme, setTheme } = useTheme();
   const { i18n, t } = useTranslation("common");
@@ -133,6 +133,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>([]);
   const [menuReady, setMenuReady] = useState<boolean>(false);
+
+  const visibleLocales = LOCALES.filter((l) => enabledLocales.includes(l.code));
+  const showLanguageMenu = visibleLocales.length > 1;
 
   // Clear cached menu/sites when signed-in user changes (prevents flash of previous user's menu)
   useEffect(() => {
@@ -709,23 +712,25 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Globe className="h-4 w-4 mr-2" />
-                  <span>{t("userMenu.language")}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-52">
-                  {LOCALES.map((l) => (
-                    <DropdownMenuItem key={l.code} onSelect={() => handleLocaleChange(l.code)}>
-                      <span className="flex-1">{l.nativeName}</span>
-                      <span className="text-xs text-muted-foreground mr-1">{l.name}</span>
-                      {l.code === i18n.language && <Check className="h-3.5 w-3.5" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
+              {showLanguageMenu && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Globe className="h-4 w-4 mr-2" />
+                    <span>{t("userMenu.language")}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-52">
+                    {visibleLocales.map((l) => (
+                      <DropdownMenuItem key={l.code} onSelect={() => handleLocaleChange(l.code)}>
+                        <span className="flex-1">{l.nativeName}</span>
+                        <span className="text-xs text-muted-foreground mr-1">{l.name}</span>
+                        {l.code === i18n.language && <Check className="h-3.5 w-3.5" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+              {showLanguageMenu && <DropdownMenuSeparator />}
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{t("userMenu.theme")}</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTheme("light")}>
                 <Sun className="h-4 w-4 mr-2" />

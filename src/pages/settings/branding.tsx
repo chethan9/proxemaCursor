@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Upload, RotateCcw, Save, Image as ImageIcon, History } from "lucide-react";
+import { Upload, RotateCcw, Save, Image as ImageIcon, History, Languages } from "lucide-react";
+import { LOCALES, ALL_LOCALE_CODES, type LocaleCode } from "@/lib/i18n";
 
 interface ActivityEntry {
   id: string;
@@ -24,9 +26,10 @@ interface ActivityEntry {
 export default function BrandingPage() {
   const { t } = useTranslation("settings");
   const { isSuperAdmin } = useAuth();
-  const { brandName, logoUrl, save, loading } = useBranding();
+  const { brandName, logoUrl, enabledLocales, save, loading } = useBranding();
   const [draftName, setDraftName] = useState(brandName);
   const [draftLogo, setDraftLogo] = useState<string | null>(logoUrl);
+  const [draftLocales, setDraftLocales] = useState<LocaleCode[]>(enabledLocales);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -35,7 +38,8 @@ export default function BrandingPage() {
   useEffect(() => {
     setDraftName(brandName);
     setDraftLogo(logoUrl);
-  }, [brandName, logoUrl, loading]);
+    setDraftLocales(enabledLocales);
+  }, [brandName, logoUrl, enabledLocales, loading]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -50,7 +54,16 @@ export default function BrandingPage() {
     })();
   }, [isSuperAdmin]);
 
-  const dirty = draftName !== brandName || draftLogo !== logoUrl;
+  const localesEqual = draftLocales.length === enabledLocales.length && draftLocales.every((c) => enabledLocales.includes(c));
+  const dirty = draftName !== brandName || draftLogo !== logoUrl || !localesEqual;
+
+  function toggleLocale(code: LocaleCode) {
+    setDraftLocales((prev) => {
+      if (code === "en") return prev; // English is always required
+      if (prev.includes(code)) return prev.filter((c) => c !== code);
+      return [...prev, code];
+    });
+  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -74,7 +87,7 @@ export default function BrandingPage() {
   async function handleSave() {
     setSaving(true);
     try {
-      await save({ brandName: draftName.trim() || brandName, logoUrl: draftLogo });
+      await save({ brandName: draftName.trim() || brandName, logoUrl: draftLogo, enabledLocales: draftLocales });
       toast({ title: t("branding.saved") });
     } catch (err) {
       toast({ title: t("branding.saveFailed"), description: err instanceof Error ? err.message : "", variant: "destructive" });
@@ -86,6 +99,7 @@ export default function BrandingPage() {
   function reset() {
     setDraftName(brandName);
     setDraftLogo(logoUrl);
+    setDraftLocales(enabledLocales);
   }
 
   function fmt(v: unknown): string {
@@ -101,6 +115,7 @@ export default function BrandingPage() {
       brand_name: t("branding.diff.appName"),
       logo_url: t("branding.diff.logo"),
       theme_preset: t("branding.diff.preset"),
+      enabled_locales: "Languages",
     };
     const keys = Object.keys(map).filter((k) => fmt(before[k]) !== fmt(after[k]));
     return keys.map((k) => ({ key: map[k], before: fmt(before[k]), after: fmt(after[k]) }));
@@ -148,20 +163,58 @@ export default function BrandingPage() {
                 </div>
               )}
             </div>
-            {isSuperAdmin && (
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={reset} disabled={!dirty || saving}>
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                  {t("branding.reset")}
-                </Button>
-                <Button onClick={handleSave} disabled={!dirty || saving}>
-                  <Save className="h-4 w-4 mr-1.5" />
-                  {saving ? t("branding.saving") : t("branding.save")}
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Languages className="h-4 w-4" />
+              Available languages
+            </CardTitle>
+            <CardDescription>
+              Choose which languages users can switch to. English is always available. Disabled languages are hidden from the language menu everywhere.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {LOCALES.map((l) => {
+              const isEn = l.code === "en";
+              const enabled = isEn || draftLocales.includes(l.code);
+              return (
+                <div key={l.code} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">
+                      {l.nativeName} <span className="text-muted-foreground text-xs ml-2">({l.name})</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{l.code.toUpperCase()} · {l.dir.toUpperCase()}</span>
+                  </div>
+                  <Switch
+                    checked={enabled}
+                    disabled={!isSuperAdmin || isEn}
+                    onCheckedChange={() => toggleLocale(l.code)}
+                    aria-label={`Toggle ${l.name}`}
+                  />
+                </div>
+              );
+            })}
+            <p className="text-xs text-muted-foreground pt-2">
+              {draftLocales.length} of {ALL_LOCALE_CODES.length} languages enabled.
+            </p>
+          </CardContent>
+        </Card>
+
+        {isSuperAdmin && (
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={reset} disabled={!dirty || saving}>
+              <RotateCcw className="h-4 w-4 mr-1.5" />
+              {t("branding.reset")}
+            </Button>
+            <Button onClick={handleSave} disabled={!dirty || saving}>
+              <Save className="h-4 w-4 mr-1.5" />
+              {saving ? t("branding.saving") : t("branding.save")}
+            </Button>
+          </div>
+        )}
 
         <Card>
           <CardHeader>

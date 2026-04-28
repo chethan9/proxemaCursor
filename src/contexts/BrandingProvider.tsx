@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ALL_LOCALE_CODES, type LocaleCode } from "@/lib/i18n";
 
 export type ThemePreset = "classic" | "modern";
 
@@ -10,6 +11,7 @@ export interface BrandingSettings {
   sidebarColor: string;
   accentColor: string;
   themePreset: ThemePreset;
+  enabledLocales: LocaleCode[];
 }
 
 interface BrandingContextValue extends BrandingSettings {
@@ -25,39 +27,16 @@ const DEFAULTS: BrandingSettings = {
   sidebarColor: "#1a1a1a",
   accentColor: "#008060",
   themePreset: "modern",
+  enabledLocales: [...ALL_LOCALE_CODES],
 };
 
 const BrandingContext = createContext<BrandingContextValue | null>(null);
 
-function hexToHsl(hex: string): string {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.substring(0, 2), 16) / 255;
-  const g = parseInt(h.substring(2, 4), 16) / 255;
-  const b = parseInt(h.substring(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let hue = 0, s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: hue = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: hue = (b - r) / d + 2; break;
-      case b: hue = (r - g) / d + 4; break;
-    }
-    hue /= 6;
-  }
-  return `${Math.round(hue * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
 function applyTheme(settings: BrandingSettings) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-
-  try { localStorage.setItem("woosync-theme-preset", settings.themePreset); } catch {}
-
+  try { localStorage.setItem("woosync-theme-preset", settings.themePreset); } catch { /* ignore */ }
   if (settings.themePreset === "classic") {
-    // FROZEN Classic baseline — do not modify. Any redesign must go through "modern" preset.
     root.style.setProperty("--primary", "166 100% 25%");
     root.style.setProperty("--primary-foreground", "0 0% 100%");
     root.style.setProperty("--ring", "166 100% 25%");
@@ -73,11 +52,16 @@ function applyTheme(settings: BrandingSettings) {
     root.dataset.themePreset = "classic";
     return;
   }
-
-  // Modern preset — all styling handled by globals.css [data-theme-preset="modern"] scope
-  // Clear any inline overrides so CSS variables from stylesheet take effect
   ["--primary","--primary-foreground","--ring","--sidebar","--sidebar-foreground","--sidebar-primary","--sidebar-accent","--background","--card","--muted","--border","--radius"].forEach((v) => root.style.removeProperty(v));
   root.dataset.themePreset = "modern";
+}
+
+function sanitizeLocales(input: unknown): LocaleCode[] {
+  if (!Array.isArray(input)) return [...ALL_LOCALE_CODES];
+  const filtered = input.filter((c): c is LocaleCode => (ALL_LOCALE_CODES as string[]).includes(c as string));
+  if (filtered.length === 0) return ["en"]; // never allow empty — at minimum English
+  if (!filtered.includes("en")) filtered.unshift("en");
+  return filtered as LocaleCode[];
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
@@ -88,7 +72,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       if (cached === "modern" || cached === "classic") {
         return { ...DEFAULTS, themePreset: cached };
       }
-    } catch {}
+    } catch { /* ignore */ }
     return DEFAULTS;
   });
   const [loading, setLoading] = useState(true);
@@ -103,6 +87,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
         sidebarColor: data.sidebar_color || DEFAULTS.sidebarColor,
         accentColor: data.accent_color || DEFAULTS.accentColor,
         themePreset: ((data as { theme_preset?: string }).theme_preset as ThemePreset) || DEFAULTS.themePreset,
+        enabledLocales: sanitizeLocales((data as { enabled_locales?: unknown }).enabled_locales),
       };
       setSettings(next);
       applyTheme(next);
@@ -116,6 +101,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 
   const save = useCallback(async (updates: Partial<BrandingSettings>) => {
     const next = { ...settings, ...updates };
+    if (updates.enabledLocales) next.enabledLocales = sanitizeLocales(updates.enabledLocales);
     setSettings(next);
     applyTheme(next);
     await supabase.from("app_settings").upsert({
@@ -126,6 +112,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       sidebar_color: next.sidebarColor,
       accent_color: next.accentColor,
       theme_preset: next.themePreset,
+      enabled_locales: next.enabledLocales,
       updated_at: new Date().toISOString(),
     });
   }, [settings]);

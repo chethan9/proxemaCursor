@@ -15,9 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LOCALES, getLocaleMeta, type LocaleCode } from "@/lib/i18n";
+import { LOCALES, getLocaleMeta, NAMESPACES, type LocaleCode } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useBranding } from "@/contexts/BrandingProvider";
 import { logActivity } from "@/lib/activity-log";
 import { cn } from "@/lib/utils";
 
@@ -50,14 +51,34 @@ interface Props {
 export function LocaleSwitcher({ variant = "menu", align = "end" }: Props) {
   const { i18n } = useTranslation();
   const { user } = useAuth();
+  const { enabledLocales } = useBranding();
   const [busy, setBusy] = useState(false);
   const current = (i18n.language || "en") as LocaleCode;
   const currentMeta = getLocaleMeta(current);
+  const visibleLocales = LOCALES.filter((l) => enabledLocales.includes(l.code));
+
+  if (visibleLocales.length <= 1) return null;
 
   async function handleSelect(code: LocaleCode) {
     if (code === current) return;
     setBusy(true);
     try {
+      if (typeof document !== "undefined") {
+        document.documentElement.dir = getLocaleMeta(code).dir;
+        document.documentElement.lang = code;
+      }
+      await Promise.all(
+        NAMESPACES.map(async (ns) => {
+          if (i18n.hasResourceBundle(code, ns)) return;
+          try {
+            const res = await fetch(`/locales/${code}/${ns}.json`);
+            if (res.ok) {
+              const data = await res.json();
+              i18n.addResourceBundle(code, ns, data, true, true);
+            }
+          } catch { /* ignore */ }
+        })
+      );
       await i18n.changeLanguage(code);
       await persistLocale(code, user?.id || null);
     } finally {
@@ -72,7 +93,7 @@ export function LocaleSwitcher({ variant = "menu", align = "end" }: Props) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {LOCALES.map((l) => (
+          {visibleLocales.map((l) => (
             <SelectItem key={l.code} value={l.code}>
               <span className="flex items-center gap-2">
                 <span>{l.nativeName}</span>
@@ -99,7 +120,7 @@ export function LocaleSwitcher({ variant = "menu", align = "end" }: Props) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">
-        {LOCALES.map((l) => (
+        {visibleLocales.map((l) => (
           <DropdownMenuItem
             key={l.code}
             onSelect={() => handleSelect(l.code)}

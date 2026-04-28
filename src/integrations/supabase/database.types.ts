@@ -271,6 +271,7 @@ export type Database = {
           accent_color: string | null
           brand_name: string | null
           created_at: string | null
+          enabled_locales: string[]
           id: string
           logo_url: string | null
           primary_color: string | null
@@ -282,6 +283,7 @@ export type Database = {
           accent_color?: string | null
           brand_name?: string | null
           created_at?: string | null
+          enabled_locales?: string[]
           id?: string
           logo_url?: string | null
           primary_color?: string | null
@@ -293,6 +295,7 @@ export type Database = {
           accent_color?: string | null
           brand_name?: string | null
           created_at?: string | null
+          enabled_locales?: string[]
           id?: string
           logo_url?: string | null
           primary_color?: string | null
