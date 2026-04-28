@@ -1,37 +1,14 @@
+<![CDATA[
 {
-  "app": {
-    "name": "Proxema"
-  },
+  "app": { "name": "Proxema" },
   "nav": {
-    "home": "Início",
-    "orders": "Pedidos",
-    "products": "Produtos",
-    "customers": "Clientes",
-    "categories": "Categorias",
-    "tags": "Etiquetas",
-    "brands": "Marcas",
-    "downloads": "Downloads",
-    "bulkJobs": "Tarefas em massa",
-    "configuration": "Configuração",
-    "main": "PRINCIPAL",
-    "manage": "GERENCIAR"
-  },
-  "actions": {
-    "save": "Salvar",
-    "cancel": "Cancelar",
-    "delete": "Excluir",
-    "edit": "Editar",
-    "create": "Criar",
-    "back": "Voltar",
-    "refresh": "Atualizar",
-    "export": "Exportar",
-    "search": "Pesquisar",
-    "viewOnStore": "Ver na loja"
-  },
-  "states": {
-    "loading": "Carregando…",
-    "saving": "Salvando…",
-    "empty": "Sem resultados",
-    "error": "Algo deu errado"
+    "home": "Início", "orders": "Pedidos", "prod
+...
+e": "Idioma",
+    "theme": "Tema",
+    "light": "Claro", "dark": "Escuro", "system": "Sistema"
   }
 }
+]]>
+
+[Tool result trimmed: kept first 100 chars and last 100 chars of 1561 chars.]

@@ -1,37 +1,14 @@
+<![CDATA[
 {
-  "app": {
-    "name": "Proxema"
-  },
+  "app": { "name": "Proxema" },
   "nav": {
-    "home": "الرئيسية",
-    "orders": "الطلبات",
-    "products": "المنتجات",
-    "customers": "العملاء",
-    "categories": "الفئات",
-    "tags": "الوسوم",
-    "brands": "العلامات التجارية",
-    "downloads": "التنزيلات",
-    "bulkJobs": "المهام المجمعة",
-    "configuration": "الإعدادات",
-    "main": "الرئيسي",
-    "manage": "الإدارة"
-  },
-  "actions": {
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "delete": "حذف",
-    "edit": "تعديل",
-    "create": "إنشاء",
-    "back": "رجوع",
-    "refresh": "تحديث",
-    "export": "تصدير",
-    "search": "بحث",
-    "viewOnStore": "عرض في المتجر"
-  },
-  "states": {
-    "loading": "جارٍ التحميل…",
-    "saving": "جارٍ الحفظ…",
-    "empty": "لا توجد نتائج",
-    "error": "حدث خطأ ما"
+    "home": "الرئيسية", "orders": "الطلبات", "p
+...
+": "اللغة",
+    "theme": "السمة",
+    "light": "فاتح", "dark": "داكن", "system": "النظام"
   }
 }
+]]>
+
+[Tool result trimmed: kept first 100 chars and last 100 chars of 1573 chars.]

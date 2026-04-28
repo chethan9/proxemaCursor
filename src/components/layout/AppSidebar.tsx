@@ -108,7 +108,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const { brandName, logoUrl } = useBranding();
   const qc = useQueryClient();
   const { theme: currentTheme, setTheme } = useTheme();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation("common");
   const prefetchStore = (id: string) => {
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
@@ -293,10 +293,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     return router.pathname === href;
   };
 
+  const tItemLabel = (node: ResolvedMenuNode) => t(`appNav.${node.id}`, { defaultValue: node.label });
+  const tGroupLabel = (node: ResolvedMenuNode) => t(`appNavGroups.${node.label}`, { defaultValue: node.label });
+
   const renderItem = (node: ResolvedMenuNode, indent = false) => {
     if (node.type !== "item" || !node.href) return null;
     const active = isItemActive(node.href);
     const Icon = resolveIcon(node.icon);
+    const label = tItemLabel(node);
     const link = (
       <Link
         href={node.href}
@@ -314,7 +318,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
         )}
         <Icon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden="true" />
-        {!collapsed && <span className="truncate">{node.label}</span>}
+        {!collapsed && <span className="truncate">{label}</span>}
       </Link>
     );
     return (
@@ -322,7 +326,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>{link}</TooltipTrigger>
-            <TooltipContent side="right">{node.label}</TooltipContent>
+            <TooltipContent side="right">{label}</TooltipContent>
           </Tooltip>
         ) : link}
       </li>
@@ -367,6 +371,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
   const currentLocaleMeta = getLocaleMeta(i18n.language);
 
+  const tItemLabel = (node: ResolvedMenuNode) => t(`appNav.${node.id}`, { defaultValue: node.label });
+  const tGroupLabel = (node: ResolvedMenuNode) => t(`appNavGroups.${node.label}`, { defaultValue: node.label });
+
   async function handleLocaleChange(code: LocaleCode) {
     if (code === i18n.language) return;
     await i18n.changeLanguage(code);
@@ -388,6 +395,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const hasActiveChild = children.some((c) => c.href === router.pathname);
     const isExpanded = !!groupExpanded[node.id];
     const isPanelMode = node.displayMode === "panel";
+    const groupLabel = tGroupLabel(node);
 
     if (isPanelMode && !collapsed) {
       const isOpen = activePanelId === node.id;
@@ -414,7 +422,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             )}
           >
             <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
-            <span className="truncate flex-1 text-left">{node.label}</span>
+            <span className="truncate flex-1 text-left">{groupLabel}</span>
             <PanelRight className={cn("h-3 w-3 shrink-0 transition-opacity", isOpen ? "opacity-100" : "opacity-50")} />
           </button>
         </div>
@@ -430,7 +438,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    aria-label={node.label}
+                    aria-label={groupLabel}
                     className={cn(
                       "relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                       hasActiveChild ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
@@ -440,15 +448,16 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   </button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="z-[100]">{node.label}</TooltipContent>
+              <TooltipContent side="right" sideOffset={8} className="z-[100]">{groupLabel}</TooltipContent>
             </Tooltip>
             <PopoverContent side="right" align="start" sideOffset={8} className="w-56 p-1 z-[100]">
-              <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{node.label}</div>
+              <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{groupLabel}</div>
               <ul className="space-y-0.5">
                 {children.map((child) => {
                   if (child.type !== "item" || !child.href) return null;
                   const Icon = resolveIcon(child.icon);
                   const active = isItemActive(child.href);
+                  const childLabel = tItemLabel(child);
                   return (
                     <li key={child.id}>
                       <Link
@@ -459,7 +468,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" style={child.iconColor ? { color: child.iconColor } : undefined} />
-                        <span className="truncate">{child.label}</span>
+                        <span className="truncate">{childLabel}</span>
                       </Link>
                     </li>
                   );
@@ -484,7 +493,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           aria-expanded={isExpanded}
         >
           <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
-          <span className="truncate flex-1 text-left">{node.label}</span>
+          <span className="truncate flex-1 text-left">{groupLabel}</span>
           <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !isExpanded && "-rotate-90")} />
         </button>
         {isExpanded && (
@@ -680,7 +689,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             <DropdownMenuContent side="right" align="end" className="w-56">
               <DropdownMenuLabel>
                 <div>
-                  <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
+                  <p className="text-sm font-medium">{profile?.full_name || t("userMenu.user", { defaultValue: "User" })}</p>
                   <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
                 </div>
               </DropdownMenuLabel>
@@ -688,7 +697,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <Globe className="h-4 w-4 mr-2" />
-                  <span>Language</span>
+                  <span>{t("userMenu.language")}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-52">
@@ -702,26 +711,26 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Theme</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{t("userMenu.theme")}</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTheme("light")}>
                 <Sun className="h-4 w-4 mr-2" />
-                Light
+                {t("userMenu.light")}
                 {currentTheme === "light" && <Check className="h-3.5 w-3.5 ml-auto" />}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("dark")}>
                 <Moon className="h-4 w-4 mr-2" />
-                Dark
+                {t("userMenu.dark")}
                 {currentTheme === "dark" && <Check className="h-3.5 w-3.5 ml-auto" />}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("system")}>
                 <Monitor className="h-4 w-4 mr-2" />
-                System
+                {t("userMenu.system")}
                 {currentTheme === "system" && <Check className="h-3.5 w-3.5 ml-auto" />}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />
-                Sign out
+                {t("userMenu.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
