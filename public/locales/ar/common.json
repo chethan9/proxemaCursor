@@ -214,5 +214,37 @@
     "key": "المفتاح",
     "secret": "السر",
     "failed": "فشل"
+  },
+  "projects": {
+    "title": "المشاريع",
+    "emptyHeading": "نسيت شيئاً.",
+    "emptyHint": "(تلميح: موقع)",
+    "addSite": "إضافة موقع",
+    "noMatches": "لا توجد مواقع تطابق هذه الفلاتر.",
+    "clearFilters": "مسح الفلاتر",
+    "showing": "عرض {{from}}–{{to}} من {{total}}",
+    "unassigned": "غير مُعيّن",
+    "unknown": "غير معروف",
+    "toasts": {
+      "wpConnectedTitle": "تم ربط WordPress",
+      "wpConnectedDesc": "أصبح الوصول إلى مكتبة الوسائط فعّالاً.",
+      "wpRejectedTitle": "تم إلغاء التفويض",
+      "wpRejectedDesc": "لم يتم منح وصول WordPress.",
+      "wpErrorTitle": "فشل التفويض",
+      "wpErrorDesc": "تعذّر حفظ بيانات اعتماد WordPress.",
+      "wpMissingTitle": "التفويض غير مكتمل",
+      "wpMissingDesc": "لم يُرجع WordPress بيانات الاعتماد.",
+      "bulkSyncTitle": "تم إدراج المزامنة الجماعية",
+      "bulkSyncDesc": "{{ok}} بدأت، {{fail}} فشلت"
+    },
+    "csv": {
+      "name": "الاسم",
+      "url": "الرابط",
+      "client": "العميل",
+      "status": "الحالة",
+      "health": "الحالة الصحية",
+      "lastSync": "آخر مزامنة",
+      "created": "تاريخ الإنشاء"
+    }
   }
 }

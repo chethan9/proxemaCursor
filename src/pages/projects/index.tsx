@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import type { GetServerSideProps } from "next";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Globe2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -30,6 +33,7 @@ interface ProjectPrefs {
 }
 
 export default function SitesPage() {
+  const { t } = useTranslation("common");
   const { isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const router = useRouter();
@@ -67,10 +71,10 @@ export default function SitesPage() {
     const key = `${wp}:${storeParam}`;
     if (handledRef.current === key) return;
     handledRef.current = key;
-    if (wp === "ok") toast({ title: "WordPress connected", description: "Media library access is now active." });
-    else if (wp === "rejected") toast({ title: "Authorization cancelled", description: "WordPress access was not granted.", variant: "destructive" });
-    else if (wp === "error") toast({ title: "Authorization failed", description: "Unable to save WordPress credentials.", variant: "destructive" });
-    else if (wp === "missing") toast({ title: "Authorization incomplete", description: "WordPress did not return credentials.", variant: "destructive" });
+    if (wp === "ok") toast({ title: t("projects.toasts.wpConnectedTitle"), description: t("projects.toasts.wpConnectedDesc") });
+    else if (wp === "rejected") toast({ title: t("projects.toasts.wpRejectedTitle"), description: t("projects.toasts.wpRejectedDesc"), variant: "destructive" });
+    else if (wp === "error") toast({ title: t("projects.toasts.wpErrorTitle"), description: t("projects.toasts.wpErrorDesc"), variant: "destructive" });
+    else if (wp === "missing") toast({ title: t("projects.toasts.wpMissingTitle"), description: t("projects.toasts.wpMissingDesc"), variant: "destructive" });
     qc.refetchQueries({ queryKey: queryKeys.stores }).then(() => {
       setEditStoreId(storeParam);
       setEditOpen(true);
@@ -95,8 +99,8 @@ export default function SitesPage() {
   }, [searchQuery, clientFilter, statusFilter, healthFilter, sort]);
 
   const getClientName = (clientId: string | null) => {
-    if (!clientId) return "Unassigned";
-    return clients.find((c) => c.id === clientId)?.name || "Unknown";
+    if (!clientId) return t("projects.unassigned");
+    return clients.find((c) => c.id === clientId)?.name || t("projects.unknown");
   };
 
   const filteredStores = useMemo(() => {
@@ -174,8 +178,8 @@ export default function SitesPage() {
     }));
     setSyncingBulk(false);
     toast({
-      title: "Bulk sync enqueued",
-      description: `${ok} started, ${fail} failed`,
+      title: t("projects.toasts.bulkSyncTitle"),
+      description: t("projects.toasts.bulkSyncDesc", { ok, fail }),
       variant: fail > 0 ? "destructive" : "default",
     });
     clearSelection();
@@ -186,7 +190,15 @@ export default function SitesPage() {
     if (selected.size === 0) return;
     const ids = Array.from(selected);
     const list = stores.filter((s) => ids.includes(s.id));
-    const headers = ["Name", "URL", "Client", "Status", "Health", "Last Sync", "Created"];
+    const headers = [
+      t("projects.csv.name"),
+      t("projects.csv.url"),
+      t("projects.csv.client"),
+      t("projects.csv.status"),
+      t("projects.csv.health"),
+      t("projects.csv.lastSync"),
+      t("projects.csv.created"),
+    ];
     const rows = list.map((s) => [
       s.name,
       s.url,
@@ -221,7 +233,7 @@ export default function SitesPage() {
   const setViewMode = (v: ViewMode) => update({ viewMode: v });
 
   return (
-    <AppLayout title="Projects">
+    <AppLayout title={t("projects.title")}>
       {isEmpty ? (
         <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
           {catData && (
@@ -250,11 +262,11 @@ export default function SitesPage() {
             <div className="h-20 w-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-5 shadow-sm">
               <Globe2 className="h-10 w-10 text-primary" strokeWidth={1.5} />
             </div>
-            <h2 className="text-2xl font-semibold text-foreground">You forgot something.</h2>
-            <p className="text-base text-muted-foreground mt-2">(Hint: a site)</p>
+            <h2 className="text-2xl font-semibold text-foreground">{t("projects.emptyHeading")}</h2>
+            <p className="text-base text-muted-foreground mt-2">{t("projects.emptyHint")}</p>
             <Button size="lg" className="mt-6" onClick={() => setAddOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Site
+              {t("projects.addSite")}
             </Button>
           </div>
         </div>
@@ -284,7 +296,7 @@ export default function SitesPage() {
 
           {filteredStores.length === 0 && !loading ? (
             <div className="rounded-lg border border-border bg-card p-12 text-center text-sm text-muted-foreground">
-              No sites match these filters.
+              {t("projects.noMatches")}
               {hasFilters && (
                 <Button variant="link" size="sm" className="ml-2"
                   onClick={() => {
@@ -293,7 +305,7 @@ export default function SitesPage() {
                     setStatusFilter("all");
                     setHealthFilter("all");
                   }}>
-                  Clear filters
+                  {t("projects.clearFilters")}
                 </Button>
               )}
             </div>
@@ -341,7 +353,11 @@ export default function SitesPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-1 text-sm">
               <div className="text-muted-foreground">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredStores.length)} of {filteredStores.length}
+                {t("projects.showing", {
+                  from: (page - 1) * PAGE_SIZE + 1,
+                  to: Math.min(page * PAGE_SIZE, filteredStores.length),
+                  total: filteredStores.length,
+                })}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
@@ -380,3 +396,9 @@ export default function SitesPage() {
     </AppLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
+  },
+});
