@@ -53,6 +53,7 @@ import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "next-i18next";
 
 const PENDING_LABELS: Record<string, string> = {
   delete: "Scheduled for deletion",
@@ -132,6 +133,7 @@ interface ProductsTabProps {
 }
 
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
+  const { t } = useTranslation("site");
   const queryClient = useQueryClient();
   const { locked } = useSyncLocked(storeId);
   const router = useRouter();
@@ -166,8 +168,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const isPending = (p: ProductRow) => !!p.pending_action;
   const { toast } = useToast();
   const showLockedToast = useCallback((p: ProductRow) => {
-    toast({ title: pendingLabel(p.pending_action), description: "This product is queued in a bulk job. Edits are disabled until it finishes." });
-  }, [toast]);
+    toast({ title: pendingLabel(p.pending_action), description: t("products.row.pendingLockTooltip") });
+  }, [toast, t]);
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -442,26 +444,26 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           <div className="flex items-center gap-2 flex-shrink-0">
             <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
               <SelectTrigger className="h-9 w-[180px] text-xs gap-1.5 px-2.5 border-border bg-card shadow-polaris-xs hover:bg-muted">
-                <SelectValue placeholder="All categories" />
+                <SelectValue placeholder={t("products.filters.allCategories")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">{t("products.filters.allCategories")}</SelectItem>
                 {categoryOptions.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <div className="flex items-center gap-0.5 rounded-md border border-border bg-card shadow-polaris-xs px-1 h-9">
-              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "table" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "table" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("table")} title={t("products.view.table")}><List className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "grid" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("grid")} title={t("products.view.grid")}><LayoutGrid className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${viewMode === "compact" ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}`} onClick={() => setViewMode("compact")} title={t("products.view.compact")}><Grid3x3 className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[360px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input ref={searchInputRef} placeholder="Search products by name or SKU..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-12 h-9" />
+                <Input ref={searchInputRef} placeholder={t("products.search")} value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-12 h-9" />
                 {!search && (
                   <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground pointer-events-none">⌘K</kbd>
                 )}
@@ -471,13 +473,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("products.toolbar.sort")}: ${sort.label}`}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
-                  <span className="text-xs">Sort</span>
+                  <span className="text-xs">{t("products.toolbar.sort")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("products.toolbar.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {SORT_OPTIONS.map((opt, i) => (
                   <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
@@ -486,15 +488,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? "Available after initial sync completes" : "Customize columns"}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? t("products.toolbar.lockedHint") : t("products.toolbar.customizeColumns")}>
                   <Columns3 className="h-3.5 w-3.5" />
-                  <span className="text-xs">Columns</span>
+                  <span className="text-xs">{t("products.toolbar.columns")}</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-[560px] p-0" sideOffset={6}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                  <div className="text-sm font-medium">Customize columns</div>
+                  <div className="text-sm font-medium">{t("products.toolbar.customizeColumns")}</div>
                 </div>
                 <div className="max-h-[420px] overflow-y-auto p-4">
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
@@ -530,14 +532,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0 || locked} title={locked ? "Available after initial sync completes" : "Export CSV"}>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0 || locked} title={locked ? t("products.toolbar.lockedHint") : t("products.toolbar.exportCsv")}>
               <Download className="h-3.5 w-3.5" />
-              <span className="text-xs">Export</span>
+              <span className="text-xs">{t("products.toolbar.export")}</span>
             </Button>
             <Link href={`/sites/${storeId}/products/new`} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
               <Button size="sm" className="h-9 gap-1.5" onClick={(e) => { if (!locked) { e.preventDefault(); setTypeDialogOpen(true); } }}>
                 <Plus className="h-4 w-4" />
-                Add product
+                {t("products.addProduct")}
               </Button>
             </Link>
           </div>
@@ -715,17 +717,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-xs">{selectedIds.size}</Badge>
-                <span className="text-xs font-medium">selected</span>
-                {overLimit && <span className="text-[11px] text-destructive ml-1">(max {MAX_BULK} per job)</span>}
-                {locked && <span className="text-[11px] text-warning ml-1">Bulk actions disabled during initial sync</span>}
+                <span className="text-xs font-medium">{t("products.bulk.selected")}</span>
+                {overLimit && <span className="text-[11px] text-destructive ml-1">{t("products.bulk.maxLimit", { max: MAX_BULK })}</span>}
+                {locked && <span className="text-[11px] text-warning ml-1">{t("products.bulk.lockedDuringSync")}</span>}
               </div>
               <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("price")}><DollarSign className="h-3.5 w-3.5" />Price</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />Stock</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />Status</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />Categories</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit || locked} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
-              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />Clear</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("price")}><DollarSign className="h-3.5 w-3.5" />{t("products.bulk.price")}</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />{t("products.bulk.stock")}</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />{t("products.bulk.status")}</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />{t("products.bulk.categories")}</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit || locked} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />{t("products.bulk.delete")}</Button>
+              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />{t("products.bulk.clear")}</Button>
             </div>
           )}
           {viewMode !== "table" ? (
@@ -760,14 +762,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       {activeSync ? (
                         <div className="py-16 text-center">
                           <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
-                          <p className="text-sm font-medium">Syncing your products…</p>
-                          <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new products will appear automatically</p>
+                          <p className="text-sm font-medium">{t("products.empty.syncing")}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t("products.empty.syncProgress", { percent: activeSync.progress })}</p>
                         </div>
                       ) : (
                         <EmptyState
                           illustration={<NoProductsIllustration className="w-full h-full" />}
-                          title="No products yet"
-                          description="Once your store has products, they'll appear here. Run a sync to pull existing products from WooCommerce."
+                          title={t("products.empty.title")}
+                          description={t("products.empty.description")}
                         />
                       )}
                     </div>
@@ -1049,14 +1051,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         {activeSync ? (
                           <div className="text-center">
                             <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
-                            <p className="text-sm font-medium">Syncing your products…</p>
-                            <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new products will appear automatically</p>
+                            <p className="text-sm font-medium">{t("products.empty.syncing")}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{t("products.empty.syncProgress", { percent: activeSync.progress })}</p>
                           </div>
                         ) : (
                           <EmptyState
                             illustration={<NoProductsIllustration className="w-full h-full" />}
-                            title="No products yet"
-                            description="Once your store has products, they'll appear here. Run a sync to pull existing products from WooCommerce."
+                            title={t("products.empty.title")}
+                            description={t("products.empty.description")}
                           />
                         )}
                       </TableCell>

@@ -61,46 +61,166 @@
   },
   "products": {
     "title": "المنتجات",
-    "addNew": "منتج جديد",
-    "search": "بحث في المنتجات…",
-    "empty": "لا توجد منتجات بعد",
-    "emptyHint": "أنشئ أول منتج لك أو زامن من ووكومرس.",
+    "addProduct": "إضافة منتج",
+    "search": "ابحث عن المنتجات بالاسم أو SKU...",
+    "filters": {
+      "allCategories": "كل الفئات",
+      "allStatuses": "كل الحالات",
+      "allStock": "كل المخزون",
+      "inStock": "متوفر",
+      "outOfStock": "نفد المخزون",
+      "onBackorder": "طلب مسبق",
+      "clear": "مسح",
+      "category": "الفئة",
+      "status": "الحالة"
+    },
+    "statuses": {
+      "publish": "منشور",
+      "draft": "مسودة",
+      "pending": "قيد الانتظار",
+      "private": "خاص",
+      "active": "نشط"
+    },
+    "view": {
+      "table": "عرض جدول",
+      "grid": "عرض شبكي",
+      "compact": "شبكة مضغوطة"
+    },
+    "toolbar": {
+      "sort": "ترتيب",
+      "sortBy": "ترتيب حسب",
+      "columns": "الأعمدة",
+      "customizeColumns": "تخصيص الأعمدة",
+      "export": "تصدير",
+      "exportCsv": "تصدير CSV",
+      "rows": "صفوف",
+      "rowsPerPage": "صفوف لكل صفحة",
+      "lockedHint": "متاح بعد اكتمال المزامنة الأولية"
+    },
+    "sortOptions": {
+      "newestFirst": "الأحدث أولاً",
+      "oldestFirst": "الأقدم أولاً",
+      "nameAsc": "الاسم أ-ي",
+      "nameDesc": "الاسم ي-أ",
+      "priceHigh": "السعر من الأعلى للأدنى",
+      "priceLow": "السعر من الأدنى للأعلى",
+      "stockHigh": "المخزون من الأعلى للأدنى",
+      "stockLow": "المخزون من الأدنى للأعلى",
+      "recentlySynced": "تمت المزامنة مؤخراً"
+    },
+    "columnGroups": {
+      "product": "المنتج",
+      "pricingInventory": "التسعير والمخزون",
+      "contentDates": "المحتوى والتواريخ"
+    },
     "columns": {
       "image": "الصورة",
-      "name": "الاسم",
+      "id": "المعرّف",
+      "wooId": "معرّف Woo",
+      "name": "اسم المنتج",
+      "slug": "المعرّف النصي",
       "sku": "SKU",
+      "type": "النوع",
+      "status": "الحالة",
+      "permalink": "الرابط الدائم",
+      "parentId": "المعرّف الأب",
+      "price": "السعر",
+      "regularPrice": "السعر العادي",
+      "salePrice": "سعر التخفيض",
+      "stock": "كمية المخزون",
+      "stockStatus": "حالة المخزون",
+      "manageStock": "إدارة المخزون",
+      "taxStatus": "حالة الضريبة",
+      "taxClass": "فئة الضريبة",
+      "shippingRequired": "يتطلب شحن",
+      "categories": "الفئات",
+      "brands": "العلامات التجارية",
+      "attributes": "السمات",
+      "imagesCount": "عدد الصور",
+      "shortDesc": "الوصف المختصر",
+      "description": "الوصف",
+      "dateCreated": "تاريخ الإنشاء (Woo)",
+      "dateModified": "تاريخ التعديل (Woo)",
+      "lastSynced": "آخر مزامنة",
+      "createdAt": "تاريخ الإنشاء (DB)",
+      "updatedAt": "تاريخ التحديث (DB)"
+    },
+    "empty": {
+      "title": "لا توجد منتجات بعد",
+      "description": "بمجرد أن يحتوي متجرك على منتجات، ستظهر هنا. قم بتشغيل المزامنة لجلب المنتجات الموجودة من WooCommerce.",
+      "syncing": "جاري مزامنة منتجاتك…",
+      "syncProgress": "{{percent}}% مكتمل — ستظهر المنتجات الجديدة تلقائياً"
+    },
+    "bulk": {
+      "selected": "محدد",
+      "maxLimit": "(الحد الأقصى {{max}} لكل مهمة)",
+      "lockedDuringSync": "الإجراءات المجمعة معطلة خلال المزامنة الأولية",
       "price": "السعر",
       "stock": "المخزون",
       "status": "الحالة",
       "categories": "الفئات",
-      "tags": "الوسوم",
-      "type": "النوع",
-      "updated": "آخر تحديث"
-    },
-    "type": {
-      "simple": "بسيط",
-      "variable": "متعدد المتغيرات",
-      "grouped": "مجموعة",
-      "external": "خارجي"
-    },
-    "stockStatus": {
-      "instock": "متوفر",
-      "outofstock": "غير متوفر",
-      "onbackorder": "طلب مسبق"
-    },
-    "filters": {
-      "all": "الكل",
-      "published": "منشور",
-      "draft": "مسودة",
-      "private": "خاص"
-    },
-    "actions": {
-      "edit": "تعديل",
-      "duplicate": "نسخ",
       "delete": "حذف",
-      "view": "عرض",
-      "publish": "نشر",
-      "unpublish": "إلغاء النشر"
+      "clear": "مسح",
+      "skipped": "{{count}} منتج تم تخطيه",
+      "skippedDesc": "موجود بالفعل في مهمة جماعية أخرى.",
+      "noEligible": "لا توجد منتجات مؤهلة",
+      "noEligibleDesc": "جميع المنتجات المحددة موجودة بالفعل في مهمة جماعية أخرى.",
+      "dialog": {
+        "updatePrice": "تحديث السعر",
+        "updateStock": "تحديث المخزون",
+        "updateStatus": "تحديث الحالة",
+        "updateCategories": "تحديث الفئات",
+        "deleteProducts": "حذف منتجات",
+        "deleteConfirm": "حذف {{count}} منتج نهائياً؟ لا يمكن التراجع عن هذا.",
+        "applyTo": "تطبيق هذا التغيير على {{count}} منتج محدد.",
+        "operation": "العملية",
+        "value": "القيمة",
+        "quantity": "الكمية",
+        "newStatus": "الحالة الجديدة",
+        "stockStatus": "حالة المخزون",
+        "mode": "الوضع",
+        "categoriesField": "الفئات",
+        "noCategoriesAvailable": "لا توجد فئات متاحة",
+        "categoryNote": "ملاحظة: البحث عن الفئة يستخدم الأسماء. للاستهداف الدقيق بالمعرّف، استخدم صفحة المهام الجماعية.",
+        "ops": {
+          "set": "تعيين السعر العادي إلى",
+          "setSale": "تعيين سعر التخفيض إلى",
+          "increasePct": "زيادة بنسبة %",
+          "decreasePct": "تقليل بنسبة %",
+          "increaseFixed": "زيادة بمبلغ ثابت",
+          "decreaseFixed": "تقليل بمبلغ ثابت",
+          "setQty": "تعيين الكمية إلى",
+          "adjustQty": "تعديل الكمية بمقدار",
+          "setStockStatus": "تعيين حالة المخزون",
+          "addCats": "إضافة فئات",
+          "removeCats": "إزالة فئات",
+          "replaceCats": "استبدال بـ"
+        }
+      }
+    },
+    "row": {
+      "edit": "تعديل",
+      "editProduct": "تعديل المنتج",
+      "outOfStock": "نفد المخزون",
+      "out": "نفد",
+      "low": "منخفض",
+      "backorder": "طلب مسبق",
+      "uncategorized": "غير مصنف",
+      "stockLabel": "المخزون:",
+      "skuLabel": "SKU:",
+      "idLabel": "المعرّف:",
+      "hasVariations": "يحتوي على متغيرات",
+      "lockedTooltip": "التعديل معطل خلال المزامنة الأولية",
+      "pendingLockTooltip": "هذا المنتج في طابور مهمة جماعية. التعديلات معطلة حتى انتهائها.",
+      "pendingBadge": "قيد الانتظار"
+    },
+    "pending": {
+      "delete": "مجدول للحذف",
+      "statusChange": "مجدول لتغيير الحالة",
+      "priceUpdate": "مجدول لتحديث السعر",
+      "stockUpdate": "مجدول لتحديث المخزون",
+      "categoryUpdate": "مجدول لتحديث الفئة",
+      "scheduledGeneric": "مجدول: {{action}}"
     }
   },
   "productEdit": {
