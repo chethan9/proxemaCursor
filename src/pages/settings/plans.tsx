@@ -9,17 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { usePlans, useCreatePlan, useUpdatePlan, useDeletePlan, type Plan } from "@/hooks/queries/usePlans";
+import { usePlansAdmin } from "@/hooks/queries/usePlans";
+import type { Plan } from "@/services/planService";
 import { PlanDialog } from "@/components/plans/PlanDialog";
 import { useToast } from "@/hooks/use-toast";
 
 function PlansContent() {
   const { t } = useTranslation("settings");
   const { toast } = useToast();
-  const { data: plans, isLoading } = usePlans();
-  const createMut = useCreatePlan();
-  const updateMut = useUpdatePlan();
-  const deleteMut = useDeletePlan();
+  const { plans, isLoading, save, isSaving, delete: deletePlan } = usePlansAdmin();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
 
@@ -35,34 +33,30 @@ function PlansContent() {
 
   async function handleSave(payload: Partial<Plan>) {
     try {
-      if (editing) {
-        await updateMut.mutateAsync({ id: editing.id, ...payload });
-        toast({ title: t("plans.toast.planUpdated") });
-      } else {
-        await createMut.mutateAsync(payload);
-        toast({ title: t("plans.toast.planCreated") });
-      }
+      const merged = editing ? { ...payload, id: editing.id } : payload;
+      await save(merged);
+      toast({ title: editing ? t("plans.toast.planUpdated") : t("plans.toast.planCreated") });
       setDialogOpen(false);
     } catch (e) {
       toast({ title: t("plans.toast.saveFailed"), description: e instanceof Error ? e.message : "", variant: "destructive" });
     }
   }
 
-  async function handleDelete(plan: Plan) {
-    if (!confirm(`Delete plan "${plan.name}"?`)) return;
+  function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete plan "${name}"?`)) return;
     try {
-      await deleteMut.mutateAsync(plan.id);
+      deletePlan(id);
       toast({ title: t("plans.toast.planDeleted") });
     } catch (e) {
       toast({ title: t("plans.toast.saveFailed"), description: e instanceof Error ? e.message : "", variant: "destructive" });
     }
   }
 
-  function formatPrices(prices: Record<string, number> | null | undefined): string {
-    if (!prices || Object.keys(prices).length === 0) return t("plans.noPrices");
-    return Object.entries(prices)
-      .map(([cur, val]) => `${cur} ${val}`)
-      .join(" · ");
+  function formatPrices(prices: unknown): string {
+    if (!prices || typeof prices !== "object") return t("plans.noPrices");
+    const entries = Object.entries(prices as Record<string, number>);
+    if (entries.length === 0) return t("plans.noPrices");
+    return entries.map(([cur, val]) => `${cur} ${val}`).join(" · ");
   }
 
   return (
@@ -106,13 +100,13 @@ function PlansContent() {
                 <tr key={plan.id} className="border-t">
                   <td className="px-4 py-2 font-medium">
                     {plan.name}
-                    {plan.is_enterprise ? <Badge variant="secondary" className="ml-2 text-[10px]">{t("plans.contactSales")}</Badge> : null}
+                    {plan.is_custom ? <Badge variant="secondary" className="ml-2 text-[10px]">{t("plans.contactSales")}</Badge> : null}
                   </td>
                   <td className="px-4 py-2 text-xs font-mono text-muted-foreground">{formatPrices(plan.prices)}</td>
                   <td className="px-4 py-2 text-right">{plan.max_sites ?? t("plans.noValue")}</td>
                   <td className="px-4 py-2 text-right">{plan.max_products_per_site ?? t("plans.noValue")}</td>
                   <td className="px-4 py-2 text-right">{plan.max_users ?? t("plans.noValue")}</td>
-                  <td className="px-4 py-2 text-right">{plan.max_api_calls_monthly ?? t("plans.noValue")}</td>
+                  <td className="px-4 py-2 text-right">{plan.max_api_calls_per_month ?? t("plans.noValue")}</td>
                   <td className="px-4 py-2 text-right">
                     {plan.trial_days ? t("plans.trialDays", { count: plan.trial_days }) : t("plans.noValue")}
                   </td>
@@ -126,7 +120,7 @@ function PlansContent() {
                       <Button variant="ghost" size="sm" onClick={() => openEdit(plan)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(plan)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(plan.id, plan.name)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -143,6 +137,7 @@ function PlansContent() {
         onOpenChange={setDialogOpen}
         plan={editing}
         onSave={handleSave}
+        saving={isSaving}
       />
     </SettingsLayout>
   );
