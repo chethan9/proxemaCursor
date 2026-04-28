@@ -32,6 +32,7 @@ export interface Profile {
   avatar_url: string | null;
   country_code: string | null;
   billing_currency: string | null;
+  locale: string | null;
 }
 
 export interface Role {
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfileAndRole = async (userId: string) => {
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, client_id, is_active, default_landing_path, avatar_url, country_code, billing_currency")
+      .select("id, email, full_name, role, client_id, is_active, default_landing_path, avatar_url, country_code, billing_currency, locale")
       .eq("id", userId)
       .maybeSingle();
     setProfile(prof as Profile | null);
