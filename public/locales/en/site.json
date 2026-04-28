@@ -1,0 +1,29 @@
+{
+  "home": {
+    "refresh": "Refresh",
+    "errorTitle": "Unable to load dashboard stats",
+    "errorBody": "Something went wrong fetching site statistics.",
+    "retry": "Retry",
+    "emptyTitle": "Your dashboard is waiting for its first order",
+    "emptyBody": "Once customers start placing orders on your store, sales trends, top products, and activity will all populate automatically right here.",
+    "multiCurrency": "Multi-currency store",
+    "viewingIn": "Viewing sales in",
+    "noSalesInCurrency": "No sales in {{currency}} in the last 30 days. Try another currency above.",
+    "stats": {
+      "ordersToday": "Orders Today",
+      "ordersInProgress": "Orders in Progress",
+      "todaySales": "Today Sales",
+      "weeklySales": "Weekly Sales",
+      "monthlySales": "Monthly Sales",
+      "avgOrder": "Avg Order (30d)"
+    },
+    "spark": {
+      "sales": "Sales",
+      "revenue": "Revenue",
+      "ordersInCurrency": "orders in {{currency}} (30d)",
+      "ordersLast30d": "orders last 30d",
+      "vsPrev30d": "vs prev 30d",
+      "last30d": "last 30d"
+    }
+  }
+}

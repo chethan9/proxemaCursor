@@ -1,0 +1,29 @@
+{
+  "home": {
+    "refresh": "刷新",
+    "errorTitle": "无法加载仪表板统计",
+    "errorBody": "获取站点统计时出错。",
+    "retry": "重试",
+    "emptyTitle": "仪表板正在等待第一笔订单",
+    "emptyBody": "一旦客户开始在您的店铺下单，销售趋势、热门商品和活动都会自动显示在这里。",
+    "multiCurrency": "多币种店铺",
+    "viewingIn": "查看销售货币",
+    "noSalesInCurrency": "过去 30 天内没有 {{currency}} 销售。请在上方尝试其他货币。",
+    "stats": {
+      "ordersToday": "今日订单",
+      "ordersInProgress": "进行中订单",
+      "todaySales": "今日销售",
+      "weeklySales": "周销售",
+      "monthlySales": "月销售",
+      "avgOrder": "平均订单(30天)"
+    },
+    "spark": {
+      "sales": "销售",
+      "revenue": "收入",
+      "ordersInCurrency": "{{currency}} 订单 (30天)",
+      "ordersLast30d": "近30天订单",
+      "vsPrev30d": "对比上 30 天",
+      "last30d": "近 30 天"
+    }
+  }
+}

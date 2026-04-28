@@ -1,0 +1,29 @@
+{
+  "home": {
+    "refresh": "更新",
+    "errorTitle": "ダッシュボード統計を読み込めません",
+    "errorBody": "サイト統計の取得中にエラーが発生しました。",
+    "retry": "再試行",
+    "emptyTitle": "ダッシュボードは最初の注文を待っています",
+    "emptyBody": "お客様がストアで注文を開始すると、売上トレンド、人気商品、アクティビティがここに自動的に表示されます。",
+    "multiCurrency": "複数通貨ストア",
+    "viewingIn": "売上の表示通貨",
+    "noSalesInCurrency": "過去30日間に {{currency}} の売上はありません。上で別の通貨を試してください。",
+    "stats": {
+      "ordersToday": "本日の注文",
+      "ordersInProgress": "進行中の注文",
+      "todaySales": "本日の売上",
+      "weeklySales": "週間売上",
+      "monthlySales": "月間売上",
+      "avgOrder": "平均注文(30日)"
+    },
+    "spark": {
+      "sales": "売上",
+      "revenue": "収益",
+      "ordersInCurrency": "{{currency}} の注文 (30日)",
+      "ordersLast30d": "過去30日の注文",
+      "vsPrev30d": "前30日比",
+      "last30d": "過去30日"
+    }
+  }
+}

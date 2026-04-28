@@ -1,0 +1,29 @@
+{
+  "home": {
+    "refresh": "Aktualisieren",
+    "errorTitle": "Statistiken konnten nicht geladen werden",
+    "errorBody": "Beim Abrufen der Statistiken ist ein Fehler aufgetreten.",
+    "retry": "Erneut versuchen",
+    "emptyTitle": "Ihr Dashboard wartet auf die erste Bestellung",
+    "emptyBody": "Sobald Kunden in Ihrem Shop bestellen, erscheinen Verkaufstrends, Top-Produkte und Aktivität automatisch hier.",
+    "multiCurrency": "Mehrwährungs-Shop",
+    "viewingIn": "Umsätze in",
+    "noSalesInCurrency": "Keine Umsätze in {{currency}} in den letzten 30 Tagen. Wählen Sie oben eine andere Währung.",
+    "stats": {
+      "ordersToday": "Bestellungen heute",
+      "ordersInProgress": "Laufende Bestellungen",
+      "todaySales": "Umsatz heute",
+      "weeklySales": "Umsatz Woche",
+      "monthlySales": "Umsatz Monat",
+      "avgOrder": "Ø Bestellung (30T)"
+    },
+    "spark": {
+      "sales": "Verkäufe",
+      "revenue": "Umsatz",
+      "ordersInCurrency": "Bestellungen in {{currency}} (30T)",
+      "ordersLast30d": "Bestellungen letzte 30T",
+      "vsPrev30d": "vs. vorherige 30T",
+      "last30d": "letzte 30T"
+    }
+  }
+}

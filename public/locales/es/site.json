@@ -1,0 +1,29 @@
+{
+  "home": {
+    "refresh": "Actualizar",
+    "errorTitle": "No se pueden cargar las estadísticas",
+    "errorBody": "Algo salió mal al obtener las estadísticas del sitio.",
+    "retry": "Reintentar",
+    "emptyTitle": "Tu panel espera su primer pedido",
+    "emptyBody": "Cuando los clientes empiecen a hacer pedidos en tu tienda, las tendencias de ventas, los productos principales y la actividad aparecerán automáticamente aquí.",
+    "multiCurrency": "Tienda multimoneda",
+    "viewingIn": "Viendo ventas en",
+    "noSalesInCurrency": "Sin ventas en {{currency}} en los últimos 30 días. Prueba otra moneda arriba.",
+    "stats": {
+      "ordersToday": "Pedidos hoy",
+      "ordersInProgress": "Pedidos en curso",
+      "todaySales": "Ventas hoy",
+      "weeklySales": "Ventas semana",
+      "monthlySales": "Ventas mes",
+      "avgOrder": "Pedido medio (30d)"
+    },
+    "spark": {
+      "sales": "Ventas",
+      "revenue": "Ingresos",
+      "ordersInCurrency": "pedidos en {{currency}} (30d)",
+      "ordersLast30d": "pedidos últimos 30d",
+      "vsPrev30d": "vs 30d anteriores",
+      "last30d": "últimos 30d"
+    }
+  }
+}

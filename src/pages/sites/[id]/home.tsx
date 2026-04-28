@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import type { GetStaticProps, GetStaticPaths } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw, AlertTriangle } from "lucide-react";
@@ -22,6 +25,7 @@ function fmtMoney(n: number): string {
 }
 
 function HomeInner() {
+  const { t } = useTranslation("site");
   const { store, loading: storeLoading } = useSiteFromRoute();
   const router = useRouter();
   const qc = useQueryClient();
@@ -63,7 +67,7 @@ function HomeInner() {
         style={{ zIndex: 9998 }}
         onClick={() => qc.invalidateQueries({ queryKey: ["site-home-stats", storeId] })}
         disabled={isFetching}
-        title="Refresh"
+        title={t("home.refresh")}
       >
         <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
       </Button>
@@ -74,13 +78,13 @@ function HomeInner() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-destructive/10 mb-3">
               <AlertTriangle className="h-6 w-6 text-destructive" />
             </div>
-            <h2 className="text-lg font-semibold mb-1">Unable to load dashboard stats</h2>
+            <h2 className="text-lg font-semibold mb-1">{t("home.errorTitle")}</h2>
             <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
-              {(error as Error)?.message || "Something went wrong fetching site statistics."}
+              {(error as Error)?.message || t("home.errorBody")}
             </p>
             <Button onClick={() => refetch()} disabled={isFetching}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-              Retry
+              {t("home.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -90,8 +94,8 @@ function HomeInner() {
             <EmptyState
               size="lg"
               illustration={<NoDataIllustration className="w-full h-full" />}
-              title="Your dashboard is waiting for its first order"
-              description="Once customers start placing orders on your store, sales trends, top products, and activity will all populate automatically right here."
+              title={t("home.emptyTitle")}
+              description={t("home.emptyBody")}
             />
           </CardContent>
         </Card>
@@ -100,9 +104,9 @@ function HomeInner() {
           {multiCurrency && (
             <div className="flex flex-wrap items-center justify-between gap-3 px-1">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Multi-currency store</span>
+                <span className="font-medium text-foreground">{t("home.multiCurrency")}</span>
                 <span>·</span>
-                <span>Viewing sales in</span>
+                <span>{t("home.viewingIn")}</span>
                 <span className="font-mono font-semibold text-foreground">{currency}</span>
               </div>
               <CurrencySwitcher
@@ -116,7 +120,7 @@ function HomeInner() {
           {multiCurrency && !hasCurrencySales && (
             <Card className="border-amber-200 bg-amber-50/40">
               <CardContent className="py-4 text-sm text-amber-900">
-                No sales in <span className="font-mono font-semibold">{currency}</span> in the last 30 days. Try another currency above.
+                {t("home.noSalesInCurrency", { currency })}
               </CardContent>
             </Card>
           )}
@@ -124,12 +128,12 @@ function HomeInner() {
           <StatStrip
             loading={isLoading}
             items={[
-              { label: "Orders Today", value: s?.orders_today ?? 0 },
-              { label: "Orders in Progress", value: s?.orders_in_progress ?? 0 },
-              { label: "Today Sales", value: fmtMoney(s?.sales_today ?? 0), suffix: currency },
-              { label: "Weekly Sales", value: fmtMoney(s?.sales_week ?? 0), suffix: currency },
-              { label: "Monthly Sales", value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
-              { label: "Avg Order (30d)", value: fmtMoney(aov), suffix: currency },
+              { label: t("home.stats.ordersToday"), value: s?.orders_today ?? 0 },
+              { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
+              { label: t("home.stats.todaySales"), value: fmtMoney(s?.sales_today ?? 0), suffix: currency },
+              { label: t("home.stats.weeklySales"), value: fmtMoney(s?.sales_week ?? 0), suffix: currency },
+              { label: t("home.stats.monthlySales"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
+              { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
             ]}
           />
 
@@ -139,19 +143,19 @@ function HomeInner() {
             </div>
             <div className="lg:col-span-2 flex flex-col gap-4">
               <SparklineTile
-                label="Sales"
+                label={t("home.spark.sales")}
                 value={String(s?.orders_month_count ?? 0)}
-                subtext={multiCurrency ? `orders in ${currency} (30d)` : "orders last 30d"}
+                subtext={multiCurrency ? t("home.spark.ordersInCurrency", { currency }) : t("home.spark.ordersLast30d")}
                 data={ordersSpark}
                 color="hsl(var(--primary))"
                 loading={isLoading}
                 compact
               />
               <SparklineTile
-                label="Revenue"
+                label={t("home.spark.revenue")}
                 value={fmtMoney(s?.sales_month ?? 0)}
                 suffix={currency}
-                subtext={deltaPct != null ? "vs prev 30d" : "last 30d"}
+                subtext={deltaPct != null ? t("home.spark.vsPrev30d") : t("home.spark.last30d")}
                 data={salesSpark}
                 color="hsl(var(--success))"
                 delta={deltaPct}
@@ -191,3 +195,11 @@ function HomeInner() {
 export default function SiteHomePage() {
   return <SitePageShell><HomeInner /></SitePageShell>;
 }
+
+export const getStaticPaths: GetStaticPaths = async () => ({ paths: [], fallback: "blocking" });
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
+  },
+});

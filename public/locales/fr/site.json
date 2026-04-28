@@ -1,0 +1,29 @@
+{
+  "home": {
+    "refresh": "Actualiser",
+    "errorTitle": "Impossible de charger les statistiques",
+    "errorBody": "Une erreur est survenue lors de la récupération des statistiques du site.",
+    "retry": "Réessayer",
+    "emptyTitle": "Votre tableau de bord attend sa première commande",
+    "emptyBody": "Dès que des clients passeront commande sur votre boutique, les tendances de ventes, les meilleurs produits et l'activité s'afficheront automatiquement ici.",
+    "multiCurrency": "Boutique multi-devises",
+    "viewingIn": "Affichage des ventes en",
+    "noSalesInCurrency": "Aucune vente en {{currency}} ces 30 derniers jours. Essayez une autre devise ci-dessus.",
+    "stats": {
+      "ordersToday": "Commandes aujourd'hui",
+      "ordersInProgress": "Commandes en cours",
+      "todaySales": "Ventes du jour",
+      "weeklySales": "Ventes semaine",
+      "monthlySales": "Ventes mois",
+      "avgOrder": "Panier moyen (30j)"
+    },
+    "spark": {
+      "sales": "Ventes",
+      "revenue": "Revenus",
+      "ordersInCurrency": "commandes en {{currency}} (30j)",
+      "ordersLast30d": "commandes 30 derniers j",
+      "vsPrev30d": "vs 30j précédents",
+      "last30d": "30 derniers j"
+    }
+  }
+}
