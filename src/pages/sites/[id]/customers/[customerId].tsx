@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useTranslation } from "next-i18next";
 
 type LineItem = {
   name?: string;
@@ -50,7 +51,13 @@ type OrderRow = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  completed: "Completed", processing: "Processing", "on-hold": "On hold", pending: "Pending", cancelled: "Cancelled", refunded: "Refunded", failed: "Failed",
+  completed: t("orders.statuses.completed"),
+  processing: t("orders.statuses.processing"),
+  "on-hold": t("orders.statuses.onHold"),
+  pending: t("orders.statuses.pending"),
+  cancelled: t("orders.statuses.cancelled"),
+  refunded: t("orders.statuses.refunded"),
+  failed: t("orders.statuses.failed"),
 };
 
 const STATUS_FILTERS = ["all", "pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"] as const;
@@ -74,6 +81,7 @@ function CustomerDetailsInner() {
   const router = useRouter();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { t } = useTranslation("site");
   const { id: siteId, store, loading: siteLoading } = useSiteFromRoute();
   const customerId = router.query.customerId as string | undefined;
   const { data: customer, isLoading } = useCustomer(customerId);
@@ -139,13 +147,13 @@ function CustomerDetailsInner() {
     return { completed, cancelled, highest, lowest, preferredPayment, lastOrderDate: lastOrder?.date_created };
   }, [customer, orders]);
 
-  const copy = (v?: string | null) => { if (!v) return; navigator.clipboard?.writeText(v); toast({ title: "Copied" }); };
+  const copy = (v?: string | null) => { if (!v) return; navigator.clipboard?.writeText(v); toast({ title: t("customerDetail.toasts.copied") }); };
 
   const save = useSiteMutation<unknown, void>({
     mutationFn: () => updateCustomer(customer!.id, { first_name: form.first_name, last_name: form.last_name, email: form.email, username: form.username, billing: form.billing, shipping: form.shipping }),
     invalidateKeys: customer ? [["customer", customer.id], ["customers", siteId]] : [],
     siteName: store?.name,
-    successToast: "Customer updated",
+    successToast: t("customerDetail.toasts.updated"),
     onSuccessExtra: () => setEditing(false),
   });
 
@@ -153,7 +161,7 @@ function CustomerDetailsInner() {
     mutationFn: () => deleteCustomer(siteId, customer!.id),
     invalidateKeys: [["customers", siteId]],
     siteName: store?.name,
-    successToast: "Customer deleted",
+    successToast: t("customerDetail.toasts.deleted"),
     onSuccessExtra: () => router.push(`/sites/${siteId}/customers`),
   });
 
@@ -169,8 +177,8 @@ function CustomerDetailsInner() {
   const deleting = remove.isPending;
 
   if (siteLoading || isLoading) return <CustomerDetailSkeleton />;
-  if (!store) return <div className="p-6">Store not found</div>;
-  if (!customer) return <div className="p-6">Customer not found</div>;
+  if (!store) return <div className="p-6">{t("customerDetail.toasts.storeNotFound")}</div>;
+  if (!customer) return <div className="p-6">{t("customerDetail.toasts.notFound")}</div>;
 
   const billing = getCustomerBilling(customer);
   const shipping = getCustomerShipping(customer);
@@ -184,15 +192,15 @@ function CustomerDetailsInner() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {customer ? getCustomerName(customer) : "customer"}?</AlertDialogTitle>
+            <AlertDialogTitle>{t("customerDetail.delete.confirmTitle", { name: customer ? getCustomerName(customer) : "customer" })}</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the customer from WooCommerce and your panel. This action can&apos;t be undone.
+              {t("customerDetail.delete.confirmDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("customerDetail.delete.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete customer
+              {t("customerDetail.delete.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -202,7 +210,7 @@ function CustomerDetailsInner() {
           <Link href={`/sites/${siteId}/customers`} className="mt-1 h-8 w-8 rounded-md border border-border hover:bg-muted flex items-center justify-center"><ArrowLeft className="h-4 w-4" /></Link>
           <div>
             <h1 className="text-2xl font-semibold">#{customer.woo_id || customer.id.slice(0, 6)}</h1>
-            <div className="text-xs text-primary mt-0.5">Customers / Customer Details</div>
+            <div className="text-xs text-primary mt-0.5">{t("customerDetail.breadcrumb")}</div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -210,14 +218,14 @@ function CustomerDetailsInner() {
             <>
               <ActivityHistoryDrawer entityType="customer" entityId={customer.id} />
               <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:text-destructive">
-                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />} Delete
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />} {t("customerDetail.actions.delete")}
               </Button>
-              <Button size="sm" onClick={() => setEditing(true)}><Edit3 className="h-3.5 w-3.5 mr-1.5" /> Edit Customer</Button>
+              <Button size="sm" onClick={() => setEditing(true)}><Edit3 className="h-3.5 w-3.5 mr-1.5" /> {t("customerDetail.actions.edit")}</Button>
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={saving}><X className="h-3.5 w-3.5 mr-1.5" /> Cancel</Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />} Save</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={saving}><X className="h-3.5 w-3.5 mr-1.5" /> {t("customerDetail.actions.cancel")}</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />} {t("customerDetail.actions.save")}</Button>
             </>
           )}
         </div>
@@ -228,83 +236,83 @@ function CustomerDetailsInner() {
           <div className="flex items-center gap-3">
             <div className="h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-semibold">{getCustomerInitials(customer)}</div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Name</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("customerDetail.summary.name")}</div>
               <div className="font-semibold text-base">{getCustomerName(customer)}</div>
               {customer.username && <div className="text-xs text-muted-foreground">@{customer.username}</div>}
             </div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Contact</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("customerDetail.summary.contact")}</div>
             {billing.phone && <div className="flex items-center gap-1.5 text-sm"><Phone className="h-3 w-3 text-muted-foreground" /><span>{billing.phone}</span><button onClick={() => copy(billing.phone)} className="ml-1 text-muted-foreground hover:text-foreground"><Copy className="h-3 w-3" /></button></div>}
             {customer.email && <div className="flex items-center gap-1.5 text-sm mt-1"><Mail className="h-3 w-3 text-muted-foreground" /><span className="truncate">{customer.email}</span><button onClick={() => copy(customer.email)} className="ml-1 text-muted-foreground hover:text-foreground"><Copy className="h-3 w-3" /></button></div>}
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Orders</div>
-            <div className="font-semibold text-base">{totalOrders} Orders</div>
-            <div className="text-xs text-muted-foreground">Last ordered on {fmtDate(stats?.lastOrderDate)}</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("customerDetail.summary.orders")}</div>
+            <div className="font-semibold text-base">{t("customerDetail.summary.ordersCount", { count: totalOrders })}</div>
+            <div className="text-xs text-muted-foreground">{t("customerDetail.summary.lastOrderedOn", { date: fmtDate(stats?.lastOrderDate) })}</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Spent</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("customerDetail.summary.spent")}</div>
             <div className="font-semibold text-base">{fmtMoney(totalSpent)}</div>
-            <div className="text-xs text-muted-foreground">Average order value {fmtMoney(aov)}</div>
+            <div className="text-xs text-muted-foreground">{t("customerDetail.summary.aov", { value: fmtMoney(aov) })}</div>
           </div>
         </div>
       </div>
 
       <div className="rounded-lg border border-border bg-white overflow-hidden">
         <div className="border-b border-border flex">
-          <button onClick={() => setTab("details")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "details" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Basic Details</button>
-          <button onClick={() => setTab("orders")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "orders" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Orders ({ordersTotal})</button>
+          <button onClick={() => setTab("details")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "details" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t("customerDetail.tabs.details")}</button>
+          <button onClick={() => setTab("orders")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "orders" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t("customerDetail.tabs.orders", { count: ordersTotal })}</button>
         </div>
 
         {tab === "details" ? (
           <div className="p-5 space-y-5">
             {editing && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pb-5 border-b border-border">
-                <div><Label className="text-xs">First Name</Label><Input value={form.first_name} onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))} className="h-8 text-sm" /></div>
-                <div><Label className="text-xs">Last Name</Label><Input value={form.last_name} onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))} className="h-8 text-sm" /></div>
-                <div><Label className="text-xs">Email</Label><Input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} className="h-8 text-sm" /></div>
-                <div><Label className="text-xs">Username</Label><Input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} className="h-8 text-sm" disabled /></div>
+                <div><Label className="text-xs">{t("customerDetail.form.firstName")}</Label><Input value={form.first_name} onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))} className="h-8 text-sm" /></div>
+                <div><Label className="text-xs">{t("customerDetail.form.lastName")}</Label><Input value={form.last_name} onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))} className="h-8 text-sm" /></div>
+                <div><Label className="text-xs">{t("customerDetail.form.email")}</Label><Input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} className="h-8 text-sm" /></div>
+                <div><Label className="text-xs">{t("customerDetail.form.username")}</Label><Input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} className="h-8 text-sm" disabled /></div>
               </div>
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
-              <Field label="Account Status" value={<span className="text-emerald-600 font-medium">Active</span>} />
-              <Field label="Customer Type" value={customer.role === "customer" ? "Registered User" : customer.role || "Guest"} />
-              <Field label="Customer Since" value={fmtDate(customer.date_created)} />
-              <Field label="Last Active" value={fmtDateTime(customer.synced_at)} />
-              <Field label="Last Order Date" value={fmtDate(stats?.lastOrderDate)} />
-              <Field label="Preferred Payment" value={stats?.preferredPayment || "—"} />
-              <Field label="Preferred Delivery" value="Standard Delivery" />
-              <Field label="Delivery Issues" value="None" />
-              <Field label="Total Orders" value={`${totalOrders} Orders`} />
-              <Field label="Completed Orders" value={String(stats?.completed || 0)} />
-              <Field label="Cancelled Orders" value={String(stats?.cancelled || 0)} />
-              <Field label="Average Order Value" value={fmtMoney(aov)} />
-              <Field label="Total Spent" value={fmtMoney(totalSpent)} />
-              <Field label="Highest Order" value={fmtMoney(stats?.highest || 0)} />
-              <Field label="Lowest Order" value={fmtMoney(stats?.lowest || 0)} />
-              <Field label="Paying Customer" value={customer.is_paying_customer ? "Yes" : "No"} />
+              <Field label={t("customerDetail.fields.accountStatus")} value={<span className="text-emerald-600 font-medium">{t("customerDetail.fields.active")}</span>} />
+              <Field label={t("customerDetail.fields.customerType")} value={customer.role === "customer" ? t("customerDetail.fields.registeredUser") : customer.role || t("customerDetail.fields.guest")} />
+              <Field label={t("customerDetail.fields.customerSince")} value={fmtDate(customer.date_created)} />
+              <Field label={t("customerDetail.fields.lastActive")} value={fmtDateTime(customer.synced_at)} />
+              <Field label={t("customerDetail.fields.lastOrderDate")} value={fmtDate(stats?.lastOrderDate)} />
+              <Field label={t("customerDetail.fields.preferredPayment")} value={stats?.preferredPayment || "—"} />
+              <Field label={t("customerDetail.fields.preferredDelivery")} value={t("customerDetail.fields.standardDelivery")} />
+              <Field label={t("customerDetail.fields.deliveryIssues")} value={t("customerDetail.fields.none")} />
+              <Field label={t("customerDetail.fields.totalOrders")} value={t("customerDetail.summary.ordersCount", { count: totalOrders })} />
+              <Field label={t("customerDetail.fields.completedOrders")} value={String(stats?.completed || 0)} />
+              <Field label={t("customerDetail.fields.cancelledOrders")} value={String(stats?.cancelled || 0)} />
+              <Field label={t("customerDetail.fields.avgOrderValue")} value={fmtMoney(aov)} />
+              <Field label={t("customerDetail.fields.totalSpent")} value={fmtMoney(totalSpent)} />
+              <Field label={t("customerDetail.fields.highestOrder")} value={fmtMoney(stats?.highest || 0)} />
+              <Field label={t("customerDetail.fields.lowestOrder")} value={fmtMoney(stats?.lowest || 0)} />
+              <Field label={t("customerDetail.fields.payingCustomer")} value={customer.is_paying_customer ? t("customerDetail.fields.yes") : t("customerDetail.fields.no")} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-border">
-              <AddressBlock title="Billing Address" editing={editing} data={editing ? form.billing : billing} onChange={(k, v) => setForm((p) => ({ ...p, billing: { ...p.billing, [k]: v } }))} withContact />
-              <AddressBlock title="Shipping Address" editing={editing} data={editing ? form.shipping : shipping} onChange={(k, v) => setForm((p) => ({ ...p, shipping: { ...p.shipping, [k]: v } }))} />
+              <AddressBlock title={t("customerDetail.address.billingTitle")} editing={editing} data={editing ? form.billing : billing} onChange={(k, v) => setForm((p) => ({ ...p, billing: { ...p.billing, [k]: v } }))} withContact emptyLabel={t("customerDetail.address.noBilling")} t={t} />
+              <AddressBlock title={t("customerDetail.address.shippingTitle")} editing={editing} data={editing ? form.shipping : shipping} onChange={(k, v) => setForm((p) => ({ ...p, shipping: { ...p.shipping, [k]: v } }))} emptyLabel={t("customerDetail.address.noShipping")} t={t} />
             </div>
           </div>
         ) : (
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-              <StatTile tone="slate" icon={<ShoppingBag className="h-3.5 w-3.5" />} label="Total orders" value={String(totalOrders)} />
-              <StatTile tone="emerald" icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Completed" value={String(stats?.completed || 0)} sub={`${completedPct}% of loaded`} />
-              <StatTile tone="rose" icon={<XCircle className="h-3.5 w-3.5" />} label="Cancelled" value={String(stats?.cancelled || 0)} />
-              <StatTile tone="blue" icon={<Wallet className="h-3.5 w-3.5" />} label="Total spent" value={fmtMoney(totalSpent)} />
-              <StatTile tone="violet" icon={<TrendingUp className="h-3.5 w-3.5" />} label="Avg order" value={fmtMoney(aov)} />
+              <StatTile tone="slate" icon={<ShoppingBag className="h-3.5 w-3.5" />} label={t("customerDetail.stats.totalOrders")} value={String(totalOrders)} />
+              <StatTile tone="emerald" icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={t("customerDetail.stats.completed")} value={String(stats?.completed || 0)} sub={t("customerDetail.stats.ofLoaded", { percent: completedPct })} />
+              <StatTile tone="rose" icon={<XCircle className="h-3.5 w-3.5" />} label={t("customerDetail.stats.cancelled")} value={String(stats?.cancelled || 0)} />
+              <StatTile tone="blue" icon={<Wallet className="h-3.5 w-3.5" />} label={t("customerDetail.stats.totalSpent")} value={fmtMoney(totalSpent)} />
+              <StatTile tone="violet" icon={<TrendingUp className="h-3.5 w-3.5" />} label={t("customerDetail.stats.avgOrder")} value={fmtMoney(aov)} />
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
               {STATUS_FILTERS.map((s) => {
-                const label = s === "all" ? "All" : (STATUS_LABELS[s] || s);
+                const label = s === "all" ? t("customerDetail.filter.all") : (STATUS_LABELS[s] || s);
                 const n = statusCounts[s] ?? 0;
                 const active = statusFilter === s;
                 return (
@@ -324,8 +332,8 @@ function CustomerDetailsInner() {
               <div className="text-center py-16 flex flex-col items-center gap-3 text-muted-foreground">
                 <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center"><Package className="h-5 w-5" /></div>
                 <div>
-                  <div className="text-sm font-medium text-foreground">No orders yet</div>
-                  <div className="text-xs mt-0.5">{statusFilter === "all" ? "This customer hasn't placed any orders." : `No ${STATUS_LABELS[statusFilter] || statusFilter} orders.`}</div>
+                  <div className="text-sm font-medium text-foreground">{t("customerDetail.ordersTab.empty")}</div>
+                  <div className="text-xs mt-0.5">{statusFilter === "all" ? t("customerDetail.ordersTab.emptyDesc") : t("customerDetail.ordersTab.noFiltered", { status: STATUS_LABELS[statusFilter] || statusFilter })}</div>
                 </div>
               </div>
             ) : (
@@ -337,6 +345,8 @@ function CustomerDetailsInner() {
                     siteId={siteId}
                     expanded={expandedOrderId === o.id}
                     onToggle={() => setExpandedOrderId((cur) => (cur === o.id ? null : o.id))}
+                    statusLabel={STATUS_LABELS[o.status || "pending"] || o.status || "pending"}
+                    t={t}
                   />
                 ))}
               </div>
@@ -344,10 +354,10 @@ function CustomerDetailsInner() {
 
             {ordersTotal > 25 && (
               <div className="flex justify-between items-center pt-3 text-xs text-muted-foreground border-t border-border">
-                <div>Page {ordersPage + 1} of {Math.ceil(ordersTotal / 25)} · Showing {orders.length} of {ordersTotal}</div>
+                <div>{t("customerDetail.ordersTab.page", { current: ordersPage + 1, total: Math.ceil(ordersTotal / 25) })} · {t("customerDetail.ordersTab.showing", { loaded: orders.length, total: ordersTotal })}</div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={ordersPage === 0} onClick={() => setOrdersPage((p) => p - 1)}>Previous</Button>
-                  <Button variant="outline" size="sm" disabled={(ordersPage + 1) * 25 >= ordersTotal} onClick={() => setOrdersPage((p) => p + 1)}>Next</Button>
+                  <Button variant="outline" size="sm" disabled={ordersPage === 0} onClick={() => setOrdersPage((p) => p - 1)}>{t("customerDetail.ordersTab.previous")}</Button>
+                  <Button variant="outline" size="sm" disabled={(ordersPage + 1) * 25 >= ordersTotal} onClick={() => setOrdersPage((p) => p + 1)}>{t("customerDetail.ordersTab.next")}</Button>
                 </div>
               </div>
             )}
@@ -380,7 +390,7 @@ function StatTile({ icon, label, value, sub, tone = "slate" }: { icon: React.Rea
   );
 }
 
-function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; siteId: string; expanded: boolean; onToggle: () => void }) {
+function OrderCard({ order, siteId, expanded, onToggle, statusLabel, t }: { order: OrderRow; siteId: string; expanded: boolean; onToggle: () => void; statusLabel: string; t: (k: string, opts?: Record<string, unknown>) => string }) {
   const status = order.status || "pending";
   const sc = statusClasses(status);
   const items = Array.isArray(order.line_items) ? order.line_items : [];
@@ -399,7 +409,7 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
       <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={onToggle}>
         <span className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset ${sc.pill}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-          {STATUS_LABELS[status] || status}
+          {statusLabel}
         </span>
         <Link
           href={`/sites/${siteId}/orders/${order.id}`}
@@ -428,7 +438,7 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
             )}
           </div>
         )}
-        <div className="text-[11px] text-muted-foreground hidden lg:block whitespace-nowrap">{itemCount} item{itemCount === 1 ? "" : "s"}</div>
+        <div className="text-[11px] text-muted-foreground hidden lg:block whitespace-nowrap">{t(itemCount === 1 ? "customerDetail.ordersTab.items" : "customerDetail.ordersTab.items_other", { count: itemCount })}</div>
         <div className="text-sm font-semibold ml-auto font-mono whitespace-nowrap">{fmtMoney(order.total, currency)}</div>
         <button className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground" aria-label="Toggle">
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -437,9 +447,9 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
 
       {(shipTo || shipMethod || coupon) && !expanded && (
         <div className="px-3 pb-2.5 flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
-          {shipTo && <span>Ship to: <span className="text-foreground/70">{shipTo}</span></span>}
+          {shipTo && <span>{t("customerDetail.ordersTab.shipTo")} <span className="text-foreground/70">{shipTo}</span></span>}
           {shipMethod && <span>• {shipMethod}</span>}
-          {coupon && <span>• Coupon: <span className="font-mono text-foreground/70 uppercase">{coupon}</span></span>}
+          {coupon && <span>• {t("customerDetail.ordersTab.coupon")} <span className="font-mono text-foreground/70 uppercase">{coupon}</span></span>}
         </div>
       )}
 
@@ -470,22 +480,22 @@ function OrderCard({ order, siteId, expanded, onToggle }: { order: OrderRow; sit
             })}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-border">
-            <TotalLine label="Subtotal" value={fmtMoney(subtotal, currency)} />
-            <TotalLine label="Discount" value={`−${fmtMoney(order.discount_total, currency)}`} muted={!Number(order.discount_total)} />
-            <TotalLine label="Shipping" value={fmtMoney(order.shipping_total, currency)} muted={!Number(order.shipping_total)} />
-            <TotalLine label="Tax" value={fmtMoney(order.total_tax, currency)} muted={!Number(order.total_tax)} />
-            <TotalLine label="Total" value={fmtMoney(order.total, currency)} strong />
+            <TotalLine label={t("customerDetail.ordersTab.subtotal")} value={fmtMoney(subtotal, currency)} />
+            <TotalLine label={t("customerDetail.ordersTab.discount")} value={`−${fmtMoney(order.discount_total, currency)}`} muted={!Number(order.discount_total)} />
+            <TotalLine label={t("customerDetail.ordersTab.shipping")} value={fmtMoney(order.shipping_total, currency)} muted={!Number(order.shipping_total)} />
+            <TotalLine label={t("customerDetail.ordersTab.tax")} value={fmtMoney(order.total_tax, currency)} muted={!Number(order.total_tax)} />
+            <TotalLine label={t("customerDetail.ordersTab.total")} value={fmtMoney(order.total, currency)} strong />
           </div>
           {(shipTo || shipMethod || coupon) && (
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap pt-2 border-t border-border">
-              {shipTo && <span>Ship to: <span className="text-foreground/70">{shipTo}</span></span>}
+              {shipTo && <span>{t("customerDetail.ordersTab.shipTo")} <span className="text-foreground/70">{shipTo}</span></span>}
               {shipMethod && <span>• {shipMethod}</span>}
-              {coupon && <span>• Coupon: <span className="font-mono text-foreground/70 uppercase">{coupon}</span></span>}
+              {coupon && <span>• {t("customerDetail.ordersTab.coupon")} <span className="font-mono text-foreground/70 uppercase">{coupon}</span></span>}
             </div>
           )}
           <div className="flex justify-end">
             <Button size="sm" variant="outline" asChild>
-              <Link href={`/sites/${siteId}/orders/${order.id}`}>Open order details →</Link>
+              <Link href={`/sites/${siteId}/orders/${order.id}`}>{t("customerDetail.ordersTab.openOrder")}</Link>
             </Button>
           </div>
         </div>
@@ -512,14 +522,14 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function AddressBlock({ title, editing, data, onChange, withContact }: { title: string; editing: boolean; data: Record<string, string>; onChange: (k: string, v: string) => void; withContact?: boolean }) {
+function AddressBlock({ title, editing, data, onChange, withContact, emptyLabel, t }: { title: string; editing: boolean; data: Record<string, string>; onChange: (k: string, v: string) => void; withContact?: boolean; emptyLabel: string; t: (k: string) => string }) {
   const fields: Array<{ k: string; l: string; cols?: number }> = [
-    { k: "first_name", l: "First name", cols: 1 }, { k: "last_name", l: "Last name", cols: 1 },
-    { k: "address_1", l: "Address 1", cols: 2 }, { k: "address_2", l: "Address 2", cols: 2 },
-    { k: "city", l: "City", cols: 1 }, { k: "state", l: "State / Region", cols: 1 },
-    { k: "postcode", l: "Postcode", cols: 1 }, { k: "country", l: "Country", cols: 1 },
+    { k: "first_name", l: t("customerDetail.address.firstName"), cols: 1 }, { k: "last_name", l: t("customerDetail.address.lastName"), cols: 1 },
+    { k: "address_1", l: t("customerDetail.address.address1"), cols: 2 }, { k: "address_2", l: t("customerDetail.address.address2"), cols: 2 },
+    { k: "city", l: t("customerDetail.address.city"), cols: 1 }, { k: "state", l: t("customerDetail.address.stateRegion"), cols: 1 },
+    { k: "postcode", l: t("customerDetail.address.postcode"), cols: 1 }, { k: "country", l: t("customerDetail.address.country"), cols: 1 },
   ];
-  if (withContact) fields.push({ k: "phone", l: "Phone", cols: 1 }, { k: "email", l: "Email", cols: 1 });
+  if (withContact) fields.push({ k: "phone", l: t("customerDetail.address.phone"), cols: 1 }, { k: "email", l: t("customerDetail.address.email"), cols: 1 });
   return (
     <div>
       <div className="text-xs font-semibold text-muted-foreground mb-2">{title}</div>
@@ -541,7 +551,7 @@ function AddressBlock({ title, editing, data, onChange, withContact }: { title: 
           {data.country && <div className="uppercase">{data.country}</div>}
           {withContact && data.phone && <div className="text-xs text-muted-foreground mt-1">{data.phone}</div>}
           {withContact && data.email && <div className="text-xs text-muted-foreground">{data.email}</div>}
-          {!data.address_1 && !data.city && <div className="text-muted-foreground italic">No {title.toLowerCase()} on file.</div>}
+          {!data.address_1 && !data.city && <div className="text-muted-foreground italic">{emptyLabel}</div>}
         </div>
       )}
     </div>

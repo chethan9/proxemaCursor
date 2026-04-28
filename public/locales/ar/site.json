@@ -521,17 +521,115 @@
     }
   },
   "customerDetail": {
-    "sections": {
-      "profile": "الملف الشخصي",
-      "addresses": "العناوين",
+    "breadcrumb": "العملاء / بيانات العميل",
+    "actions": {
+      "delete": "حذف",
+      "edit": "تعديل العميل",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "summary": {
+      "name": "الاسم",
+      "contact": "التواصل",
       "orders": "الطلبات",
-      "stats": "الإحصائيات"
+      "ordersCount": "{{count}} طلب",
+      "lastOrderedOn": "آخر طلب في {{date}}",
+      "spent": "المنفق",
+      "aov": "متوسط قيمة الطلب {{value}}"
+    },
+    "tabs": {
+      "details": "البيانات الأساسية",
+      "orders": "الطلبات ({{count}})"
+    },
+    "form": {
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد",
+      "username": "اسم المستخدم"
+    },
+    "fields": {
+      "accountStatus": "حالة الحساب",
+      "active": "نشط",
+      "customerType": "نوع العميل",
+      "registeredUser": "مستخدم مسجل",
+      "guest": "زائر",
+      "customerSince": "عميل منذ",
+      "lastActive": "آخر نشاط",
+      "lastOrderDate": "تاريخ آخر طلب",
+      "preferredPayment": "طريقة الدفع المفضلة",
+      "preferredDelivery": "طريقة التوصيل المفضلة",
+      "standardDelivery": "توصيل عادي",
+      "deliveryIssues": "مشاكل التوصيل",
+      "none": "لا يوجد",
+      "totalOrders": "إجمالي الطلبات",
+      "completedOrders": "الطلبات المكتملة",
+      "cancelledOrders": "الطلبات الملغاة",
+      "avgOrderValue": "متوسط قيمة الطلب",
+      "totalSpent": "إجمالي المنفق",
+      "highestOrder": "أعلى طلب",
+      "lowestOrder": "أقل طلب",
+      "payingCustomer": "عميل دافع",
+      "yes": "نعم",
+      "no": "لا"
+    },
+    "address": {
+      "billingTitle": "عنوان الفوترة",
+      "shippingTitle": "عنوان الشحن",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "address1": "العنوان 1",
+      "address2": "العنوان 2",
+      "city": "المدينة",
+      "stateRegion": "المنطقة / الولاية",
+      "postcode": "الرمز البريدي",
+      "country": "الدولة",
+      "phone": "الهاتف",
+      "email": "البريد",
+      "noBilling": "لا يوجد عنوان فوترة مسجل.",
+      "noShipping": "لا يوجد عنوان شحن مسجل."
     },
     "stats": {
       "totalOrders": "إجمالي الطلبات",
-      "totalSpent": "إجمالي الإنفاق",
-      "avgOrderValue": "متوسط قيمة الطلب",
-      "lastOrder": "آخر طلب"
+      "completed": "مكتمل",
+      "ofLoaded": "{{percent}}% من المُحمّل",
+      "cancelled": "ملغى",
+      "totalSpent": "إجمالي المنفق",
+      "avgOrder": "متوسط الطلب"
+    },
+    "filter": {
+      "all": "الكل"
+    },
+    "ordersTab": {
+      "empty": "لا توجد طلبات بعد",
+      "emptyDesc": "لم يقم هذا العميل بأي طلب.",
+      "noFiltered": "لا توجد طلبات {{status}}.",
+      "items": "{{count}} عنصر",
+      "items_other": "{{count}} عناصر",
+      "shipTo": "الشحن إلى:",
+      "coupon": "كوبون:",
+      "subtotal": "المجموع الفرعي",
+      "discount": "الخصم",
+      "shipping": "الشحن",
+      "tax": "الضريبة",
+      "total": "الإجمالي",
+      "openOrder": "فتح تفاصيل الطلب ←",
+      "page": "صفحة {{current}} من {{total}}",
+      "showing": "عرض {{loaded}} من {{total}}",
+      "previous": "السابق",
+      "next": "التالي"
+    },
+    "delete": {
+      "confirmTitle": "حذف {{name}}؟",
+      "confirmDesc": "يؤدي هذا إلى إزالة العميل من WooCommerce ومن لوحتك. لا يمكن التراجع عن هذا الإجراء.",
+      "cancel": "إلغاء",
+      "confirm": "حذف العميل"
+    },
+    "toasts": {
+      "copied": "تم النسخ",
+      "updated": "تم تحديث العميل",
+      "deleted": "تم حذف العميل",
+      "notFound": "العميل غير موجود",
+      "storeNotFound": "المتجر غير موجود"
     }
   },
   "taxonomy": {

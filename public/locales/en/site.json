@@ -507,28 +507,115 @@
     }
   },
   "customerDetail": {
-    "title": "Customer profile",
-    "sections": {
-      "profile": "Profile",
-      "addresses": "Addresses",
+    "breadcrumb": "Customers / Customer Details",
+    "actions": {
+      "delete": "Delete",
+      "edit": "Edit Customer",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "summary": {
+      "name": "Name",
+      "contact": "Contact",
       "orders": "Orders",
-      "spending": "Spending",
-      "notes": "Notes"
+      "ordersCount": "{{count}} Orders",
+      "lastOrderedOn": "Last ordered on {{date}}",
+      "spent": "Spent",
+      "aov": "Average order value {{value}}"
+    },
+    "tabs": {
+      "details": "Basic Details",
+      "orders": "Orders ({{count}})"
+    },
+    "form": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "username": "Username"
     },
     "fields": {
+      "accountStatus": "Account Status",
+      "active": "Active",
+      "customerType": "Customer Type",
+      "registeredUser": "Registered User",
+      "guest": "Guest",
+      "customerSince": "Customer Since",
+      "lastActive": "Last Active",
+      "lastOrderDate": "Last Order Date",
+      "preferredPayment": "Preferred Payment",
+      "preferredDelivery": "Preferred Delivery",
+      "standardDelivery": "Standard Delivery",
+      "deliveryIssues": "Delivery Issues",
+      "none": "None",
+      "totalOrders": "Total Orders",
+      "completedOrders": "Completed Orders",
+      "cancelledOrders": "Cancelled Orders",
+      "avgOrderValue": "Average Order Value",
+      "totalSpent": "Total Spent",
+      "highestOrder": "Highest Order",
+      "lowestOrder": "Lowest Order",
+      "payingCustomer": "Paying Customer",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "address": {
+      "billingTitle": "Billing Address",
+      "shippingTitle": "Shipping Address",
       "firstName": "First name",
       "lastName": "Last name",
-      "email": "Email",
+      "address1": "Address 1",
+      "address2": "Address 2",
+      "city": "City",
+      "stateRegion": "State / Region",
+      "postcode": "Postcode",
+      "country": "Country",
       "phone": "Phone",
-      "company": "Company",
-      "billingAddress": "Billing address",
-      "shippingAddress": "Shipping address"
+      "email": "Email",
+      "noBilling": "No billing address on file.",
+      "noShipping": "No shipping address on file."
     },
     "stats": {
       "totalOrders": "Total orders",
+      "completed": "Completed",
+      "ofLoaded": "{{percent}}% of loaded",
+      "cancelled": "Cancelled",
       "totalSpent": "Total spent",
-      "averageOrder": "Average order",
-      "lastOrder": "Last order"
+      "avgOrder": "Avg order"
+    },
+    "filter": {
+      "all": "All"
+    },
+    "ordersTab": {
+      "empty": "No orders yet",
+      "emptyDesc": "This customer hasn't placed any orders.",
+      "noFiltered": "No {{status}} orders.",
+      "items": "{{count}} item",
+      "items_other": "{{count}} items",
+      "shipTo": "Ship to:",
+      "coupon": "Coupon:",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "total": "Total",
+      "openOrder": "Open order details →",
+      "page": "Page {{current}} of {{total}}",
+      "showing": "Showing {{loaded}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "delete": {
+      "confirmTitle": "Delete {{name}}?",
+      "confirmDesc": "This removes the customer from WooCommerce and your panel. This action can't be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete customer"
+    },
+    "toasts": {
+      "copied": "Copied",
+      "updated": "Customer updated",
+      "deleted": "Customer deleted",
+      "notFound": "Customer not found",
+      "storeNotFound": "Store not found"
     }
   },
   "taxonomy": {
