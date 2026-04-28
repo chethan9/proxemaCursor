@@ -428,3 +428,12 @@ export default function DownloadsPage() {
     </SitePageShell>
   );
 }
+
+export const getServerSideProps = async ({ locale }: { locale?: string }) => {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
+    },
+  };
+};
