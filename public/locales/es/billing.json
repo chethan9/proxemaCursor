@@ -1,0 +1,26 @@
+{
+  "title": "Facturación",
+  "subtitle": "Gestiona tu suscripción, métodos de pago y facturas.",
+  "paymentMethods": "Métodos de pago",
+  "changePlan": "Cambiar plan",
+  "history": {
+    "title": "Historial de pagos",
+    "refresh": "Actualizar",
+    "loading": "Cargando…",
+    "emptyTitle": "Aún no hay facturas",
+    "emptyBody": "Las facturas aparecerán aquí tras tu primer pago.",
+    "columns": {
+      "invoice": "Factura",
+      "date": "Fecha",
+      "amount": "Importe",
+      "status": "Estado",
+      "gateway": "Pasarela"
+    }
+  },
+  "status": {
+    "paid": "Pagada",
+    "failed": "Fallida",
+    "pending": "Pendiente",
+    "refunded": "Reembolsada"
+  }
+}

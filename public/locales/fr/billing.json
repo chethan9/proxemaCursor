@@ -1,0 +1,26 @@
+{
+  "title": "Facturation",
+  "subtitle": "Gérez votre abonnement, vos moyens de paiement et vos factures.",
+  "paymentMethods": "Moyens de paiement",
+  "changePlan": "Changer de forfait",
+  "history": {
+    "title": "Historique des paiements",
+    "refresh": "Actualiser",
+    "loading": "Chargement…",
+    "emptyTitle": "Aucune facture pour le moment",
+    "emptyBody": "Les factures apparaîtront ici après votre premier paiement.",
+    "columns": {
+      "invoice": "Facture",
+      "date": "Date",
+      "amount": "Montant",
+      "status": "Statut",
+      "gateway": "Passerelle"
+    }
+  },
+  "status": {
+    "paid": "Payée",
+    "failed": "Échouée",
+    "pending": "En attente",
+    "refunded": "Remboursée"
+  }
+}

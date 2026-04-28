@@ -1,0 +1,26 @@
+{
+  "title": "請求",
+  "subtitle": "サブスクリプション、支払い方法、請求書を管理します。",
+  "paymentMethods": "支払い方法",
+  "changePlan": "プラン変更",
+  "history": {
+    "title": "支払い履歴",
+    "refresh": "更新",
+    "loading": "読み込み中…",
+    "emptyTitle": "請求書はまだありません",
+    "emptyBody": "初回支払い後、請求書がここに表示されます。",
+    "columns": {
+      "invoice": "請求書",
+      "date": "日付",
+      "amount": "金額",
+      "status": "ステータス",
+      "gateway": "ゲートウェイ"
+    }
+  },
+  "status": {
+    "paid": "支払い済み",
+    "failed": "失敗",
+    "pending": "保留中",
+    "refunded": "返金済み"
+  }
+}

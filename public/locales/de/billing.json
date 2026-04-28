@@ -1,0 +1,26 @@
+{
+  "title": "Abrechnung",
+  "subtitle": "Verwalten Sie Ihr Abonnement, Zahlungsmethoden und Rechnungen.",
+  "paymentMethods": "Zahlungsmethoden",
+  "changePlan": "Tarif ändern",
+  "history": {
+    "title": "Zahlungsverlauf",
+    "refresh": "Aktualisieren",
+    "loading": "Wird geladen…",
+    "emptyTitle": "Noch keine Rechnungen",
+    "emptyBody": "Rechnungen erscheinen hier nach Ihrer ersten Zahlung.",
+    "columns": {
+      "invoice": "Rechnung",
+      "date": "Datum",
+      "amount": "Betrag",
+      "status": "Status",
+      "gateway": "Anbieter"
+    }
+  },
+  "status": {
+    "paid": "Bezahlt",
+    "failed": "Fehlgeschlagen",
+    "pending": "Ausstehend",
+    "refunded": "Erstattet"
+  }
+}

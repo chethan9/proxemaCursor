@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { GetStaticProps } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard";
@@ -19,6 +22,7 @@ type Invoice = Tables<"invoices">;
 
 function BillingInner() {
   const { profile } = useAuth();
+  const { t } = useTranslation("billing");
   const usage = useBillingUsage(profile?.client_id || "");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,10 +44,10 @@ function BillingInner() {
 
   const statusBadge = (s: string | null) => {
     const v = (s || "").toLowerCase();
-    if (v === "paid") return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Paid</Badge>;
-    if (v === "failed") return <Badge variant="destructive">Failed</Badge>;
-    if (v === "pending") return <Badge variant="secondary">Pending</Badge>;
-    if (v === "refunded") return <Badge variant="outline">Refunded</Badge>;
+    if (v === "paid") return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{t("status.paid")}</Badge>;
+    if (v === "failed") return <Badge variant="destructive">{t("status.failed")}</Badge>;
+    if (v === "pending") return <Badge variant="secondary">{t("status.pending")}</Badge>;
+    if (v === "refunded") return <Badge variant="outline">{t("status.refunded")}</Badge>;
     return <Badge variant="outline">{s || "—"}</Badge>;
   };
 
@@ -56,12 +60,12 @@ function BillingInner() {
       <div className="p-6 space-y-5 max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Billing</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Manage your subscription, payment methods, and invoices.</p>
+            <h1 className="text-2xl font-semibold">{t("title")}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{t("subtitle")}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" asChild><Link href="/settings/payment-methods"><CreditCard className="h-4 w-4 mr-1.5" />Payment methods</Link></Button>
-            <Button variant="outline" size="sm" asChild><Link href="/pricing"><ExternalLink className="h-4 w-4 mr-1.5" />Change plan</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/settings/payment-methods"><CreditCard className="h-4 w-4 mr-1.5" />{t("paymentMethods")}</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/pricing"><ExternalLink className="h-4 w-4 mr-1.5" />{t("changePlan")}</Link></Button>
           </div>
         </div>
 
@@ -72,30 +76,30 @@ function BillingInner() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2"><Receipt className="h-4 w-4" />Payment history</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Receipt className="h-4 w-4" />{t("history.title")}</CardTitle>
             <Button variant="outline" size="sm" onClick={loadInvoices} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? "animate-spin" : ""}`} />Refresh
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? "animate-spin" : ""}`} />{t("history.refresh")}
             </Button>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-8 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading…</div>
+              <div className="flex items-center justify-center py-8 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" />{t("history.loading")}</div>
             ) : invoices.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                 <FileText className="h-10 w-10 mb-3 opacity-40" />
-                <p className="text-sm">No invoices yet</p>
-                <p className="text-xs mt-1">Invoices will appear here after your first payment.</p>
+                <p className="text-sm">{t("history.emptyTitle")}</p>
+                <p className="text-xs mt-1">{t("history.emptyBody")}</p>
               </div>
             ) : (
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Gateway</TableHead>
+                      <TableHead>{t("history.columns.invoice")}</TableHead>
+                      <TableHead>{t("history.columns.date")}</TableHead>
+                      <TableHead>{t("history.columns.amount")}</TableHead>
+                      <TableHead>{t("history.columns.status")}</TableHead>
+                      <TableHead>{t("history.columns.gateway")}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -133,3 +137,9 @@ function BillingInner() {
 export default function BillingPage() {
   return <AuthGuard><BillingInner /></AuthGuard>;
 }
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "billing"])),
+  },
+});

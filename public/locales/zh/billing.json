@@ -1,0 +1,26 @@
+{
+  "title": "账单",
+  "subtitle": "管理您的订阅、支付方式和发票。",
+  "paymentMethods": "支付方式",
+  "changePlan": "更改套餐",
+  "history": {
+    "title": "支付历史",
+    "refresh": "刷新",
+    "loading": "加载中…",
+    "emptyTitle": "暂无发票",
+    "emptyBody": "首次付款后，发票将显示在此处。",
+    "columns": {
+      "invoice": "发票",
+      "date": "日期",
+      "amount": "金额",
+      "status": "状态",
+      "gateway": "网关"
+    }
+  },
+  "status": {
+    "paid": "已支付",
+    "failed": "失败",
+    "pending": "待处理",
+    "refunded": "已退款"
+  }
+}

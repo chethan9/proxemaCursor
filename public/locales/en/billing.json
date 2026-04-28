@@ -1,0 +1,26 @@
+{
+  "title": "Billing",
+  "subtitle": "Manage your subscription, payment methods, and invoices.",
+  "paymentMethods": "Payment methods",
+  "changePlan": "Change plan",
+  "history": {
+    "title": "Payment history",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "emptyTitle": "No invoices yet",
+    "emptyBody": "Invoices will appear here after your first payment.",
+    "columns": {
+      "invoice": "Invoice",
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status",
+      "gateway": "Gateway"
+    }
+  },
+  "status": {
+    "paid": "Paid",
+    "failed": "Failed",
+    "pending": "Pending",
+    "refunded": "Refunded"
+  }
+}

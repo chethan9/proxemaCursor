@@ -1,0 +1,26 @@
+{
+  "title": "Faturamento",
+  "subtitle": "Gerencie sua assinatura, métodos de pagamento e faturas.",
+  "paymentMethods": "Métodos de pagamento",
+  "changePlan": "Alterar plano",
+  "history": {
+    "title": "Histórico de pagamentos",
+    "refresh": "Atualizar",
+    "loading": "Carregando…",
+    "emptyTitle": "Sem faturas ainda",
+    "emptyBody": "As faturas aparecerão aqui após o primeiro pagamento.",
+    "columns": {
+      "invoice": "Fatura",
+      "date": "Data",
+      "amount": "Valor",
+      "status": "Status",
+      "gateway": "Gateway"
+    }
+  },
+  "status": {
+    "paid": "Paga",
+    "failed": "Falhou",
+    "pending": "Pendente",
+    "refunded": "Reembolsada"
+  }
+}
