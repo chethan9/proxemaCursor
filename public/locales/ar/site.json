@@ -13,50 +13,29 @@
   },
   "home": {
     "refresh": "تحديث",
-    "errorTitle": "تعذّر تحميل إحصائيات لوحة التحكم",
-    "errorBody": "حدث خطأ أثناء جلب إحصائيات الموقع.",
+    "errorTitle": "تعذّر تحميل لوحة التحكم",
+    "errorBody": "حدث خطأ أثناء جلب الإحصائيات. حاول مرة أخرى.",
     "retry": "إعادة المحاولة",
-    "emptyTitle": "لوحة التحكم تنتظر أول طلب",
-    "emptyBody": "بمجرد أن يبدأ العملاء بإجراء طلبات على متجرك، ستظهر اتجاهات المبيعات والمنتجات الأكثر مبيعاً والنشاطات تلقائياً هنا.",
+    "emptyTitle": "لا يوجد نشاط بعد",
+    "emptyBody": "بمجرد ورود طلبات، ستظهر المؤشرات هنا.",
     "multiCurrency": "متجر متعدد العملات",
-    "viewingIn": "عرض المبيعات بـ",
-    "noSalesInCurrency": "لا توجد مبيعات بـ {{currency}} في آخر 30 يوماً. جرّب عملة أخرى أعلاه.",
+    "viewingIn": "عرض بـ",
+    "noSalesInCurrency": "لا توجد مبيعات مسجلة بـ {{currency}} في هذه الفترة.",
     "stats": {
       "ordersToday": "طلبات اليوم",
-      "ordersInProgress": "طلبات قيد التنفيذ",
+      "ordersInProgress": "قيد المعالجة",
       "todaySales": "مبيعات اليوم",
-      "weeklySales": "مبيعات الأسبوع",
-      "monthlySales": "مبيعات الشهر",
-      "avgOrder": "متوسط الطلب (30 يوم)"
+      "weeklySales": "المبيعات الأسبوعية",
+      "monthlySales": "المبيعات الشهرية",
+      "avgOrder": "متوسط الطلب"
     },
     "spark": {
       "sales": "المبيعات",
+      "ordersInCurrency": "الطلبات بـ {{currency}}",
+      "ordersLast30d": "الطلبات آخر 30 يوم",
       "revenue": "الإيرادات",
-      "ordersInCurrency": "طلبات بـ {{currency}} (30 يوم)",
-      "ordersLast30d": "طلبات آخر 30 يوم",
-      "vsPrev30d": "مقارنة بـ 30 يوم سابقة",
+      "vsPrev30d": "مقارنة بآخر 30 يوم",
       "last30d": "آخر 30 يوم"
-    },
-    "salesTrend": {
-      "title": "اتجاه المبيعات (30 يوم)",
-      "subtitle": "الإيرادات اليومية وعدد الطلبات",
-      "revenue": "الإيرادات",
-      "orders": "الطلبات"
-    },
-    "statusDonut": {
-      "title": "حالة الطلبات",
-      "subtitle": "آخر 30 يوم",
-      "noData": "لا توجد بيانات"
-    },
-    "recentOrders": {
-      "title": "أحدث الطلبات",
-      "viewAll": "عرض الكل",
-      "empty": "لا توجد طلبات حديثة"
-    },
-    "topProducts": {
-      "title": "المنتجات الأكثر مبيعاً",
-      "viewAll": "عرض الكل",
-      "empty": "لا توجد بيانات منتجات"
     }
   },
   "products": {

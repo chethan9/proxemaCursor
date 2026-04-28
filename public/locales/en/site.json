@@ -12,50 +12,30 @@
     "settings": "Settings"
   },
   "home": {
-    "title": "Store overview",
-    "subtitle": "Snapshot of recent activity and key metrics",
+    "refresh": "Refresh",
+    "errorTitle": "Couldn't load dashboard",
+    "errorBody": "Something went wrong fetching stats. Please try again.",
+    "retry": "Retry",
+    "emptyTitle": "No store activity yet",
+    "emptyBody": "Once orders start coming in, you'll see metrics here.",
+    "multiCurrency": "Multi-currency store",
+    "viewingIn": "Viewing in",
+    "noSalesInCurrency": "No sales recorded in {{currency}} during this window.",
     "stats": {
+      "ordersToday": "Orders today",
+      "ordersInProgress": "In progress",
+      "todaySales": "Today's sales",
+      "weeklySales": "Weekly sales",
+      "monthlySales": "Monthly sales",
+      "avgOrder": "Avg order"
+    },
+    "spark": {
+      "sales": "Sales",
+      "ordersInCurrency": "Orders in {{currency}}",
+      "ordersLast30d": "Orders last 30d",
       "revenue": "Revenue",
-      "orders": "Orders",
-      "customers": "Customers",
-      "products": "Products",
-      "avgOrderValue": "Avg order value",
-      "conversionRate": "Conversion rate"
-    },
-    "ranges": {
-      "today": "Today",
-      "7d": "Last 7 days",
-      "30d": "Last 30 days",
-      "90d": "Last 90 days",
-      "ytd": "Year to date",
-      "custom": "Custom range"
-    },
-    "salesTrend": {
-      "title": "Sales trend",
-      "subtitle": "Daily revenue and order count",
-      "noData": "No sales data for this period yet."
-    },
-    "orderStatus": {
-      "title": "Order status",
-      "subtitle": "Distribution across statuses",
-      "empty": "No orders yet."
-    },
-    "recentOrders": {
-      "title": "Recent orders",
-      "viewAll": "View all",
-      "empty": "No recent orders.",
-      "orderNumber": "Order #{{number}}",
-      "noNumber": "Untitled order"
-    },
-    "topProducts": {
-      "title": "Top products",
-      "subtitle": "Best sellers in the selected window",
-      "empty": "No sales recorded yet.",
-      "unitsSold": "{{count}} sold"
-    },
-    "currency": {
-      "switchTo": "View in {{currency}}",
-      "store": "Store currency"
+      "vsPrev30d": "vs prev 30d",
+      "last30d": "Last 30d"
     }
   },
   "products": {
