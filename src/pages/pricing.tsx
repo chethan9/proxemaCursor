@@ -17,6 +17,7 @@ import { BillingIntervalToggle } from "@/components/pricing/BillingIntervalToggl
 import { PricingFAQ } from "@/components/pricing/PricingFAQ";
 import { PlanChangeDialog } from "@/components/pricing/PlanChangeDialog";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import type { Tables } from "@/integrations/supabase/helpers";
 
 type Plan = Tables<"plans">;
@@ -171,6 +172,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/"><BrandLogo /></Link>
           <div className="flex gap-3 items-center">
+            <LocaleSwitcher variant="compact" />
             <CurrencySwitcher country={country} onChange={handleCountryChange} />
             {user ? (
               <Link href="/billing" className="text-sm font-medium hover:underline">Billing</Link>

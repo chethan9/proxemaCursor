@@ -1,6 +1,6 @@
 ---
 title: Locale switcher UI (profile menu + settings + public footer)
-status: todo
+status: done
 priority: high
 type: feature
 tags: [i18n, ui]
@@ -11,24 +11,23 @@ position: 251
 
 ## Notes
 
-Depends on Task 249. Three placements:
+Reusable `LocaleSwitcher` component (variants: menu/select/compact) + sidebar profile sub-menu + settings/profile card + pricing header. Auto-load on login lives in `_app.tsx` `LocaleDirSync` (reads `profile.locale` and applies via `i18n.changeLanguage`). Activity log entry `profile.locale_changed` written.
 
-1. **Profile dropdown** in `AppSidebar.tsx` — language item with current native name, opens dialog/sub-menu listing all enabled locales (read from admin page in Task F; until then, all 10).
-2. **`/settings/profile`** — language select field, persists to `profiles.locale`.
-3. **Public pages footer** (`/pricing`, `/auth/login`, `/auth/signup`) — small dropdown bottom-right.
-
-Switching: call `router.push(router.asPath, router.asPath, { locale: newLocale })` and write to `profiles.locale` if logged in, else cookie `NEXT_LOCALE`.
+Auth pages (`/auth/login`, `/auth/signup`) intentionally deferred — strings will be extracted in Task 252 and the switcher can be added in the same pass.
 
 ## Checklist
 
-- [ ] LocaleSwitcher component (reusable, accepts `variant: 'menu' | 'select' | 'compact'`)
-- [ ] Wire into AppSidebar profile menu
-- [ ] Wire into settings/profile.tsx
-- [ ] Wire into pricing + auth public pages
-- [ ] Persist to profiles.locale on change for logged-in users
-- [ ] Activity log: profile.locale_changed
+- [x] LocaleSwitcher component (menu / select / compact variants)
+- [x] AppSidebar profile menu sub-menu
+- [x] settings/profile card
+- [x] pricing header
+- [x] Auto-load from profile.locale on login (in LocaleDirSync)
+- [x] Persist to NEXT_LOCALE cookie + profiles.locale on change
+- [x] Activity log: profile.locale_changed
+- [ ] Auth pages footer — bundled into Task 252
 
 ## Acceptance
 
-- User can switch language from profile menu, settings, or public footer
-- Choice persists across sessions for logged-in users
+- User can switch from sidebar profile menu, /settings/profile, or pricing header
+- Choice persists across sessions for logged-in users (auto-loaded from profile.locale)
+- Anonymous switch persists via NEXT_LOCALE cookie

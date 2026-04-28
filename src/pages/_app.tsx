@@ -27,6 +27,17 @@ import { isRtl } from "@/lib/i18n";
 
 function LocaleDirSync() {
   const { i18n } = useTranslation();
+  const { profile } = useAuth();
+
+  useEffect(() => {
+    if (profile?.locale && profile.locale !== i18n.language) {
+      i18n.changeLanguage(profile.locale);
+      if (typeof document !== "undefined") {
+        document.cookie = `NEXT_LOCALE=${profile.locale}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+    }
+  }, [profile?.locale, i18n]);
+
   useEffect(() => {
     const lang = i18n.language || "en";
     if (typeof document === "undefined") return;

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User as UserIcon, Globe, Camera, Save, Loader2 } from "lucide-react";
+import { User as UserIcon, Globe, Camera, Save, Loader2, Languages } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 const COUNTRIES = [
   { code: "US", name: "United States", currency: "USD" },
@@ -174,6 +175,19 @@ export default function ProfilePage() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Languages className="h-4 w-4 text-muted-foreground" />
+              Language
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">Interface language. Saved to your profile.</p>
+          </CardHeader>
+          <CardContent>
+            <LocaleSwitcher variant="select" />
           </CardContent>
         </Card>
 

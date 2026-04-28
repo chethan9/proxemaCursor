@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "next-i18next";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -23,12 +24,18 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight, Sun, Moon, Monitor } from "lucide-react";
+import { LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight, Sun, Moon, Monitor, Globe } from "lucide-react";
 import { useTheme } from "next-themes";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
+import { LOCALES, getLocaleMeta, type LocaleCode } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 
 let cachedSites: StoreWithClient[] | null = null;
 const cachedMenuByRole = new Map<RoleKey, ResolvedMenuNode[]>();
@@ -101,6 +108,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const { brandName, logoUrl } = useBranding();
   const qc = useQueryClient();
   const { theme: currentTheme, setTheme } = useTheme();
+  const { i18n } = useTranslation();
   const prefetchStore = (id: string) => {
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
@@ -357,6 +365,21 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   );
 
   const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
+  const currentLocaleMeta = getLocaleMeta(i18n.language);
+
+  async function handleLocaleChange(code: LocaleCode) {
+    if (code === i18n.language) return;
+    await i18n.changeLanguage(code);
+    if (typeof document !== "undefined") {
+      document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+    if (user?.id) {
+      try {
+        await supabase.from("profiles").update({ locale: code }).eq("id", user.id);
+        await logActivity({ action: "profile.locale_changed", entityType: "profile", entityId: user.id, metadata: { locale: code } });
+      } catch { /* non-fatal */ }
+    }
+  }
 
   const renderCollapsibleGroup = (node: ResolvedMenuNode) => {
     const children = node.children || [];
@@ -661,6 +684,23 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Globe className="h-4 w-4 mr-2" />
+                  <span>Language</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-52">
+                  {LOCALES.map((l) => (
+                    <DropdownMenuItem key={l.code} onSelect={() => handleLocaleChange(l.code)}>
+                      <span className="flex-1">{l.nativeName}</span>
+                      <span className="text-xs text-muted-foreground mr-1">{l.name}</span>
+                      {l.code === i18n.language && <Check className="h-3.5 w-3.5" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Theme</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTheme("light")}>
