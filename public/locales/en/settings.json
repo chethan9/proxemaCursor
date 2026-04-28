@@ -116,5 +116,44 @@
       "cancel": "Cancel",
       "confirm": "Yes, grant super admin"
     }
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "subtitle": "Define what each role can see and do",
+    "newRole": "New role",
+    "system": "system",
+    "allPermissions": "All permissions (*)",
+    "permissions": "Permissions",
+    "permissionCount_one": "{{count}} permission",
+    "permissionCount_other": "{{count}} permissions",
+    "noPermissions": "No permissions assigned",
+    "editPermissions": "Edit permissions",
+    "groups": {
+      "Clients": "Clients", "Sites": "Sites", "Sync": "Sync", "Webhooks": "Webhooks",
+      "API": "API", "Users": "Users", "Roles": "Roles", "Settings": "Settings"
+    },
+    "dialog": {
+      "createTitle": "Create new role",
+      "editTitle": "Edit role: {{name}}",
+      "createDescription": "Define a new role with specific permissions",
+      "editDescription": "Adjust permissions for this role",
+      "name": "Name",
+      "namePlaceholder": "e.g. support_agent",
+      "description": "Description",
+      "descriptionPlaceholder": "What does this role do?",
+      "permissions": "Permissions",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "create": "Create role"
+    },
+    "toast": {
+      "nameRequired": "Name required",
+      "roleCreated": "Role created",
+      "roleUpdated": "Role updated",
+      "roleDeleted": "Role deleted",
+      "failed": "Failed",
+      "error": "Error"
+    },
+    "confirmDelete": "Delete role \"{{name}}\"? Users with this role will need reassignment."
   }
 }

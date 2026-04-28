@@ -117,5 +117,45 @@
       "cancel": "Отмена",
       "confirm": "Да, выдать супер-админ"
     }
+  },
+  "roles": {
+    "title": "Роли и разрешения",
+    "subtitle": "Определите, что каждая роль может видеть и делать",
+    "newRole": "Новая роль",
+    "system": "система",
+    "allPermissions": "Все разрешения (*)",
+    "permissions": "Разрешения",
+    "permissionCount_one": "{{count}} разрешение",
+    "permissionCount_few": "{{count}} разрешения",
+    "permissionCount_many": "{{count}} разрешений",
+    "noPermissions": "Разрешения не назначены",
+    "editPermissions": "Изменить разрешения",
+    "groups": {
+      "Clients": "Клиенты", "Sites": "Сайты", "Sync": "Синхронизация", "Webhooks": "Webhooks",
+      "API": "API", "Users": "Пользователи", "Roles": "Роли", "Settings": "Настройки"
+    },
+    "dialog": {
+      "createTitle": "Создать новую роль",
+      "editTitle": "Изменить роль: {{name}}",
+      "createDescription": "Определите новую роль с конкретными разрешениями",
+      "editDescription": "Скорректируйте разрешения этой роли",
+      "name": "Название",
+      "namePlaceholder": "напр. support_agent",
+      "description": "Описание",
+      "descriptionPlaceholder": "Что делает эта роль?",
+      "permissions": "Разрешения",
+      "cancel": "Отмена",
+      "save": "Сохранить изменения",
+      "create": "Создать роль"
+    },
+    "toast": {
+      "nameRequired": "Требуется название",
+      "roleCreated": "Роль создана",
+      "roleUpdated": "Роль обновлена",
+      "roleDeleted": "Роль удалена",
+      "failed": "Ошибка",
+      "error": "Ошибка"
+    },
+    "confirmDelete": "Удалить роль \"{{name}}\"? Пользователям с этой ролью потребуется переназначение."
   }
 }

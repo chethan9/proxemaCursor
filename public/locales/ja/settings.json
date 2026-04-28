@@ -116,5 +116,44 @@
       "cancel": "キャンセル",
       "confirm": "はい、スーパー管理者を付与"
     }
+  },
+  "roles": {
+    "title": "役割と権限",
+    "subtitle": "各役割が何を見て何ができるかを定義します",
+    "newRole": "新しい役割",
+    "system": "システム",
+    "allPermissions": "すべての権限 (*)",
+    "permissions": "権限",
+    "permissionCount_one": "{{count}} 件の権限",
+    "permissionCount_other": "{{count}} 件の権限",
+    "noPermissions": "権限が割り当てられていません",
+    "editPermissions": "権限を編集",
+    "groups": {
+      "Clients": "クライアント", "Sites": "サイト", "Sync": "同期", "Webhooks": "Webhooks",
+      "API": "API", "Users": "ユーザー", "Roles": "役割", "Settings": "設定"
+    },
+    "dialog": {
+      "createTitle": "新しい役割を作成",
+      "editTitle": "役割を編集: {{name}}",
+      "createDescription": "特定の権限を持つ新しい役割を定義します",
+      "editDescription": "この役割の権限を調整します",
+      "name": "名前",
+      "namePlaceholder": "例: support_agent",
+      "description": "説明",
+      "descriptionPlaceholder": "この役割は何をしますか？",
+      "permissions": "権限",
+      "cancel": "キャンセル",
+      "save": "変更を保存",
+      "create": "役割を作成"
+    },
+    "toast": {
+      "nameRequired": "名前は必須です",
+      "roleCreated": "役割を作成しました",
+      "roleUpdated": "役割を更新しました",
+      "roleDeleted": "役割を削除しました",
+      "failed": "失敗",
+      "error": "エラー"
+    },
+    "confirmDelete": "役割「{{name}}」を削除しますか？この役割のユーザーは再割り当てが必要です。"
   }
 }

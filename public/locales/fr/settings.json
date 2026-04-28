@@ -116,5 +116,44 @@
       "cancel": "Annuler",
       "confirm": "Oui, accorder super admin"
     }
+  },
+  "roles": {
+    "title": "Rôles et permissions",
+    "subtitle": "Définissez ce que chaque rôle peut voir et faire",
+    "newRole": "Nouveau rôle",
+    "system": "système",
+    "allPermissions": "Toutes les permissions (*)",
+    "permissions": "Permissions",
+    "permissionCount_one": "{{count}} permission",
+    "permissionCount_other": "{{count}} permissions",
+    "noPermissions": "Aucune permission attribuée",
+    "editPermissions": "Modifier les permissions",
+    "groups": {
+      "Clients": "Clients", "Sites": "Sites", "Sync": "Synchronisation", "Webhooks": "Webhooks",
+      "API": "API", "Users": "Utilisateurs", "Roles": "Rôles", "Settings": "Paramètres"
+    },
+    "dialog": {
+      "createTitle": "Créer un nouveau rôle",
+      "editTitle": "Modifier le rôle : {{name}}",
+      "createDescription": "Définissez un nouveau rôle avec des permissions spécifiques",
+      "editDescription": "Ajustez les permissions de ce rôle",
+      "name": "Nom",
+      "namePlaceholder": "ex. support_agent",
+      "description": "Description",
+      "descriptionPlaceholder": "Que fait ce rôle ?",
+      "permissions": "Permissions",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "create": "Créer le rôle"
+    },
+    "toast": {
+      "nameRequired": "Nom requis",
+      "roleCreated": "Rôle créé",
+      "roleUpdated": "Rôle mis à jour",
+      "roleDeleted": "Rôle supprimé",
+      "failed": "Échec",
+      "error": "Erreur"
+    },
+    "confirmDelete": "Supprimer le rôle « {{name}} » ? Les utilisateurs avec ce rôle devront être réaffectés."
   }
 }

@@ -116,5 +116,44 @@
       "cancel": "Cancelar",
       "confirm": "Sí, conceder superadmin"
     }
+  },
+  "roles": {
+    "title": "Roles y permisos",
+    "subtitle": "Define lo que cada rol puede ver y hacer",
+    "newRole": "Nuevo rol",
+    "system": "sistema",
+    "allPermissions": "Todos los permisos (*)",
+    "permissions": "Permisos",
+    "permissionCount_one": "{{count}} permiso",
+    "permissionCount_other": "{{count}} permisos",
+    "noPermissions": "Sin permisos asignados",
+    "editPermissions": "Editar permisos",
+    "groups": {
+      "Clients": "Clientes", "Sites": "Sitios", "Sync": "Sincronización", "Webhooks": "Webhooks",
+      "API": "API", "Users": "Usuarios", "Roles": "Roles", "Settings": "Configuración"
+    },
+    "dialog": {
+      "createTitle": "Crear nuevo rol",
+      "editTitle": "Editar rol: {{name}}",
+      "createDescription": "Define un nuevo rol con permisos específicos",
+      "editDescription": "Ajusta los permisos de este rol",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. support_agent",
+      "description": "Descripción",
+      "descriptionPlaceholder": "¿Qué hace este rol?",
+      "permissions": "Permisos",
+      "cancel": "Cancelar",
+      "save": "Guardar cambios",
+      "create": "Crear rol"
+    },
+    "toast": {
+      "nameRequired": "Nombre requerido",
+      "roleCreated": "Rol creado",
+      "roleUpdated": "Rol actualizado",
+      "roleDeleted": "Rol eliminado",
+      "failed": "Error",
+      "error": "Error"
+    },
+    "confirmDelete": "¿Eliminar el rol \"{{name}}\"? Los usuarios con este rol necesitarán reasignación."
   }
 }

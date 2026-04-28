@@ -116,5 +116,44 @@
       "cancel": "रद्द करें",
       "confirm": "हाँ, सुपर एडमिन प्रदान करें"
     }
+  },
+  "roles": {
+    "title": "भूमिकाएँ और अनुमतियाँ",
+    "subtitle": "परिभाषित करें कि प्रत्येक भूमिका क्या देख और कर सकती है",
+    "newRole": "नई भूमिका",
+    "system": "सिस्टम",
+    "allPermissions": "सभी अनुमतियाँ (*)",
+    "permissions": "अनुमतियाँ",
+    "permissionCount_one": "{{count}} अनुमति",
+    "permissionCount_other": "{{count}} अनुमतियाँ",
+    "noPermissions": "कोई अनुमति निर्दिष्ट नहीं",
+    "editPermissions": "अनुमतियाँ संपादित करें",
+    "groups": {
+      "Clients": "ग्राहक", "Sites": "साइट्स", "Sync": "सिंक", "Webhooks": "Webhooks",
+      "API": "API", "Users": "उपयोगकर्ता", "Roles": "भूमिकाएँ", "Settings": "सेटिंग्स"
+    },
+    "dialog": {
+      "createTitle": "नई भूमिका बनाएँ",
+      "editTitle": "भूमिका संपादित करें: {{name}}",
+      "createDescription": "विशिष्ट अनुमतियों के साथ नई भूमिका परिभाषित करें",
+      "editDescription": "इस भूमिका की अनुमतियाँ समायोजित करें",
+      "name": "नाम",
+      "namePlaceholder": "जैसे support_agent",
+      "description": "विवरण",
+      "descriptionPlaceholder": "यह भूमिका क्या करती है?",
+      "permissions": "अनुमतियाँ",
+      "cancel": "रद्द करें",
+      "save": "परिवर्तन सहेजें",
+      "create": "भूमिका बनाएँ"
+    },
+    "toast": {
+      "nameRequired": "नाम आवश्यक",
+      "roleCreated": "भूमिका बनाई गई",
+      "roleUpdated": "भूमिका अपडेट",
+      "roleDeleted": "भूमिका हटाई गई",
+      "failed": "विफल",
+      "error": "त्रुटि"
+    },
+    "confirmDelete": "भूमिका \"{{name}}\" हटाएँ? इस भूमिका वाले उपयोगकर्ताओं को पुनर्निर्धारण की आवश्यकता होगी।"
   }
 }

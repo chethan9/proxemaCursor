@@ -116,5 +116,44 @@
       "cancel": "Abbrechen",
       "confirm": "Ja, Super-Admin gewähren"
     }
+  },
+  "roles": {
+    "title": "Rollen & Berechtigungen",
+    "subtitle": "Legen Sie fest, was jede Rolle sehen und tun kann",
+    "newRole": "Neue Rolle",
+    "system": "System",
+    "allPermissions": "Alle Berechtigungen (*)",
+    "permissions": "Berechtigungen",
+    "permissionCount_one": "{{count}} Berechtigung",
+    "permissionCount_other": "{{count}} Berechtigungen",
+    "noPermissions": "Keine Berechtigungen zugewiesen",
+    "editPermissions": "Berechtigungen bearbeiten",
+    "groups": {
+      "Clients": "Kunden", "Sites": "Websites", "Sync": "Synchronisation", "Webhooks": "Webhooks",
+      "API": "API", "Users": "Benutzer", "Roles": "Rollen", "Settings": "Einstellungen"
+    },
+    "dialog": {
+      "createTitle": "Neue Rolle erstellen",
+      "editTitle": "Rolle bearbeiten: {{name}}",
+      "createDescription": "Definieren Sie eine neue Rolle mit spezifischen Berechtigungen",
+      "editDescription": "Passen Sie die Berechtigungen für diese Rolle an",
+      "name": "Name",
+      "namePlaceholder": "z. B. support_agent",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Was macht diese Rolle?",
+      "permissions": "Berechtigungen",
+      "cancel": "Abbrechen",
+      "save": "Änderungen speichern",
+      "create": "Rolle erstellen"
+    },
+    "toast": {
+      "nameRequired": "Name erforderlich",
+      "roleCreated": "Rolle erstellt",
+      "roleUpdated": "Rolle aktualisiert",
+      "roleDeleted": "Rolle gelöscht",
+      "failed": "Fehlgeschlagen",
+      "error": "Fehler"
+    },
+    "confirmDelete": "Rolle \"{{name}}\" löschen? Benutzer mit dieser Rolle müssen neu zugewiesen werden."
   }
 }

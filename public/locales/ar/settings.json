@@ -116,5 +116,44 @@
       "cancel": "إلغاء",
       "confirm": "نعم، امنح صلاحيات المسؤول الكبير"
     }
+  },
+  "roles": {
+    "title": "الأدوار والأذونات",
+    "subtitle": "حدد ما يمكن لكل دور رؤيته وفعله",
+    "newRole": "دور جديد",
+    "system": "نظام",
+    "allPermissions": "جميع الأذونات (*)",
+    "permissions": "الأذونات",
+    "permissionCount_one": "{{count}} إذن",
+    "permissionCount_other": "{{count}} أذونات",
+    "noPermissions": "لا توجد أذونات معينة",
+    "editPermissions": "تحرير الأذونات",
+    "groups": {
+      "Clients": "العملاء", "Sites": "المواقع", "Sync": "المزامنة", "Webhooks": "Webhooks",
+      "API": "API", "Users": "المستخدمون", "Roles": "الأدوار", "Settings": "الإعدادات"
+    },
+    "dialog": {
+      "createTitle": "إنشاء دور جديد",
+      "editTitle": "تحرير الدور: {{name}}",
+      "createDescription": "حدد دوراً جديداً بأذونات محددة",
+      "editDescription": "تعديل الأذونات لهذا الدور",
+      "name": "الاسم",
+      "namePlaceholder": "مثل support_agent",
+      "description": "الوصف",
+      "descriptionPlaceholder": "ماذا يفعل هذا الدور؟",
+      "permissions": "الأذونات",
+      "cancel": "إلغاء",
+      "save": "حفظ التغييرات",
+      "create": "إنشاء الدور"
+    },
+    "toast": {
+      "nameRequired": "الاسم مطلوب",
+      "roleCreated": "تم إنشاء الدور",
+      "roleUpdated": "تم تحديث الدور",
+      "roleDeleted": "تم حذف الدور",
+      "failed": "فشل",
+      "error": "خطأ"
+    },
+    "confirmDelete": "حذف الدور \"{{name}}\"؟ سيحتاج المستخدمون بهذا الدور إلى إعادة تعيين."
   }
 }

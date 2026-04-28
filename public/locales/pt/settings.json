@@ -116,5 +116,44 @@
       "cancel": "Cancelar",
       "confirm": "Sim, conceder superadmin"
     }
+  },
+  "roles": {
+    "title": "Funções e permissões",
+    "subtitle": "Defina o que cada função pode ver e fazer",
+    "newRole": "Nova função",
+    "system": "sistema",
+    "allPermissions": "Todas as permissões (*)",
+    "permissions": "Permissões",
+    "permissionCount_one": "{{count}} permissão",
+    "permissionCount_other": "{{count}} permissões",
+    "noPermissions": "Sem permissões atribuídas",
+    "editPermissions": "Editar permissões",
+    "groups": {
+      "Clients": "Clientes", "Sites": "Sites", "Sync": "Sincronização", "Webhooks": "Webhooks",
+      "API": "API", "Users": "Usuários", "Roles": "Funções", "Settings": "Configurações"
+    },
+    "dialog": {
+      "createTitle": "Criar nova função",
+      "editTitle": "Editar função: {{name}}",
+      "createDescription": "Defina uma nova função com permissões específicas",
+      "editDescription": "Ajuste as permissões desta função",
+      "name": "Nome",
+      "namePlaceholder": "ex. support_agent",
+      "description": "Descrição",
+      "descriptionPlaceholder": "O que esta função faz?",
+      "permissions": "Permissões",
+      "cancel": "Cancelar",
+      "save": "Salvar alterações",
+      "create": "Criar função"
+    },
+    "toast": {
+      "nameRequired": "Nome obrigatório",
+      "roleCreated": "Função criada",
+      "roleUpdated": "Função atualizada",
+      "roleDeleted": "Função excluída",
+      "failed": "Falhou",
+      "error": "Erro"
+    },
+    "confirmDelete": "Excluir a função \"{{name}}\"? Usuários com esta função precisarão de reatribuição."
   }
 }

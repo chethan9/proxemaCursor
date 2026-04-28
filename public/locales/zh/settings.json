@@ -116,5 +116,44 @@
       "cancel": "取消",
       "confirm": "是，授予超级管理员"
     }
+  },
+  "roles": {
+    "title": "角色与权限",
+    "subtitle": "定义每个角色可以看到和做什么",
+    "newRole": "新角色",
+    "system": "系统",
+    "allPermissions": "所有权限 (*)",
+    "permissions": "权限",
+    "permissionCount_one": "{{count}} 项权限",
+    "permissionCount_other": "{{count}} 项权限",
+    "noPermissions": "未分配权限",
+    "editPermissions": "编辑权限",
+    "groups": {
+      "Clients": "客户", "Sites": "站点", "Sync": "同步", "Webhooks": "Webhooks",
+      "API": "API", "Users": "用户", "Roles": "角色", "Settings": "设置"
+    },
+    "dialog": {
+      "createTitle": "创建新角色",
+      "editTitle": "编辑角色：{{name}}",
+      "createDescription": "定义一个具有特定权限的新角色",
+      "editDescription": "调整此角色的权限",
+      "name": "名称",
+      "namePlaceholder": "例如 support_agent",
+      "description": "描述",
+      "descriptionPlaceholder": "此角色做什么？",
+      "permissions": "权限",
+      "cancel": "取消",
+      "save": "保存更改",
+      "create": "创建角色"
+    },
+    "toast": {
+      "nameRequired": "需要名称",
+      "roleCreated": "角色已创建",
+      "roleUpdated": "角色已更新",
+      "roleDeleted": "角色已删除",
+      "failed": "失败",
+      "error": "错误"
+    },
+    "confirmDelete": "删除角色 \"{{name}}\"？拥有此角色的用户需要重新分配。"
   }
 }

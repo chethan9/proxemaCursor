@@ -1,218 +1,199 @@
 import { useEffect, useState } from "react";
+import type { GetServerSideProps } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation, Trans } from "next-i18next";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsLayout } from "@/components/layout/SettingsLayout";
+import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { PERMISSIONS } from "@/lib/permissions";
-import { listRoles, createRole, updateRole, deleteRole, type RoleRow } from "@/services/userService";
-import { Loader2, Plus, Shield, Trash2, Save, Lock } from "lucide-react";
-import { useAuth } from "@/contexts/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
-const PERMISSION_GROUPS = [
-  { label: "Clients", perms: [PERMISSIONS.CLIENTS_VIEW, PERMISSIONS.CLIENTS_MANAGE] },
-  { label: "Sites", perms: [PERMISSIONS.SITES_VIEW, PERMISSIONS.SITES_MANAGE, PERMISSIONS.SITES_SYNC] },
-  { label: "Sync", perms: [PERMISSIONS.SYNC_VIEW, PERMISSIONS.SYNC_RUN] },
-  { label: "Webhooks", perms: [PERMISSIONS.WEBHOOKS_VIEW, PERMISSIONS.WEBHOOKS_MANAGE] },
-  { label: "API", perms: [PERMISSIONS.API_VIEW, PERMISSIONS.API_MANAGE] },
-  { label: "Users", perms: [PERMISSIONS.USERS_VIEW, PERMISSIONS.USERS_MANAGE] },
-  { label: "Roles", perms: [PERMISSIONS.ROLES_VIEW, PERMISSIONS.ROLES_MANAGE] },
-  { label: "Settings", perms: [PERMISSIONS.SETTINGS_VIEW, PERMISSIONS.SETTINGS_MANAGE] },
-];
+interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+  is_system: boolean;
+}
 
-export default function RolesPage() {
+const PERMISSION_GROUPS: Record<string, string[]> = {
+  Clients: ["clients.read", "clients.write", "clients.delete"],
+  Sites: ["sites.read", "sites.write", "sites.delete"],
+  Sync: ["sync.read", "sync.run", "sync.cancel"],
+  Webhooks: ["webhooks.read", "webhooks.write", "webhooks.delete"],
+  API: ["api.read", "api.write"],
+  Users: ["users.read", "users.write", "users.delete"],
+  Roles: ["roles.read", "roles.write", "roles.delete"],
+  Settings: ["settings.read", "settings.write"],
+};
+
+function RolesContent() {
+  const { t } = useTranslation("settings");
   const { toast } = useToast();
-  const { isSuperAdmin } = useAuth();
-  const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<RoleRow | null>(null);
+  const [editing, setEditing] = useState<Role | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", permissions: [] as string[] });
-  const [saving, setSaving] = useState(false);
 
-  const load = async () => {
+  async function load() {
     setLoading(true);
-    try {
-      setRoles(await listRoles());
-    } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const { data } = await supabase.from("roles" as never).select("*").order("name");
+    setRoles(((data as unknown) as Role[]) ?? []);
+    setLoading(false);
+  }
 
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => {
+  function openCreate() {
     setEditing(null);
     setForm({ name: "", description: "", permissions: [] });
-    setCreateOpen(true);
-  };
+    setShowDialog(true);
+  }
 
-  const openEdit = (r: RoleRow) => {
-    setEditing(r);
-    setForm({ name: r.name, description: r.description || "", permissions: r.permissions || [] });
-    setCreateOpen(true);
-  };
+  function openEdit(role: Role) {
+    setEditing(role);
+    setForm({ name: role.name, description: role.description ?? "", permissions: role.permissions ?? [] });
+    setShowDialog(true);
+  }
 
-  const togglePerm = (p: string) => {
-    setForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(p) ? f.permissions.filter((x) => x !== p) : [...f.permissions, p],
-    }));
-  };
-
-  const save = async () => {
-    if (!form.name.trim()) { toast({ title: "Name required", variant: "destructive" }); return; }
-    setSaving(true);
+  async function save() {
+    if (!form.name.trim()) {
+      toast({ title: t("roles.toast.nameRequired"), variant: "destructive" });
+      return;
+    }
     try {
       if (editing) {
-        await updateRole(editing.id, { description: form.description, permissions: form.permissions });
-        toast({ title: "Role updated" });
+        const { error } = await supabase
+          .from("roles" as never)
+          .update({ name: form.name, description: form.description, permissions: form.permissions } as never)
+          .eq("id", editing.id);
+        if (error) throw error;
+        toast({ title: t("roles.toast.roleUpdated") });
       } else {
-        await createRole(form.name.trim(), form.description, form.permissions);
-        toast({ title: "Role created" });
+        const { error } = await supabase
+          .from("roles" as never)
+          .insert({ name: form.name, description: form.description, permissions: form.permissions } as never);
+        if (error) throw error;
+        toast({ title: t("roles.toast.roleCreated") });
       }
-      setCreateOpen(false);
+      setShowDialog(false);
       await load();
     } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
-    } finally {
-      setSaving(false);
+      toast({ title: t("roles.toast.failed"), description: e instanceof Error ? e.message : t("roles.toast.error"), variant: "destructive" });
     }
-  };
+  }
 
-  const remove = async (r: RoleRow) => {
-    if (!confirm(`Delete role "${r.name}"? Users with this role will need reassignment.`)) return;
+  async function remove(role: Role) {
+    if (!confirm(t("roles.confirmDelete", { name: role.name }))) return;
     try {
-      await deleteRole(r.id);
-      toast({ title: "Role deleted" });
+      const { error } = await supabase.from("roles" as never).delete().eq("id", role.id);
+      if (error) throw error;
+      toast({ title: t("roles.toast.roleDeleted") });
       await load();
     } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+      toast({ title: t("roles.toast.failed"), description: e instanceof Error ? e.message : t("roles.toast.error"), variant: "destructive" });
     }
-  };
+  }
+
+  function togglePermission(perm: string) {
+    setForm((f) => ({
+      ...f,
+      permissions: f.permissions.includes(perm) ? f.permissions.filter((p) => p !== perm) : [...f.permissions, perm],
+    }));
+  }
 
   return (
-    <AppLayout title="Roles & Permissions" requirePermission={PERMISSIONS.ROLES_VIEW}>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Roles & Permissions</h1>
-            <p className="text-sm text-muted-foreground mt-1">Define what each role can see and do</p>
-          </div>
-          {isSuperAdmin && (
-            <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />New role</Button>
-          )}
+    <SettingsLayout>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold">{t("roles.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("roles.subtitle")}</p>
         </div>
-
-        {loading ? (
-          <div className="p-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {roles.map(r => {
-              const hasAll = r.permissions.includes("*");
-              return (
-                <Card key={r.id} className={r.is_system ? "border-primary/30" : ""}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Shield className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            {r.name}
-                            {r.is_system && <Badge variant="outline" className="text-[10px]"><Lock className="h-2.5 w-2.5 mr-1" />system</Badge>}
-                          </CardTitle>
-                          <CardDescription className="text-xs mt-0.5">{r.description || "No description"}</CardDescription>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                        {hasAll ? "Permissions" : `${r.permissions.length} permission${r.permissions.length !== 1 ? "s" : ""}`}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {hasAll ? (
-                          <Badge className="bg-primary/10 text-primary border-primary/20" variant="outline">All permissions (*)</Badge>
-                        ) : r.permissions.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">No permissions assigned</span>
-                        ) : (
-                          r.permissions.slice(0, 8).map(p => (
-                            <Badge key={p} variant="secondary" className="text-[10px] font-mono">{p}</Badge>
-                          ))
-                        )}
-                        {!hasAll && r.permissions.length > 8 && (
-                          <Badge variant="outline" className="text-[10px]">+{r.permissions.length - 8}</Badge>
-                        )}
-                      </div>
-                    </div>
-                    {isSuperAdmin && (
-                      <div className="flex gap-2 pt-2 border-t">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(r)} disabled={r.name === "super_admin"}>
-                          Edit permissions
-                        </Button>
-                        {!r.is_system && (
-                          <Button size="sm" variant="ghost" onClick={() => remove(r)} className="text-destructive hover:text-destructive">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t("roles.newRole")}
+        </Button>
       </div>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="grid gap-4">
+        {loading ? null : roles.map((role) => (
+          <Card key={role.id}>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  {role.name}
+                  {role.is_system ? <Badge variant="secondary" className="text-[10px]">{t("roles.system")}</Badge> : null}
+                </CardTitle>
+                {role.description ? <p className="text-sm text-muted-foreground mt-1">{role.description}</p> : null}
+              </div>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => openEdit(role)} aria-label={t("roles.editPermissions")}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                {!role.is_system && (
+                  <Button variant="ghost" size="sm" onClick={() => remove(role)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs text-muted-foreground mb-2">
+                {role.permissions?.includes("*")
+                  ? t("roles.allPermissions")
+                  : role.permissions?.length
+                  ? t("roles.permissionCount", { count: role.permissions.length })
+                  : t("roles.noPermissions")}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(role.permissions ?? []).slice(0, 12).map((p) => (
+                  <Badge key={p} variant="outline" className="text-[10px] font-mono">{p}</Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editing ? `Edit role: ${editing.name}` : "Create new role"}</DialogTitle>
+            <DialogTitle>
+              {editing ? <Trans i18nKey="roles.dialog.editTitle" t={t} values={{ name: editing.name }} /> : t("roles.dialog.createTitle")}
+            </DialogTitle>
             <DialogDescription>
-              {editing ? "Adjust permissions for this role" : "Define a new role with specific permissions"}
+              {editing ? t("roles.dialog.editDescription") : t("roles.dialog.createDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. support_agent"
-                disabled={!!editing}
-              />
+            <div>
+              <label className="text-sm font-medium block mb-1">{t("roles.dialog.name")}</label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("roles.dialog.namePlaceholder")} />
             </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="What does this role do?"
-                rows={2}
-              />
+            <div>
+              <label className="text-sm font-medium block mb-1">{t("roles.dialog.description")}</label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("roles.dialog.descriptionPlaceholder")} rows={2} />
             </div>
-            <div className="space-y-3">
-              <Label>Permissions</Label>
-              <div className="space-y-3 border rounded-lg p-3">
-                {PERMISSION_GROUPS.map(g => (
-                  <div key={g.label}>
-                    <p className="text-xs font-semibold text-muted-foreground mb-1.5">{g.label}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {g.perms.map(p => (
-                        <label key={p} className="flex items-center gap-2 text-sm cursor-pointer p-1.5 rounded hover:bg-muted">
-                          <Checkbox checked={form.permissions.includes(p)} onCheckedChange={() => togglePerm(p)} />
-                          <span className="font-mono text-xs">{p}</span>
+            <div>
+              <label className="text-sm font-medium block mb-2">{t("roles.dialog.permissions")}</label>
+              <div className="grid grid-cols-2 gap-3 max-h-72 overflow-y-auto border rounded-md p-3">
+                {Object.entries(PERMISSION_GROUPS).map(([group, perms]) => (
+                  <div key={group}>
+                    <div className="text-xs font-semibold text-muted-foreground mb-1">{t(`roles.groups.${group}`, { defaultValue: group })}</div>
+                    <div className="space-y-1">
+                      {perms.map((perm) => (
+                        <label key={perm} className="flex items-center gap-2 text-xs cursor-pointer">
+                          <Checkbox checked={form.permissions.includes(perm)} onCheckedChange={() => togglePermission(perm)} />
+                          <span className="font-mono">{perm}</span>
                         </label>
                       ))}
                     </div>
@@ -222,14 +203,27 @@ export default function RolesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              {editing ? "Save changes" : "Create role"}
-            </Button>
+            <Button variant="ghost" onClick={() => setShowDialog(false)}>{t("roles.dialog.cancel")}</Button>
+            <Button onClick={save}>{editing ? t("roles.dialog.save") : t("roles.dialog.create")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </SettingsLayout>
   );
 }
+
+export default function RolesPage() {
+  return (
+    <AuthGuard requireSuperAdmin>
+      <AppLayout>
+        <RolesContent />
+      </AppLayout>
+    </AuthGuard>
+  );
+}
+
+export const getStaticProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
+  },
+});
