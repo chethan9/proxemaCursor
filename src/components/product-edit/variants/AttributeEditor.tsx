@@ -5,15 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Trash2, Plus, Loader2, Check, ChevronsUpDown, Sparkles } from "lucide-react";
+import { Trash2, Plus, Loader2, ChevronsUpDown, Sparkles, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductFormState } from "@/services/productEditService";
 import {
@@ -48,11 +40,13 @@ function AttributeNameCombobox({
   const [search, setSearch] = useState("");
 
   const available = wooAttributes.filter((a) => !excludeIds.has(a.id));
-  const exact = wooAttributes.find((a) => a.name.toLowerCase() === search.trim().toLowerCase());
-  const showCreate = !!search.trim() && !exact;
+  const q = search.trim().toLowerCase();
+  const filtered = q ? available.filter((a) => a.name.toLowerCase().includes(q)) : available;
+  const exact = wooAttributes.find((a) => a.name.toLowerCase() === q);
+  const showCreate = !!q && !exact;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch(""); }}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -77,79 +71,58 @@ function AttributeNameCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="p-0 w-[var(--radix-popover-trigger-width)] shadow-lg"
+        className="p-0 w-[var(--radix-popover-trigger-width)] shadow-lg overflow-hidden"
         align="start"
         sideOffset={4}
       >
-        <Command className="rounded-md">
-          <CommandInput
+        <div className="relative border-b">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            autoFocus
             value={search}
-            onValueChange={setSearch}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search or type new name…"
-            className="h-9 text-sm"
+            className="w-full h-9 pl-8 pr-2 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
           />
-          <CommandList className="max-h-64">
-            <CommandEmpty className="py-2">
-              {search.trim() ? (
+        </div>
+        <div className="max-h-64 overflow-y-auto py-1">
+          {filtered.length === 0 && !showCreate && (
+            <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+              No global attributes yet.
+            </div>
+          )}
+          {filtered.length > 0 && (
+            <div className="px-1">
+              <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Existing global attributes</div>
+              {filtered.map((a) => (
                 <button
+                  key={a.id}
                   type="button"
-                  onClick={() => {
-                    onCreateNew(search.trim());
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-left"
+                  onClick={() => { onSelectExisting(a); setOpen(false); setSearch(""); }}
+                  className="flex items-center w-full text-sm py-1.5 px-2 rounded-sm hover:bg-accent text-left"
                 >
-                  <Plus className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="flex-1 truncate">
-                    Create <strong>&ldquo;{search.trim()}&rdquo;</strong>
-                  </span>
-                  <span className="text-[10px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded px-1.5 py-0.5">new</span>
+                  <span className="flex-1 truncate">{a.name}</span>
+                  <span className="text-[10px] text-muted-foreground ml-2">global</span>
                 </button>
-              ) : (
-                <span className="px-3 py-2 text-xs text-muted-foreground block text-center">No global attributes yet.</span>
-              )}
-            </CommandEmpty>
-            {available.length > 0 && (
-              <CommandGroup heading="Existing global attributes" className="px-1 py-1">
-                {available.map((a) => (
-                  <CommandItem
-                    key={a.id}
-                    value={a.name}
-                    onSelect={() => {
-                      onSelectExisting(a);
-                      setOpen(false);
-                      setSearch("");
-                    }}
-                    className="text-sm py-1.5"
-                  >
-                    <span className="flex-1 truncate">{a.name}</span>
-                    <span className="text-[10px] text-muted-foreground ml-2">global</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {showCreate && (
-              <CommandGroup className="px-1 py-1 border-t">
-                <CommandItem
-                  value={`__create__${search}`}
-                  onSelect={() => {
-                    onCreateNew(search.trim());
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className="text-sm py-1.5"
-                >
-                  <Plus className="mr-2 h-3.5 w-3.5 text-emerald-600" />
-                  <span className="flex-1 truncate">
-                    Create <strong>&ldquo;{search.trim()}&rdquo;</strong>
-                  </span>
-                  <span className="ml-auto text-[10px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded px-1.5 py-0.5">new</span>
-                </CommandItem>
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
+              ))}
+            </div>
+          )}
+          {showCreate && (
+            <div className={cn("px-1", filtered.length > 0 && "border-t mt-1 pt-1")}>
+              <button
+                type="button"
+                onClick={() => { onCreateNew(q); setOpen(false); setSearch(""); }}
+                className="flex items-center w-full text-sm py-1.5 px-2 rounded-sm hover:bg-accent text-left"
+              >
+                <Plus className="mr-2 h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span className="flex-1 truncate">
+                  Create <strong>&ldquo;{search.trim()}&rdquo;</strong>
+                </span>
+                <span className="ml-2 text-[10px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded px-1.5 py-0.5">new</span>
+              </button>
+            </div>
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );
