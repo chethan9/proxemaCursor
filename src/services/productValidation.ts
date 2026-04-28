@@ -16,12 +16,6 @@ function isPositivePriceString(s: string | undefined | null): boolean {
   return !Number.isNaN(n) && n > 0;
 }
 
-function isValidPriceString(s: string | undefined | null): boolean {
-  const t = trim(s);
-  if (!t) return true;
-  return /^\d+(\.\d+)?$/.test(t);
-}
-
 function clampNonNeg(n: number | null | undefined): number | null {
   if (n == null) return null;
   if (Number.isNaN(n)) return null;
@@ -179,9 +173,10 @@ export function validateProductForm(form: ProductFormState): ValidationResult {
           [...v.attributes].sort((a, b) => a.name.localeCompare(b.name))
         ).toLowerCase();
         if (seen.has(key)) {
+          const prevIdx = seen.get(key) ?? 0;
           errors.push({
             field: `variation:${v.key}:duplicate`,
-            message: `Duplicate attribute combination (also at row ${seen.get(key)! + 1})`,
+            message: `Duplicate attribute combination (also at row ${prevIdx + 1})`,
           });
         } else {
           seen.set(key, idx);

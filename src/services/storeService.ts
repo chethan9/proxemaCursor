@@ -62,7 +62,8 @@ export async function createStore(store: StoreInsert): Promise<Store> {
   // which can hang on getSession() after certain errors.
   let token: string | null = null;
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) throw new Error("Supabase URL not configured");
     const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
     const key = `sb-${projectRef}-auth-token`;
     const raw = localStorage.getItem(key);
@@ -100,7 +101,8 @@ export async function updateStore(
 ): Promise<Store> {
   let token: string | null = null;
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) throw new Error("Supabase URL not configured");
     const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
     const key = `sb-${projectRef}-auth-token`;
     const raw = localStorage.getItem(key);
@@ -141,7 +143,8 @@ export async function deleteStore(id: string): Promise<{
 }> {
   let token: string | null = null;
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) throw new Error("Supabase URL not configured");
     const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
     const key = `sb-${projectRef}-auth-token`;
     const raw = localStorage.getItem(key);
