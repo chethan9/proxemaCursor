@@ -363,43 +363,88 @@
     }
   },
   "orderDetail": {
-    "title": "Order #{{number}}",
-    "createdOn": "Created on {{date}}",
-    "sections": {
-      "summary": "Summary",
-      "lineItems": "Line items",
-      "billingAddress": "Billing address",
-      "shippingAddress": "Shipping address",
-      "customer": "Customer",
+    "breadcrumb": "Orders",
+    "title": "Order Details",
+    "orderNumber": "Order #{{number}}",
+    "statuses": {
+      "processing": "Processing",
+      "onHold": "On Hold",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "stepper": {
+      "title": "Update Order Status",
+      "orderPlaced": "Order Placed",
+      "processing": "Processing",
+      "completed": "Completed",
+      "notYet": "Not yet"
+    },
+    "customer": {
+      "title": "Customer Details",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "ip": "Customer IP"
+    },
+    "address": {
+      "title": "Address",
+      "shipping": "Shipping Address",
+      "billing": "Billing Address"
+    },
+    "details": {
+      "title": "Order Details",
+      "placedOn": "Placed on",
       "payment": "Payment",
-      "shipping": "Shipping",
-      "fees": "Fees",
-      "taxes": "Taxes",
-      "notes": "Order notes",
-      "history": "Activity"
+      "txnId": "Txn ID",
+      "paidOn": "Paid on",
+      "updated": "Updated",
+      "customerNote": "Customer note"
+    },
+    "items": {
+      "title": "Items Ordered",
+      "item": "Item",
+      "sku": "SKU",
+      "variation": "Variation",
+      "qty": "Qty",
+      "price": "Price",
+      "total": "Total",
+      "noItems": "No items"
     },
     "totals": {
       "subtotal": "Subtotal",
+      "coupon": "Coupon",
       "shipping": "Shipping",
       "tax": "Tax",
-      "discount": "Discount",
-      "total": "Total",
-      "refunded": "Refunded"
-    },
-    "notes": {
-      "addPrivate": "Add private note",
-      "addCustomer": "Add note to customer",
-      "placeholder": "Write a note…",
-      "post": "Post note",
-      "private": "Private",
-      "customer": "Customer-facing"
+      "total": "Total"
     },
     "actions": {
-      "edit": "Edit order",
-      "print": "Print invoice",
-      "openInWoo": "Open in WooCommerce",
-      "refund": "Issue refund",
-      "changeStatus": "Change status"
+      "title": "Actions",
+      "emailInvoice": "Email invoice to customer",
+      "viewCustomer": "View customer profile",
+      "viewCustomerShort": "View Customer",
+      "noMatchingCustomer": "No matching customer profile found",
+      "noCustomerInfo": "No customer info on this order",
+      "resendNotification": "Resend new order notification",
+      "openInWp": "Open in WP admin"
+    },
+    "changeStatus": "Change Status",
+    "notes": {
+      "title": "Order Notes",
+      "loading": "Loading notes…",
+      "empty": "No notes yet",
+      "sentToCustomer": "Sent to customer",
+      "placeholder": "Add a note...",
+      "sendToCustomer": "Send to customer (email)",
+      "addNote": "Add note",
+      "saving": "Saving…"
+    },
+    "toast": {
+      "statusUpdated": "Order → {{status}}",
+      "noteSent": "Note sent to customer",
+      "notePrivate": "Private note added"
     }
   },
   "customers": {

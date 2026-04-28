@@ -377,29 +377,88 @@
     }
   },
   "orderDetail": {
-    "title": "الطلب رقم {{number}}",
-    "sections": {
-      "summary": "الملخص",
-      "items": "العناصر",
-      "customer": "معلومات العميل",
-      "billing": "عنوان الفوترة",
+    "breadcrumb": "الطلبات",
+    "title": "تفاصيل الطلب",
+    "orderNumber": "طلب #{{number}}",
+    "statuses": {
+      "processing": "قيد المعالجة",
+      "onHold": "معلّق",
+      "completed": "مكتمل",
+      "cancelled": "ملغى",
+      "refunded": "مسترد",
+      "failed": "فشل",
+      "pending": "قيد الانتظار"
+    },
+    "stepper": {
+      "title": "تحديث حالة الطلب",
+      "orderPlaced": "تم استلام الطلب",
+      "processing": "قيد المعالجة",
+      "completed": "مكتمل",
+      "notYet": "ليس بعد"
+    },
+    "customer": {
+      "title": "بيانات العميل",
+      "name": "الاسم",
+      "email": "البريد",
+      "phone": "الهاتف",
+      "ip": "عنوان IP للعميل"
+    },
+    "address": {
+      "title": "العنوان",
       "shipping": "عنوان الشحن",
-      "payment": "تفاصيل الدفع",
-      "notes": "ملاحظات الطلب",
-      "history": "السجل"
+      "billing": "عنوان الفوترة"
+    },
+    "details": {
+      "title": "تفاصيل الطلب",
+      "placedOn": "تاريخ الطلب",
+      "payment": "الدفع",
+      "txnId": "رقم العملية",
+      "paidOn": "تاريخ الدفع",
+      "updated": "آخر تحديث",
+      "customerNote": "ملاحظة العميل"
+    },
+    "items": {
+      "title": "المنتجات المطلوبة",
+      "item": "المنتج",
+      "sku": "SKU",
+      "variation": "المتغير",
+      "qty": "الكمية",
+      "price": "السعر",
+      "total": "الإجمالي",
+      "noItems": "لا توجد عناصر"
     },
     "totals": {
       "subtotal": "المجموع الفرعي",
+      "coupon": "كوبون",
       "shipping": "الشحن",
       "tax": "الضريبة",
-      "discount": "الخصم",
       "total": "الإجمالي"
     },
     "actions": {
+      "title": "الإجراءات",
+      "emailInvoice": "إرسال الفاتورة بالبريد",
+      "viewCustomer": "عرض ملف العميل",
+      "viewCustomerShort": "عرض العميل",
+      "noMatchingCustomer": "لم يتم العثور على ملف عميل مطابق",
+      "noCustomerInfo": "لا توجد بيانات عميل لهذا الطلب",
+      "resendNotification": "إعادة إرسال إشعار الطلب الجديد",
+      "openInWp": "فتح في WP admin"
+    },
+    "changeStatus": "تغيير الحالة",
+    "notes": {
+      "title": "ملاحظات الطلب",
+      "loading": "جاري تحميل الملاحظات…",
+      "empty": "لا توجد ملاحظات بعد",
+      "sentToCustomer": "أُرسلت للعميل",
+      "placeholder": "إضافة ملاحظة...",
+      "sendToCustomer": "إرسال للعميل (بريد)",
       "addNote": "إضافة ملاحظة",
-      "updateStatus": "تحديث الحالة",
-      "printInvoice": "طباعة الفاتورة",
-      "emailCustomer": "مراسلة العميل"
+      "saving": "جاري الحفظ…"
+    },
+    "toast": {
+      "statusUpdated": "الطلب → {{status}}",
+      "noteSent": "تم إرسال الملاحظة للعميل",
+      "notePrivate": "تمت إضافة ملاحظة خاصة"
     }
   },
   "customers": {

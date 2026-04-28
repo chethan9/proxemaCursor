@@ -46,6 +46,7 @@ import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
 import { useBlockingEffect } from "@/contexts/LoadingProvider";
+import { useTranslation } from "next-i18next";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
@@ -69,13 +70,15 @@ function fmtDateTime(s?: string | null) {
 }
 
 function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid?: string; dateCompleted?: string }) {
+  const { t } = useTranslation("site");
   const status = order.status || "pending";
-  const placed = { label: "Order Placed", date: order.date_created, done: true };
-  const processing = { label: "Processing", date: datePaid || order.date_modified, done: ["processing", "on-hold", "completed"].includes(status) };
-  const completed = { label: "Completed", date: dateCompleted, done: status === "completed" };
+  const placed = { label: t("orderDetail.stepper.orderPlaced"), date: order.date_created, done: true };
+  const processing = { label: t("orderDetail.stepper.processing"), date: datePaid || order.date_modified, done: ["processing", "on-hold", "completed"].includes(status) };
+  const completed = { label: t("orderDetail.stepper.completed"), date: dateCompleted, done: status === "completed" };
 
   const branchIcon = status === "cancelled" ? Ban : status === "refunded" ? RotateCcw : status === "failed" ? XCircle : null;
-  const branchLabel = status === "cancelled" ? "Cancelled" : status === "refunded" ? "Refunded" : status === "failed" ? "Failed" : null;
+  const statusKeyMap: Record<string, string> = { cancelled: "cancelled", refunded: "refunded", failed: "failed" };
+  const branchLabel = statusKeyMap[status] ? t(`orderDetail.statuses.${statusKeyMap[status]}`) : null;
   const steps = [placed, processing, completed];
 
   return (
@@ -83,7 +86,7 @@ function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <Truck className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold">Update Order Status</h2>
+          <h2 className="text-sm font-semibold">{t("orderDetail.stepper.title")}</h2>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {steps.map((step, i) => {
@@ -93,7 +96,7 @@ function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid
                 <Icon className={cn("h-5 w-5 shrink-0", step.done ? "text-emerald-600" : "text-muted-foreground/40")} />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{step.label}</div>
-                  <div className="text-[11px] text-muted-foreground truncate">{step.done ? fmtDateTime(step.date) : "Not yet"}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{step.done ? fmtDateTime(step.date) : t("orderDetail.stepper.notYet")}</div>
                 </div>
               </div>
             );
@@ -116,6 +119,7 @@ export default function OrderDetailsPage() {
   const storeId = typeof router.query.id === "string" ? router.query.id : "";
   const orderId = typeof router.query.orderId === "string" ? router.query.orderId : "";
   const { toast } = useToast();
+  const { t } = useTranslation("site");
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState("");
   const [noteIsCustomer, setNoteIsCustomer] = useState(false);
@@ -190,6 +194,17 @@ export default function OrderDetailsPage() {
     : persistedNotes.map((n) => ({ note: n.note || "", date_created: n.date_created || "", author: n.author, customer_note: false }));
   const statusStyle = order ? STATUS_STYLES[order.status || "pending"] || STATUS_STYLES.pending : STATUS_STYLES.pending;
 
+  const STATUS_LABEL_KEYS: Record<string, string> = {
+    processing: "processing",
+    "on-hold": "onHold",
+    completed: "completed",
+    cancelled: "cancelled",
+    refunded: "refunded",
+    failed: "failed",
+    pending: "pending",
+  };
+  const statusLabel = (s: string) => t(`orderDetail.statuses.${STATUS_LABEL_KEYS[s] || "pending"}`);
+
   const statusMutation = useSiteMutation<OrderRow, string>({
     mutationFn: (newStatus) => updateOrderStatus(orderId, newStatus),
     invalidateKeys: [["order", orderId], storeId ? queryKeys.orders(storeId) : ["orders"]],
@@ -200,7 +215,7 @@ export default function OrderDetailsPage() {
       },
     ],
     siteName: store?.name,
-    successToast: (_d, newStatus) => `Order → ${newStatus}`,
+    successToast: (_d, newStatus) => t("orderDetail.toast.statusUpdated", { status: statusLabel(newStatus) }),
     onSuccessExtra: (updated) => queryClient.setQueryData(["order", orderId], updated),
   });
 
@@ -225,7 +240,7 @@ export default function OrderDetailsPage() {
     },
     invalidateKeys: [["order-notes", storeId, orderId]],
     siteName: store?.name,
-    successToast: () => (noteIsCustomer ? "Note sent to customer" : "Private note added"),
+    successToast: () => (noteIsCustomer ? t("orderDetail.toast.noteSent") : t("orderDetail.toast.notePrivate")),
     onSuccessExtra: () => { setNoteText(""); setNoteIsCustomer(false); refetchNotes(); },
   });
 
@@ -262,16 +277,16 @@ export default function OrderDetailsPage() {
             </Link>
             <div className="min-w-0 flex-1">
               <div className="text-xs text-muted-foreground">
-                <Link href={`/sites/${storeId}/orders`} className="hover:text-foreground">Orders</Link> / Order Details
+                <Link href={`/sites/${storeId}/orders`} className="hover:text-foreground">{t("orderDetail.breadcrumb")}</Link> / {t("orderDetail.title")}
               </div>
               <h1 className="text-xl font-semibold leading-tight">
-                {isLoading ? <Skeleton className="h-6 w-40" /> : `Order #${order?.order_number || order?.woo_id || "—"}`}
+                {isLoading ? <Skeleton className="h-6 w-40" /> : t("orderDetail.orderNumber", { number: order?.order_number || order?.woo_id || "—" })}
               </h1>
             </div>
             {order && (
               <Badge className={cn("h-7 px-3 text-xs font-medium ring-1 border-0 capitalize gap-1.5", statusStyle.bg, statusStyle.text, statusStyle.ring)}>
                 <statusStyle.Icon className="h-3.5 w-3.5" />
-                {statusStyle.label}
+                {statusLabel(order.status || "pending")}
               </Badge>
             )}
             {order && <ActivityHistoryDrawer entityType="order" entityId={order.id} />}
@@ -289,26 +304,26 @@ export default function OrderDetailsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="p-5">
-                      <div className="flex items-center gap-2 mb-3"><User className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Customer Details</h3></div>
+                      <div className="flex items-center gap-2 mb-3"><User className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.customer.title")}</h3></div>
                       <dl className="text-sm space-y-1.5">
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Name</dt><dd className="text-right truncate">{getCustomerName(order.billing)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Email</dt><dd className="text-right truncate">{getCustomerEmail(order.billing) || "—"}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Phone</dt><dd className="text-right truncate">{billing.phone || "—"}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Customer IP</dt><dd className="text-right font-mono text-xs truncate">{raw.customer_ip_address || "—"}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.name")}</dt><dd className="text-right truncate">{getCustomerName(order.billing)}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.email")}</dt><dd className="text-right truncate">{getCustomerEmail(order.billing) || "—"}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.phone")}</dt><dd className="text-right truncate">{billing.phone || "—"}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.ip")}</dt><dd className="text-right font-mono text-xs truncate">{raw.customer_ip_address || "—"}</dd></div>
                       </dl>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardContent className="p-5">
-                      <div className="flex items-center gap-2 mb-3"><MapPin className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Address</h3></div>
+                      <div className="flex items-center gap-2 mb-3"><MapPin className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.address.title")}</h3></div>
                       <div className="text-xs space-y-2.5">
                         <div>
-                          <div className="text-muted-foreground mb-1">Shipping Address</div>
+                          <div className="text-muted-foreground mb-1">{t("orderDetail.address.shipping")}</div>
                           <div className="text-sm leading-relaxed">{formatAddress(shipping).map((l, i) => <div key={i}>{l}</div>)}</div>
                         </div>
                         <div className="pt-2 border-t border-border">
-                          <div className="text-muted-foreground mb-1">Billing Address</div>
+                          <div className="text-muted-foreground mb-1">{t("orderDetail.address.billing")}</div>
                           <div className="text-sm leading-relaxed">{formatAddress(billing).map((l, i) => <div key={i}>{l}</div>)}</div>
                         </div>
                       </div>
@@ -317,14 +332,14 @@ export default function OrderDetailsPage() {
 
                   <Card>
                     <CardContent className="p-5">
-                      <div className="flex items-center gap-2 mb-3"><Package className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Order Details</h3></div>
+                      <div className="flex items-center gap-2 mb-3"><Package className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.details.title")}</h3></div>
                       <dl className="text-sm space-y-1.5">
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Placed on</dt><dd className="text-right">{fmtDateTime(order.date_created)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Payment</dt><dd className="text-right truncate">{order.payment_method_title || order.payment_method || "—"}</dd></div>
-                        {raw.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Txn ID</dt><dd className="text-right font-mono text-xs truncate">{raw.transaction_id}</dd></div>}
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Paid on</dt><dd className="text-right">{fmtDateTime(raw.date_paid)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">Updated</dt><dd className="text-right">{fmtDateTime(order.date_modified)}</dd></div>
-                        {raw.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">Customer note</dt><dd className="text-xs">{raw.customer_note}</dd></div>}
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.placedOn")}</dt><dd className="text-right">{fmtDateTime(order.date_created)}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.payment")}</dt><dd className="text-right truncate">{order.payment_method_title || order.payment_method || "—"}</dd></div>
+                        {raw.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.txnId")}</dt><dd className="text-right font-mono text-xs truncate">{raw.transaction_id}</dd></div>}
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.paidOn")}</dt><dd className="text-right">{fmtDateTime(raw.date_paid)}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.updated")}</dt><dd className="text-right">{fmtDateTime(order.date_modified)}</dd></div>
+                        {raw.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">{t("orderDetail.details.customerNote")}</dt><dd className="text-xs">{raw.customer_note}</dd></div>}
                       </dl>
                     </CardContent>
                   </Card>
@@ -333,17 +348,17 @@ export default function OrderDetailsPage() {
                 {/* Items */}
                 <Card>
                   <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-3"><Package className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Items Ordered <span className="ml-1 text-xs text-muted-foreground font-normal">({lineItems.length})</span></h3></div>
+                    <div className="flex items-center gap-2 mb-3"><Package className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.items.title")} <span className="ml-1 text-xs text-muted-foreground font-normal">({lineItems.length})</span></h3></div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                            <th className="text-left py-2 pr-2">Item</th>
-                            <th className="text-left py-2 px-2">SKU</th>
-                            <th className="text-left py-2 px-2">Variation</th>
-                            <th className="text-right py-2 px-2">Qty</th>
-                            <th className="text-right py-2 px-2">Price</th>
-                            <th className="text-right py-2 pl-2">Total</th>
+                            <th className="text-left py-2 pr-2">{t("orderDetail.items.item")}</th>
+                            <th className="text-left py-2 px-2">{t("orderDetail.items.sku")}</th>
+                            <th className="text-left py-2 px-2">{t("orderDetail.items.variation")}</th>
+                            <th className="text-right py-2 px-2">{t("orderDetail.items.qty")}</th>
+                            <th className="text-right py-2 px-2">{t("orderDetail.items.price")}</th>
+                            <th className="text-right py-2 pl-2">{t("orderDetail.items.total")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -367,24 +382,24 @@ export default function OrderDetailsPage() {
                               <td className="py-3 pl-2 text-right font-mono font-medium">{item.total ?? "—"}</td>
                             </tr>
                           ))}
-                          {lineItems.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-muted-foreground text-xs">No items</td></tr>}
+                          {lineItems.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-muted-foreground text-xs">{t("orderDetail.items.noItems")}</td></tr>}
                         </tbody>
                       </table>
                     </div>
 
                     {/* Totals */}
                     <div className="mt-4 space-y-1.5 text-sm max-w-sm ml-auto">
-                      <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="font-mono">{computedSubtotal.toFixed(2)} {currency}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>{t("orderDetail.totals.subtotal")}</span><span className="font-mono">{computedSubtotal.toFixed(2)} {currency}</span></div>
                       {coupons.map((c, i) => (
-                        <div key={i} className="flex justify-between text-muted-foreground"><span className="flex items-center gap-1.5"><Tag className="h-3 w-3" />Coupon <Badge variant="outline" className="h-5 font-mono text-[10px]">{c.code}</Badge></span><span className="font-mono">-{c.discount ?? "0"} {currency}</span></div>
+                        <div key={i} className="flex justify-between text-muted-foreground"><span className="flex items-center gap-1.5"><Tag className="h-3 w-3" />{t("orderDetail.totals.coupon")} <Badge variant="outline" className="h-5 font-mono text-[10px]">{c.code}</Badge></span><span className="font-mono">-{c.discount ?? "0"} {currency}</span></div>
                       ))}
                       {shippingLines.map((s, i) => (
-                        <div key={i} className="flex justify-between text-muted-foreground"><span>{s.method_title || "Shipping"}</span><span className="font-mono">{s.total ?? "0"} {currency}</span></div>
+                        <div key={i} className="flex justify-between text-muted-foreground"><span>{s.method_title || t("orderDetail.totals.shipping")}</span><span className="font-mono">{s.total ?? "0"} {currency}</span></div>
                       ))}
                       {order.total_tax != null && Number(order.total_tax) > 0 && (
-                        <div className="flex justify-between text-muted-foreground"><span>Tax</span><span className="font-mono">{order.total_tax} {currency}</span></div>
+                        <div className="flex justify-between text-muted-foreground"><span>{t("orderDetail.totals.tax")}</span><span className="font-mono">{order.total_tax} {currency}</span></div>
                       )}
-                      <div className="flex justify-between pt-2 border-t border-border font-semibold text-base"><span>Total</span><span className="font-mono">{order.total ?? "—"} {currency}</span></div>
+                      <div className="flex justify-between pt-2 border-t border-border font-semibold text-base"><span>{t("orderDetail.totals.total")}</span><span className="font-mono">{order.total ?? "—"} {currency}</span></div>
                     </div>
                   </CardContent>
                 </Card>
@@ -394,7 +409,7 @@ export default function OrderDetailsPage() {
               <div className="space-y-4">
                 <Card>
                   <CardContent className="p-4">
-                    <h3 className="text-sm font-semibold mb-3">Actions</h3>
+                    <h3 className="text-sm font-semibold mb-3">{t("orderDetail.actions.title")}</h3>
                     <div className="grid grid-cols-2 gap-1.5 mb-2">
                       <TemplatePrintMenu storeId={storeId} orderId={orderId} type="invoice" className="w-full" />
                       <TemplatePrintMenu storeId={storeId} orderId={orderId} type="pickslip" className="w-full" />
@@ -402,24 +417,24 @@ export default function OrderDetailsPage() {
                     <div className="space-y-1.5">
                       {getCustomerEmail(order.billing) && (
                         <a href={`mailto:${getCustomerEmail(order.billing)}?subject=Order #${order.order_number || order.woo_id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
-                          <Mail className="h-3.5 w-3.5" /><span>Email invoice to customer</span><span className="ml-auto text-muted-foreground">→</span>
+                          <Mail className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.emailInvoice")}</span><span className="ml-auto text-muted-foreground">→</span>
                         </a>
                       )}
                       {linkedCustomer?.id ? (
                         <Link href={`/sites/${storeId}/customers/${linkedCustomer.id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
-                          <User className="h-3.5 w-3.5" /><span>View customer profile</span><span className="ml-auto text-muted-foreground">→</span>
+                          <User className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.viewCustomer")}</span><span className="ml-auto text-muted-foreground">→</span>
                         </Link>
                       ) : (
-                        <button disabled title={custEmailForLookup ? "No matching customer profile found" : "No customer info on this order"} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-                          <User className="h-3.5 w-3.5" /><span>View Customer</span><span className="ml-auto">→</span>
+                        <button disabled title={custEmailForLookup ? t("orderDetail.actions.noMatchingCustomer") : t("orderDetail.actions.noCustomerInfo")} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
+                          <User className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.viewCustomerShort")}</span><span className="ml-auto">→</span>
                         </button>
                       )}
                       <button disabled className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-                        <Send className="h-3.5 w-3.5" /><span>Resend new order notification</span><span className="ml-auto">→</span>
+                        <Send className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.resendNotification")}</span><span className="ml-auto">→</span>
                       </button>
                       {store?.url && (
                         <a href={`${store.url.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${order.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
-                          <ExternalLink className="h-3.5 w-3.5" /><span>Open in WP admin</span><span className="ml-auto text-muted-foreground">→</span>
+                          <ExternalLink className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.openInWp")}</span><span className="ml-auto text-muted-foreground">→</span>
                         </a>
                       )}
                     </div>
@@ -428,7 +443,7 @@ export default function OrderDetailsPage() {
 
                 <Card>
                   <CardContent className="p-4">
-                    <h3 className="text-sm font-semibold mb-3">Change Status</h3>
+                    <h3 className="text-sm font-semibold mb-3">{t("orderDetail.changeStatus")}</h3>
                     <div className="space-y-1.5">
                       {STATUS_OPTIONS.filter((s) => s !== order.status).map((s) => {
                         const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
@@ -437,7 +452,7 @@ export default function OrderDetailsPage() {
                         return (
                           <button key={s} disabled={!!savingStatus} onClick={() => handleStatusChange(s)} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs capitalize font-medium transition-all ring-1 hover:ring-2 disabled:opacity-50 disabled:cursor-not-allowed", style.bg, style.text, style.ring)}>
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
-                            <span>{style.label}</span>
+                            <span>{statusLabel(s)}</span>
                             {isSaving && <Check className="h-3 w-3 ml-auto" />}
                           </button>
                         );
@@ -448,28 +463,28 @@ export default function OrderDetailsPage() {
 
                 <Card>
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3"><FileText className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">Order Notes {wooNotes ? <span className="text-xs text-muted-foreground font-normal">({wooNotes.length})</span> : null}</h3></div>
+                    <div className="flex items-center gap-2 mb-3"><FileText className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.notes.title")} {wooNotes ? <span className="text-xs text-muted-foreground font-normal">({wooNotes.length})</span> : null}</h3></div>
                     <div className="space-y-2 mb-3 max-h-[280px] overflow-y-auto">
-                      {notesLoading && <div className="text-xs text-muted-foreground">Loading notes…</div>}
-                      {!notesLoading && allNotes.length === 0 && <div className="text-xs text-muted-foreground italic">No notes yet</div>}
+                      {notesLoading && <div className="text-xs text-muted-foreground">{t("orderDetail.notes.loading")}</div>}
+                      {!notesLoading && allNotes.length === 0 && <div className="text-xs text-muted-foreground italic">{t("orderDetail.notes.empty")}</div>}
                       {allNotes.map((n, i) => (
                         <div key={i} className={cn("rounded-md p-2.5 border", n.customer_note ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900" : "bg-muted/40 border-border")}>
                           <div className="text-xs leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: n.note }} />
                           <div className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1.5 flex-wrap">
                             <span>{fmtDateTime(n.date_created)}</span>
                             {n.author && <span className="text-muted-foreground/60">· {n.author}</span>}
-                            {n.customer_note && <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">Sent to customer</span>}
+                            {n.customer_note && <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">{t("orderDetail.notes.sentToCustomer")}</span>}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note..." className="text-xs resize-none min-h-[80px]" disabled={addNoteMutation.isPending} />
+                    <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder={t("orderDetail.notes.placeholder")} className="text-xs resize-none min-h-[80px]" disabled={addNoteMutation.isPending} />
                     <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer">
                       <Checkbox checked={noteIsCustomer} onCheckedChange={(v) => setNoteIsCustomer(!!v)} disabled={addNoteMutation.isPending} />
-                      <span>Send to customer (email)</span>
+                      <span>{t("orderDetail.notes.sendToCustomer")}</span>
                     </label>
                     <Button size="sm" className="w-full mt-2" disabled={!noteText.trim() || addNoteMutation.isPending} onClick={handleAddNote}>
-                      {addNoteMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</> : "Add note"}
+                      {addNoteMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />{t("orderDetail.notes.saving")}</> : t("orderDetail.notes.addNote")}
                     </Button>
                   </CardContent>
                 </Card>
