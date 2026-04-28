@@ -1,60 +1,29 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useTranslation } from "next-i18next";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Ban,
-  Briefcase,
-  Clock,
-  Search,
-  Filter,
-  RefreshCw,
-  RotateCcw,
-  Download,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Ban, Briefcase, Clock, Search, Filter, RefreshCw, RotateCcw, Download } from "lucide-react";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 import { cancelBulkJob, retryFailedBulkJobItems, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string; badge: string; label: string }> = {
-  pending: { icon: Clock, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground", label: "pending" },
-  running: { icon: Loader2, cls: "text-primary animate-spin", badge: "bg-primary/10 text-primary border-primary/20", label: "running" },
-  completed: { icon: CheckCircle2, cls: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "completed" },
-  partial: { icon: AlertCircle, cls: "text-amber-600", badge: "bg-amber-50 text-amber-700 border-amber-200", label: "partial" },
-  failed: { icon: XCircle, cls: "text-destructive", badge: "bg-destructive/10 text-destructive border-destructive/20", label: "failed" },
-  cancelled: { icon: Ban, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground", label: "cancelled" },
+const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string; badge: string }> = {
+  pending: { icon: Clock, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
+  running: { icon: Loader2, cls: "text-primary animate-spin", badge: "bg-primary/10 text-primary border-primary/20" },
+  completed: { icon: CheckCircle2, cls: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  partial: { icon: AlertCircle, cls: "text-amber-600", badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  failed: { icon: XCircle, cls: "text-destructive", badge: "bg-destructive/10 text-destructive border-destructive/20" },
+  cancelled: { icon: Ban, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
 };
 
 function effectiveStatus(job: BulkJob): string {
@@ -64,6 +33,7 @@ function effectiveStatus(job: BulkJob): string {
 
 function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
+  const { t } = useTranslation("site");
   const { data: jobs = [], isLoading, isFetching } = useStoreBulkJobs(id, 200);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -102,9 +72,9 @@ function BulkJobsInner() {
     try {
       await cancelBulkJob(j.id);
       qc.invalidateQueries({ queryKey: ["bulk-jobs"] });
-      toast({ title: "Job cancelled" });
+      toast({ title: t("bulkJobs.toasts.cancelled") });
     } catch (e) {
-      toast({ title: "Failed to cancel", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      toast({ title: t("bulkJobs.toasts.cancelFailed"), description: e instanceof Error ? e.message : "", variant: "destructive" });
     }
   };
 
@@ -131,14 +101,14 @@ function BulkJobsInner() {
     <div className="p-6 space-y-5 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Bulk Jobs</h1>
-          <p className="text-sm text-muted-foreground">Background jobs for {store.name}</p>
+          <h1 className="text-2xl font-semibold">{t("bulkJobs.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("bulkJobs.subtitle", { name: store.name })}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
             <Link href={`/sites/${id}/downloads`}>
               <Download className="h-4 w-4 mr-2" />
-              View downloads
+              {t("bulkJobs.viewDownloads")}
             </Link>
           </Button>
           <Button
@@ -148,7 +118,7 @@ function BulkJobsInner() {
             disabled={isFetching}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
+            {t("bulkJobs.refresh")}
           </Button>
         </div>
       </div>
@@ -162,7 +132,7 @@ function BulkJobsInner() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Jobs</p>
+                <p className="text-xs text-muted-foreground">{t("bulkJobs.stats.total")}</p>
               </div>
             </div>
           </CardContent>
@@ -175,7 +145,7 @@ function BulkJobsInner() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.running}</p>
-                <p className="text-xs text-muted-foreground">Active</p>
+                <p className="text-xs text-muted-foreground">{t("bulkJobs.stats.active")}</p>
               </div>
             </div>
           </CardContent>
@@ -188,7 +158,7 @@ function BulkJobsInner() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.completed}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-xs text-muted-foreground">{t("bulkJobs.stats.completed")}</p>
               </div>
             </div>
           </CardContent>
@@ -201,7 +171,7 @@ function BulkJobsInner() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.failed}</p>
-                <p className="text-xs text-muted-foreground">Failed</p>
+                <p className="text-xs text-muted-foreground">{t("bulkJobs.stats.failed")}</p>
               </div>
             </div>
           </CardContent>
@@ -214,7 +184,7 @@ function BulkJobsInner() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.totalProcessed.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Records Processed</p>
+                <p className="text-xs text-muted-foreground">{t("bulkJobs.stats.processed")}</p>
               </div>
             </div>
           </CardContent>
@@ -227,33 +197,33 @@ function BulkJobsInner() {
             <Filter className="h-4 w-4 text-muted-foreground" />
             <div className="relative flex-1 min-w-[200px] max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input placeholder="Search jobs..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder={t("bulkJobs.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="running">Running</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="all">{t("bulkJobs.filters.allStatus")}</SelectItem>
+                <SelectItem value="pending">{t("bulkJobs.statuses.pending")}</SelectItem>
+                <SelectItem value="running">{t("bulkJobs.statuses.running")}</SelectItem>
+                <SelectItem value="completed">{t("bulkJobs.statuses.completed")}</SelectItem>
+                <SelectItem value="failed">{t("bulkJobs.statuses.failed")}</SelectItem>
+                <SelectItem value="cancelled">{t("bulkJobs.statuses.cancelled")}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {jobTypes.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {JOB_TYPE_LABEL[t as keyof typeof JOB_TYPE_LABEL] || t}
+                <SelectItem value="all">{t("bulkJobs.filters.allTypes")}</SelectItem>
+                {jobTypes.map((tt) => (
+                  <SelectItem key={tt} value={tt}>
+                    {JOB_TYPE_LABEL[tt as keyof typeof JOB_TYPE_LABEL] || tt}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {(search || statusFilter !== "all" || typeFilter !== "all") && (
               <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); }}>
-                Clear
+                {t("bulkJobs.filters.clear")}
               </Button>
             )}
           </div>
@@ -262,31 +232,31 @@ function BulkJobsInner() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Job History</CardTitle>
+          <CardTitle className="text-base">{t("bulkJobs.history")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[240px]">Progress</TableHead>
-                <TableHead className="text-right">Success</TableHead>
-                <TableHead className="text-right">Failed</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("bulkJobs.columns.type")}</TableHead>
+                <TableHead>{t("bulkJobs.columns.status")}</TableHead>
+                <TableHead className="w-[240px]">{t("bulkJobs.columns.progress")}</TableHead>
+                <TableHead className="text-right">{t("bulkJobs.columns.succeeded")}</TableHead>
+                <TableHead className="text-right">{t("bulkJobs.columns.failed")}</TableHead>
+                <TableHead>{t("bulkJobs.columns.duration")}</TableHead>
+                <TableHead>{t("bulkJobs.columns.started")}</TableHead>
+                <TableHead className="text-right">{t("bulkJobs.columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />Loading jobs…
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />{t("bulkJobs.loading")}
                 </TableCell></TableRow>
               ) : filteredJobs.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
                   <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  {jobs.length === 0 ? "No bulk jobs yet" : "No jobs match your filters"}
+                  {jobs.length === 0 ? t("bulkJobs.empty.none") : t("bulkJobs.empty.noMatches")}
                 </TableCell></TableRow>
               ) : (
                 filteredJobs.map((j) => {
@@ -303,7 +273,7 @@ function BulkJobsInner() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
-                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{meta.label}</Badge>
+                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -325,15 +295,15 @@ function BulkJobsInner() {
                         <div className="flex items-center justify-end gap-2">
                           {j.error_message && (
                             <span title={j.error_message} className="text-[11px] text-destructive inline-flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" /> error
+                              <AlertCircle className="h-3 w-3" /> {t("bulkJobs.row.error")}
                             </span>
                           )}
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedJob(j)}>
-                            View
+                            {t("bulkJobs.row.view")}
                           </Button>
                           {running && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleCancel(j)}>
-                              Cancel
+                              {t("bulkJobs.row.cancel")}
                             </Button>
                           )}
                         </div>
@@ -353,6 +323,7 @@ function BulkJobsInner() {
 }
 
 function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () => void }) {
+  const { t } = useTranslation("site");
   const { toast } = useToast();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
@@ -380,10 +351,13 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
     try {
       const next = await retryFailedBulkJobItems(job.id, force !== undefined ? { force } : undefined);
       qc.invalidateQueries({ queryKey: ["bulk-jobs"] });
-      toast({ title: "Retry job queued", description: `Re-running ${next.total} failed item${next.total === 1 ? "" : "s"}` });
+      toast({
+        title: t("bulkJobs.toasts.retryQueued"),
+        description: t("bulkJobs.toasts.retryQueuedDesc", { count: next.total }),
+      });
       onClose();
     } catch (e) {
-      toast({ title: "Retry failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      toast({ title: t("bulkJobs.toasts.retryFailed"), description: e instanceof Error ? e.message : "", variant: "destructive" });
     } finally {
       setRetrying(false);
     }
@@ -396,35 +370,35 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
           <DialogTitle className="flex items-center gap-2">
             <Icon className={`h-5 w-5 ${meta.cls}`} />
             {JOB_TYPE_LABEL[job.job_type as keyof typeof JOB_TYPE_LABEL] || job.job_type}
-            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{meta.label}</Badge>
+            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
           </DialogTitle>
-          <DialogDescription>Job ID: <code className="text-xs">{job.id}</code></DialogDescription>
+          <DialogDescription>{t("bulkJobs.details.jobId")} <code className="text-xs">{job.id}</code></DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-5 pb-2">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-lg border p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Total</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.total")}</p>
                 <p className="text-lg font-semibold font-mono">{job.total}</p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Processed</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.processed")}</p>
                 <p className="text-lg font-semibold font-mono">{job.processed}</p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Succeeded</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.succeeded")}</p>
                 <p className="text-lg font-semibold font-mono text-emerald-600">{job.succeeded}</p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Failed</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.failed")}</p>
                 <p className="text-lg font-semibold font-mono text-destructive">{job.failed}</p>
               </div>
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Progress</span>
+                <span>{t("bulkJobs.details.progress")}</span>
                 <span className="font-mono">{pct}%</span>
               </div>
               <Progress value={pct} className="h-2" />
@@ -432,19 +406,19 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Created</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">{t("bulkJobs.details.created")}</p>
                 <p>{fmt(job.created_at)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Started</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">{t("bulkJobs.details.started")}</p>
                 <p>{fmt(job.started_at)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Completed</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">{t("bulkJobs.details.completed")}</p>
                 <p>{fmt(job.completed_at)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">Duration</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1">{t("bulkJobs.details.duration")}</p>
                 <p className="font-mono">{dur}</p>
               </div>
             </div>
@@ -452,7 +426,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
             {job.error_message && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
                 <p className="text-xs font-medium text-destructive mb-1 inline-flex items-center gap-1">
-                  <AlertCircle className="h-3.5 w-3.5" /> Job Error
+                  <AlertCircle className="h-3.5 w-3.5" /> {t("bulkJobs.details.jobError")}
                 </p>
                 <p className="text-sm text-destructive/90">{job.error_message}</p>
               </div>
@@ -460,7 +434,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
 
             {payload && (
               <div>
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1.5">Payload</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-1.5">{t("bulkJobs.details.payload")}</p>
                 <pre className="rounded-lg border bg-muted/30 p-3 text-xs font-mono overflow-x-auto max-h-64">
 {JSON.stringify(payload, null, 2)}
                 </pre>
@@ -471,42 +445,24 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-[10px] uppercase text-muted-foreground tracking-wide">
-                    Per-item Errors ({errors.length})
+                    {t("bulkJobs.details.perItemErrors", { count: errors.length })}
                   </p>
                   <div className="flex items-center gap-2">
                     {isDeleteJob ? (
                       <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={() => handleRetry(false)}
-                          disabled={retrying}
-                        >
+                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => handleRetry(false)} disabled={retrying}>
                           <RotateCcw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
-                          Retry (trash)
+                          {t("bulkJobs.details.retryTrash")}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={() => handleRetry(true)}
-                          disabled={retrying}
-                        >
+                        <Button size="sm" variant="destructive" className="h-7 text-xs gap-1.5" onClick={() => handleRetry(true)} disabled={retrying}>
                           <RotateCcw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
-                          Retry (force delete)
+                          {t("bulkJobs.details.retryForce")}
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs gap-1.5"
-                        onClick={() => handleRetry()}
-                        disabled={retrying}
-                      >
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => handleRetry()} disabled={retrying}>
                         <RotateCcw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
-                        Retry failed items
+                        {t("bulkJobs.details.retryFailed")}
                       </Button>
                     )}
                   </div>
