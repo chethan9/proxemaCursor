@@ -43,5 +43,13 @@
       "classic": { "name": "クラシック Shopify", "tagline": "クリーンな Polaris スタイル、シャープなエッジ" },
       "modern": { "name": "モダン", "tagline": "柔らかな表面、丸い角" }
     }
+  },
+  "myActivity": {
+    "title": "マイアクティビティ",
+    "subtitle": "プラットフォームでの最近の操作。",
+    "loading": "読み込み中…",
+    "empty": "アクティビティはまだありません。",
+    "loadMore": "さらに読み込む",
+    "viewAll": "完全な監査ログを表示"
   }
 }

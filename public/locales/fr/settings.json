@@ -43,5 +43,13 @@
       "classic": { "name": "Shopify Classique", "tagline": "Style Polaris épuré, bords nets" },
       "modern": { "name": "Moderne", "tagline": "Surfaces douces, coins arrondis" }
     }
+  },
+  "myActivity": {
+    "title": "Mon activité",
+    "subtitle": "Vos actions récentes sur la plateforme.",
+    "loading": "Chargement…",
+    "empty": "Aucune activité pour le moment.",
+    "loadMore": "Charger plus",
+    "viewAll": "Voir le journal d'audit complet"
   }
 }

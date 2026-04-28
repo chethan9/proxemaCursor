@@ -43,5 +43,13 @@
       "classic": { "name": "Shopify Clásico", "tagline": "Estilo Polaris limpio, bordes definidos" },
       "modern": { "name": "Moderno", "tagline": "Superficies suaves, esquinas redondeadas" }
     }
+  },
+  "myActivity": {
+    "title": "Mi actividad",
+    "subtitle": "Tus acciones recientes en la plataforma.",
+    "loading": "Cargando…",
+    "empty": "Aún sin actividad.",
+    "loadMore": "Cargar más",
+    "viewAll": "Ver registro de auditoría completo"
   }
 }

@@ -43,5 +43,13 @@
       "classic": { "name": "经典 Shopify", "tagline": "Polaris 风格，锐利边缘" },
       "modern": { "name": "现代", "tagline": "柔和表面，圆角" }
     }
+  },
+  "myActivity": {
+    "title": "我的活动",
+    "subtitle": "您在平台上的最近操作。",
+    "loading": "加载中…",
+    "empty": "暂无活动。",
+    "loadMore": "加载更多",
+    "viewAll": "查看完整审计日志"
   }
 }
