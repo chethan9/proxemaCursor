@@ -202,5 +202,50 @@
     "extra_one": "{{count}} extra",
     "extra_other": "{{count}} extra",
     "nav": "Translations"
+  },
+  "paymentMethods": {
+    "title": "Payment Methods",
+    "subtitle": "Define payment gateways. The <code>key</code> must match the exact WooCommerce <code>payment_method</code> value.",
+    "addMethod": "Add method",
+    "superAdminRequired": "Super admin access required.",
+    "columns": {
+      "icon": "Icon",
+      "label": "Label",
+      "key": "Key",
+      "description": "Description",
+      "actions": "Actions"
+    },
+    "empty": "No payment methods defined yet",
+    "addFirst": "Add your first",
+    "dialog": {
+      "addTitle": "Add payment method",
+      "editTitle": "Edit payment method",
+      "description": "The <strong>key</strong> must match exactly what WooCommerce sends in <code>payment_method</code> (e.g. <code>myfatoorah_v2</code>, <code>stripe</code>, <code>cod</code>).",
+      "keyLabel": "Key *",
+      "labelLabel": "Label *",
+      "iconUrlLabel": "Icon URL",
+      "descriptionLabel": "Description",
+      "keyPlaceholder": "myfatoorah_v2",
+      "labelPlaceholder": "MyFatoorah",
+      "iconUrlPlaceholder": "https://...",
+      "cancel": "Cancel",
+      "update": "Update",
+      "create": "Create"
+    },
+    "delete": {
+      "title": "Delete payment method?",
+      "body": "Delete \"{{label}}\"? Orders with this method will fall back to showing the raw key.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "loadFailed": "Failed to load",
+      "keyLabelRequired": "Key and label required",
+      "updated": "Updated",
+      "created": "Created",
+      "saveFailed": "Save failed",
+      "deleted": "Deleted",
+      "deleteFailed": "Delete failed"
+    }
   }
 }
