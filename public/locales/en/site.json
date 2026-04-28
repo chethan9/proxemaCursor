@@ -633,32 +633,40 @@
     }
   },
   "taxonomy": {
-    "categoriesTitle": "Categories",
-    "tagsTitle": "Tags",
-    "brandsTitle": "Brands",
-    "search": "Search…",
-    "addCategory": "Add category",
-    "addTag": "Add tag",
-    "addBrand": "Add brand",
+    "search": "Search {{mode}}…",
+    "sort": "Sort",
+    "sortBy": "Sort by",
+    "export": "Export",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "refreshTitle": "Refresh from WooCommerce",
+    "newCategory": "New category",
+    "newTag": "New tag",
+    "newBrand": "New brand",
+    "rows": "Rows:",
+    "sortOptions": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "countDesc": "Most products",
+      "countAsc": "Fewest products",
+      "recent": "Recently added"
+    },
     "columns": {
       "name": "Name",
       "slug": "Slug",
-      "parent": "Parent",
-      "count": "Items",
-      "description": "Description"
-    },
-    "dialog": {
-      "create": "Create",
-      "edit": "Edit",
-      "name": "Name",
-      "slug": "Slug",
+      "products": "Products",
       "description": "Description",
-      "parent": "Parent (optional)",
-      "image": "Image",
-      "save": "Save",
-      "cancel": "Cancel"
+      "wooId": "Woo ID"
     },
-    "empty": "Nothing here yet."
+    "empty": {
+      "noMatch": "No {{mode}} match \"{{search}}\"",
+      "noItems": "No {{mode}} yet",
+      "noItemsHint": "Create one or trigger a sync to pull them in."
+    },
+    "toasts": {
+      "synced": "Synced {{count}} {{mode}}",
+      "refreshFailed": "Refresh failed"
+    }
   },
   "downloads": {
     "title": "Downloads",

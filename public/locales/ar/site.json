@@ -647,28 +647,39 @@
     }
   },
   "taxonomy": {
-    "categories": {
-      "title": "الفئات",
-      "addNew": "فئة جديدة",
-      "empty": "لا توجد فئات بعد"
+    "search": "ابحث في {{mode}}…",
+    "sort": "ترتيب",
+    "sortBy": "ترتيب حسب",
+    "export": "تصدير",
+    "refresh": "تحديث",
+    "refreshing": "جاري التحديث…",
+    "refreshTitle": "تحديث من WooCommerce",
+    "newCategory": "فئة جديدة",
+    "newTag": "وسم جديد",
+    "newBrand": "علامة تجارية جديدة",
+    "rows": "صفوف:",
+    "sortOptions": {
+      "nameAsc": "الاسم أ→ي",
+      "nameDesc": "الاسم ي→أ",
+      "countDesc": "الأكثر منتجات",
+      "countAsc": "الأقل منتجات",
+      "recent": "أُضيف مؤخراً"
     },
-    "tags": {
-      "title": "الوسوم",
-      "addNew": "وسم جديد",
-      "empty": "لا توجد وسوم بعد"
-    },
-    "brands": {
-      "title": "العلامات التجارية",
-      "addNew": "علامة جديدة",
-      "empty": "لا توجد علامات تجارية بعد"
-    },
-    "fields": {
+    "columns": {
       "name": "الاسم",
-      "slug": "الرابط",
+      "slug": "المعرّف النصي",
+      "products": "المنتجات",
       "description": "الوصف",
-      "parent": "الأصل",
-      "image": "الصورة",
-      "count": "عدد المنتجات"
+      "wooId": "معرّف Woo"
+    },
+    "empty": {
+      "noMatch": "لا توجد {{mode}} تطابق \"{{search}}\"",
+      "noItems": "لا توجد {{mode}} بعد",
+      "noItemsHint": "أنشئ واحدة أو شغّل المزامنة لجلبها."
+    },
+    "toasts": {
+      "synced": "تمت مزامنة {{count}} {{mode}}",
+      "refreshFailed": "فشل التحديث"
     }
   },
   "downloads": {

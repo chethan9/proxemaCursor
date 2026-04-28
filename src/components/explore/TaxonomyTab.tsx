@@ -1,7 +1,6 @@
 import { useState, Fragment, useRef } from "react";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { ChevronRight, ChevronDown, Search, Download, ArrowLeft, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2, RefreshCw } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { ChevronRight, ChevronDown, Search, Download, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,16 +39,16 @@ type Props = {
 
 const PAGE_SIZES = [25, 50, 100, 200, 500, 1000];
 
-const SORT_OPTIONS: { field: TaxonomySortField; direction: TaxonomySortDirection; label: string }[] = [
-  { field: "name", direction: "asc", label: "Name A→Z" },
-  { field: "name", direction: "desc", label: "Name Z→A" },
-  { field: "count", direction: "desc", label: "Most products" },
-  { field: "count", direction: "asc", label: "Fewest products" },
-  { field: "created_at", direction: "desc", label: "Recently added" },
+const SORT_OPTIONS: { field: TaxonomySortField; direction: TaxonomySortDirection; key: string }[] = [
+  { field: "name", direction: "asc", key: "nameAsc" },
+  { field: "name", direction: "desc", key: "nameDesc" },
+  { field: "count", direction: "desc", key: "countDesc" },
+  { field: "count", direction: "asc", key: "countAsc" },
+  { field: "created_at", direction: "desc", key: "recent" },
 ];
 
-export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader, storeName, storeUrl }: Props) {
-  const router = useRouter();
+export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }: Props) {
+  const { t } = useTranslation("site");
   const { toast } = useToast();
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
@@ -70,9 +69,6 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const showRefetchOverlay = isFetching && !isLoading && items.length > 0;
   useLoadingEffect(isFetching);
-  const parentPool = mode === "categories"
-    ? (allCats || []).map((t) => ({ ...t, parent_woo_id: (t as { parent_id?: number }).parent_id ?? null }))
-    : [];
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
@@ -84,12 +80,12 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
     exportCsv(
       items,
       [
-        { key: "woo_id", label: "Woo ID", accessor: (r) => r.woo_id },
-        { key: "name", label: "Name", accessor: (r) => r.name },
-        { key: "slug", label: "Slug", accessor: (r) => r.slug },
-        { key: "description", label: "Description", accessor: (r) => r.description || "" },
+        { key: "woo_id", label: t("taxonomy.columns.wooId"), accessor: (r) => r.woo_id },
+        { key: "name", label: t("taxonomy.columns.name"), accessor: (r) => r.name },
+        { key: "slug", label: t("taxonomy.columns.slug"), accessor: (r) => r.slug },
+        { key: "description", label: t("taxonomy.columns.description"), accessor: (r) => r.description || "" },
         { key: "parent", label: "Parent Woo ID", accessor: (r) => (r as { parent_woo_id?: number | null }).parent_woo_id || "" },
-        { key: "count", label: "Products", accessor: (r) => r.count || 0 },
+        { key: "count", label: t("taxonomy.columns.products"), accessor: (r) => r.count || 0 },
       ],
       `${mode}-${storeName || storeId}`
     );
@@ -105,17 +101,17 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Refresh failed (${res.status})`);
-      toast({ title: `Synced ${data.synced ?? 0} ${mode}` });
+      toast({ title: t("taxonomy.toasts.synced", { count: data.synced ?? 0, mode }) });
       await qc.invalidateQueries({ queryKey: ["taxonomy", storeId, mode] });
       await qc.invalidateQueries({ queryKey: ["taxonomy-all-categories", storeId] });
     } catch (e) {
-      toast({ title: "Refresh failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+      toast({ title: t("taxonomy.toasts.refreshFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setRefreshing(false);
     }
   }
 
-  const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";
+  const newLabel = mode === "categories" ? t("taxonomy.newCategory") : mode === "tags" ? t("taxonomy.newTag") : t("taxonomy.newBrand");
   const Icon = mode === "categories" ? FolderTree : mode === "tags" ? TagIcon : Award;
 
   return (
@@ -125,13 +121,13 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("taxonomy.sort")}: ${t(`taxonomy.sortOptions.${sort.key}`)}`}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
-                  <span className="text-xs">Sort</span>
+                  <span className="text-xs">{t("taxonomy.sort")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("taxonomy.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {SORT_OPTIONS.map((opt, i) => (
                   <DropdownMenuItem
@@ -139,7 +135,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                     onClick={() => { setSort(opt); setPage(0); }}
                     className={sort.field === opt.field && sort.direction === opt.direction ? "bg-accent" : ""}
                   >
-                    {opt.label}
+                    {t(`taxonomy.sortOptions.${opt.key}`)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -154,7 +150,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                   ref={searchInputRef}
                   value={search}
                   onChange={(e) => { onSearchChange(e.target.value); setPage(0); }}
-                  placeholder={`Search ${mode}…`}
+                  placeholder={t("taxonomy.search", { mode })}
                   className="pl-9 pr-12 h-9"
                 />
                 {!search && (
@@ -168,13 +164,13 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={items.length === 0} onClick={handleExport} title="Export CSV">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={items.length === 0} onClick={handleExport} title={t("taxonomy.export")}>
               <Download className="h-3.5 w-3.5" />
-              <span className="text-xs">Export</span>
+              <span className="text-xs">{t("taxonomy.export")}</span>
             </Button>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={refreshing} onClick={handleRefresh} title="Refresh from WooCommerce">
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={refreshing} onClick={handleRefresh} title={t("taxonomy.refreshTitle")}>
               <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-              <span className="text-xs">{refreshing ? "Refreshing…" : "Refresh"}</span>
+              <span className="text-xs">{refreshing ? t("taxonomy.refreshing") : t("taxonomy.refresh")}</span>
             </Button>
             <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -185,7 +181,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                 <>
                   <div className="h-4 w-px bg-border" />
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>Rows:</span>
+                    <span>{t("taxonomy.rows")}</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1">{pageSize}</Button>
@@ -209,7 +205,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
             </div>
             <Button size="sm" className="h-9 px-3 gap-1.5" onClick={() => setDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
-              <span className="text-xs">New {singular}</span>
+              <span className="text-xs">{newLabel}</span>
             </Button>
           </div>
         </div>
@@ -223,11 +219,11 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead className="w-8"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead className="text-right">Products</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Woo ID</TableHead>
+                  <TableHead>{t("taxonomy.columns.name")}</TableHead>
+                  <TableHead>{t("taxonomy.columns.slug")}</TableHead>
+                  <TableHead className="text-right">{t("taxonomy.columns.products")}</TableHead>
+                  <TableHead>{t("taxonomy.columns.description")}</TableHead>
+                  <TableHead className="text-right">{t("taxonomy.columns.wooId")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -242,37 +238,37 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, embedHeader
                     <TableCell colSpan={6} className="text-center py-16">
                       <Icon className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        {search ? `No ${mode} match "${search}"` : `No ${mode} yet`}
+                        {search ? t("taxonomy.empty.noMatch", { mode, search }) : t("taxonomy.empty.noItems", { mode })}
                       </p>
                       {!search && (
-                        <p className="text-xs text-muted-foreground/70 mt-1">Create one or trigger a sync to pull them in.</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">{t("taxonomy.empty.noItemsHint")}</p>
                       )}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  items.map((t) => {
-                    const isExpanded = expanded === t.id;
+                  items.map((item) => {
+                    const isExpanded = expanded === item.id;
                     return (
-                      <Fragment key={t.id}>
+                      <Fragment key={item.id}>
                         <TableRow
-                          onClick={() => setExpanded(isExpanded ? null : t.id)}
+                          onClick={() => setExpanded(isExpanded ? null : item.id)}
                           className={`cursor-pointer ${isExpanded ? "bg-muted/30 hover:bg-muted/30" : "hover:bg-muted/30"}`}
                         >
                           <TableCell className="w-8">
                             {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                           </TableCell>
-                          <TableCell className="font-medium">{t.name}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{t.slug}</TableCell>
-                          <TableCell className="text-right tabular-nums">{t.count ?? 0}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs max-w-md truncate">{t.description || "—"}</TableCell>
-                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{t.woo_id ?? "—"}</TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{item.slug}</TableCell>
+                          <TableCell className="text-right tabular-nums">{item.count ?? 0}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs max-w-md truncate">{item.description || "—"}</TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{item.woo_id ?? "—"}</TableCell>
                         </TableRow>
                         {isExpanded && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
                             <TableCell colSpan={6} className="p-0">
                               <div onClick={(e) => e.stopPropagation()}>
                                 <TaxonomyRowExpanded
-                                  item={t}
+                                  item={item}
                                   mode={mode}
                                   storeId={storeId}
                                   onClose={() => setExpanded(null)}
