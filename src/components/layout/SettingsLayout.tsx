@@ -34,6 +34,13 @@ export function SettingsLayout({ children, title = "Settings", requirePermission
       ],
     },
     {
+      label: "Team",
+      items: [
+        { href: "/settings/users", icon: UserCog, label: "Users", show: can(PERMISSIONS.USERS_VIEW) || isSuperAdmin },
+        { href: "/settings/roles", icon: Shield, label: "Roles", show: can(PERMISSIONS.ROLES_VIEW) || isSuperAdmin },
+      ],
+    },
+    {
       label: "Admin",
       items: [
         { href: "/settings/plans", icon: Layers, label: "Plans", show: isSuperAdmin },

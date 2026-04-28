@@ -20,7 +20,6 @@ function findBestScroller(): HTMLElement | Window {
     if (doc.scrollHeight > doc.clientHeight + 10) return window;
     return window;
   }
-  // Pick the one with largest scrollHeight (main content usually)
   candidates.sort((a, b) => b.scrollHeight - a.scrollHeight);
   return candidates[0];
 }
@@ -40,9 +39,15 @@ function getMetrics(target: HTMLElement | Window) {
 
 export function ScrollToEdgeButton() {
   const [mode, setMode] = useState<"hidden" | "up" | "down">("hidden");
+  const [isRtl, setIsRtl] = useState(false);
   const targetRef = useRef<HTMLElement | Window | null>(null);
 
   useEffect(() => {
+    const updateDir = () => setIsRtl(document.documentElement.dir === "rtl");
+    updateDir();
+    const dirObserver = new MutationObserver(updateDir);
+    dirObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["dir", "lang"] });
+
     const attachedTargets = new Set<HTMLElement | Window>();
 
     const update = () => {
@@ -56,14 +61,12 @@ export function ScrollToEdgeButton() {
       }
       setMode(scrollTop > 100 ? "up" : "down");
 
-      // Attach listener to newly-discovered scroller
       if (!attachedTargets.has(target)) {
         attachedTargets.add(target);
         target.addEventListener("scroll", update, { passive: true } as AddEventListenerOptions);
       }
     };
 
-    // Also listen to window scroll
     window.addEventListener("scroll", update, { passive: true });
     attachedTargets.add(window);
 
@@ -85,6 +88,7 @@ export function ScrollToEdgeButton() {
       attachedTargets.forEach((t) => t.removeEventListener("scroll", update));
       ro.disconnect();
       mo.disconnect();
+      dirObserver.disconnect();
       clearTimeout(initialDelay);
       clearTimeout(secondDelay);
       clearInterval(interval);
@@ -106,9 +110,10 @@ export function ScrollToEdgeButton() {
       onClick={handleClick}
       aria-label={mode === "up" ? "Scroll to top" : "Scroll to bottom"}
       className={cn(
-        "fixed bottom-6 right-6 h-10 w-10 rounded-full border bg-background shadow-lg",
+        "fixed bottom-6 h-10 w-10 rounded-full border bg-background shadow-lg",
         "flex items-center justify-center text-foreground/80 hover:text-foreground hover:shadow-xl",
         "transition-all duration-200",
+        isRtl ? "left-6" : "right-6",
         visible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
       )}
       style={{ zIndex: 9999 }}
