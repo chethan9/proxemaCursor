@@ -118,7 +118,7 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
         </CardContent>
       </Card>
 
-      <div className="lg:sticky lg:top-4 h-fit space-y-4">
+      <div className="lg:sticky lg:top-4 h-fit space-y-3">
         {setForm && (
           <Card>
             <CardContent className="p-4 space-y-2.5">

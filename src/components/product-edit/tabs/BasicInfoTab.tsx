@@ -79,18 +79,18 @@ export function BasicInfoTab({ storeId, form, setForm }: Props) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="space-y-1.5">
         <Label required>Product Name</Label>
         <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
       </div>
       <div className="space-y-1.5">
         <Label>Description</Label>
-        <RichTextEditor value={form.description} onChange={(html) => setForm((p) => ({ ...p, description: html }))} rows={6} />
+        <RichTextEditor value={form.description} onChange={(html) => setForm((p) => ({ ...p, description: html }))} rows={4} />
       </div>
       <div className="space-y-1.5">
         <Label>Short Description</Label>
-        <RichTextEditor value={form.short_description || ""} onChange={(html) => setForm((p) => ({ ...p, short_description: html }))} rows={3} />
+        <RichTextEditor value={form.short_description || ""} onChange={(html) => setForm((p) => ({ ...p, short_description: html }))} rows={2} />
       </div>
 
       <div className="flex items-start gap-4">

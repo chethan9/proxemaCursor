@@ -415,11 +415,9 @@ export default function OrderDetailsPage() {
                       <TemplatePrintMenu storeId={storeId} orderId={orderId} type="pickslip" className="w-full" />
                     </div>
                     <div className="space-y-1.5">
-                      {getCustomerEmail(order.billing) && (
-                        <a href={`mailto:${getCustomerEmail(order.billing)}?subject=Order #${order.order_number || order.woo_id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
-                          <Mail className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.emailInvoice")}</span><span className="ml-auto text-muted-foreground">→</span>
-                        </a>
-                      )}
+                      <button disabled title={t("orderDetail.actions.emailInvoiceUnavailable")} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
+                        <Mail className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.emailInvoice")}</span><span className="ml-auto">→</span>
+                      </button>
                       {linkedCustomer?.id ? (
                         <Link href={`/sites/${storeId}/customers/${linkedCustomer.id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
                           <User className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.viewCustomer")}</span><span className="ml-auto text-muted-foreground">→</span>

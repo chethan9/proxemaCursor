@@ -54,9 +54,10 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
 
   const applyBulk = () => {
     if (!bulkMode) return;
+    if (selected.size === 0) return;
     const val = bulkValue.trim();
     if (!val && bulkMode !== "stock_quantity") return;
-    const targets = selected.size > 0 ? variations.filter((v) => selected.has(v.key)) : variations;
+    const targets = variations.filter((v) => selected.has(v.key));
     if (bulkMode === "sale_price" && val) {
       const sale = parseFloat(val);
       if (!Number.isNaN(sale) && sale > 0) {
@@ -82,13 +83,14 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
       patch.stock_quantity = val ? Number(val) : null;
       patch.manage_stock = true;
     }
-    onBulk(patch, selected.size > 0, selected);
+    onBulk(patch, true, selected);
     setBulkMode(null);
     setBulkValue("");
   };
 
   const setAllEnabled = (enabled: boolean) => {
-    onBulk({ enabled }, selected.size > 0, selected);
+    if (selected.size === 0) return;
+    onBulk({ enabled }, true, selected);
   };
 
   const deleteSelected = () => {
@@ -162,7 +164,7 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
       <div className="flex items-center gap-2 flex-wrap">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm" className="rounded-full">
+            <Button type="button" variant="outline" size="sm" disabled={selected.size === 0} className="rounded-full" title={selected.size === 0 ? "Select at least one variation" : undefined}>
               <MoreVertical className="h-3.5 w-3.5 mr-1.5" />Bulk actions {selected.size > 0 ? `(${selected.size})` : ""}
             </Button>
           </DropdownMenuTrigger>
@@ -171,8 +173,8 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
             <DropdownMenuItem onClick={() => setBulkMode("sale_price")}>Set sale price</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setBulkMode("stock_quantity")}>Set stock quantity</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setAllEnabled(true)}>Enable {selected.size > 0 ? "selected" : "all"}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAllEnabled(false)}>Disable {selected.size > 0 ? "selected" : "all"}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAllEnabled(true)}>Enable selected</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAllEnabled(false)}>Disable selected</DropdownMenuItem>
             {onBulkDelete && (
               <>
                 <DropdownMenuSeparator />
@@ -186,7 +188,7 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
         {bulkMode && (
           <>
             <NumberInput className="h-9 w-40" value={bulkValue} onValueChange={(v) => { setBulkValue(v); setBulkError(""); }} integer={bulkMode === "stock_quantity"} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
-            <Button size="sm" type="button" onClick={applyBulk} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply {selected.size > 0 ? `to ${selected.size}` : "to all"}</Button>
+            <Button size="sm" type="button" onClick={applyBulk} disabled={selected.size === 0} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply to {selected.size}</Button>
             <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
           </>
         )}
