@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ function slugify(s: string): string {
 }
 
 export function TaxonomyDialog({ open, onOpenChange, storeId, siteName, mode, parentOptions = [] }: Props) {
+  const qc = useQueryClient();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
@@ -63,7 +65,10 @@ export function TaxonomyDialog({ open, onOpenChange, storeId, siteName, mode, pa
     invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode), ["woo", "taxonomy", storeId, mode]],
     siteName,
     successToast: `${singular.charAt(0).toUpperCase() + singular.slice(1)} created`,
-    onSuccessExtra: () => onOpenChange(false),
+    onSuccessExtra: () => {
+      void qc.refetchQueries({ queryKey: ["taxonomy", mode, storeId], type: "active" });
+      onOpenChange(false);
+    },
     onErrorExtra: (err) => setError((err as Error).message),
   });
 

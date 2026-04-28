@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,7 @@ type Props = {
 
 export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [name, setName] = useState(item.name);
   const [slug, setSlug] = useState(item.slug || "");
   const [description, setDescription] = useState(item.description || "");
@@ -41,6 +43,9 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
     },
     invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode)],
     successToast: "Synced to WooCommerce",
+    onSuccessExtra: () => {
+      void qc.refetchQueries({ queryKey: ["taxonomy", mode, storeId], type: "active" });
+    },
   });
 
   const deleteMut = useSiteMutation<void, void>({
@@ -51,7 +56,10 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
     },
     invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode)],
     successToast: "Deleted from WooCommerce",
-    onSuccessExtra: () => onClose(),
+    onSuccessExtra: () => {
+      void qc.refetchQueries({ queryKey: ["taxonomy", mode, storeId], type: "active" });
+      onClose();
+    },
   });
 
   const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";

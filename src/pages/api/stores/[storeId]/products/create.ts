@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { quotaErrorPayload } from "@/lib/quota";
 import { canAddProductServer } from "@/lib/quota.server";
 import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
+import { refreshTaxonomyCounts, extractTaxonomyIds } from "@/lib/refresh-taxonomy-counts";
 
 type WooVariationInput = {
   id?: number;
@@ -347,6 +348,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: { woo_id: wooId, store_id: storeId },
       req,
     });
+
+    void Promise.all([
+      refreshTaxonomyCounts(creds, storeId, "categories", extractTaxonomyIds(created.categories)),
+      refreshTaxonomyCounts(creds, storeId, "tags", extractTaxonomyIds(created.tags)),
+      refreshTaxonomyCounts(creds, storeId, "brands", extractTaxonomyIds((created as Record<string, unknown>).brands)),
+    ]);
 
     return res.status(200).json(inserted);
   } catch (e) {

@@ -5,6 +5,7 @@ import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { WooApiError } from "@/lib/sync-error";
 import { logActivity } from "@/lib/activity-log";
 import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
+import { refreshTaxonomyCounts, extractTaxonomyIds } from "@/lib/refresh-taxonomy-counts";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -540,6 +541,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: { woo_id: localProduct.woo_id, store_id: storeId },
       req,
     });
+
+    {
+      const beforeBrands = extractTaxonomyIds((localProduct as { brands?: unknown }).brands);
+      const beforeCats = extractTaxonomyIds((localProduct as { categories?: unknown }).categories);
+      const beforeTags = extractTaxonomyIds((localProduct as { tags?: unknown }).tags);
+      const afterBrands = extractTaxonomyIds((updated as unknown as { brands?: unknown[] }).brands);
+      const afterCats = extractTaxonomyIds(updated.categories);
+      const afterTags = extractTaxonomyIds(updated.tags || []);
+      const allBrands = Array.from(new Set([...beforeBrands, ...afterBrands]));
+      const allCats = Array.from(new Set([...beforeCats, ...afterCats]));
+      const allTags = Array.from(new Set([...beforeTags, ...afterTags]));
+      void Promise.all([
+        refreshTaxonomyCounts(store, storeId, "categories", allCats),
+        refreshTaxonomyCounts(store, storeId, "tags", allTags),
+        refreshTaxonomyCounts(store, storeId, "brands", allBrands),
+      ]);
+    }
 
     return res.status(200).json(saved);
   } catch (err) {
