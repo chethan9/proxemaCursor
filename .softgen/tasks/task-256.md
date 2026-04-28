@@ -19,7 +19,7 @@ common.json now translated across all 10 locales. Next: create per-namespace JSO
 - [ ] Create en/orders.json (statuses, columns, detail labels), wire into OrdersTab + orders/[orderId].tsx
 - [x] Create en/billing.json (plan card, usage meter, checkout), wire into billing/index.tsx (checkout/return deferred)
 - [x] Create en/admin.json (activity wired; payment gateways/logs deferred)
-- [ ] Create en/settings.json (profile, theme, users, roles, branding, plans, subscriptions), wire into settings/* pages
+- [ ] Create en/settings.json (profile/theme/my-activity wired; users/roles/branding/plans/subscriptions/payment-methods/menu-editor deferred)
 - [x] Create en/pricing.json + 9 translations, wire into pricing.tsx (bonus — sub-components deferred)
 - [x] Translate auth + site + pricing namespaces into ar, es, fr, de, pt, hi, zh, ja, ru
 - [ ] Translate products/orders/billing/admin/settings namespaces into 9 non-English locales

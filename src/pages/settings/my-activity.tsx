@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { GetServerSideProps } from "next";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,12 @@ import { Loader2, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { listMyActivity, type ActivityLogEntry } from "@/services/activityLogService";
 import { ActivityFeedRow } from "@/components/ActivityFeedRow";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
 export default function MyActivityPage() {
   const { user } = useAuth();
+  const { t } = useTranslation("settings");
   const [rows, setRows] = useState<ActivityLogEntry[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [page, setPage] = useState(0);
@@ -34,16 +38,16 @@ export default function MyActivityPage() {
   }, [user?.id, page]);
 
   return (
-    <SettingsLayout title="My Activity">
+    <SettingsLayout title={t("myActivity.title")}>
       <div className="p-6 space-y-5 max-w-4xl">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            My Activity
+            {t("myActivity.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            A transparent record of every action you&apos;ve taken in the app.
-            {count !== null && <span className="ml-2">{count.toLocaleString()} total entries.</span>}
+            {t("myActivity.subtitle")}
+            {count !== null && <span className="ml-2">{count.toLocaleString()}</span>}
           </p>
         </div>
 
@@ -56,7 +60,7 @@ export default function MyActivityPage() {
           {!loading && rows.length === 0 && (
             <Card>
               <CardContent className="py-16 text-center text-sm text-muted-foreground">
-                No activity recorded yet. Your actions will appear here as you use the app.
+                {t("myActivity.empty")}
               </CardContent>
             </Card>
           )}
@@ -69,7 +73,7 @@ export default function MyActivityPage() {
           <div className="flex justify-center py-4">
             <Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Load more
+              {t("myActivity.loadMore")}
             </Button>
           </div>
         )}
@@ -77,3 +81,9 @@ export default function MyActivityPage() {
     </SettingsLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
+  },
+});
