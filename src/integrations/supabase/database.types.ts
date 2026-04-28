@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -1083,6 +1083,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      locales: {
+        Row: {
+          code: string
+          created_at: string
+          dir: string
+          enabled: boolean
+          is_default: boolean
+          name: string
+          native_name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          dir?: string
+          enabled?: boolean
+          is_default?: boolean
+          name: string
+          native_name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          dir?: string
+          enabled?: boolean
+          is_default?: boolean
+          name?: string
+          native_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       menu_configs: {
         Row: {
@@ -2440,6 +2473,57 @@ export type Database = {
             columns: ["current_version_id"]
             isOneToOne: false
             referencedRelation: "template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      translations: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          locale: string
+          namespace: string
+          needs_review: boolean
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          locale: string
+          namespace: string
+          needs_review?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          locale?: string
+          namespace?: string
+          needs_review?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translations_locale_fkey"
+            columns: ["locale"]
+            isOneToOne: false
+            referencedRelation: "locales"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "translations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
