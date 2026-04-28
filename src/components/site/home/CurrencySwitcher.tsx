@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "next-i18next";
 
 interface Props {
   currencies: { code: string; count: number }[];
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function CurrencySwitcher({ currencies, selected, onChange }: Props) {
+  const { t } = useTranslation("site");
   if (!currencies || currencies.length <= 1) return null;
   return (
     <div className="inline-flex items-center gap-1 rounded-lg border bg-background p-1 shadow-sm">
@@ -23,7 +25,7 @@ export function CurrencySwitcher({ currencies, selected, onChange }: Props) {
               ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
               : "text-muted-foreground hover:bg-muted"
           )}
-          title={`${c.count} order${c.count === 1 ? "" : "s"} in ${c.code} (last 30d)`}
+          title={t("home.cards.currencyTooltip", { count: c.count, code: c.code })}
         >
           {c.code}
           <span className="ml-1.5 opacity-70 tabular-nums">{c.count}</span>

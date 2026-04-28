@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useTranslation } from "next-i18next";
 
 const STATUS_COLORS: Record<string, string> = {
   processing: "hsl(221 83% 53%)",
@@ -20,20 +21,21 @@ interface Props {
 }
 
 export function OrderStatusDonut({ data, loading }: Props) {
+  const { t } = useTranslation("site");
   const total = data.reduce((sum, d) => sum + d.count, 0);
   const chartData = data.map((d) => ({ ...d, color: STATUS_COLORS[d.status] || STATUS_COLORS.unknown }));
 
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Order Status (30d)</CardTitle>
-        <p className="text-xs text-muted-foreground">Breakdown by order status</p>
+        <CardTitle className="text-base">{t("home.cards.orderStatus.title")}</CardTitle>
+        <p className="text-xs text-muted-foreground">{t("home.cards.orderStatus.subtitle")}</p>
       </CardHeader>
       <CardContent>
         {loading ? (
           <Skeleton className="h-[280px] w-full" />
         ) : total === 0 ? (
-          <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">No orders in last 30 days</div>
+          <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">{t("home.cards.orderStatus.empty")}</div>
         ) : (
           <div className="flex flex-col">
             <div className="h-[180px] relative">
@@ -51,7 +53,7 @@ export function OrderStatusDonut({ data, loading }: Props) {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <div className="text-2xl font-semibold">{total}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
+                <div className="text-xs text-muted-foreground">{t("home.cards.orderStatus.total")}</div>
               </div>
             </div>
             <div className="mt-3 space-y-1.5">

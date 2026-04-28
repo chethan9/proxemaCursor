@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ComposedChart } from "recharts";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "next-i18next";
 
 interface Props {
   data: { day: string; orders: number; revenue: number }[];
@@ -10,16 +11,19 @@ interface Props {
 }
 
 export function SalesTrendCard({ data, currency, loading }: Props) {
+  const { t } = useTranslation("site");
   const chartData = data.map((d) => ({
     ...d,
     label: format(parseISO(d.day), "MMM d"),
   }));
+  const revenueLabel = t("home.cards.salesTrend.revenue");
+  const ordersLabel = t("home.cards.salesTrend.orders");
 
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Sales Trend (30d)</CardTitle>
-        <p className="text-xs text-muted-foreground">Daily revenue and order count</p>
+        <CardTitle className="text-base">{t("home.cards.salesTrend.title")}</CardTitle>
+        <p className="text-xs text-muted-foreground">{t("home.cards.salesTrend.subtitle")}</p>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -49,12 +53,12 @@ export function SalesTrendCard({ data, currency, loading }: Props) {
                   }}
                   labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                   formatter={(value: number, name: string) => {
-                    if (name === "Revenue") return [`${value.toFixed(2)} ${currency}`, name];
+                    if (name === revenueLabel) return [`${value.toFixed(2)} ${currency}`, name];
                     return [value, name];
                   }}
                 />
-                <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue" stroke="hsl(var(--primary))" fill="url(#revGrad)" strokeWidth={2} />
-                <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+                <Area yAxisId="left" type="monotone" dataKey="revenue" name={revenueLabel} stroke="hsl(var(--primary))" fill="url(#revGrad)" strokeWidth={2} />
+                <Line yAxisId="right" type="monotone" dataKey="orders" name={ordersLabel} stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>

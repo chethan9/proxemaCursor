@@ -36,6 +36,32 @@
       "revenue": "Revenue",
       "vsPrev30d": "vs prev 30d",
       "last30d": "Last 30d"
+    },
+    "cards": {
+      "salesTrend": {
+        "title": "Sales Trend (30d)",
+        "subtitle": "Daily revenue and order count",
+        "revenue": "Revenue",
+        "orders": "Orders"
+      },
+      "orderStatus": {
+        "title": "Order Status (30d)",
+        "subtitle": "Breakdown by order status",
+        "empty": "No orders in last 30 days",
+        "total": "Total"
+      },
+      "recentOrders": {
+        "title": "Recent Orders",
+        "subtitle": "Last 10 orders",
+        "empty": "No orders yet"
+      },
+      "topProducts": {
+        "title": "Top Products",
+        "subtitle": "Best sellers (30d)",
+        "empty": "No sales in last 30 days",
+        "unitsSold": "{{count}} units sold"
+      },
+      "currencyTooltip": "{{count}} order(s) in {{code}} (last 30d)"
     }
   },
   "products": {

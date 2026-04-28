@@ -4,6 +4,7 @@ import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { format, parseISO } from "date-fns";
 import { useRouter } from "next/router";
 import Image from "next/image";
+import { useTranslation } from "next-i18next";
 
 interface RecentOrder {
   id: string;
@@ -32,13 +33,14 @@ function customerName(billing: unknown): string {
 }
 
 export function RecentOrdersCard({ orders, storeId, currency, loading }: Props) {
+  const { t } = useTranslation("site");
   const router = useRouter();
 
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Recent Orders</CardTitle>
-        <p className="text-xs text-muted-foreground">Last 10 orders</p>
+        <CardTitle className="text-base">{t("home.cards.recentOrders.title")}</CardTitle>
+        <p className="text-xs text-muted-foreground">{t("home.cards.recentOrders.subtitle")}</p>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
@@ -48,7 +50,7 @@ export function RecentOrdersCard({ orders, storeId, currency, loading }: Props) 
             ))}
           </div>
         ) : orders.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No orders yet</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t("home.cards.recentOrders.empty")}</div>
         ) : (
           <div className="divide-y">
             {orders.map((o) => {

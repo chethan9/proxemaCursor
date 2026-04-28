@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/router";
 import Image from "next/image";
+import { useTranslation } from "next-i18next";
 
 interface TopProduct {
   product_id: number;
@@ -20,13 +21,14 @@ interface Props {
 }
 
 export function TopProductsCard({ products, storeId, currency, loading }: Props) {
+  const { t } = useTranslation("site");
   const router = useRouter();
 
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Top Products</CardTitle>
-        <p className="text-xs text-muted-foreground">Best sellers (30d)</p>
+        <CardTitle className="text-base">{t("home.cards.topProducts.title")}</CardTitle>
+        <p className="text-xs text-muted-foreground">{t("home.cards.topProducts.subtitle")}</p>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
@@ -36,7 +38,7 @@ export function TopProductsCard({ products, storeId, currency, loading }: Props)
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No sales in last 30 days</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t("home.cards.topProducts.empty")}</div>
         ) : (
           <div className="divide-y">
             {products.map((p) => (
@@ -55,7 +57,7 @@ export function TopProductsCard({ products, storeId, currency, loading }: Props)
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{p.name || "—"}</div>
-                  <div className="text-xs text-muted-foreground">{p.units} units sold</div>
+                  <div className="text-xs text-muted-foreground">{t("home.cards.topProducts.unitsSold", { count: p.units })}</div>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-sm font-semibold tabular-nums">
