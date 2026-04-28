@@ -33,7 +33,7 @@ import { LogOut, Lock, Unlock, MoreHorizontal, Check, ChevronDown, PanelRight, S
 import { useTheme } from "next-themes";
 import { queryKeys } from "@/lib/query-client";
 import { useStores } from "@/hooks/queries/useStores";
-import { LOCALES, getLocaleMeta, type LocaleCode } from "@/lib/i18n";
+import { LOCALES, getLocaleMeta, NAMESPACES, type LocaleCode } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 
@@ -378,8 +378,20 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       document.documentElement.dir = getLocaleMeta(code).dir;
       document.documentElement.lang = code;
     }
-    // Instant client-side switch — next-i18next fetches new namespaces over HTTP and re-renders
-    void i18n.changeLanguage(code);
+    // Preload namespaces for the new locale in parallel — i18next has no HTTP backend on client
+    await Promise.all(
+      NAMESPACES.map(async (ns) => {
+        if (i18n.hasResourceBundle(code, ns)) return;
+        try {
+          const res = await fetch(`/locales/${code}/${ns}.json`);
+          if (res.ok) {
+            const data = await res.json();
+            i18n.addResourceBundle(code, ns, data, true, true);
+          }
+        } catch { /* ignore */ }
+      })
+    );
+    await i18n.changeLanguage(code);
     // Background: persist preference + audit log (non-blocking)
     if (user?.id) {
       void (async () => {
