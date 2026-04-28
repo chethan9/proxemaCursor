@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { listPaymentMethods, type PaymentMethod } from "@/services/paymentMethodService";
+import { listPaymentMethods, type PaymentMethodRow as PaymentMethod } from "@/services/paymentMethodService";
 import { supabase } from "@/integrations/supabase/client";
 
 type FormState = { id?: string; key: string; label: string; icon_url: string; description: string };
@@ -89,7 +89,7 @@ export default function PaymentMethodsPage() {
   };
 
   return (
-    <AuthGuard requireSuperAdmin fallback={<div className="p-6 text-sm text-muted-foreground">{t("paymentMethods.superAdminRequired")}</div>}>
+    <AuthGuard requireSuperAdmin>
       <SettingsLayout title={t("paymentMethods.title")}>
         <div className="p-6 max-w-5xl">
           <div className="flex items-center justify-between mb-5">
