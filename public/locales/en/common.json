@@ -26,6 +26,14 @@
     "apiManagement": "API management",
     "moreSites": "+{{count}} more sites"
   },
+  "siteNavGroups": {
+    "Catalog": "Catalog",
+    "Manage": "Manage",
+    "Analytics": "Analytics",
+    "Developer": "Developer",
+    "Administration": "Administration",
+    "Settings": "Settings"
+  },
   "userMenu": {
     "user": "User",
     "language": "Language",
@@ -46,7 +54,16 @@
     "confirm": "Confirm",
     "back": "Back",
     "next": "Next",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "viewAll": "View all",
+    "viewDetails": "View details",
+    "more": "More"
   },
   "status": {
     "active": "Active",

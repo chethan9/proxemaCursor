@@ -1,14 +1,75 @@
-<![CDATA[
 {
-  "app": { "name": "Proxema" },
+  "app": {
+    "name": "Proxema"
+  },
   "nav": {
-    "home": "الرئيسية", "orders": "الطلبات", "p
-...
-": "اللغة",
+    "home": "الرئيسية",
+    "dashboard": "لوحة التحكم",
+    "health": "الحالة",
+    "clients": "العملاء",
+    "developer": "المطوّر",
+    "administration": "الإدارة",
+    "billing": "الفوترة",
+    "settings": "الإعدادات",
+    "explore": "استكشاف",
+    "templates": "القوالب",
+    "orders": "الطلبات",
+    "products": "المنتجات",
+    "customers": "العملاء",
+    "categories": "الفئات",
+    "tags": "الوسوم",
+    "brands": "العلامات التجارية",
+    "downloads": "التنزيلات",
+    "bulkJobs": "المهام المجمعة",
+    "syncRuns": "عمليات المزامنة",
+    "webhooks": "الويب هوك",
+    "apiManagement": "إدارة الـ API",
+    "moreSites": "+{{count}} موقع إضافي"
+  },
+  "siteNavGroups": {
+    "Catalog": "الكتالوج",
+    "Manage": "الإدارة",
+    "Analytics": "التحليلات",
+    "Developer": "المطوّر",
+    "Administration": "الإدارة",
+    "Settings": "الإعدادات"
+  },
+  "userMenu": {
+    "user": "المستخدم",
+    "language": "اللغة",
     "theme": "السمة",
-    "light": "فاتح", "dark": "داكن", "system": "النظام"
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام",
+    "signOut": "تسجيل الخروج"
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "close": "إغلاق",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "next": "التالي",
+    "loading": "جاري التحميل…",
+    "search": "بحث",
+    "filter": "تصفية",
+    "export": "تصدير",
+    "import": "استيراد",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "viewAll": "عرض الكل",
+    "viewDetails": "عرض التفاصيل",
+    "more": "المزيد"
+  },
+  "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "pending": "قيد الانتظار",
+    "error": "خطأ",
+    "success": "نجاح"
   }
 }
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 1573 chars.]
