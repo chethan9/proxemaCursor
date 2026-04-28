@@ -51,5 +51,31 @@
     "empty": "Aún sin actividad.",
     "loadMore": "Cargar más",
     "viewAll": "Ver registro de auditoría completo"
+  },
+  "branding": {
+    "title": "Marca",
+    "lockMessage": "Solo los superadministradores pueden cambiar la marca.",
+    "identityTitle": "Identidad de marca",
+    "identitySubtitle": "Nombre de la app y logo de la barra lateral.",
+    "appName": "Nombre de la app",
+    "logoUrl": "URL del logo",
+    "uploadFile": "Subir archivo",
+    "uploading": "Subiendo…",
+    "logoAlt": "Logo",
+    "reset": "Restablecer",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Marca guardada",
+    "saveFailed": "Error al guardar",
+    "uploadFailed": "Error al subir",
+    "history": "Historial de cambios",
+    "lastChanges": "Últimos {{count}} cambios",
+    "noChanges": "Aún no se han registrado cambios.",
+    "system": "Sistema",
+    "diff": {
+      "appName": "Nombre de la app",
+      "logo": "Logo",
+      "preset": "Preajuste"
+    }
   }
 }

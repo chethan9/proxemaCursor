@@ -51,5 +51,31 @@
     "empty": "Aucune activité pour le moment.",
     "loadMore": "Charger plus",
     "viewAll": "Voir le journal d'audit complet"
+  },
+  "branding": {
+    "title": "Identité",
+    "lockMessage": "Seuls les super-administrateurs peuvent modifier l'identité.",
+    "identityTitle": "Identité de marque",
+    "identitySubtitle": "Nom de l'application et logo de la barre latérale.",
+    "appName": "Nom de l'application",
+    "logoUrl": "URL du logo",
+    "uploadFile": "Téléverser un fichier",
+    "uploading": "Envoi…",
+    "logoAlt": "Logo",
+    "reset": "Réinitialiser",
+    "save": "Enregistrer les modifications",
+    "saving": "Enregistrement…",
+    "saved": "Identité enregistrée",
+    "saveFailed": "Échec de l'enregistrement",
+    "uploadFailed": "Échec de l'envoi",
+    "history": "Historique des modifications",
+    "lastChanges": "{{count}} dernières modifications",
+    "noChanges": "Aucune modification enregistrée pour le moment.",
+    "system": "Système",
+    "diff": {
+      "appName": "Nom de l'app",
+      "logo": "Logo",
+      "preset": "Préréglage"
+    }
   }
 }

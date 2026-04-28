@@ -51,5 +51,31 @@
     "empty": "No activity yet.",
     "loadMore": "Load more",
     "viewAll": "View full audit log"
+  },
+  "branding": {
+    "title": "Branding",
+    "lockMessage": "Only super admins can change branding.",
+    "identityTitle": "Brand Identity",
+    "identitySubtitle": "Sidebar app name and logo.",
+    "appName": "App Name",
+    "logoUrl": "Logo URL",
+    "uploadFile": "Upload File",
+    "uploading": "Uploading…",
+    "logoAlt": "Logo",
+    "reset": "Reset",
+    "save": "Save Changes",
+    "saving": "Saving…",
+    "saved": "Branding saved",
+    "saveFailed": "Save failed",
+    "uploadFailed": "Upload failed",
+    "history": "Change History",
+    "lastChanges": "Last {{count}} changes",
+    "noChanges": "No changes recorded yet.",
+    "system": "System",
+    "diff": {
+      "appName": "App name",
+      "logo": "Logo",
+      "preset": "Preset"
+    }
   }
 }

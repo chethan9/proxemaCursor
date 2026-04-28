@@ -51,5 +51,31 @@
     "empty": "अभी कोई गतिविधि नहीं।",
     "loadMore": "और लोड करें",
     "viewAll": "पूरा ऑडिट लॉग देखें"
+  },
+  "branding": {
+    "title": "ब्रांडिंग",
+    "lockMessage": "केवल सुपर एडमिन ब्रांडिंग बदल सकते हैं।",
+    "identityTitle": "ब्रांड पहचान",
+    "identitySubtitle": "साइडबार ऐप नाम और लोगो।",
+    "appName": "ऐप नाम",
+    "logoUrl": "लोगो URL",
+    "uploadFile": "फ़ाइल अपलोड करें",
+    "uploading": "अपलोड हो रहा है…",
+    "logoAlt": "लोगो",
+    "reset": "रीसेट",
+    "save": "परिवर्तन सहेजें",
+    "saving": "सहेजा जा रहा है…",
+    "saved": "ब्रांडिंग सहेजी गई",
+    "saveFailed": "सहेजना विफल",
+    "uploadFailed": "अपलोड विफल",
+    "history": "परिवर्तन इतिहास",
+    "lastChanges": "अंतिम {{count}} परिवर्तन",
+    "noChanges": "अभी तक कोई परिवर्तन रिकॉर्ड नहीं।",
+    "system": "सिस्टम",
+    "diff": {
+      "appName": "ऐप नाम",
+      "logo": "लोगो",
+      "preset": "प्रीसेट"
+    }
   }
 }

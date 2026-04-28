@@ -51,5 +51,31 @@
     "empty": "アクティビティはまだありません。",
     "loadMore": "さらに読み込む",
     "viewAll": "完全な監査ログを表示"
+  },
+  "branding": {
+    "title": "ブランディング",
+    "lockMessage": "ブランディングを変更できるのはスーパー管理者のみです。",
+    "identityTitle": "ブランドアイデンティティ",
+    "identitySubtitle": "サイドバーのアプリ名とロゴ。",
+    "appName": "アプリ名",
+    "logoUrl": "ロゴ URL",
+    "uploadFile": "ファイルをアップロード",
+    "uploading": "アップロード中…",
+    "logoAlt": "ロゴ",
+    "reset": "リセット",
+    "save": "変更を保存",
+    "saving": "保存中…",
+    "saved": "ブランディングを保存しました",
+    "saveFailed": "保存に失敗しました",
+    "uploadFailed": "アップロードに失敗しました",
+    "history": "変更履歴",
+    "lastChanges": "直近 {{count}} 件の変更",
+    "noChanges": "まだ変更が記録されていません。",
+    "system": "システム",
+    "diff": {
+      "appName": "アプリ名",
+      "logo": "ロゴ",
+      "preset": "プリセット"
+    }
   }
 }

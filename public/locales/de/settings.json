@@ -51,5 +51,31 @@
     "empty": "Noch keine Aktivität.",
     "loadMore": "Mehr laden",
     "viewAll": "Vollständiges Audit-Protokoll anzeigen"
+  },
+  "branding": {
+    "title": "Branding",
+    "lockMessage": "Nur Super-Admins können das Branding ändern.",
+    "identityTitle": "Markenidentität",
+    "identitySubtitle": "App-Name und Logo in der Seitenleiste.",
+    "appName": "App-Name",
+    "logoUrl": "Logo-URL",
+    "uploadFile": "Datei hochladen",
+    "uploading": "Hochladen…",
+    "logoAlt": "Logo",
+    "reset": "Zurücksetzen",
+    "save": "Änderungen speichern",
+    "saving": "Speichert…",
+    "saved": "Branding gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "uploadFailed": "Upload fehlgeschlagen",
+    "history": "Änderungsverlauf",
+    "lastChanges": "Letzte {{count}} Änderungen",
+    "noChanges": "Noch keine Änderungen aufgezeichnet.",
+    "system": "System",
+    "diff": {
+      "appName": "App-Name",
+      "logo": "Logo",
+      "preset": "Voreinstellung"
+    }
   }
 }
