@@ -27,5 +27,21 @@
       "cancel": "Cancelar",
       "confirm": "Confirmar alteração"
     }
+  },
+  "theme": {
+    "title": "Tema",
+    "lockMessage": "Apenas superadministradores podem alterar o estilo global. Você pode visualizar as predefinições abaixo.",
+    "presetTitle": "Predefinição de estilo",
+    "presetSubtitle": "Controla cores, raios, sombras e tipografia globalmente.",
+    "reset": "Redefinir",
+    "save": "Salvar alterações",
+    "saving": "Salvando…",
+    "saved": "Tema salvo",
+    "savedDescription": "Predefinição: {{preset}}",
+    "saveFailed": "Falha ao salvar",
+    "presets": {
+      "classic": { "name": "Shopify Clássico", "tagline": "Estilo Polaris limpo, bordas definidas" },
+      "modern": { "name": "Moderno", "tagline": "Superfícies suaves, cantos arredondados" }
+    }
   }
 }

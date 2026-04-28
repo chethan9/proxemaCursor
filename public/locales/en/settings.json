@@ -27,5 +27,21 @@
       "cancel": "Cancel",
       "confirm": "Confirm change"
     }
+  },
+  "theme": {
+    "title": "Theme",
+    "lockMessage": "Only super admins can change the global style. You can preview presets below.",
+    "presetTitle": "Style Preset",
+    "presetSubtitle": "Controls colors, radius, shadows, and typography globally.",
+    "reset": "Reset",
+    "save": "Save Changes",
+    "saving": "Saving…",
+    "saved": "Theme saved",
+    "savedDescription": "Style preset: {{preset}}",
+    "saveFailed": "Save failed",
+    "presets": {
+      "classic": { "name": "Classic Shopify", "tagline": "Clean Polaris-style, sharp edges" },
+      "modern": { "name": "Modern", "tagline": "Soft surfaces, rounded corners" }
+    }
   }
 }

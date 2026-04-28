@@ -27,5 +27,21 @@
       "cancel": "キャンセル",
       "confirm": "変更を確定"
     }
+  },
+  "theme": {
+    "title": "テーマ",
+    "lockMessage": "グローバルスタイルを変更できるのはスーパー管理者のみです。プリセットは下でプレビューできます。",
+    "presetTitle": "スタイルプリセット",
+    "presetSubtitle": "色、角丸、影、タイポグラフィをグローバルに制御します。",
+    "reset": "リセット",
+    "save": "変更を保存",
+    "saving": "保存中…",
+    "saved": "テーマを保存しました",
+    "savedDescription": "プリセット: {{preset}}",
+    "saveFailed": "保存に失敗しました",
+    "presets": {
+      "classic": { "name": "クラシック Shopify", "tagline": "クリーンな Polaris スタイル、シャープなエッジ" },
+      "modern": { "name": "モダン", "tagline": "柔らかな表面、丸い角" }
+    }
   }
 }

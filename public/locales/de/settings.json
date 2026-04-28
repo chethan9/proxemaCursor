@@ -27,5 +27,21 @@
       "cancel": "Abbrechen",
       "confirm": "Änderung bestätigen"
     }
+  },
+  "theme": {
+    "title": "Design",
+    "lockMessage": "Nur Super-Admins können den globalen Stil ändern. Sie können die Voreinstellungen unten ansehen.",
+    "presetTitle": "Stil-Voreinstellung",
+    "presetSubtitle": "Steuert Farben, Radius, Schatten und Typografie global.",
+    "reset": "Zurücksetzen",
+    "save": "Änderungen speichern",
+    "saving": "Speichert…",
+    "saved": "Design gespeichert",
+    "savedDescription": "Voreinstellung: {{preset}}",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "presets": {
+      "classic": { "name": "Klassisch Shopify", "tagline": "Sauberer Polaris-Stil, scharfe Kanten" },
+      "modern": { "name": "Modern", "tagline": "Weiche Flächen, abgerundete Ecken" }
+    }
   }
 }

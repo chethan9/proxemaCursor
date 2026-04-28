@@ -27,5 +27,21 @@
       "cancel": "取消",
       "confirm": "确认更改"
     }
+  },
+  "theme": {
+    "title": "主题",
+    "lockMessage": "只有超级管理员可以更改全局样式。您可以在下方预览预设。",
+    "presetTitle": "样式预设",
+    "presetSubtitle": "全局控制颜色、圆角、阴影和字体。",
+    "reset": "重置",
+    "save": "保存更改",
+    "saving": "保存中…",
+    "saved": "主题已保存",
+    "savedDescription": "预设：{{preset}}",
+    "saveFailed": "保存失败",
+    "presets": {
+      "classic": { "name": "经典 Shopify", "tagline": "Polaris 风格，锐利边缘" },
+      "modern": { "name": "现代", "tagline": "柔和表面，圆角" }
+    }
   }
 }
