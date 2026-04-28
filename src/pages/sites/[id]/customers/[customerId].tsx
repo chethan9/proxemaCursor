@@ -75,6 +75,17 @@ function CustomerDetailsInner() {
   const { id: siteId, store, loading: siteLoading } = useSiteFromRoute();
   const customerId = router.query.customerId as string | undefined;
   const { data: customer, isLoading } = useCustomer(customerId);
+
+  const STATUS_LABELS: Record<string, string> = {
+    completed: t("orders.statuses.completed"),
+    processing: t("orders.statuses.processing"),
+    "on-hold": t("orders.statuses.onHold"),
+    pending: t("orders.statuses.pending"),
+    cancelled: t("orders.statuses.cancelled"),
+    refunded: t("orders.statuses.refunded"),
+    failed: t("orders.statuses.failed"),
+  };
+
   const [tab, setTab] = useState<"details" | "orders">("details");
   const [editing, setEditing] = useState(() => {
     if (typeof window === "undefined") return false;
