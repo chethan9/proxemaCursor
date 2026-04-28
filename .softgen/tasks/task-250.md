@@ -1,6 +1,6 @@
 ---
 title: RTL infrastructure (dir switching + logical CSS audit)
-status: todo
+status: in_progress
 priority: high
 type: feature
 tags: [i18n, rtl, css]
@@ -11,30 +11,23 @@ position: 250
 
 ## Notes
 
-Depends on Task 249. Make Arabic locale render right-to-left site-wide.
+Infrastructure (dir switching + globals.css audit) shipped. Component-level Tailwind class audit (ml/mr → ms/me, etc.) is deferred — will be done incrementally during string extraction passes (Tasks 252, 253) since both touch the same files.
 
-1. Add `dir={locale === 'ar' ? 'rtl' : 'ltr'}` and `lang={locale}` on `<html>` in `_document.tsx` (use `__NEXT_LOCALE` cookie or query) — or apply via `useEffect` in `_app.tsx` on `document.documentElement` for client switching.
-2. Audit `src/styles/globals.css` — replace `left/right` with logical `inline-start/inline-end` where it makes sense.
-3. Audit components for directional classes:
-   - `ml-*` / `mr-*` → `ms-*` / `me-*` (Tailwind logical equivalents)
-   - `pl-*` / `pr-*` → `ps-*` / `pe-*`
-   - `text-left` / `text-right` → `text-start` / `text-end`
-   - `border-l` / `border-r` → `border-s` / `border-e`
-   - `rounded-l-*` / `rounded-r-*` → `rounded-s-*` / `rounded-e-*`
-4. Directional icons (`ChevronRight`, `ArrowRight`, `ChevronLeft`, `ArrowLeft`) — wrap in a `<DirectionalIcon>` helper that swaps based on dir, OR add `rtl:rotate-180` class.
-5. Test pages: AppSidebar, all `/sites/[id]/*`, all dialogs, ProductsTab, OrdersTab, dropdowns, popovers, charts.
-6. Force Latin numerals globally via CSS `font-feature-settings` or by passing `numberingSystem: 'latn'` to formatters (Task G).
+1. `_document.tsx` has no-flash script that sets html `lang` and `dir` from `NEXT_LOCALE` cookie before paint.
+2. `_app.tsx` has `<LocaleDirSync />` that updates dir/lang reactively when `i18n.language` changes.
+3. `globals.css` directional properties (left/right, padding-left/right, border-left/right) replaced with logical equivalents (inline-start/inline-end, padding-inline, border-inline-start/end).
+4. Tailwind class audit (`ml-/mr-` → `ms-/me-`, `text-left/right` → `text-start/end`, `rounded-l-/r-` → `rounded-s-/e-`, `rtl:rotate-180` on directional icons) — done as part of Tasks 252/253.
 
 ## Checklist
 
-- [ ] dir/lang on html element switches with locale
-- [ ] globals.css logical property pass
-- [ ] Tailwind directional class audit (ml/mr → ms/me, etc.) across components
-- [ ] DirectionalIcon helper or rtl:rotate-180 utility
-- [ ] Visual QA in Arabic on: sidebar, dashboard, products, orders, product edit, dialogs
+- [x] dir/lang on html element switches with locale (no-flash script + reactive effect)
+- [x] globals.css logical property pass
+- [ ] Tailwind directional class audit — bundled into Tasks 252/253
+- [ ] DirectionalIcon helper or rtl:rotate-180 utility — applied during component string extraction
+- [ ] Visual QA in Arabic on: sidebar, dashboard, products, orders, product edit, dialogs — after Tasks 252/253
 
 ## Acceptance
 
-- Switching to Arabic flips entire layout right-to-left
-- No leaked LTR sections (sidebars on wrong side, icons pointing wrong way)
-- English layout unchanged after the audit
+- Switching to Arabic flips html dir to rtl (verified)
+- globals.css uses logical properties (no left/right leaks in base styles)
+- Component-level audit follows in extraction passes

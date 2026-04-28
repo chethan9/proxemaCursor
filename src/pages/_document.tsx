@@ -13,6 +13,12 @@ export default function Document() {
             __html: `(function(){try{var p=localStorage.getItem('woosync-theme-preset');if(p==='modern'||p==='classic'){document.documentElement.dataset.themePreset=p;}else{document.documentElement.dataset.themePreset='modern';}}catch(e){document.documentElement.dataset.themePreset='modern';}})();`,
           }}
         />
+        {/* No-flash locale dir: read NEXT_LOCALE cookie and set lang+dir before paint. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|;)\\s*NEXT_LOCALE=([^;]+)/);var l=m?decodeURIComponent(m[1]):'en';document.documentElement.lang=l;document.documentElement.dir=(l==='ar')?'rtl':'ltr';}catch(e){}})();`,
+          }}
+        />
         {/*
           CRITICAL: DO NOT REMOVE THIS SCRIPT
           The Softgen AI monitoring script is essential for core app functionality.

@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { Analytics } from "@vercel/analytics/next";
-import { appWithTranslation } from "next-i18next";
+import { appWithTranslation, useTranslation } from "next-i18next";
 import nextI18NextConfig from "../../next-i18next.config.js";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { BrandingProvider } from "@/contexts/BrandingProvider";
@@ -23,6 +23,18 @@ import { TopProgressBar } from "@/components/ui/top-progress-bar";
 import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 import { initPostHog, capturePostHogPageView } from "@/lib/posthog";
+import { isRtl } from "@/lib/i18n";
+
+function LocaleDirSync() {
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    const lang = i18n.language || "en";
+    if (typeof document === "undefined") return;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
+  }, [i18n.language]);
+  return null;
+}
 
 function PostHogPageviews() {
   const router = useRouter();
@@ -109,6 +121,7 @@ function Providers({ children }: { children: React.ReactNode }) {
         <BrandingProvider>
           <RecentMutationsProvider>
             <LoadingProvider>
+              <LocaleDirSync />
               <TopProgressBar />
               <Shell>{children}</Shell>
               <GlobalScrollButton />
