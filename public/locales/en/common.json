@@ -214,5 +214,37 @@
     "key": "Key",
     "secret": "Secret",
     "failed": "Failed"
+  },
+  "projects": {
+    "title": "Projects",
+    "emptyHeading": "You forgot something.",
+    "emptyHint": "(Hint: a site)",
+    "addSite": "Add Site",
+    "noMatches": "No sites match these filters.",
+    "clearFilters": "Clear filters",
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "unassigned": "Unassigned",
+    "unknown": "Unknown",
+    "toasts": {
+      "wpConnectedTitle": "WordPress connected",
+      "wpConnectedDesc": "Media library access is now active.",
+      "wpRejectedTitle": "Authorization cancelled",
+      "wpRejectedDesc": "WordPress access was not granted.",
+      "wpErrorTitle": "Authorization failed",
+      "wpErrorDesc": "Unable to save WordPress credentials.",
+      "wpMissingTitle": "Authorization incomplete",
+      "wpMissingDesc": "WordPress did not return credentials.",
+      "bulkSyncTitle": "Bulk sync enqueued",
+      "bulkSyncDesc": "{{ok}} started, {{fail}} failed"
+    },
+    "csv": {
+      "name": "Name",
+      "url": "URL",
+      "client": "Client",
+      "status": "Status",
+      "health": "Health",
+      "lastSync": "Last Sync",
+      "created": "Created"
+    }
   }
 }
