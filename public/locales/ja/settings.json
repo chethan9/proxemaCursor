@@ -77,5 +77,44 @@
       "logo": "ロゴ",
       "preset": "プリセット"
     }
+  },
+  "users": {
+    "title": "ユーザー",
+    "subtitle": "誰がコンソールにアクセスでき、何ができるかを管理します",
+    "invite": "ユーザーを招待",
+    "inviteTitle": "新しいユーザーを招待",
+    "inviteDescription": "現在、ユーザーはサインアップページから自分で登録します。リンクを共有し、登録後にここで役割とクライアントを割り当ててください。",
+    "signupLink": "サインアップリンク",
+    "close": "閉じる",
+    "allUsers": "全ユーザー ({{count}})",
+    "superAdminCount_one": "スーパー管理者 {{count}} 名",
+    "superAdminCount_other": "スーパー管理者 {{count}} 名",
+    "empty": "ユーザーはまだいません",
+    "columns": { "user": "ユーザー", "role": "役割", "client": "クライアント", "active": "有効" },
+    "you": "あなた",
+    "unnamed": "名前未設定",
+    "noClient": "— なし —",
+    "allClients": "すべて（スーパー管理者）",
+    "toast": {
+      "loadFailed": "読み込みに失敗しました",
+      "roleUpdated": "役割を更新しました",
+      "cannotDemote": "降格できません",
+      "lastSuperAdmin": "少なくとも1名のスーパー管理者が必要です。",
+      "superAdminGranted": "スーパー管理者を付与しました",
+      "clientUpdated": "クライアント割り当てを更新しました",
+      "cannotDeactivateSelf": "自分を無効化できません",
+      "cannotDeactivate": "無効化できません",
+      "lastSuperAdminActive": "少なくとも1名の有効なスーパー管理者が必要です。",
+      "userActivated": "ユーザーを有効化しました",
+      "userDeactivated": "ユーザーを無効化しました",
+      "failed": "失敗",
+      "error": "エラー"
+    },
+    "confirm": {
+      "title": "スーパー管理者権限を付与しますか？",
+      "body": "<strong>{{email}}</strong> に、ユーザー管理、破壊的操作、すべてのクライアントデータを含む、すべてへの無制限アクセスを付与しようとしています。これは彼らによって取り消せません。この人を完全に信頼する場合のみ続行してください。",
+      "cancel": "キャンセル",
+      "confirm": "はい、スーパー管理者を付与"
+    }
   }
 }

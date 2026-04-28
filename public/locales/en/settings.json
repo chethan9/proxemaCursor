@@ -77,5 +77,44 @@
       "logo": "Logo",
       "preset": "Preset"
     }
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Manage who can access the console and what they can do",
+    "invite": "Invite user",
+    "inviteTitle": "Invite a new user",
+    "inviteDescription": "Currently, users self-register via the signup page. Share the signup link with them, then assign their role and client here after they sign up.",
+    "signupLink": "Signup link",
+    "close": "Close",
+    "allUsers": "All users ({{count}})",
+    "superAdminCount_one": "{{count}} super admin",
+    "superAdminCount_other": "{{count}} super admins",
+    "empty": "No users yet",
+    "columns": { "user": "User", "role": "Role", "client": "Client", "active": "Active" },
+    "you": "you",
+    "unnamed": "Unnamed",
+    "noClient": "— none —",
+    "allClients": "all (super admin)",
+    "toast": {
+      "loadFailed": "Failed to load",
+      "roleUpdated": "Role updated",
+      "cannotDemote": "Cannot demote",
+      "lastSuperAdmin": "At least one super admin must remain.",
+      "superAdminGranted": "Super admin granted",
+      "clientUpdated": "Client assignment updated",
+      "cannotDeactivateSelf": "Cannot deactivate yourself",
+      "cannotDeactivate": "Cannot deactivate",
+      "lastSuperAdminActive": "At least one super admin must remain active.",
+      "userActivated": "User activated",
+      "userDeactivated": "User deactivated",
+      "failed": "Failed",
+      "error": "Error"
+    },
+    "confirm": {
+      "title": "Grant super admin access?",
+      "body": "You are about to grant <strong>{{email}}</strong> full unrestricted access to everything, including user management, destructive operations, and all client data. This is irreversible by them. Only proceed if you fully trust this person.",
+      "cancel": "Cancel",
+      "confirm": "Yes, grant super admin"
+    }
   }
 }

@@ -77,5 +77,44 @@
       "logo": "Logo",
       "preset": "Preajuste"
     }
+  },
+  "users": {
+    "title": "Usuarios",
+    "subtitle": "Gestiona quién puede acceder a la consola y qué puede hacer",
+    "invite": "Invitar usuario",
+    "inviteTitle": "Invitar a un nuevo usuario",
+    "inviteDescription": "Actualmente los usuarios se registran solos en la página de registro. Comparte el enlace con ellos y asigna su rol y cliente aquí después.",
+    "signupLink": "Enlace de registro",
+    "close": "Cerrar",
+    "allUsers": "Todos los usuarios ({{count}})",
+    "superAdminCount_one": "{{count}} superadministrador",
+    "superAdminCount_other": "{{count}} superadministradores",
+    "empty": "Aún sin usuarios",
+    "columns": { "user": "Usuario", "role": "Rol", "client": "Cliente", "active": "Activo" },
+    "you": "tú",
+    "unnamed": "Sin nombre",
+    "noClient": "— ninguno —",
+    "allClients": "todos (superadmin)",
+    "toast": {
+      "loadFailed": "Error al cargar",
+      "roleUpdated": "Rol actualizado",
+      "cannotDemote": "No se puede degradar",
+      "lastSuperAdmin": "Debe permanecer al menos un superadministrador.",
+      "superAdminGranted": "Superadministrador concedido",
+      "clientUpdated": "Asignación de cliente actualizada",
+      "cannotDeactivateSelf": "No puedes desactivarte a ti mismo",
+      "cannotDeactivate": "No se puede desactivar",
+      "lastSuperAdminActive": "Debe permanecer al menos un superadministrador activo.",
+      "userActivated": "Usuario activado",
+      "userDeactivated": "Usuario desactivado",
+      "failed": "Error",
+      "error": "Error"
+    },
+    "confirm": {
+      "title": "¿Conceder acceso de superadministrador?",
+      "body": "Estás a punto de conceder a <strong>{{email}}</strong> acceso total sin restricciones a todo, incluyendo gestión de usuarios, operaciones destructivas y todos los datos de clientes. Es irreversible por ellos. Procede solo si confías plenamente en esta persona.",
+      "cancel": "Cancelar",
+      "confirm": "Sí, conceder superadmin"
+    }
   }
 }

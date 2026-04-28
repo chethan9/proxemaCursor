@@ -77,5 +77,44 @@
       "logo": "Logo",
       "preset": "Préréglage"
     }
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "subtitle": "Gérez qui peut accéder à la console et ce qu'ils peuvent faire",
+    "invite": "Inviter un utilisateur",
+    "inviteTitle": "Inviter un nouvel utilisateur",
+    "inviteDescription": "Actuellement, les utilisateurs s'inscrivent eux-mêmes via la page d'inscription. Partagez le lien avec eux, puis attribuez leur rôle et client ici après inscription.",
+    "signupLink": "Lien d'inscription",
+    "close": "Fermer",
+    "allUsers": "Tous les utilisateurs ({{count}})",
+    "superAdminCount_one": "{{count}} super administrateur",
+    "superAdminCount_other": "{{count}} super administrateurs",
+    "empty": "Aucun utilisateur pour le moment",
+    "columns": { "user": "Utilisateur", "role": "Rôle", "client": "Client", "active": "Actif" },
+    "you": "vous",
+    "unnamed": "Sans nom",
+    "noClient": "— aucun —",
+    "allClients": "tous (super admin)",
+    "toast": {
+      "loadFailed": "Échec du chargement",
+      "roleUpdated": "Rôle mis à jour",
+      "cannotDemote": "Impossible de rétrograder",
+      "lastSuperAdmin": "Au moins un super administrateur doit rester.",
+      "superAdminGranted": "Super admin accordé",
+      "clientUpdated": "Affectation client mise à jour",
+      "cannotDeactivateSelf": "Vous ne pouvez pas vous désactiver",
+      "cannotDeactivate": "Impossible de désactiver",
+      "lastSuperAdminActive": "Au moins un super administrateur actif doit rester.",
+      "userActivated": "Utilisateur activé",
+      "userDeactivated": "Utilisateur désactivé",
+      "failed": "Échec",
+      "error": "Erreur"
+    },
+    "confirm": {
+      "title": "Accorder l'accès super administrateur ?",
+      "body": "Vous êtes sur le point d'accorder à <strong>{{email}}</strong> un accès illimité à tout, y compris la gestion des utilisateurs, les opérations destructrices et toutes les données clients. C'est irréversible de leur part. Ne procédez que si vous faites entièrement confiance à cette personne.",
+      "cancel": "Annuler",
+      "confirm": "Oui, accorder super admin"
+    }
   }
 }

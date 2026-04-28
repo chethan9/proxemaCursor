@@ -77,5 +77,44 @@
       "logo": "徽标",
       "preset": "预设"
     }
+  },
+  "users": {
+    "title": "用户",
+    "subtitle": "管理谁可以访问控制台以及他们可以做什么",
+    "invite": "邀请用户",
+    "inviteTitle": "邀请新用户",
+    "inviteDescription": "目前用户通过注册页面自行注册。与他们分享注册链接，然后在他们注册后在此分配角色和客户。",
+    "signupLink": "注册链接",
+    "close": "关闭",
+    "allUsers": "所有用户 ({{count}})",
+    "superAdminCount_one": "{{count}} 名超级管理员",
+    "superAdminCount_other": "{{count}} 名超级管理员",
+    "empty": "暂无用户",
+    "columns": { "user": "用户", "role": "角色", "client": "客户", "active": "启用" },
+    "you": "您",
+    "unnamed": "未命名",
+    "noClient": "— 无 —",
+    "allClients": "全部（超级管理员）",
+    "toast": {
+      "loadFailed": "加载失败",
+      "roleUpdated": "角色已更新",
+      "cannotDemote": "无法降级",
+      "lastSuperAdmin": "至少需保留一名超级管理员。",
+      "superAdminGranted": "已授予超级管理员",
+      "clientUpdated": "客户分配已更新",
+      "cannotDeactivateSelf": "无法停用自己",
+      "cannotDeactivate": "无法停用",
+      "lastSuperAdminActive": "至少需保留一名活跃的超级管理员。",
+      "userActivated": "用户已激活",
+      "userDeactivated": "用户已停用",
+      "failed": "失败",
+      "error": "错误"
+    },
+    "confirm": {
+      "title": "授予超级管理员权限？",
+      "body": "您即将向 <strong>{{email}}</strong> 授予对所有内容的完全不受限访问权限，包括用户管理、破坏性操作和所有客户数据。他们无法撤销此权限。仅在您完全信任此人时才继续。",
+      "cancel": "取消",
+      "confirm": "是，授予超级管理员"
+    }
   }
 }

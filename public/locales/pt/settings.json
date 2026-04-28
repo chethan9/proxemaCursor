@@ -77,5 +77,44 @@
       "logo": "Logo",
       "preset": "Predefinição"
     }
+  },
+  "users": {
+    "title": "Usuários",
+    "subtitle": "Gerencie quem pode acessar o console e o que pode fazer",
+    "invite": "Convidar usuário",
+    "inviteTitle": "Convidar novo usuário",
+    "inviteDescription": "Atualmente os usuários se cadastram pela página de cadastro. Compartilhe o link com eles e atribua função e cliente aqui após o cadastro.",
+    "signupLink": "Link de cadastro",
+    "close": "Fechar",
+    "allUsers": "Todos os usuários ({{count}})",
+    "superAdminCount_one": "{{count}} superadministrador",
+    "superAdminCount_other": "{{count}} superadministradores",
+    "empty": "Ainda sem usuários",
+    "columns": { "user": "Usuário", "role": "Função", "client": "Cliente", "active": "Ativo" },
+    "you": "você",
+    "unnamed": "Sem nome",
+    "noClient": "— nenhum —",
+    "allClients": "todos (superadmin)",
+    "toast": {
+      "loadFailed": "Falha ao carregar",
+      "roleUpdated": "Função atualizada",
+      "cannotDemote": "Não é possível rebaixar",
+      "lastSuperAdmin": "Pelo menos um superadministrador deve permanecer.",
+      "superAdminGranted": "Superadministrador concedido",
+      "clientUpdated": "Atribuição de cliente atualizada",
+      "cannotDeactivateSelf": "Você não pode se desativar",
+      "cannotDeactivate": "Não é possível desativar",
+      "lastSuperAdminActive": "Pelo menos um superadministrador ativo deve permanecer.",
+      "userActivated": "Usuário ativado",
+      "userDeactivated": "Usuário desativado",
+      "failed": "Falhou",
+      "error": "Erro"
+    },
+    "confirm": {
+      "title": "Conceder acesso de superadministrador?",
+      "body": "Você está prestes a conceder a <strong>{{email}}</strong> acesso total irrestrito a tudo, incluindo gerenciamento de usuários, operações destrutivas e todos os dados de clientes. É irreversível por eles. Prossiga somente se confia totalmente nessa pessoa.",
+      "cancel": "Cancelar",
+      "confirm": "Sim, conceder superadmin"
+    }
   }
 }

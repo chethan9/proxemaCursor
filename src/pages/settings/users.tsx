@@ -15,10 +15,14 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { PERMISSIONS } from "@/lib/permissions";
 import { listUsers, updateUserRole, updateUserClient, updateUserActive, type UserProfile, listRoles, type RoleRow } from "@/services/userService";
 import { getClients } from "@/services/clientService";
-import { Loader2, UserPlus, Shield, ShieldAlert } from "lucide-react";
+import { Loader2, UserPlus, ShieldAlert } from "lucide-react";
+import type { GetServerSideProps } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation, Trans } from "next-i18next";
 
 export default function UsersPage() {
   const { toast } = useToast();
+  const { t } = useTranslation("settings");
   const { user: currentUser, isSuperAdmin } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
@@ -35,7 +39,7 @@ export default function UsersPage() {
       setRoles(r);
       setClients(c.map(x => ({ id: x.id, name: x.name })));
     } catch (e) {
-      toast({ title: "Failed to load", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+      toast({ title: t("users.toast.loadFailed"), description: e instanceof Error ? e.message : t("users.toast.error"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -46,22 +50,20 @@ export default function UsersPage() {
   const superAdminCount = users.filter(u => u.role === "super_admin" && u.is_active).length;
 
   const handleRoleChange = async (u: UserProfile, newRole: string) => {
-    // Promoting to super_admin needs confirmation
     if (newRole === "super_admin" && u.role !== "super_admin") {
       setConfirmSuperAdmin({ userId: u.id, email: u.email || "" });
       return;
     }
-    // Last super admin protection
     if (u.role === "super_admin" && newRole !== "super_admin" && superAdminCount <= 1) {
-      toast({ title: "Cannot demote", description: "At least one super admin must remain.", variant: "destructive" });
+      toast({ title: t("users.toast.cannotDemote"), description: t("users.toast.lastSuperAdmin"), variant: "destructive" });
       return;
     }
     try {
       await updateUserRole(u.id, newRole);
-      toast({ title: "Role updated" });
+      toast({ title: t("users.toast.roleUpdated") });
       await load();
     } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+      toast({ title: t("users.toast.failed"), description: e instanceof Error ? e.message : t("users.toast.error"), variant: "destructive" });
     }
   };
 
@@ -69,68 +71,66 @@ export default function UsersPage() {
     if (!confirmSuperAdmin) return;
     try {
       await updateUserRole(confirmSuperAdmin.userId, "super_admin");
-      toast({ title: "Super admin granted" });
+      toast({ title: t("users.toast.superAdminGranted") });
       setConfirmSuperAdmin(null);
       await load();
     } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+      toast({ title: t("users.toast.failed"), description: e instanceof Error ? e.message : t("users.toast.error"), variant: "destructive" });
     }
   };
 
   const handleClientChange = async (u: UserProfile, clientId: string) => {
     try {
       await updateUserClient(u.id, clientId === "__none__" ? null : clientId);
-      toast({ title: "Client assignment updated" });
+      toast({ title: t("users.toast.clientUpdated") });
       await load();
     } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+      toast({ title: t("users.toast.failed"), description: e instanceof Error ? e.message : t("users.toast.error"), variant: "destructive" });
     }
   };
 
   const handleActiveToggle = async (u: UserProfile, active: boolean) => {
     if (u.id === currentUser?.id && !active) {
-      toast({ title: "Cannot deactivate yourself", variant: "destructive" });
+      toast({ title: t("users.toast.cannotDeactivateSelf"), variant: "destructive" });
       return;
     }
     if (u.role === "super_admin" && !active && superAdminCount <= 1) {
-      toast({ title: "Cannot deactivate", description: "At least one super admin must remain active.", variant: "destructive" });
+      toast({ title: t("users.toast.cannotDeactivate"), description: t("users.toast.lastSuperAdminActive"), variant: "destructive" });
       return;
     }
     try {
       await updateUserActive(u.id, active);
-      toast({ title: active ? "User activated" : "User deactivated" });
+      toast({ title: active ? t("users.toast.userActivated") : t("users.toast.userDeactivated") });
       await load();
     } catch (e) {
-      toast({ title: "Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+      toast({ title: t("users.toast.failed"), description: e instanceof Error ? e.message : t("users.toast.error"), variant: "destructive" });
     }
   };
 
   return (
-    <AppLayout title="Users" requirePermission={PERMISSIONS.USERS_VIEW}>
+    <AppLayout title={t("users.title")} requirePermission={PERMISSIONS.USERS_VIEW}>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Users</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage who can access the console and what they can do</p>
+            <h1 className="text-2xl font-semibold text-foreground">{t("users.title")}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t("users.subtitle")}</p>
           </div>
           {isSuperAdmin && (
             <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
               <DialogTrigger asChild>
-                <Button><UserPlus className="h-4 w-4 mr-2" />Invite user</Button>
+                <Button><UserPlus className="h-4 w-4 mr-2" />{t("users.invite")}</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Invite a new user</DialogTitle>
-                  <DialogDescription>
-                    Currently, users self-register via the signup page. Share the signup link with them, then assign their role and client here after they sign up.
-                  </DialogDescription>
+                  <DialogTitle>{t("users.inviteTitle")}</DialogTitle>
+                  <DialogDescription>{t("users.inviteDescription")}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2">
-                  <Label>Signup link</Label>
+                  <Label>{t("users.signupLink")}</Label>
                   <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/auth/signup` : ""} />
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => setInviteOpen(false)}>Close</Button>
+                  <Button onClick={() => setInviteOpen(false)}>{t("users.close")}</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -139,22 +139,22 @@ export default function UsersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">All users ({users.length})</CardTitle>
-            <CardDescription>{superAdminCount} super admin{superAdminCount !== 1 ? "s" : ""}</CardDescription>
+            <CardTitle className="text-base">{t("users.allUsers", { count: users.length })}</CardTitle>
+            <CardDescription>{t("users.superAdminCount", { count: superAdminCount })}</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
               <div className="p-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : users.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground">No users yet</div>
+              <div className="p-12 text-center text-muted-foreground">{t("users.empty")}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Active</TableHead>
+                    <TableHead>{t("users.columns.user")}</TableHead>
+                    <TableHead>{t("users.columns.role")}</TableHead>
+                    <TableHead>{t("users.columns.client")}</TableHead>
+                    <TableHead>{t("users.columns.active")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -165,8 +165,8 @@ export default function UsersPage() {
                           {u.role === "super_admin" && <ShieldAlert className="h-4 w-4 text-primary" />}
                           <div>
                             <div className="font-medium text-sm flex items-center gap-2">
-                              {u.full_name || "Unnamed"}
-                              {u.id === currentUser?.id && <Badge variant="outline" className="text-[10px]">you</Badge>}
+                              {u.full_name || t("users.unnamed")}
+                              {u.id === currentUser?.id && <Badge variant="outline" className="text-[10px]">{t("users.you")}</Badge>}
                             </div>
                             <div className="text-xs text-muted-foreground">{u.email}</div>
                           </div>
@@ -189,13 +189,13 @@ export default function UsersPage() {
                           <Select value={u.client_id || "__none__"} onValueChange={(v) => handleClientChange(u, v)}>
                             <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">— none —</SelectItem>
+                              <SelectItem value="__none__">{t("users.noClient")}</SelectItem>
                               {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            {u.role === "super_admin" ? "all (super admin)" : (clients.find(c => c.id === u.client_id)?.name || "—")}
+                            {u.role === "super_admin" ? t("users.allClients") : (clients.find(c => c.id === u.client_id)?.name || "—")}
                           </span>
                         )}
                       </TableCell>
@@ -220,18 +220,29 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-destructive" />
-              Grant super admin access?
+              {t("users.confirm.title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to grant <strong>{confirmSuperAdmin?.email}</strong> full unrestricted access to everything, including user management, destructive operations, and all client data. This is irreversible by them. Only proceed if you fully trust this person.
+              <Trans
+                i18nKey="users.confirm.body"
+                ns="settings"
+                values={{ email: confirmSuperAdmin?.email || "" }}
+                components={{ strong: <strong /> }}
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmPromoteSuperAdmin}>Yes, grant super admin</AlertDialogAction>
+            <AlertDialogCancel>{t("users.confirm.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPromoteSuperAdmin}>{t("users.confirm.confirm")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </AppLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
+  },
+});

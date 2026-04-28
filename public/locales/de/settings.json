@@ -77,5 +77,44 @@
       "logo": "Logo",
       "preset": "Voreinstellung"
     }
+  },
+  "users": {
+    "title": "Benutzer",
+    "subtitle": "Verwalten Sie, wer auf die Konsole zugreifen kann und was sie tun dürfen",
+    "invite": "Benutzer einladen",
+    "inviteTitle": "Neuen Benutzer einladen",
+    "inviteDescription": "Aktuell registrieren sich Benutzer selbst über die Anmeldeseite. Teilen Sie den Link mit ihnen und weisen Sie ihnen anschließend hier Rolle und Kunde zu.",
+    "signupLink": "Anmeldelink",
+    "close": "Schließen",
+    "allUsers": "Alle Benutzer ({{count}})",
+    "superAdminCount_one": "{{count}} Super-Admin",
+    "superAdminCount_other": "{{count}} Super-Admins",
+    "empty": "Noch keine Benutzer",
+    "columns": { "user": "Benutzer", "role": "Rolle", "client": "Kunde", "active": "Aktiv" },
+    "you": "Sie",
+    "unnamed": "Ohne Namen",
+    "noClient": "— keiner —",
+    "allClients": "alle (Super-Admin)",
+    "toast": {
+      "loadFailed": "Laden fehlgeschlagen",
+      "roleUpdated": "Rolle aktualisiert",
+      "cannotDemote": "Herabstufen nicht möglich",
+      "lastSuperAdmin": "Es muss mindestens ein Super-Admin bestehen bleiben.",
+      "superAdminGranted": "Super-Admin gewährt",
+      "clientUpdated": "Kundenzuordnung aktualisiert",
+      "cannotDeactivateSelf": "Sie können sich nicht selbst deaktivieren",
+      "cannotDeactivate": "Deaktivieren nicht möglich",
+      "lastSuperAdminActive": "Mindestens ein aktiver Super-Admin muss bestehen bleiben.",
+      "userActivated": "Benutzer aktiviert",
+      "userDeactivated": "Benutzer deaktiviert",
+      "failed": "Fehlgeschlagen",
+      "error": "Fehler"
+    },
+    "confirm": {
+      "title": "Super-Admin-Zugang gewähren?",
+      "body": "Sie sind im Begriff, <strong>{{email}}</strong> uneingeschränkten Zugriff auf alles zu gewähren, einschließlich Benutzerverwaltung, destruktiven Operationen und allen Kundendaten. Dies ist von ihnen nicht umkehrbar. Fahren Sie nur fort, wenn Sie dieser Person voll vertrauen.",
+      "cancel": "Abbrechen",
+      "confirm": "Ja, Super-Admin gewähren"
+    }
   }
 }
