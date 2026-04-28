@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
+import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 
 function getEntityType(topic: string): string | null {
   const prefix = topic.split(".")[0];
@@ -364,6 +365,17 @@ export default async function handler(
         await upsertEntityFromWebhook(storeId, entityType, changeType, payload);
       } catch (upsertErr) {
         console.error(`[Webhook] Entity upsert failed for ${entityType}:`, upsertErr);
+      }
+
+      // For order webhooks: ensure customer record exists in our mirror so the
+      // order doesn't display as "Guest" once Woo has assigned a customer_id.
+      if (entityType === "order" && changeType !== "deleted") {
+        const wooCustomerId = (payload.customer_id as number) || 0;
+        if (wooCustomerId > 0) {
+          refreshCustomerForOrder(storeId, wooCustomerId).catch((e) => {
+            console.warn("[Webhook] refreshCustomerForOrder failed:", e);
+          });
+        }
       }
     }
 
