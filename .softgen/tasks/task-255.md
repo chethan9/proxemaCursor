@@ -1,6 +1,6 @@
 ---
 title: Locale-aware formatters (date, number, currency)
-status: todo
+status: in_progress
 priority: medium
 type: feature
 tags: [i18n, formatters]
@@ -13,19 +13,19 @@ position: 255
 
 Depends on Task 249. Replace ad-hoc date/number formatting with locale-aware helpers.
 
-1. Update `src/lib/format-store-date.ts` to accept locale and use `Intl.DateTimeFormat(locale, ...)`. Default locale from `useRouter().locale` or `i18n.language`.
-2. New `src/lib/format-number.ts` exporting `formatNumber(value, locale, options)` and `formatCurrency(value, currency, locale)` using `Intl.NumberFormat`.
-3. For Arabic, force Latin numerals: `new Intl.NumberFormat('ar', { numberingSystem: 'latn' })` — confirm with user if Arabic-Indic numerals preferred instead.
-4. Audit usages of `.toLocaleDateString()`, `.toLocaleString()`, raw template literals with currency — migrate to helpers.
-5. Charts (sales trend, donut) — pass formatted labels.
+1. `src/lib/format-store-date.ts` accepts optional `locale` and uses `Intl.DateTimeFormat(locale, ...)`. Callers pass `useRouter().locale` or `i18n.language`.
+2. `src/lib/format-number.ts` exports `formatNumber`, `formatCurrency`, `formatPercent`, `formatCompact` using `Intl.NumberFormat`.
+3. Arabic decision: force Latin numerals (`ar-u-nu-latn`) for operator-dashboard consistency. If Arabic-Indic numerals are preferred later, remove the `resolveLocale` mapping.
+4. Codebase audit/migration of `.toLocaleDateString()`, `.toLocaleString()`, raw currency template literals → deferred. Spans 50+ files. Migrate incrementally as pages get touched.
+5. Chart formatters (sales trend, donut) — deferred with #4.
 
 ## Checklist
 
-- [ ] Update format-store-date to accept locale
-- [ ] Create format-number.ts (formatNumber + formatCurrency)
-- [ ] Confirm numeral system preference for Arabic
-- [ ] Audit + migrate ad-hoc formatters across codebase
-- [ ] Update chart axis/tooltip formatters
+- [x] Update format-store-date to accept locale
+- [x] Create format-number.ts (formatNumber + formatCurrency)
+- [x] Confirm numeral system preference for Arabic (Latin numerals via `ar-u-nu-latn`)
+- [ ] Audit + migrate ad-hoc formatters across codebase (deferred — incremental)
+- [ ] Update chart axis/tooltip formatters (deferred with audit)
 
 ## Acceptance
 
