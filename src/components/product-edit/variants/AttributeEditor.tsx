@@ -77,17 +77,19 @@ function AttributeNameCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="p-0 w-[var(--radix-popover-trigger-width)]"
+        className="p-0 w-[var(--radix-popover-trigger-width)] shadow-lg"
         align="start"
+        sideOffset={4}
       >
-        <Command>
+        <Command className="rounded-md">
           <CommandInput
             value={search}
             onValueChange={setSearch}
             placeholder="Search or type new name…"
+            className="h-9 text-sm"
           />
-          <CommandList>
-            <CommandEmpty>
+          <CommandList className="max-h-64">
+            <CommandEmpty className="py-2">
               {search.trim() ? (
                 <button
                   type="button"
@@ -98,17 +100,18 @@ function AttributeNameCombobox({
                   }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-left"
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>
-                    Create <strong>&ldquo;{search.trim()}&rdquo;</strong> as new global attribute
+                  <Plus className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="flex-1 truncate">
+                    Create <strong>&ldquo;{search.trim()}&rdquo;</strong>
                   </span>
+                  <span className="text-[10px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded px-1.5 py-0.5">new</span>
                 </button>
               ) : (
-                <span className="px-3 py-2 text-xs text-muted-foreground block">No global attributes yet — type a name to create one.</span>
+                <span className="px-3 py-2 text-xs text-muted-foreground block text-center">No global attributes yet.</span>
               )}
             </CommandEmpty>
             {available.length > 0 && (
-              <CommandGroup heading="Existing global attributes">
+              <CommandGroup heading="Existing global attributes" className="px-1 py-1">
                 {available.map((a) => (
                   <CommandItem
                     key={a.id}
@@ -118,16 +121,16 @@ function AttributeNameCombobox({
                       setOpen(false);
                       setSearch("");
                     }}
+                    className="text-sm py-1.5"
                   >
-                    <Check className={cn("mr-2 h-3.5 w-3.5 opacity-0")} />
-                    <span className="flex-1">{a.name}</span>
+                    <span className="flex-1 truncate">{a.name}</span>
                     <span className="text-[10px] text-muted-foreground ml-2">global</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
             )}
             {showCreate && (
-              <CommandGroup>
+              <CommandGroup className="px-1 py-1 border-t">
                 <CommandItem
                   value={`__create__${search}`}
                   onSelect={() => {
@@ -135,9 +138,10 @@ function AttributeNameCombobox({
                     setOpen(false);
                     setSearch("");
                   }}
+                  className="text-sm py-1.5"
                 >
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  <span>
+                  <Plus className="mr-2 h-3.5 w-3.5 text-emerald-600" />
+                  <span className="flex-1 truncate">
                     Create <strong>&ldquo;{search.trim()}&rdquo;</strong>
                   </span>
                   <span className="ml-auto text-[10px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded px-1.5 py-0.5">new</span>
