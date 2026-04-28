@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ type Flow = "signup" | "email_change" | "unknown";
 export default function ConfirmEmailPage() {
   const router = useRouter();
   const branding = useBranding();
+  const { t } = useTranslation("auth");
   const [status, setStatus] = useState<Status>("loading");
   const [flow, setFlow] = useState<Flow>("unknown");
   const [email, setEmail] = useState<string>("");
@@ -27,8 +29,8 @@ export default function ConfirmEmailPage() {
 
     if (hash.includes("error") || search.includes("error")) {
       const params = new URLSearchParams(hash.replace(/^#/, "") || search.replace(/^\?/, ""));
-      const desc = params.get("error_description") || params.get("error") || "The confirmation link is invalid or has expired.";
-      setErrorMessage(decodeURIComponent(desc.replace(/\+/g, " ")));
+      const desc = params.get("error_description") || params.get("error") || "";
+      setErrorMessage(desc ? decodeURIComponent(desc.replace(/\+/g, " ")) : t("confirm.errorDefault"));
       setStatus("error");
       return;
     }
@@ -58,7 +60,7 @@ export default function ConfirmEmailPage() {
         setStatus("success");
       }
     })();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (status !== "success") return;
@@ -67,11 +69,11 @@ export default function ConfirmEmailPage() {
       router.replace(dest);
       return;
     }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const tt = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(tt);
   }, [status, countdown, flow, router]);
 
-  const destLabel = flow === "email_change" ? "Profile settings" : "Sign in";
+  const destLabel = flow === "email_change" ? t("confirm.profileLabel") : t("confirm.signInLabel");
   const destHref = flow === "email_change" ? "/settings/profile" : "/auth/login";
 
   return (
@@ -88,17 +90,17 @@ export default function ConfirmEmailPage() {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            {status === "loading" && "Confirming your email..."}
-            {status === "success" && (flow === "email_change" ? "Email updated" : "Email confirmed")}
-            {status === "error" && "Confirmation failed"}
+            {status === "loading" && t("confirm.loadingTitle")}
+            {status === "success" && (flow === "email_change" ? t("confirm.successTitleChange") : t("confirm.successTitleSignup"))}
+            {status === "error" && t("confirm.errorTitle")}
           </CardTitle>
           <CardDescription className="mt-2">
-            {status === "loading" && "Hang tight, this only takes a moment."}
+            {status === "loading" && t("confirm.loadingDesc")}
             {status === "success" && flow === "email_change" && (
-              <>Your email address has been successfully changed{email ? ` to ` : "."}{email && <span className="font-medium text-foreground">{email}</span>}{email && "."}</>
+              email ? t("confirm.successDescChangeWithEmail", { email }) : t("confirm.successDescChange")
             )}
-            {status === "success" && flow !== "email_change" && "Your email address has been verified. You can now sign in to your account."}
-            {status === "error" && errorMessage}
+            {status === "success" && flow !== "email_change" && t("confirm.successDescSignup")}
+            {status === "error" && (errorMessage || t("confirm.errorDefault"))}
           </CardDescription>
         </CardHeader>
 
@@ -108,12 +110,12 @@ export default function ConfirmEmailPage() {
               <div className="rounded-lg bg-muted/50 border border-border/60 px-4 py-3 flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div className="text-sm text-muted-foreground flex-1">
-                  Redirecting to {destLabel.toLowerCase()} in <span className="font-medium text-foreground">{countdown}s</span>
+                  {t("confirm.redirectingIn", { label: destLabel.toLowerCase() })} <span className="font-medium text-foreground">{countdown}s</span>
                 </div>
               </div>
               <Button asChild className="w-full">
                 <Link href={destHref}>
-                  Go to {destLabel} now
+                  {t("confirm.goNow", { label: destLabel })}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -123,10 +125,10 @@ export default function ConfirmEmailPage() {
           {status === "error" && (
             <div className="space-y-2">
               <Button asChild className="w-full">
-                <Link href="/auth/login">Back to sign in</Link>
+                <Link href="/auth/login">{t("confirm.back")}</Link>
               </Button>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/auth/forgot-password">Request a new link</Link>
+                <Link href="/auth/forgot-password">{t("confirm.requestNew")}</Link>
               </Button>
             </div>
           )}
@@ -146,4 +148,13 @@ export default function ConfirmEmailPage() {
       </Card>
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common", "auth"])),
+    },
+  };
 }

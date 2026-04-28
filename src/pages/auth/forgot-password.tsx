@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Loader2, Mail } from "lucide-react";
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation("auth");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,28 +45,37 @@ export default function ForgotPasswordPage() {
               <Mail className="h-6 w-6 text-primary" />
             </div>
           </div>
-          <CardTitle>Reset password</CardTitle>
-          <CardDescription>{sent ? `Check ${email} for a reset link` : "Enter your email and we'll send a reset link"}</CardDescription>
+          <CardTitle>{t("forgot.title")}</CardTitle>
+          <CardDescription>{sent ? t("forgot.sentTo", { email }) : t("forgot.intro")}</CardDescription>
         </CardHeader>
         <CardContent>
           {!sent ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("forgot.email")}</Label>
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Send reset link
+                {t("forgot.submit")}
               </Button>
             </form>
           ) : null}
           <Link href="/auth/login" className="mt-4 block text-center text-sm text-primary hover:underline">
-            Back to sign in
+            {t("forgot.back")}
           </Link>
         </CardContent>
       </Card>
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common", "auth"])),
+    },
+  };
 }

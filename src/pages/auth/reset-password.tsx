@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -13,6 +14,7 @@ type Status = "checking" | "valid" | "invalid" | "done";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { t } = useTranslation("auth");
   const [status, setStatus] = useState<Status>("checking");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -42,8 +44,8 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) { setError("Passwords don't match"); return; }
-    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (password !== confirm) { setError(t("reset.mismatch")); return; }
+    if (password.length < 8) { setError(t("reset.tooShort")); return; }
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.updateUser({ password });
@@ -74,12 +76,12 @@ export default function ResetPasswordPage() {
                 <XCircle className="h-6 w-6 text-destructive" />
               </div>
             </div>
-            <CardTitle>Invalid or expired link</CardTitle>
-            <CardDescription>This reset link is no longer valid. Request a new one to continue.</CardDescription>
+            <CardTitle>{t("reset.invalidTitle")}</CardTitle>
+            <CardDescription>{t("reset.invalidDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-2">
-            <Link href="/auth/forgot-password" className="block"><Button className="w-full">Request new link</Button></Link>
-            <Link href="/auth/login" className="text-sm text-primary hover:underline">Back to sign in</Link>
+            <Link href="/auth/forgot-password" className="block"><Button className="w-full">{t("reset.requestNew")}</Button></Link>
+            <Link href="/auth/login" className="text-sm text-primary hover:underline">{t("reset.back")}</Link>
           </CardContent>
         </Card>
       </div>
@@ -95,24 +97,24 @@ export default function ResetPasswordPage() {
               {status === "done" ? <CheckCircle2 className="h-6 w-6 text-success" /> : null}
             </div>
           </div>
-          <CardTitle>{status === "done" ? "Password updated" : "Set new password"}</CardTitle>
-          <CardDescription>{status === "done" ? "Redirecting to sign in..." : "Enter your new password (min 8 characters)"}</CardDescription>
+          <CardTitle>{status === "done" ? t("reset.doneTitle") : t("reset.title")}</CardTitle>
+          <CardDescription>{status === "done" ? t("reset.doneDesc") : t("reset.intro")}</CardDescription>
         </CardHeader>
         <CardContent>
           {status === "valid" && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
               <div className="space-y-2">
-                <Label htmlFor="password">New password</Label>
+                <Label htmlFor="password">{t("reset.newPassword")}</Label>
                 <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm">Confirm password</Label>
+                <Label htmlFor="confirm">{t("reset.confirmPassword")}</Label>
                 <PasswordInput id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Update password
+                {t("reset.submit")}
               </Button>
             </form>
           )}
@@ -120,4 +122,13 @@ export default function ResetPasswordPage() {
       </Card>
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common", "auth"])),
+    },
+  };
 }
