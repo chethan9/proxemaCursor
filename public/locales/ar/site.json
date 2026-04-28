@@ -673,36 +673,138 @@
   },
   "downloads": {
     "title": "التنزيلات",
-    "empty": "لا توجد تنزيلات بعد",
+    "subtitle": "المستندات والتقارير المُنشأة لـ {{name}} · يتم حذفها تلقائياً بعد 7 أيام",
+    "bulkJobsLink": "المهام المجمعة",
+    "refresh": "تحديث",
+    "tiles": {
+      "all": "جميع الملفات",
+      "invoice": "الفواتير",
+      "packingSlip": "قوائم التعبئة",
+      "creditNote": "إشعارات الدائن",
+      "report": "التقارير"
+    },
+    "types": {
+      "invoice": "فاتورة",
+      "packingSlip": "قائمة تعبئة",
+      "creditNote": "إشعار دائن",
+      "report": "تقرير"
+    },
+    "search": "البحث بالملف أو الطلب أو العميل...",
+    "filters": {
+      "allTypes": "جميع الأنواع",
+      "clear": "مسح"
+    },
+    "selected": "{{count}} محدد",
+    "downloadSelected": "تنزيل المحدد",
+    "expired": "منتهي",
+    "daysLeft": "{{days}}ي متبقي",
+    "hoursLeft": "{{hours}}س متبقي",
     "columns": {
-      "product": "المنتج",
-      "file": "الملف",
-      "downloads": "التنزيلات",
-      "lastDownload": "آخر تنزيل"
+      "fileName": "اسم الملف",
+      "type": "النوع",
+      "orderRef": "الطلب / المرجع",
+      "customer": "العميل",
+      "generated": "تاريخ الإنشاء",
+      "expires": "ينتهي",
+      "size": "الحجم",
+      "actions": "الإجراءات"
+    },
+    "selectAll": "تحديد الكل",
+    "selectFile": "تحديد {{name}}",
+    "loading": "جاري تحميل التنزيلات…",
+    "empty": {
+      "noFiles": "لا توجد تنزيلات بعد",
+      "noFilesHint": "أنشئ فواتير من الطلبات ← طباعة الفواتير لرؤيتها هنا",
+      "noMatches": "لا توجد ملفات تطابق التصفية",
+      "noMatchesHint": "حاول مسح التصفية أو البحث بمصطلح آخر"
+    },
+    "actions": {
+      "download": "تنزيل",
+      "remove": "إزالة من التنزيلات"
+    },
+    "toasts": {
+      "unavailable": "غير متاح",
+      "notDownloadable": "هذا الملف غير قابل للتنزيل",
+      "signInRequired": "يلزم تسجيل الدخول",
+      "archiveExpired": "انتهت صلاحية الأرشيف",
+      "autoDeleted": "حُذف تلقائياً بعد 7 أيام",
+      "downloadFailed": "فشل التنزيل",
+      "removed": "تمت الإزالة من التنزيلات",
+      "removeFailed": "فشلت الإزالة"
     }
   },
   "bulkJobs": {
     "title": "المهام المجمعة",
-    "empty": "لا توجد مهام بعد",
+    "subtitle": "المهام في الخلفية لـ {{name}}",
+    "viewDownloads": "عرض التنزيلات",
+    "refresh": "تحديث",
+    "stats": {
+      "total": "إجمالي المهام",
+      "active": "نشطة",
+      "completed": "مكتملة",
+      "failed": "فاشلة",
+      "processed": "السجلات المعالجة"
+    },
+    "search": "البحث في المهام...",
+    "filters": {
+      "allStatus": "جميع الحالات",
+      "allTypes": "جميع الأنواع",
+      "clear": "مسح"
+    },
+    "statuses": {
+      "pending": "قيد الانتظار",
+      "running": "قيد التشغيل",
+      "completed": "مكتملة",
+      "partial": "جزئية",
+      "failed": "فاشلة",
+      "cancelled": "ملغاة"
+    },
+    "history": "سجل المهام",
     "columns": {
       "type": "النوع",
       "status": "الحالة",
       "progress": "التقدم",
-      "started": "البدء",
-      "completed": "الانتهاء",
-      "items": "العناصر"
-    },
-    "status": {
-      "pending": "قيد الانتظار",
-      "running": "قيد التشغيل",
-      "completed": "مكتمل",
+      "succeeded": "نجح",
       "failed": "فشل",
-      "cancelled": "ملغي"
+      "duration": "المدة",
+      "started": "بدأت",
+      "actions": "الإجراءات"
     },
-    "actions": {
+    "loading": "جاري تحميل المهام…",
+    "empty": {
+      "none": "لا توجد مهام مجمعة بعد",
+      "noMatches": "لا توجد مهام تطابق التصفية"
+    },
+    "row": {
+      "view": "عرض",
       "cancel": "إلغاء",
-      "retry": "إعادة المحاولة",
-      "download": "تنزيل النتيجة"
+      "error": "خطأ"
+    },
+    "details": {
+      "jobId": "معرّف المهمة:",
+      "total": "الإجمالي",
+      "processed": "المعالج",
+      "succeeded": "نجح",
+      "failed": "فشل",
+      "progress": "التقدم",
+      "created": "أُنشئت",
+      "started": "بدأت",
+      "completed": "اكتملت",
+      "duration": "المدة",
+      "jobError": "خطأ في المهمة",
+      "payload": "الحمولة",
+      "perItemErrors": "أخطاء العناصر ({{count}})",
+      "retryTrash": "إعادة (سلة المهملات)",
+      "retryForce": "إعادة (حذف نهائي)",
+      "retryFailed": "إعادة العناصر الفاشلة"
+    },
+    "toasts": {
+      "cancelled": "تم إلغاء المهمة",
+      "cancelFailed": "فشل الإلغاء",
+      "retryQueued": "تم إدراج إعادة المحاولة",
+      "retryQueuedDesc_one": "إعادة تشغيل {{count}} عنصر فاشل",
+      "retryQueuedDesc_other": "إعادة تشغيل {{count}} عناصر فاشلة",
+      "retryFailed": "فشلت إعادة المحاولة"
     }
   },
   "settings": {

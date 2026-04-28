@@ -662,48 +662,138 @@
   },
   "downloads": {
     "title": "Downloads",
-    "subtitle": "Digital files attached to downloadable products",
-    "search": "Search files…",
-    "columns": {
-      "file": "File",
-      "product": "Product",
-      "size": "Size",
-      "downloads": "Downloads",
-      "expires": "Expires"
+    "subtitle": "Generated documents and reports for {{name}} · auto-deleted after 7 days",
+    "bulkJobsLink": "Bulk Jobs",
+    "refresh": "Refresh",
+    "tiles": {
+      "all": "All Files",
+      "invoice": "Invoices",
+      "packingSlip": "Packing Slips",
+      "creditNote": "Credit Notes",
+      "report": "Reports"
     },
+    "types": {
+      "invoice": "Invoice",
+      "packingSlip": "Packing Slip",
+      "creditNote": "Credit Note",
+      "report": "Report"
+    },
+    "search": "Search by file, order, or customer...",
+    "filters": {
+      "allTypes": "All Types",
+      "clear": "Clear"
+    },
+    "selected": "{{count}} selected",
+    "downloadSelected": "Download selected",
+    "expired": "Expired",
+    "daysLeft": "{{days}}d left",
+    "hoursLeft": "{{hours}}h left",
+    "columns": {
+      "fileName": "File Name",
+      "type": "Type",
+      "orderRef": "Order / Ref",
+      "customer": "Customer",
+      "generated": "Generated",
+      "expires": "Expires",
+      "size": "Size",
+      "actions": "Actions"
+    },
+    "selectAll": "Select all",
+    "selectFile": "Select {{name}}",
+    "loading": "Loading downloads…",
     "empty": {
-      "title": "No downloadable files",
-      "description": "Mark products as downloadable to manage their files here."
+      "noFiles": "No downloads yet",
+      "noFilesHint": "Generate invoices from Orders → Print invoices to see files here",
+      "noMatches": "No files match your filters",
+      "noMatchesHint": "Try clearing filters or searching for a different term"
+    },
+    "actions": {
+      "download": "Download",
+      "remove": "Remove from downloads"
+    },
+    "toasts": {
+      "unavailable": "Unavailable",
+      "notDownloadable": "This file is not downloadable",
+      "signInRequired": "Sign in required",
+      "archiveExpired": "Archive expired",
+      "autoDeleted": "Auto-deleted after 7 days",
+      "downloadFailed": "Download failed",
+      "removed": "Removed from Downloads",
+      "removeFailed": "Failed to remove"
     }
   },
   "bulkJobs": {
-    "title": "Bulk jobs",
-    "subtitle": "Background tasks: imports, exports, mass edits",
+    "title": "Bulk Jobs",
+    "subtitle": "Background jobs for {{name}}",
+    "viewDownloads": "View downloads",
+    "refresh": "Refresh",
+    "stats": {
+      "total": "Total Jobs",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed",
+      "processed": "Records Processed"
+    },
+    "search": "Search jobs...",
+    "filters": {
+      "allStatus": "All Status",
+      "allTypes": "All Types",
+      "clear": "Clear"
+    },
+    "statuses": {
+      "pending": "pending",
+      "running": "running",
+      "completed": "completed",
+      "partial": "partial",
+      "failed": "failed",
+      "cancelled": "cancelled"
+    },
+    "history": "Job History",
     "columns": {
       "type": "Type",
       "status": "Status",
       "progress": "Progress",
-      "createdAt": "Started",
-      "duration": "Duration",
-      "rows": "Rows"
-    },
-    "actions": {
-      "newJob": "New bulk job",
-      "download": "Download result",
-      "retry": "Retry",
-      "cancel": "Cancel job",
-      "viewLog": "View log"
-    },
-    "status": {
-      "queued": "Queued",
-      "running": "Running",
-      "completed": "Completed",
+      "succeeded": "Success",
       "failed": "Failed",
-      "cancelled": "Cancelled"
+      "duration": "Duration",
+      "started": "Started",
+      "actions": "Actions"
     },
+    "loading": "Loading jobs…",
     "empty": {
-      "title": "No bulk jobs",
-      "description": "Bulk operations like CSV imports or mass edits will appear here."
+      "none": "No bulk jobs yet",
+      "noMatches": "No jobs match your filters"
+    },
+    "row": {
+      "view": "View",
+      "cancel": "Cancel",
+      "error": "error"
+    },
+    "details": {
+      "jobId": "Job ID:",
+      "total": "Total",
+      "processed": "Processed",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "progress": "Progress",
+      "created": "Created",
+      "started": "Started",
+      "completed": "Completed",
+      "duration": "Duration",
+      "jobError": "Job Error",
+      "payload": "Payload",
+      "perItemErrors": "Per-item Errors ({{count}})",
+      "retryTrash": "Retry (trash)",
+      "retryForce": "Retry (force delete)",
+      "retryFailed": "Retry failed items"
+    },
+    "toasts": {
+      "cancelled": "Job cancelled",
+      "cancelFailed": "Failed to cancel",
+      "retryQueued": "Retry job queued",
+      "retryQueuedDesc_one": "Re-running {{count}} failed item",
+      "retryQueuedDesc_other": "Re-running {{count}} failed items",
+      "retryFailed": "Retry failed"
     }
   },
   "settings": {
