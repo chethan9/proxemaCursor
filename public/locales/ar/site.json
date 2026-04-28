@@ -404,16 +404,61 @@
   },
   "customers": {
     "title": "العملاء",
-    "addNew": "عميل جديد",
-    "search": "بحث في العملاء…",
-    "empty": "لا يوجد عملاء بعد",
+    "newCustomer": "عميل جديد",
+    "search": "ابحث عن العملاء…",
+    "toolbar": {
+      "sort": "ترتيب",
+      "sortBy": "ترتيب حسب",
+      "columns": "الأعمدة",
+      "customizeColumns": "تخصيص الأعمدة",
+      "export": "تصدير",
+      "exportCsv": "تصدير CSV",
+      "reset": "إعادة تعيين",
+      "clear": "مسح",
+      "rows": "صفوف",
+      "lockedHint": "متاح بعد اكتمال المزامنة الأولية",
+      "exported": "تم التصدير",
+      "exportedCount": "{{count}} عميل"
+    },
+    "sortOptions": {
+      "newestRegistered": "الأحدث تسجيلاً",
+      "oldestRegistered": "الأقدم تسجيلاً",
+      "highestSpent": "الأعلى إنفاقاً",
+      "lowestSpent": "الأدنى إنفاقاً",
+      "mostOrders": "الأكثر طلبات",
+      "fewestOrders": "الأقل طلبات",
+      "nameAsc": "الاسم أ-ي",
+      "nameDesc": "الاسم ي-أ"
+    },
+    "columnGroups": {
+      "Customer": "العميل",
+      "Activity": "النشاط",
+      "Location": "الموقع"
+    },
     "columns": {
       "name": "الاسم",
-      "email": "البريد الإلكتروني",
+      "username": "اسم المستخدم",
+      "email": "البريد",
+      "phone": "الهاتف",
       "orders": "الطلبات",
-      "spent": "إجمالي الإنفاق",
-      "lastOrder": "آخر طلب",
-      "joined": "تاريخ الانضمام"
+      "spent": "المبلغ المنفق",
+      "aov": "متوسط الطلب",
+      "city": "المدينة",
+      "country": "الدولة",
+      "registered": "تاريخ التسجيل",
+      "last_active": "آخر نشاط"
+    },
+    "empty": {
+      "title": "لا يوجد عملاء بعد",
+      "description": "عند تسجيل العملاء أو تقديم طلبات في متجرك، سيظهرون هنا."
+    },
+    "expanded": {
+      "lastOrders": "آخر الطلبات",
+      "noOrders": "لا توجد طلبات بعد.",
+      "billingAddress": "عنوان الفوترة",
+      "actions": "الإجراءات",
+      "viewDetails": "عرض التفاصيل",
+      "editCustomer": "تعديل العميل"
     }
   },
   "customerDetail": {
@@ -490,25 +535,69 @@
     }
   },
   "settings": {
-    "title": "إعدادات الموقع",
-    "sections": {
-      "connection": "الاتصال",
-      "sync": "المزامنة",
-      "webhooks": "الويب هوك",
-      "history": "نافذة السجل",
-      "templates": "القوالب الافتراضية",
-      "danger": "منطقة الخطر"
+    "title": "الإعدادات",
+    "backToSites": "العودة إلى المواقع",
+    "notFound": "الموقع غير موجود.",
+    "logo": {
+      "title": "شعار الموقع",
+      "upload": "رفع",
+      "replace": "استبدال",
+      "remove": "إزالة",
+      "hint": "250×250 · PNG/JPG/WebP · ≤ 2 ميجابايت",
+      "tooLarge": "الملف كبير جداً",
+      "tooLargeDesc": "يجب أن يكون الشعار ≤ 2 ميجابايت",
+      "unsupported": "صيغة غير مدعومة",
+      "unsupportedDesc": "استخدم PNG أو JPG أو WebP",
+      "updated": "تم تحديث الشعار",
+      "removed": "تم إزالة الشعار",
+      "uploadFailed": "فشل الرفع",
+      "removeFailed": "فشلت الإزالة"
     },
-    "actions": {
-      "testConnection": "اختبار الاتصال",
-      "syncNow": "مزامنة الآن",
-      "registerWebhooks": "تسجيل الويب هوك",
-      "deleteSite": "حذف الموقع"
+    "connection": {
+      "title": "الاتصال",
+      "storeUrl": "رابط المتجر",
+      "apiStatus": "حالة API",
+      "connected": "متصل",
+      "notConnected": "غير متصل",
+      "lastSync": "آخر مزامنة",
+      "never": "أبداً",
+      "created": "تاريخ الإنشاء"
+    },
+    "scheduledSync": {
+      "title": "المزامنة المجدولة",
+      "interval": "فترة المزامنة",
+      "intervalHint": "تتم مزامنة البيانات تلقائياً في هذه الفترة.",
+      "manualOnly": "يدوي فقط",
+      "every15m": "كل 15 دقيقة",
+      "every30m": "كل 30 دقيقة",
+      "everyHour": "كل ساعة",
+      "every6h": "كل 6 ساعات",
+      "every12h": "كل 12 ساعة",
+      "every24h": "كل 24 ساعة",
+      "next": "التالي:",
+      "overdue": "(متأخر {{minutes}}د)",
+      "lastScheduler": "آخر مجدول: {{time}} ({{status}})",
+      "runNow": "تشغيل الآن",
+      "save": "حفظ الجدول",
+      "saved": "تم حفظ الجدول"
     },
     "danger": {
-      "title": "حذف هذا الموقع",
-      "description": "سيؤدي هذا إلى إزالة جميع البيانات المتزامنة بشكل دائم. لا يمكن التراجع عن هذا الإجراء.",
-      "confirm": "حذف نهائي"
+      "title": "منطقة الخطر",
+      "typeToConfirm": "اكتب",
+      "toConfirm": "للتأكيد على الحذف",
+      "permanentWarning": "يحذف الموقع وجميع البيانات المتزامنة نهائياً. لا يمكن التراجع.",
+      "deleteSite": "حذف الموقع",
+      "confirmTitle": "حذف هذا الموقع نهائياً؟",
+      "syncingWarning": "هذا الموقع قيد المزامنة حالياً.",
+      "syncingDesc": "سيؤدي الحذف إلى إلغاء المزامنة وإزالة {{name}} نهائياً مع جميع البيانات المتزامنة. لا يمكن التراجع عن هذا الإجراء.",
+      "normalDesc": "سيؤدي هذا إلى حذف {{name}} وجميع البيانات المرتبطة بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.",
+      "cancel": "إلغاء",
+      "confirm": "نعم، احذف نهائياً",
+      "deleted": "تم حذف الموقع",
+      "deleteFailed": "فشل الحذف",
+      "removed": "تم إزالة {{name}}.",
+      "webhooksRemoved": "تم تنظيف {{count}} webhook من WooCommerce.",
+      "webhooksFailed": "تعذرت إزالة {{count}} webhook (قد يكون الموقع غير متصل)."
     }
   },
   "banners": {

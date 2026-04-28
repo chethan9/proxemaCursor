@@ -404,27 +404,61 @@
   },
   "customers": {
     "title": "Customers",
-    "search": "Search by name, email, phone…",
+    "newCustomer": "New customer",
+    "search": "Search customers…",
+    "toolbar": {
+      "sort": "Sort",
+      "sortBy": "Sort by",
+      "columns": "Columns",
+      "customizeColumns": "Customize columns",
+      "export": "Export",
+      "exportCsv": "Export CSV",
+      "reset": "Reset",
+      "clear": "Clear",
+      "rows": "Rows",
+      "lockedHint": "Available after initial sync completes",
+      "exported": "Exported",
+      "exportedCount": "{{count}} customers"
+    },
+    "sortOptions": {
+      "newestRegistered": "Newest registered",
+      "oldestRegistered": "Oldest registered",
+      "highestSpent": "Highest spent",
+      "lowestSpent": "Lowest spent",
+      "mostOrders": "Most orders",
+      "fewestOrders": "Fewest orders",
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A"
+    },
+    "columnGroups": {
+      "Customer": "Customer",
+      "Activity": "Activity",
+      "Location": "Location"
+    },
     "columns": {
       "name": "Name",
+      "username": "Username",
       "email": "Email",
       "phone": "Phone",
       "orders": "Orders",
-      "totalSpent": "Total spent",
-      "lastOrder": "Last order",
-      "createdAt": "Joined",
-      "role": "Role"
-    },
-    "actions": {
-      "addCustomer": "Add customer",
-      "viewProfile": "View profile",
-      "edit": "Edit",
-      "delete": "Delete",
-      "export": "Export"
+      "spent": "Spent",
+      "aov": "AOV",
+      "city": "City",
+      "country": "Country",
+      "registered": "Registered",
+      "last_active": "Last active"
     },
     "empty": {
       "title": "No customers yet",
-      "description": "Customers will appear here as orders are placed."
+      "description": "When customers sign up or place orders on your store, they'll appear here."
+    },
+    "expanded": {
+      "lastOrders": "Last orders",
+      "noOrders": "No orders yet.",
+      "billingAddress": "Billing address",
+      "actions": "Actions",
+      "viewDetails": "View details",
+      "editCustomer": "Edit customer"
     }
   },
   "customerDetail": {
@@ -527,71 +561,69 @@
     }
   },
   "settings": {
-    "title": "Site settings",
-    "tabs": {
-      "general": "General",
-      "connection": "Connection",
-      "syncing": "Syncing",
-      "webhooks": "Webhooks",
-      "danger": "Danger zone"
-    },
-    "general": {
-      "name": "Display name",
-      "url": "Store URL",
-      "description": "Description",
-      "save": "Save changes"
+    "title": "Configuration",
+    "backToSites": "Back to Sites",
+    "notFound": "Site not found.",
+    "logo": {
+      "title": "Site Logo",
+      "upload": "Upload",
+      "replace": "Replace",
+      "remove": "Remove",
+      "hint": "250×250 · PNG/JPG/WebP · ≤ 2MB",
+      "tooLarge": "File too large",
+      "tooLargeDesc": "Logo must be ≤ 2MB",
+      "unsupported": "Unsupported format",
+      "unsupportedDesc": "Use PNG, JPG, or WebP",
+      "updated": "Logo updated",
+      "removed": "Logo removed",
+      "uploadFailed": "Upload failed",
+      "removeFailed": "Remove failed"
     },
     "connection": {
-      "title": "WooCommerce connection",
-      "consumerKey": "Consumer key",
-      "consumerSecret": "Consumer secret",
-      "test": "Test connection",
-      "lastChecked": "Last checked: {{time}}",
-      "healthy": "Connection healthy",
-      "failed": "Connection failed",
-      "diagnose": "Run diagnostic"
+      "title": "Connection",
+      "storeUrl": "Store URL",
+      "apiStatus": "API Status",
+      "connected": "Connected",
+      "notConnected": "Not Connected",
+      "lastSync": "Last Sync",
+      "never": "Never",
+      "created": "Created"
     },
-    "syncing": {
-      "title": "Sync configuration",
-      "interval": "Cron interval",
-      "intervals": {
-        "5m": "Every 5 minutes",
-        "15m": "Every 15 minutes",
-        "30m": "Every 30 minutes",
-        "1h": "Every hour",
-        "6h": "Every 6 hours",
-        "24h": "Once a day"
-      },
-      "aspects": "Aspects to sync",
-      "products": "Products",
-      "orders": "Orders",
-      "customers": "Customers",
-      "categories": "Categories",
-      "tags": "Tags",
-      "coupons": "Coupons",
-      "runNow": "Run sync now",
-      "running": "Running…",
-      "lastSync": "Last sync: {{time}}",
-      "neverSynced": "Never synced"
-    },
-    "webhooks": {
-      "title": "Webhooks",
-      "subtitle": "Real-time updates from WooCommerce",
-      "register": "Register webhooks",
-      "test": "Send test ping",
-      "repair": "Repair all",
-      "status": "Status",
-      "lastDelivery": "Last delivery",
-      "events": "Events",
-      "empty": "No webhooks registered."
+    "scheduledSync": {
+      "title": "Scheduled Sync",
+      "interval": "Sync Interval",
+      "intervalHint": "Data syncs automatically at this interval.",
+      "manualOnly": "Manual only",
+      "every15m": "Every 15 minutes",
+      "every30m": "Every 30 minutes",
+      "everyHour": "Every hour",
+      "every6h": "Every 6 hours",
+      "every12h": "Every 12 hours",
+      "every24h": "Every 24 hours",
+      "next": "Next:",
+      "overdue": "(overdue {{minutes}}m)",
+      "lastScheduler": "Last scheduler: {{time}} ({{status}})",
+      "runNow": "Run now",
+      "save": "Save Schedule",
+      "saved": "Schedule saved"
     },
     "danger": {
-      "title": "Danger zone",
-      "deleteSite": "Delete this site",
-      "deleteWarning": "This permanently removes the site and all its synced data. WooCommerce data is not affected.",
-      "delete": "Delete site",
-      "confirmText": "Type the site name to confirm",
-      "cannotUndo": "This action cannot be undone."
+      "title": "Danger Zone",
+      "typeToConfirm": "Type",
+      "toConfirm": "to confirm deletion",
+      "permanentWarning": "Permanently deletes the site and all synced data. Cannot be undone.",
+      "deleteSite": "Delete Site",
+      "confirmTitle": "Delete this site permanently?",
+      "syncingWarning": "This site is currently syncing.",
+      "syncingDesc": "Deleting will cancel the sync and permanently remove {{name}} along with all synced data. This action cannot be undone.",
+      "normalDesc": "This will permanently delete {{name}} and all associated data. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Yes, delete permanently",
+      "deleted": "Site deleted",
+      "deleteFailed": "Delete failed",
+      "removed": "{{name}} removed.",
+      "webhooksRemoved": "{{count}} webhook(s) cleaned up from WooCommerce.",
+      "webhooksFailed": "{{count}} webhook(s) could not be removed (site may be offline)."
     }
   },
   "banners": {

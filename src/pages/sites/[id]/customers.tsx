@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { SitePageShell } from "@/components/site/shared";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
@@ -72,29 +73,29 @@ type ColumnKey =
   | "registered"
   | "last_active";
 
-const COLUMNS: { key: ColumnKey; label: string; group: string; numeric?: boolean }[] = [
-  { key: "name", label: "Name", group: "Customer" },
-  { key: "username", label: "Username", group: "Customer" },
-  { key: "email", label: "Email", group: "Customer" },
-  { key: "phone", label: "Phone", group: "Customer" },
-  { key: "orders", label: "Orders", group: "Activity", numeric: true },
-  { key: "spent", label: "Spent", group: "Activity", numeric: true },
-  { key: "aov", label: "AOV", group: "Activity", numeric: true },
-  { key: "city", label: "City", group: "Location" },
-  { key: "country", label: "Country", group: "Location" },
-  { key: "registered", label: "Registered", group: "Activity" },
-  { key: "last_active", label: "Last active", group: "Activity" },
+const COLUMNS: { key: ColumnKey; group: string; numeric?: boolean }[] = [
+  { key: "name", group: "Customer" },
+  { key: "username", group: "Customer" },
+  { key: "email", group: "Customer" },
+  { key: "phone", group: "Customer" },
+  { key: "orders", group: "Activity", numeric: true },
+  { key: "spent", group: "Activity", numeric: true },
+  { key: "aov", group: "Activity", numeric: true },
+  { key: "city", group: "Location" },
+  { key: "country", group: "Location" },
+  { key: "registered", group: "Activity" },
+  { key: "last_active", group: "Activity" },
 ];
 
-const SORT_OPTIONS: { field: CustomerSortField; direction: SortDirection; label: string }[] = [
-  { field: "date_created", direction: "desc", label: "Newest registered" },
-  { field: "date_created", direction: "asc", label: "Oldest registered" },
-  { field: "total_spent", direction: "desc", label: "Highest spent" },
-  { field: "total_spent", direction: "asc", label: "Lowest spent" },
-  { field: "orders_count", direction: "desc", label: "Most orders" },
-  { field: "orders_count", direction: "asc", label: "Fewest orders" },
-  { field: "name", direction: "asc", label: "Name A→Z" },
-  { field: "name", direction: "desc", label: "Name Z→A" },
+const SORT_OPTIONS: { field: CustomerSortField; direction: SortDirection; key: string }[] = [
+  { field: "date_created", direction: "desc", key: "newestRegistered" },
+  { field: "date_created", direction: "asc", key: "oldestRegistered" },
+  { field: "total_spent", direction: "desc", key: "highestSpent" },
+  { field: "total_spent", direction: "asc", key: "lowestSpent" },
+  { field: "orders_count", direction: "desc", key: "mostOrders" },
+  { field: "orders_count", direction: "asc", key: "fewestOrders" },
+  { field: "name", direction: "asc", key: "nameAsc" },
+  { field: "name", direction: "desc", key: "nameDesc" },
 ];
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
@@ -106,6 +107,7 @@ function formatMoney(v: number | string | null | undefined, currency = "KWD") {
 }
 
 function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; storeId: string }) {
+  const { t } = useTranslation("site");
   const { data: lastOrders = [] } = useCustomerLastOrders(storeId, customer.woo_id, 3);
   const billing = getCustomerBilling(customer);
   const addr = [billing.address_1, billing.city, billing.state, billing.country].filter(Boolean).join(", ");
@@ -114,9 +116,9 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_180px] gap-6 p-5 border-t border-border">
       <div className="space-y-4 min-w-0">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Last orders</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("customers.expanded.lastOrders")}</div>
           {lastOrders.length === 0 ? (
-            <div className="text-xs text-muted-foreground py-4">No orders yet.</div>
+            <div className="text-xs text-muted-foreground py-4">{t("customers.expanded.noOrders")}</div>
           ) : (
             <div className="space-y-1.5">
               {lastOrders.map((o) => {
@@ -151,19 +153,19 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
         </div>
         {addr && (
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Billing address</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t("customers.expanded.billingAddress")}</div>
             <div className="text-xs text-foreground/80">{addr}</div>
           </div>
         )}
       </div>
       <div className="space-y-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Actions</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t("customers.expanded.actions")}</div>
         <Link
           href={`/sites/${storeId}/customers/${customer.id}`}
           className="flex items-center gap-2 px-3 h-10 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <Eye className="h-3.5 w-3.5" />
-          <span className="font-medium">View details</span>
+          <span className="font-medium">{t("customers.expanded.viewDetails")}</span>
           <span className="ml-auto">→</span>
         </Link>
         <Link
@@ -171,7 +173,7 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
           className="flex items-center gap-2 px-3 h-10 rounded-md text-sm border border-border bg-background hover:bg-muted transition-colors"
         >
           <Pencil className="h-3.5 w-3.5" />
-          <span>Edit customer</span>
+          <span>{t("customers.expanded.editCustomer")}</span>
           <span className="ml-auto text-muted-foreground">→</span>
         </Link>
       </div>
@@ -180,6 +182,7 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
 }
 
 function CustomersInner() {
+  const { t } = useTranslation("site");
   const router = useRouter();
   const storeId = typeof router.query.id === "string" ? router.query.id : "";
   const { toast } = useToast();
@@ -324,8 +327,8 @@ function CustomersInner() {
     link.download = `customers-${storeId}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: `${customers.length} customers` });
-  }, [customers, storeId, toast]);
+    toast({ title: t("customers.toolbar.exported"), description: t("customers.toolbar.exportedCount", { count: customers.length }) });
+  }, [customers, storeId, toast, t]);
 
   return (
     <div className="space-y-3">
@@ -335,23 +338,23 @@ function CustomersInner() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("customers.toolbar.sort")}: ${t(`customers.sortOptions.${sort.key}`)}`}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
-                  <span className="text-xs">Sort</span>
+                  <span className="text-xs">{t("customers.toolbar.sort")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("customers.toolbar.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {SORT_OPTIONS.map((opt, i) => (
-                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
+                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{t(`customers.sortOptions.${opt.key}`)}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" className="h-9 text-xs gap-1.5" onClick={() => { setSearch(""); }}>
                 <FilterX className="h-3.5 w-3.5" />
-                Clear
+                {t("customers.toolbar.clear")}
               </Button>
             )}
           </div>
@@ -359,7 +362,7 @@ function CustomersInner() {
             <div className="w-full max-w-[320px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input ref={searchInputRef} placeholder="Search customers…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-12 h-9" />
+                <Input ref={searchInputRef} placeholder={t("customers.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-12 h-9" />
                 {!search && (
                   <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground pointer-events-none">⌘K</kbd>
                 )}
@@ -372,21 +375,21 @@ function CustomersInner() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? "Available after initial sync completes" : "Customize columns"}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? t("customers.toolbar.lockedHint") : t("customers.toolbar.customizeColumns")}>
                   <Columns3 className="h-3.5 w-3.5" />
-                  <span className="text-xs">Columns</span>
+                  <span className="text-xs">{t("customers.toolbar.columns")}</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-[420px] p-0" sideOffset={6}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                  <div className="text-sm font-medium">Customize columns</div>
+                  <div className="text-sm font-medium">{t("customers.toolbar.customizeColumns")}</div>
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                     const def: Record<string, boolean> = {};
                     COLUMNS.forEach((c) => { def[c.key] = c.key !== "registered" && c.key !== "last_active"; });
                     setVisibleCols(def as Record<ColumnKey, boolean>);
                     setColumnOrder(COLUMNS.map((c) => c.key));
-                  }}>Reset</Button>
+                  }}>{t("customers.toolbar.reset")}</Button>
                 </div>
                 <div className="max-h-[380px] overflow-y-auto p-4">
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
@@ -398,12 +401,12 @@ function CustomersInner() {
                       });
                       return Object.entries(grouped).map(([group, cols]) => (
                         <div key={group}>
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{t(`customers.columnGroups.${group}`)}</div>
                           <div className="flex flex-col gap-0.5">
                             {cols.map((c) => (
                               <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
                                 <Checkbox checked={visibleCols[c.key]} onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))} />
-                                <span className="truncate">{c.label}</span>
+                                <span className="truncate">{t(`customers.columns.${c.key}`)}</span>
                               </label>
                             ))}
                           </div>
@@ -414,9 +417,9 @@ function CustomersInner() {
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={customers.length === 0 || locked} onClick={handleExport} title={locked ? "Available after initial sync completes" : "Export CSV"}>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={customers.length === 0 || locked} onClick={handleExport} title={locked ? t("customers.toolbar.lockedHint") : t("customers.toolbar.exportCsv")}>
               <Download className="h-3.5 w-3.5" />
-              <span className="text-xs">Export</span>
+              <span className="text-xs">{t("customers.toolbar.export")}</span>
             </Button>
             <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -427,7 +430,7 @@ function CustomersInner() {
                 <>
                   <div className="h-4 w-px bg-border" />
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>Rows:</span>
+                    <span>{t("customers.toolbar.rows")}:</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1">{pageSize}</Button>
@@ -452,7 +455,7 @@ function CustomersInner() {
             <Button size="sm" className="h-9 px-3 gap-1.5" asChild disabled={locked}>
               <Link href={`/sites/${storeId}/customers/new`} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
                 <UserPlus className="h-3.5 w-3.5" />
-                <span className="text-xs">New customer</span>
+                <span className="text-xs">{t("customers.newCustomer")}</span>
               </Link>
             </Button>
           </div>
@@ -489,7 +492,7 @@ function CustomersInner() {
                     return (
                       <TableHead key={c.key} {...dragProps} className={`${dragProps.className} ${alignCls}`}>
                         <span className={`inline-flex items-center gap-1 ${c.numeric ? "justify-end w-full" : ""}`}>
-                          {c.label}
+                          {t(`customers.columns.${c.key}`)}
                           <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                         </span>
                       </TableHead>
@@ -511,8 +514,8 @@ function CustomersInner() {
                     <TableCell colSpan={visibleColList.length} className="py-8">
                       <EmptyState
                         illustration={<NoCustomersIllustration className="w-full h-full" />}
-                        title="No customers yet"
-                        description="When customers sign up or place orders on your store, they'll appear here."
+                        title={t("customers.empty.title")}
+                        description={t("customers.empty.description")}
                       />
                     </TableCell>
                   </TableRow>

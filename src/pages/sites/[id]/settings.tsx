@@ -14,6 +14,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, RefreshCw, Plug, AlertTriangle, Trash2, Clock, Upload, X as XIcon, Image as ImageIcon, CalendarClock, Zap } from "lucide-react";
+import { useTranslation } from "next-i18next";
 import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteIcon } from "@/components/site/SiteIcon";
@@ -25,17 +26,8 @@ import { HistoryWindowCard } from "@/components/site/HistoryWindowCard";
 import { DefaultTemplatesCard } from "@/components/site/DefaultTemplatesCard";
 import { StoreProfileCard } from "@/components/site/StoreProfileCard";
 
-const SYNC_INTERVALS = [
-  { value: "0", label: "Manual only" },
-  { value: "15", label: "Every 15 minutes" },
-  { value: "30", label: "Every 30 minutes" },
-  { value: "60", label: "Every hour" },
-  { value: "360", label: "Every 6 hours" },
-  { value: "720", label: "Every 12 hours" },
-  { value: "1440", label: "Every 24 hours" },
-];
-
 function SettingsInner() {
+  const { t } = useTranslation("site");
   const router = useRouter();
   const { id, store: storeFromRoute, loading: storeLoading } = useSiteFromRoute();
   const [store, setStore] = useState<Store | null>(null);
@@ -51,6 +43,16 @@ function SettingsInner() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const SYNC_INTERVALS = [
+    { value: "0", label: t("settings.scheduledSync.manualOnly") },
+    { value: "15", label: t("settings.scheduledSync.every15m") },
+    { value: "30", label: t("settings.scheduledSync.every30m") },
+    { value: "60", label: t("settings.scheduledSync.everyHour") },
+    { value: "360", label: t("settings.scheduledSync.every6h") },
+    { value: "720", label: t("settings.scheduledSync.every12h") },
+    { value: "1440", label: t("settings.scheduledSync.every24h") },
+  ];
+
   const refreshSidebarCache = () => {
     try { localStorage.removeItem("sidebar-sites-cache"); } catch { /* ignore */ }
     qc.invalidateQueries({ queryKey: ["stores"] });
@@ -59,11 +61,11 @@ function SettingsInner() {
   const handleLogoUpload = async (file: File) => {
     if (!store) return;
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Logo must be ≤ 2MB", variant: "destructive" });
+      toast({ title: t("settings.logo.tooLarge"), description: t("settings.logo.tooLargeDesc"), variant: "destructive" });
       return;
     }
     if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
-      toast({ title: "Unsupported format", description: "Use PNG, JPG, or WebP", variant: "destructive" });
+      toast({ title: t("settings.logo.unsupported"), description: t("settings.logo.unsupportedDesc"), variant: "destructive" });
       return;
     }
     setUploadingLogo(true);
@@ -78,9 +80,9 @@ function SettingsInner() {
       const s = await getStore(store.id);
       setStore(s);
       refreshSidebarCache();
-      toast({ title: "Logo updated" });
+      toast({ title: t("settings.logo.updated") });
     } catch (e) {
-      toast({ title: "Upload failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      toast({ title: t("settings.logo.uploadFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setUploadingLogo(false);
     }
@@ -98,9 +100,9 @@ function SettingsInner() {
       const s = await getStore(store.id);
       setStore(s);
       refreshSidebarCache();
-      toast({ title: "Logo removed" });
+      toast({ title: t("settings.logo.removed") });
     } catch (e) {
-      toast({ title: "Remove failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      toast({ title: t("settings.logo.removeFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setUploadingLogo(false);
     }
@@ -156,7 +158,7 @@ function SettingsInner() {
       await updateStore(store.id, { sync_interval: interval || null, next_sync_at: nextSync });
       const s = await getStore(store.id);
       setStore(s);
-      toast({ title: "Schedule saved" });
+      toast({ title: t("settings.scheduledSync.saved") });
     } finally {
       setSavingSettings(false);
     }
@@ -167,13 +169,13 @@ function SettingsInner() {
     setDeleting(true);
     try {
       const result = await deleteStore(store.id);
-      const parts = [`${store.name} removed.`];
-      if (result.webhooks_removed > 0) parts.push(`${result.webhooks_removed} webhook${result.webhooks_removed === 1 ? "" : "s"} cleaned up from WooCommerce.`);
-      if (result.webhooks_failed > 0) parts.push(`${result.webhooks_failed} webhook${result.webhooks_failed === 1 ? "" : "s"} could not be removed (site may be offline).`);
-      toast({ title: "Site deleted", description: parts.join(" ") });
+      const parts = [t("settings.danger.removed", { name: store.name })];
+      if (result.webhooks_removed > 0) parts.push(t("settings.danger.webhooksRemoved", { count: result.webhooks_removed }));
+      if (result.webhooks_failed > 0) parts.push(t("settings.danger.webhooksFailed", { count: result.webhooks_failed }));
+      toast({ title: t("settings.danger.deleted"), description: parts.join(" ") });
       router.push("/sites");
     } catch (e) {
-      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      toast({ title: t("settings.danger.deleteFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setDeleting(false);
     }
@@ -216,8 +218,8 @@ function SettingsInner() {
   if (!store) {
     return (
       <div className="p-6">
-        <p className="text-sm text-muted-foreground">Site not found.</p>
-        <Link href="/sites"><Button variant="outline" size="sm" className="mt-3"><ArrowLeft className="h-3.5 w-3.5 mr-1.5" />Back to Sites</Button></Link>
+        <p className="text-sm text-muted-foreground">{t("settings.notFound")}</p>
+        <Link href="/sites"><Button variant="outline" size="sm" className="mt-3"><ArrowLeft className="h-3.5 w-3.5 mr-1.5" />{t("settings.backToSites")}</Button></Link>
       </div>
     );
   }
@@ -230,7 +232,7 @@ function SettingsInner() {
     <div className="p-6 max-w-6xl">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Configuration</h1>
+          <h1 className="text-xl font-semibold">{t("settings.title")}</h1>
           <p className="text-xs text-muted-foreground">{store.name} · {store.url.replace(/^https?:\/\//, "")}</p>
         </div>
         <ActivityHistoryDrawer entityType="store" entityId={store.id} />
@@ -244,7 +246,7 @@ function SettingsInner() {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b">
                 <ImageIcon className="h-3.5 w-3.5 text-primary" />
-                <h2 className="text-sm font-semibold">Site Logo</h2>
+                <h2 className="text-sm font-semibold">{t("settings.logo.title")}</h2>
               </div>
               <div className="flex items-center gap-3">
                 <SiteIcon site={store} size={44} />
@@ -260,18 +262,18 @@ function SettingsInner() {
                     <Button asChild variant="outline" size="sm" disabled={uploadingLogo} className="h-8">
                       <span>
                         {uploadingLogo ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
-                        {store.logo_url ? "Replace" : "Upload"}
+                        {store.logo_url ? t("settings.logo.replace") : t("settings.logo.upload")}
                       </span>
                     </Button>
                   </label>
                   {store.logo_url && (
                     <Button variant="ghost" size="sm" onClick={handleLogoRemove} disabled={uploadingLogo} className="h-8">
-                      <XIcon className="h-3.5 w-3.5 mr-1.5" />Remove
+                      <XIcon className="h-3.5 w-3.5 mr-1.5" />{t("settings.logo.remove")}
                     </Button>
                   )}
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">250×250 · PNG/JPG/WebP · ≤ 2MB</p>
+              <p className="text-[11px] text-muted-foreground">{t("settings.logo.hint")}</p>
             </CardContent>
           </Card>
 
@@ -280,23 +282,23 @@ function SettingsInner() {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b">
                 <Plug className="h-3.5 w-3.5 text-primary" />
-                <h2 className="text-sm font-semibold">Connection</h2>
+                <h2 className="text-sm font-semibold">{t("settings.connection.title")}</h2>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Store URL</p>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{t("settings.connection.storeUrl")}</p>
                   <p className="truncate" title={store.url}>{store.url.replace(/^https?:\/\//, "")}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">API Status</p>
-                  <StatusBadge variant={store.consumer_key ? "success" : "warning"}>{store.consumer_key ? "Connected" : "Not Connected"}</StatusBadge>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{t("settings.connection.apiStatus")}</p>
+                  <StatusBadge variant={store.consumer_key ? "success" : "warning"}>{store.consumer_key ? t("settings.connection.connected") : t("settings.connection.notConnected")}</StatusBadge>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Last Sync</p>
-                  <p>{store.last_sync_at ? formatDate(store.last_sync_at) : "Never"}</p>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{t("settings.connection.lastSync")}</p>
+                  <p>{store.last_sync_at ? formatDate(store.last_sync_at) : t("settings.connection.never")}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Created</p>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{t("settings.connection.created")}</p>
                   <p>{formatDate(store.created_at)}</p>
                 </div>
               </div>
@@ -315,18 +317,18 @@ function SettingsInner() {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b">
                 <CalendarClock className="h-3.5 w-3.5 text-primary" />
-                <h2 className="text-sm font-semibold">Scheduled Sync</h2>
+                <h2 className="text-sm font-semibold">{t("settings.scheduledSync.title")}</h2>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="sync-interval" className="text-xs">Sync Interval</Label>
+                <Label htmlFor="sync-interval" className="text-xs">{t("settings.scheduledSync.interval")}</Label>
                 <Select value={syncInterval} onValueChange={setSyncInterval}>
                   <SelectTrigger id="sync-interval" className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {SYNC_INTERVALS.map((i) => (<SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">Data syncs automatically at this interval.</p>
+                <p className="text-[11px] text-muted-foreground">{t("settings.scheduledSync.intervalHint")}</p>
               </div>
 
               {store.next_sync_at && parseInt(syncInterval) > 0 && (
@@ -334,10 +336,10 @@ function SettingsInner() {
                   {isOverdue ? <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />}
                   <div className="space-y-0.5 min-w-0">
                     <p>
-                      Next: <span className={isOverdue ? "text-warning font-medium" : "font-medium"}>{formatDate(store.next_sync_at)}</span>
-                      {isOverdue && <span className="text-warning"> (overdue {minsOverdue}m)</span>}
+                      {t("settings.scheduledSync.next")} <span className={isOverdue ? "text-warning font-medium" : "font-medium"}>{formatDate(store.next_sync_at)}</span>
+                      {isOverdue && <span className="text-warning"> {t("settings.scheduledSync.overdue", { minutes: minsOverdue })}</span>}
                     </p>
-                    {lastCron && <p className="text-muted-foreground">Last scheduler: {formatRelativeTime(lastCron.started_at)} ({lastCron.status})</p>}
+                    {lastCron && <p className="text-muted-foreground">{t("settings.scheduledSync.lastScheduler", { time: formatRelativeTime(lastCron.started_at), status: lastCron.status })}</p>}
                   </div>
                 </div>
               )}
@@ -347,11 +349,11 @@ function SettingsInner() {
               <div className="flex justify-end gap-2 pt-1">
                 <Button size="sm" variant="outline" onClick={handleTriggerCron} disabled={triggeringCron} className="h-8">
                   {triggeringCron ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
-                  Run now
+                  {t("settings.scheduledSync.runNow")}
                 </Button>
                 <Button size="sm" onClick={handleSaveSettings} disabled={savingSettings} className="h-8">
                   {savingSettings ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-                  Save Schedule
+                  {t("settings.scheduledSync.save")}
                 </Button>
               </div>
             </CardContent>
@@ -370,40 +372,40 @@ function SettingsInner() {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-destructive/20">
                 <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                <h2 className="text-sm font-semibold text-destructive">Danger Zone</h2>
+                <h2 className="text-sm font-semibold text-destructive">{t("settings.danger.title")}</h2>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="delete-confirm" className="text-xs">
-                  Type <span className="font-mono font-semibold">{store.name}</span> to confirm deletion
+                  {t("settings.danger.typeToConfirm")} <span className="font-mono font-semibold">{store.name}</span> {t("settings.danger.toConfirm")}
                 </Label>
                 <Input id="delete-confirm" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} placeholder={store.name} className="h-9" />
-                <p className="text-[11px] text-muted-foreground">Permanently deletes the site and all synced data. Cannot be undone.</p>
+                <p className="text-[11px] text-muted-foreground">{t("settings.danger.permanentWarning")}</p>
               </div>
 
               <div className="flex justify-end pt-1">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button size="sm" variant="destructive" disabled={deleteConfirmation !== store.name || deleting} className="h-8">
-                      {deleting ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete Site
+                      {deleting ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}{t("settings.danger.deleteSite")}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete this site permanently?</AlertDialogTitle>
+                      <AlertDialogTitle>{t("settings.danger.confirmTitle")}</AlertDialogTitle>
                       <AlertDialogDescription>
                         {isSyncing ? (
                           <>
-                            <strong className="text-destructive">This site is currently syncing.</strong> Deleting will cancel the sync and permanently remove <strong>{store.name}</strong> along with all synced data. This action cannot be undone.
+                            <strong className="text-destructive">{t("settings.danger.syncingWarning")}</strong> {t("settings.danger.syncingDesc", { name: store.name })}
                           </>
                         ) : (
-                          <>This will permanently delete <strong>{store.name}</strong> and all associated data. This action cannot be undone.</>
+                          t("settings.danger.normalDesc", { name: store.name })
                         )}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteStore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete permanently</AlertDialogAction>
+                      <AlertDialogCancel>{t("settings.danger.cancel")}</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteStore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("settings.danger.confirm")}</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
