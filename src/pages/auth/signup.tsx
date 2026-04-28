@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -17,6 +18,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -31,7 +33,7 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("errors.passwordTooShort"));
       return;
     }
     setLoading(true);
@@ -52,9 +54,8 @@ export default function SignupPage() {
       setError(error.message);
       return;
     }
-    // Supabase returns empty identities[] when email already registered (anti-enumeration)
     if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setError("An account with this email already exists. Try signing in instead.");
+      setError(t("errors.emailExists"));
       return;
     }
     setSent(true);
@@ -70,12 +71,12 @@ export default function SignupPage() {
                 <Mail className="h-6 w-6 text-primary" />
               </div>
             </div>
-            <CardTitle>Check your email</CardTitle>
-            <CardDescription>We sent a verification link to {email}. Click it to activate your account.</CardDescription>
+            <CardTitle>{t("signUp.checkEmailTitle")}</CardTitle>
+            <CardDescription>{t("signUp.checkEmailDesc", { email })}</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/auth/login" className="block text-center text-sm text-primary hover:underline">
-              Back to sign in
+              {t("signUp.backToSignIn")}
             </Link>
           </CardContent>
         </Card>
@@ -92,8 +93,8 @@ export default function SignupPage() {
               <img src={logoUrl} alt={brandName} className="h-12 w-auto object-contain" />
             ) : null}
           </div>
-          <CardTitle className="text-2xl">Create account</CardTitle>
-          <CardDescription>Sign up to manage your {brandName} workspace</CardDescription>
+          <CardTitle className="text-2xl">{t("signUp.title")}</CardTitle>
+          <CardDescription>{t("signUp.description", { brand: brandName })}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,29 +104,38 @@ export default function SignupPage() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full name</Label>
+              <Label htmlFor="fullName">{t("signUp.fullName")}</Label>
               <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("signUp.email")}</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("signUp.password")}</Label>
               <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
-              <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
+              <p className="text-xs text-muted-foreground">{t("signUp.passwordHint")}</p>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create account
+              {t("signUp.submit")}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/auth/login" className="text-primary hover:underline">Sign in</Link>
+              {t("signUp.haveAccount")}{" "}
+              <Link href="/auth/login" className="text-primary hover:underline">{t("signUp.signInLink")}</Link>
             </p>
           </form>
         </CardContent>
       </Card>
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common", "auth"])),
+    },
+  };
 }

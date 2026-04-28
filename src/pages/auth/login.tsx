@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -21,13 +22,11 @@ async function resolveLandingPath(userId: string): Promise<string> {
     .maybeSingle();
   const pref = prof?.default_landing_path?.trim();
   if (!pref) return "/projects";
-  // Validate site-scoped paths (site may have been deleted)
   const siteMatch = pref.match(/^\/sites\/([^/?#]+)/);
   if (siteMatch) {
     const siteId = siteMatch[1];
     const { data: site } = await supabase.from("stores").select("id").eq("id", siteId).maybeSingle();
     if (!site) {
-      // Clear stale preference and fall back
       try { await supabase.from("profiles").update({ default_landing_path: null }).eq("id", userId); } catch {}
       return "/projects";
     }
@@ -39,6 +38,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { brandName, logoUrl } = useBranding();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -63,7 +63,7 @@ export default function LoginPage() {
           <img src={logoUrl} alt={brandName} className="h-10 w-auto object-contain opacity-90" />
         ) : null}
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        <p className="text-xs text-muted-foreground">Signing you in…</p>
+        <p className="text-xs text-muted-foreground">{t("signIn.signingIn")}</p>
       </div>
     );
   }
@@ -96,8 +96,8 @@ export default function LoginPage() {
               <img src={logoUrl} alt={brandName} className="h-12 w-auto object-contain" />
             ) : null}
           </div>
-          <CardTitle className="text-2xl">Sign in</CardTitle>
-          <CardDescription>Enter your credentials to access {brandName}</CardDescription>
+          <CardTitle className="text-2xl">{t("signIn.title")}</CardTitle>
+          <CardDescription>{t("signIn.description", { brand: brandName })}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -107,28 +107,28 @@ export default function LoginPage() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("signIn.email")}</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("signIn.password")}</Label>
               <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
-              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">Remember me on this device</Label>
+              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">{t("signIn.remember")}</Label>
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Sign in
+              {t("signIn.submit")}
             </Button>
             <div className="space-y-2 pt-1">
               <p className="text-center text-sm text-muted-foreground">
-                New here?{" "}
-                <Link href="/auth/signup" className="text-primary hover:underline">Create an account</Link>
+                {t("signIn.newHere")}{" "}
+                <Link href="/auth/signup" className="text-primary hover:underline">{t("signIn.createAccount")}</Link>
               </p>
               <p className="text-center text-sm text-muted-foreground">
-                <Link href="/auth/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+                <Link href="/auth/forgot-password" className="text-primary hover:underline">{t("signIn.forgot")}</Link>
               </p>
             </div>
           </form>
@@ -136,4 +136,13 @@ export default function LoginPage() {
       </Card>
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common", "auth"])),
+    },
+  };
 }
