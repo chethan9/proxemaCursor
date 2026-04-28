@@ -1,1 +1,37 @@
-{}
+{
+  "app": {
+    "name": "Proxema"
+  },
+  "nav": {
+    "home": "ホーム",
+    "orders": "注文",
+    "products": "商品",
+    "customers": "顧客",
+    "categories": "カテゴリ",
+    "tags": "タグ",
+    "brands": "ブランド",
+    "downloads": "ダウンロード",
+    "bulkJobs": "一括ジョブ",
+    "configuration": "設定",
+    "main": "メイン",
+    "manage": "管理"
+  },
+  "actions": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "back": "戻る",
+    "refresh": "更新",
+    "export": "エクスポート",
+    "search": "検索",
+    "viewOnStore": "ストアで表示"
+  },
+  "states": {
+    "loading": "読み込み中…",
+    "saving": "保存中…",
+    "empty": "結果がありません",
+    "error": "問題が発生しました"
+  }
+}

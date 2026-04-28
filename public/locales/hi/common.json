@@ -1,1 +1,37 @@
-{}
+{
+  "app": {
+    "name": "Proxema"
+  },
+  "nav": {
+    "home": "होम",
+    "orders": "ऑर्डर",
+    "products": "उत्पाद",
+    "customers": "ग्राहक",
+    "categories": "श्रेणियाँ",
+    "tags": "टैग",
+    "brands": "ब्रांड",
+    "downloads": "डाउनलोड",
+    "bulkJobs": "बल्क जॉब्स",
+    "configuration": "कॉन्फ़िगरेशन",
+    "main": "मुख्य",
+    "manage": "प्रबंधन"
+  },
+  "actions": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएँ",
+    "edit": "संपादित करें",
+    "create": "बनाएँ",
+    "back": "वापस",
+    "refresh": "ताज़ा करें",
+    "export": "निर्यात",
+    "search": "खोजें",
+    "viewOnStore": "स्टोर पर देखें"
+  },
+  "states": {
+    "loading": "लोड हो रहा है…",
+    "saving": "सहेजा जा रहा है…",
+    "empty": "कोई परिणाम नहीं",
+    "error": "कुछ गलत हो गया"
+  }
+}

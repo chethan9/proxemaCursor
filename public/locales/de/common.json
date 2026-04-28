@@ -1,1 +1,37 @@
-{}
+{
+  "app": {
+    "name": "Proxema"
+  },
+  "nav": {
+    "home": "Start",
+    "orders": "Bestellungen",
+    "products": "Produkte",
+    "customers": "Kunden",
+    "categories": "Kategorien",
+    "tags": "Schlagwörter",
+    "brands": "Marken",
+    "downloads": "Downloads",
+    "bulkJobs": "Massenaufträge",
+    "configuration": "Konfiguration",
+    "main": "HAUPT",
+    "manage": "VERWALTEN"
+  },
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "back": "Zurück",
+    "refresh": "Aktualisieren",
+    "export": "Exportieren",
+    "search": "Suchen",
+    "viewOnStore": "Im Shop ansehen"
+  },
+  "states": {
+    "loading": "Lädt…",
+    "saving": "Speichert…",
+    "empty": "Keine Ergebnisse",
+    "error": "Etwas ist schiefgelaufen"
+  }
+}

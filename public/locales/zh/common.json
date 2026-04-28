@@ -1,1 +1,37 @@
-{}
+{
+  "app": {
+    "name": "Proxema"
+  },
+  "nav": {
+    "home": "首页",
+    "orders": "订单",
+    "products": "产品",
+    "customers": "客户",
+    "categories": "分类",
+    "tags": "标签",
+    "brands": "品牌",
+    "downloads": "下载",
+    "bulkJobs": "批量任务",
+    "configuration": "配置",
+    "main": "主要",
+    "manage": "管理"
+  },
+  "actions": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "back": "返回",
+    "refresh": "刷新",
+    "export": "导出",
+    "search": "搜索",
+    "viewOnStore": "在店铺查看"
+  },
+  "states": {
+    "loading": "加载中…",
+    "saving": "保存中…",
+    "empty": "暂无结果",
+    "error": "出现错误"
+  }
+}
