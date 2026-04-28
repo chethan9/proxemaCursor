@@ -265,7 +265,7 @@
   },
   "orders": {
     "title": "الطلبات",
-    "search": "بحث في الطلبات…",
+    "search": "ابحث عن الطلبات بالرقم أو العميل أو البريد...",
     "empty": "لا توجد طلبات بعد",
     "columns": {
       "order": "الطلب",
@@ -286,16 +286,89 @@
       "failed": "فشل"
     },
     "filters": {
-      "all": "كل الطلبات",
-      "today": "اليوم",
-      "week": "هذا الأسبوع",
-      "month": "هذا الشهر"
+      "all": "الكل",
+      "payment": "الدفع",
+      "allPaymentMethods": "كل طرق الدفع",
+      "filterByPayment": "تصفية حسب الدفع",
+      "filterByTotal": "تصفية حسب الإجمالي",
+      "total": "الإجمالي",
+      "min": "الأدنى",
+      "max": "الأعلى",
+      "clear": "مسح",
+      "clearAll": "مسح"
     },
-    "actions": {
-      "view": "عرض",
-      "edit": "تعديل",
+    "statuses": {
+      "processing": "قيد المعالجة",
+      "onHold": "معلّق",
+      "completed": "مكتمل",
+      "cancelled": "ملغى",
+      "refunded": "مسترد",
+      "failed": "فشل",
+      "pending": "قيد الانتظار"
+    },
+    "toolbar": {
+      "sort": "ترتيب",
+      "sortBy": "ترتيب حسب",
+      "columns": "الأعمدة",
+      "customizeColumns": "تخصيص الأعمدة",
+      "export": "تصدير",
+      "reset": "إعادة تعيين",
+      "lockedHint": "متاح بعد اكتمال المزامنة الأولية"
+    },
+    "sortOptions": {
+      "newestFirst": "الأحدث أولاً",
+      "oldestFirst": "الأقدم أولاً",
+      "totalHigh": "الإجمالي من الأعلى للأدنى",
+      "totalLow": "الإجمالي من الأدنى للأعلى",
+      "orderNumAsc": "رقم الطلب تصاعدي",
+      "orderNumDesc": "رقم الطلب تنازلي",
+      "recentlySynced": "تمت المزامنة مؤخراً"
+    },
+    "empty": {
+      "title": "لا توجد طلبات بعد",
+      "description": "عندما يقوم العملاء بإنشاء طلبات على متجرك، ستظهر هنا لإدارتها.",
+      "noMatch": "لا توجد طلبات تطابق التصفية",
+      "noMatchDescription": "جرّب مسح التصفية أو تعديلها لرؤية نتائج أكثر.",
+      "loading": "جاري تحميل الطلبات…",
+      "syncing": "جاري مزامنة طلباتك…",
+      "syncProgress": "{{percent}}% مكتمل — ستظهر الطلبات الجديدة تلقائياً"
+    },
+    "bulk": {
+      "selected": "محدد",
+      "maxLimit": "(الحد الأقصى {{max}} لكل مهمة)",
+      "printInvoices": "طباعة الفواتير",
+      "markStatus": "تحديد الحالة",
+      "changeStatusTo": "تغيير الحالة إلى…",
+      "delete": "حذف",
+      "clear": "مسح",
+      "skipped": "{{count}} طلب تم تخطيه",
+      "skippedDesc": "موجود بالفعل في مهمة جماعية أخرى.",
+      "noEligible": "لا توجد طلبات مؤهلة",
+      "noEligibleDesc": "جميع الطلبات المحددة موجودة بالفعل في مهمة جماعية أخرى.",
+      "queued": "تم إدراج المهمة الجماعية",
+      "queuedDesc": "جاري معالجة {{count}} طلب في الخلفية. تحقق من التقدم في لوحة المهام الجماعية.",
+      "dialog": {
+        "deleteTitle": "حذف {{count}} طلب؟",
+        "updateTitle": "تحديث {{count}} طلب إلى \"{{status}}\"؟",
+        "description": "يؤدي هذا إلى إدراج مهمة في الخلفية تدفع التغييرات إلى WooCommerce طلباً واحداً في كل مرة. قد تستغرق معالجة {{count}} طلب من {{minMinutes}} إلى {{maxMinutes}} دقيقة. يمكنك إغلاق هذه الصفحة؛ التقدم محفوظ.",
+        "queueJob": "إدراج المهمة",
+        "queueing": "جاري الإدراج…",
+        "cancel": "إلغاء"
+      }
+    },
+    "row": {
+      "markComplete": "وضع علامة مكتمل",
+      "alreadyStatus": "{{status}} بالفعل",
       "printInvoice": "طباعة الفاتورة",
-      "refund": "استرداد"
+      "noInvoiceTemplate": "لا يوجد قالب فاتورة",
+      "printPickslip": "طباعة قائمة الانتقاء",
+      "noPickslipTemplate": "لا يوجد قالب قائمة انتقاء"
+    },
+    "pending": {
+      "delete": "مجدول للحذف",
+      "statusChange": "مجدول لتغيير الحالة",
+      "scheduledGeneric": "مجدول: {{action}}",
+      "lockedTooltip": "هذا الطلب في طابور مهمة جماعية. التعديلات معطلة حتى انتهائها."
     }
   },
   "orderDetail": {

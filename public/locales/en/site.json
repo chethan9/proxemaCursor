@@ -269,42 +269,91 @@
   },
   "orders": {
     "title": "Orders",
-    "search": "Search by order #, customer, email…",
+    "search": "Search orders by #, customer, or email...",
     "filters": {
-      "status": "Status",
-      "dateRange": "Date range",
-      "paymentMethod": "Payment method",
       "all": "All",
-      "pending": "Pending payment",
+      "payment": "Payment",
+      "allPaymentMethods": "All payment methods",
+      "filterByPayment": "Filter by payment",
+      "filterByTotal": "Filter by total",
+      "total": "Total",
+      "min": "Min",
+      "max": "Max",
+      "clear": "Clear",
+      "clearAll": "Clear"
+    },
+    "statuses": {
       "processing": "Processing",
       "onHold": "On hold",
       "completed": "Completed",
       "cancelled": "Cancelled",
       "refunded": "Refunded",
-      "failed": "Failed"
+      "failed": "Failed",
+      "pending": "Pending"
     },
-    "columns": {
-      "orderNumber": "Order",
-      "customer": "Customer",
-      "status": "Status",
-      "total": "Total",
-      "items": "Items",
-      "paymentMethod": "Payment",
-      "createdAt": "Date",
-      "updatedAt": "Updated"
+    "toolbar": {
+      "sort": "Sort",
+      "sortBy": "Sort by",
+      "columns": "Columns",
+      "customizeColumns": "Customize columns",
+      "export": "Export",
+      "reset": "Reset",
+      "lockedHint": "Available after initial sync completes"
     },
-    "actions": {
-      "viewDetails": "View details",
-      "printInvoices": "Print invoices",
-      "markCompleted": "Mark completed",
-      "markProcessing": "Mark processing",
-      "refund": "Refund",
-      "cancel": "Cancel order",
-      "export": "Export"
+    "sortOptions": {
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first",
+      "totalHigh": "Total high to low",
+      "totalLow": "Total low to high",
+      "orderNumAsc": "Order # ascending",
+      "orderNumDesc": "Order # descending",
+      "recentlySynced": "Recently synced"
     },
     "empty": {
       "title": "No orders yet",
-      "description": "Orders sync automatically from WooCommerce."
+      "description": "When customers place orders on your store, they'll appear here for you to manage.",
+      "noMatch": "No orders match your filters",
+      "noMatchDescription": "Try clearing your filters or adjusting them to see more results.",
+      "loading": "Loading orders…",
+      "syncing": "Syncing your orders…",
+      "syncProgress": "{{percent}}% complete — new orders will appear automatically"
+    },
+    "bulk": {
+      "selected": "selected",
+      "maxLimit": "(max {{max}} per job)",
+      "printInvoices": "Print invoices",
+      "markStatus": "Mark status",
+      "changeStatusTo": "Change status to…",
+      "delete": "Delete",
+      "clear": "Clear",
+      "skipped": "{{count}} order(s) skipped",
+      "skippedDesc": "Already queued in another bulk job.",
+      "noEligible": "No eligible orders",
+      "noEligibleDesc": "All selected orders are already queued in another bulk job.",
+      "queued": "Bulk job queued",
+      "queuedDesc": "Processing {{count}} orders in the background. Check progress in the bulk jobs panel.",
+      "dialog": {
+        "deleteTitle": "Delete {{count}} orders?",
+        "updateTitle": "Update {{count}} orders to \"{{status}}\"?",
+        "description": "This queues a background job that pushes changes to WooCommerce one order at a time. Processing {{count}} orders may take {{minMinutes}}–{{maxMinutes}} minutes. You can close this page; progress is saved.",
+        "queueJob": "Queue job",
+        "queueing": "Queueing…",
+        "cancel": "Cancel"
+      }
+    },
+    "row": {
+      "markComplete": "Mark complete",
+      "alreadyStatus": "Already {{status}}",
+      "printInvoice": "Print invoice",
+      "noInvoiceTemplate": "No invoice template",
+      "printPickslip": "Print pick slip",
+      "noPickslipTemplate": "No pick slip template"
+    },
+    "pending": {
+      "delete": "Scheduled for deletion",
+      "statusChange": "Scheduled for status change",
+      "scheduledGeneric": "Scheduled: {{action}}",
+      "lockedTooltip": "This order is queued in a bulk job. Edits are disabled until it finishes."
     }
   },
   "orderDetail": {

@@ -69,6 +69,7 @@ import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { PrintInvoicesDialog } from "./PrintInvoicesDialog";
 
@@ -136,6 +137,7 @@ const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIco
 };
 
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
+  const { t } = useTranslation("site");
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
   const router = useRouter();
@@ -272,8 +274,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const isPending = (o: OrderRow) => !!(o as OrderRow & { pending_action?: string | null }).pending_action;
   const showLockedToast = useCallback((o: OrderRow) => {
     const action = (o as OrderRow & { pending_action?: string | null }).pending_action;
-    toast({ title: pendingLabel(action), description: "This order is queued in a bulk job. Edits are disabled until it finishes." });
-  }, [toast]);
+    toast({ title: pendingLabel(action), description: t("orders.pending.lockedTooltip") });
+  }, [toast, t]);
 
   // Clear selection when data/filters change
   useEffect(() => {
@@ -587,7 +589,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             <div className="w-full max-w-[288px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input ref={searchInputRef} placeholder="Search orders by #, customer, or email..." value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-12 h-9" />
+                <Input ref={searchInputRef} placeholder={t("orders.search")} value={search} onChange={(e) => onSearchChange?.(e.target.value)} className="pl-9 pr-12 h-9" />
                 {!search && (
                   <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground pointer-events-none">⌘K</kbd>
                 )}
@@ -600,13 +602,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`} disabled={locked}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("orders.toolbar.sort")}: ${sort.label}`} disabled={locked}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
-                  <span className="text-xs">Sort</span>
+                  <span className="text-xs">{t("orders.toolbar.sort")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("orders.toolbar.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {SORT_OPTIONS.map((opt, i) => (
                   <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
@@ -615,20 +617,20 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title="Customize columns" disabled={locked}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={t("orders.toolbar.customizeColumns")} disabled={locked}>
                   <Columns3 className="h-3.5 w-3.5" />
-                  <span className="text-xs">Columns</span>
+                  <span className="text-xs">{t("orders.toolbar.columns")}</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                  <div className="text-sm font-medium">Customize columns</div>
+                  <div className="text-sm font-medium">{t("orders.toolbar.customizeColumns")}</div>
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                     const none: Record<string, boolean> = {};
                     COLUMNS.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
                     setVisibleCols(none as Record<ColumnKey, boolean>);
-                  }}>Reset</Button>
+                  }}>{t("orders.toolbar.reset")}</Button>
                 </div>
                 <div className="max-h-[380px] overflow-y-auto p-4">
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
@@ -688,9 +690,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0 || locked} title={locked ? "Available after initial sync completes" : "Export CSV"} onClick={handleExportCsv}>
+            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={orders.length === 0 || locked} title={locked ? t("orders.toolbar.lockedHint") : t("orders.toolbar.export")} onClick={handleExportCsv}>
               <Download className="h-3.5 w-3.5" />
-              <span className="text-xs">Export</span>
+              <span className="text-xs">{t("orders.toolbar.export")}</span>
             </Button>
           </div>
         </div>
@@ -700,7 +702,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           <CardContent className="p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
-              <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>All</Button>
+              <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>{t("orders.filters.all")}</Button>
               {ORDER_STATUSES.map((s) => (
                 <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>{s}</Button>
               ))}
@@ -929,26 +931,26 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-xs">{selectedIds.size}</Badge>
-                <span className="text-xs font-medium">selected</span>
+                <span className="text-xs font-medium">{t("orders.bulk.selected")}</span>
                 {overLimit && (
-                  <span className="text-[11px] text-destructive ml-1">(max {MAX_BULK} per job)</span>
+                  <span className="text-[11px] text-destructive ml-1">{t("orders.bulk.maxLimit", { max: MAX_BULK })}</span>
                 )}
               </div>
               <div className="flex-1" />
               <Button size="sm" variant="default" className="h-8 text-xs gap-1.5" onClick={() => setPrintDialogOpen(true)} disabled={overLimit}>
                 <Printer className="h-3.5 w-3.5" />
-                Print invoices
+                {t("orders.bulk.printInvoices")}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit}>
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Mark status
+                    {t("orders.bulk.markStatus")}
                     <ChevronRight className="h-3 w-3 rotate-90 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Change status to…</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("orders.bulk.changeStatusTo")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {ORDER_STATUS_OPTIONS.map((s) => (
                     <DropdownMenuItem key={s} onClick={() => setTimeout(() => setBulkAction({ type: "update_status", status: s }), 0)} className="capitalize text-xs">
@@ -959,37 +961,37 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               </DropdownMenu>
               <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={() => setTimeout(() => setBulkAction({ type: "delete" }), 0)} disabled={overLimit}>
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete
+                {t("orders.bulk.delete")}
               </Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => setSelectedIds(new Set())}>
                 <X className="h-3.5 w-3.5" />
-                Clear
+                {t("orders.bulk.clear")}
               </Button>
             </div>
           )}
           {loading && orders.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-              Loading orders…
+              {t("orders.empty.loading")}
             </div>
           ) : orders.length === 0 ? (
             hasActiveFilters ? (
               <EmptyState
                 illustration={<NoSearchResultsIllustration className="w-full h-full" />}
-                title="No orders match your filters"
-                description="Try clearing your filters or adjusting them to see more results."
+                title={t("orders.empty.noMatch")}
+                description={t("orders.empty.noMatchDescription")}
               />
             ) : activeSync ? (
               <div className="p-8 text-center">
                 <Loader2 className="h-10 w-10 mx-auto text-primary/60 mb-2 animate-spin" />
-                <p className="text-sm font-medium">Syncing your orders…</p>
-                <p className="text-xs text-muted-foreground mt-1">{activeSync.progress}% complete — new orders will appear automatically</p>
+                <p className="text-sm font-medium">{t("orders.empty.syncing")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("orders.empty.syncProgress", { percent: activeSync.progress })}</p>
               </div>
             ) : (
               <EmptyState
                 illustration={<NoOrdersIllustration className="w-full h-full" />}
-                title="No orders yet"
-                description="When customers place orders on your store, they'll appear here for you to manage."
+                title={t("orders.empty.title")}
+                description={t("orders.empty.description")}
               />
             )
           ) : (
@@ -1277,23 +1279,21 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
           <DialogHeader>
             <DialogTitle>
               {bulkAction?.type === "delete"
-                ? `Delete ${selectedIds.size} orders?`
-                : `Update ${selectedIds.size} orders to "${bulkAction?.type === "update_status" ? bulkAction.status : ""}"?`}
+                ? t("orders.bulk.dialog.deleteTitle", { count: selectedIds.size })
+                : t("orders.bulk.dialog.updateTitle", { count: selectedIds.size, status: bulkAction?.type === "update_status" ? bulkAction.status : "" })}
             </DialogTitle>
             <DialogDescription>
-              This queues a background job that pushes changes to WooCommerce one order at a time.
-              Processing {selectedIds.size} orders may take {Math.ceil(selectedIds.size * 1.5 / 60)}–{Math.ceil(selectedIds.size * 3 / 60)} minutes.
-              You can close this page; progress is saved.
+              {t("orders.bulk.dialog.description", { count: selectedIds.size, minMinutes: Math.ceil(selectedIds.size * 1.5 / 60), maxMinutes: Math.ceil(selectedIds.size * 3 / 60) })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkAction(null)} disabled={bulkSubmitting}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBulkAction(null)} disabled={bulkSubmitting}>{t("orders.bulk.dialog.cancel")}</Button>
             <Button
               onClick={submitBulk}
               disabled={bulkSubmitting}
               variant={bulkAction?.type === "delete" ? "destructive" : "default"}
             >
-              {bulkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Queueing…</> : "Queue job"}
+              {bulkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("orders.bulk.dialog.queueing")}</> : t("orders.bulk.dialog.queueJob")}
             </Button>
           </DialogFooter>
         </DialogContent>
