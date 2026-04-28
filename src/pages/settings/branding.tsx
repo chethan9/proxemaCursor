@@ -42,11 +42,11 @@ export default function BrandingPage() {
     (async () => {
       const { data } = await supabase
         .from("activity_log")
-        .select("id, created_at, actor_email, before, after")
+        .select("*")
         .eq("entity_type", "app_settings")
         .order("created_at", { ascending: false })
         .limit(10);
-      setHistory((data as ActivityEntry[] | null) ?? []);
+      setHistory((data as unknown as ActivityEntry[] | null) ?? []);
     })();
   }, [isSuperAdmin]);
 
