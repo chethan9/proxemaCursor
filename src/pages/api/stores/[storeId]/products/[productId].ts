@@ -339,13 +339,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const toCreate: Record<string, unknown>[] = [];
       const toUpdate: Record<string, unknown>[] = [];
+      // Map of woo_id (or temp index for create) -> user-submitted gallery (with src)
+      const userGalleryByWooId = new Map<number, Array<{ id: number; src: string; alt?: string }>>();
+      const userGalleryByCreateIdx: Array<Array<{ id: number; src: string; alt?: string }>> = [];
 
       for (const v of variations) {
         const img = v.image && ((v.image as Record<string, unknown>).id || (v.image as Record<string, unknown>).src)
           ? { image: (v.image as Record<string, unknown>).id ? { id: (v.image as Record<string, unknown>).id } : { src: (v.image as Record<string, unknown>).src, alt: (v.image as Record<string, unknown>).alt || "" } }
           : {};
 
+        const userGallery = Array.isArray(v.gallery)
+          ? (v.gallery as Array<{ id: number; src: string; alt?: string }>).filter((g) => g && typeof g.id === "number" && g.id > 0)
+          : [];
+        const galleryMetaForWoo = userGallery.length > 0
+          ? { meta_data: [{ key: "_wc_additional_variation_images", value: userGallery.map((g) => g.id) }] }
+          : { meta_data: [{ key: "_wc_additional_variation_images", value: [] }] };
+
         if (!v.id) {
+          // Defensive: never create variations with empty attributes (would dupe as broken rows)
+          const vAttrs = Array.isArray(v.attributes) ? (v.attributes as Record<string, unknown>[]) : [];
+          if (vAttrs.length === 0) {
+            console.warn("[variations-batch-update] skipping create with empty attributes");
+            continue;
+          }
+          userGalleryByCreateIdx.push(userGallery);
           toCreate.push({
             regular_price: (v.regular_price as string) || "",
             sale_price: (v.sale_price as string) || "",
@@ -358,11 +375,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             description: (v.description as string) || "",
             attributes: v.attributes || [],
             ...img,
+            ...galleryMetaForWoo,
           });
           continue;
         }
         const existing = byWooId.get(v.id as number);
-        if (existing && !variationChanged(v, existing)) continue;
+        userGalleryByWooId.set(v.id as number, userGallery);
+        if (existing && !variationChanged(v, existing)) {
+          // Still update gallery if user changed it
+          const existingGallery = Array.isArray(existing.gallery) ? (existing.gallery as Array<{ id: number }>) : [];
+          const sameGallery =
+            existingGallery.length === userGallery.length &&
+            existingGallery.every((g, i) => g.id === userGallery[i]?.id);
+          if (sameGallery) continue;
+        }
         toUpdate.push({
           id: v.id,
           regular_price: (v.regular_price as string) || "",
@@ -375,6 +401,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           dimensions: v.dimensions || { length: "", width: "", height: "" },
           description: (v.description as string) || "",
           ...img,
+          ...galleryMetaForWoo,
         });
       }
 
@@ -388,12 +415,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const resp = await wooRequest<BatchResp>(store, "POST", `products/${localProduct.woo_id}/variations/batch`, batch);
           const now = new Date().toISOString();
           const toUpsert: Record<string, unknown>[] = [];
-          const process = (arr: Array<Record<string, unknown>> | undefined) => {
-            (arr || []).forEach((v) => {
+          const process = (arr: Array<Record<string, unknown>> | undefined, kind: "create" | "update") => {
+            (arr || []).forEach((v, idx) => {
               const galleryMeta = Array.isArray(v.meta_data)
                 ? (v.meta_data as { key: string; value: unknown }[]).find((m) => m.key === "_wc_additional_variation_images")
                 : undefined;
               const galleryIds = Array.isArray(galleryMeta?.value) ? (galleryMeta!.value as number[]) : [];
+              // Prefer user-submitted gallery (has src) when IDs match
+              const userGallery = kind === "create"
+                ? (userGalleryByCreateIdx[idx] || [])
+                : (userGalleryByWooId.get(v.id as number) || []);
+              const userById = new Map(userGallery.map((g) => [g.id, g]));
+              const finalGallery = galleryIds.map((id) => {
+                const u = userById.get(id);
+                return u ? { id: u.id, src: u.src || "", alt: u.alt || "" } : { id, src: "" };
+              });
               toUpsert.push({
                 store_id: storeId,
                 product_id: productId,
@@ -415,15 +451,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 description: (v.description as string) || null,
                 attributes: toJson(v.attributes || []),
                 image: v.image ? toJson(v.image) : null,
-                gallery: toJson(galleryIds.map((id) => ({ id, src: "" }))),
+                gallery: toJson(finalGallery),
                 menu_order: (v.menu_order as number) || 0,
                 raw_data: toJson(v),
                 synced_at: now,
               });
             });
           };
-          process(resp.create);
-          process(resp.update);
+          process(resp.create, "create");
+          process(resp.update, "update");
           if (toUpsert.length) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (supabaseAdmin as any)
