@@ -1,6 +1,6 @@
 ---
 title: Product editor polish — tab scrollbar, View on store, brand mirror
-status: todo
+status: done
 priority: high
 type: bug
 tags: [products, brands, ui]
