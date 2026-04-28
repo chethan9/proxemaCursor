@@ -1,4 +1,5 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useTranslation } from "next-i18next";
 import { PackagePlus, Box, LayoutGrid, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -11,51 +12,53 @@ interface Props {
   onSelect: (type: ProductType) => void;
 }
 
-const OPTIONS: {
-  type: ProductType;
-  title: string;
-  description: string;
-  image: string;
-  badgeIcon: typeof Box;
-  bgTint: string;
-  blobTint: string;
-  badgeBg: string;
-  badgeColor: string;
-  arrowBg: string;
-  arrowColor: string;
-  arrowHoverBg: string;
-}[] = [
-  {
-    type: "simple",
-    title: "Simple Product",
-    description: "For products with a single price, one SKU, and no variations.",
-    image: "/simple.png",
-    badgeIcon: Box,
-    bgTint: "bg-indigo-50/40",
-    blobTint: "bg-indigo-100/70",
-    badgeBg: "bg-indigo-100",
-    badgeColor: "text-indigo-600",
-    arrowBg: "bg-indigo-50",
-    arrowColor: "text-indigo-600",
-    arrowHoverBg: "group-hover:bg-indigo-600 group-hover:text-white",
-  },
-  {
-    type: "variable",
-    title: "Variable Product",
-    description: "For products with options like size, color, style, or other variations.",
-    image: "/variable.png",
-    badgeIcon: LayoutGrid,
-    bgTint: "bg-emerald-50/40",
-    blobTint: "bg-emerald-100/60",
-    badgeBg: "bg-emerald-100",
-    badgeColor: "text-emerald-600",
-    arrowBg: "bg-emerald-50",
-    arrowColor: "text-emerald-600",
-    arrowHoverBg: "group-hover:bg-emerald-600 group-hover:text-white",
-  },
-];
-
 export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
+  const { t } = useTranslation("site");
+
+  const OPTIONS: {
+    type: ProductType;
+    titleKey: string;
+    descKey: string;
+    image: string;
+    badgeIcon: typeof Box;
+    bgTint: string;
+    blobTint: string;
+    badgeBg: string;
+    badgeColor: string;
+    arrowBg: string;
+    arrowColor: string;
+    arrowHoverBg: string;
+  }[] = [
+    {
+      type: "simple",
+      titleKey: "productType.simple.title",
+      descKey: "productType.simple.description",
+      image: "/simple.png",
+      badgeIcon: Box,
+      bgTint: "bg-indigo-50/40",
+      blobTint: "bg-indigo-100/70",
+      badgeBg: "bg-indigo-100",
+      badgeColor: "text-indigo-600",
+      arrowBg: "bg-indigo-50",
+      arrowColor: "text-indigo-600",
+      arrowHoverBg: "group-hover:bg-indigo-600 group-hover:text-white",
+    },
+    {
+      type: "variable",
+      titleKey: "productType.variable.title",
+      descKey: "productType.variable.description",
+      image: "/variable.png",
+      badgeIcon: LayoutGrid,
+      bgTint: "bg-emerald-50/40",
+      blobTint: "bg-emerald-100/60",
+      badgeBg: "bg-emerald-100",
+      badgeColor: "text-emerald-600",
+      arrowBg: "bg-emerald-50",
+      arrowColor: "text-emerald-600",
+      arrowHoverBg: "group-hover:bg-emerald-600 group-hover:text-white",
+    },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl p-0 overflow-hidden bg-background border-border">
@@ -66,10 +69,10 @@ export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
             </div>
           </div>
           <h2 className="text-center text-base font-bold tracking-tight text-foreground">
-            What type of product are you adding?
+            {t("productType.title")}
           </h2>
           <p className="text-center text-xs text-muted-foreground mt-1">
-            Choose the best option that fits your product
+            {t("productType.subtitle")}
           </p>
 
           <div className="grid grid-cols-2 gap-3 mt-4">
@@ -98,7 +101,7 @@ export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
                     <div className="relative w-full h-full flex items-center justify-center p-2">
                       <Image
                         src={opt.image}
-                        alt={opt.title}
+                        alt={t(opt.titleKey)}
                         width={144}
                         height={108}
                         className="object-contain max-h-full w-auto drop-shadow-sm"
@@ -114,9 +117,9 @@ export function ProductTypeDialog({ open, onOpenChange, onSelect }: Props) {
                     <BadgeIcon className={cn("h-3 w-3", opt.badgeColor)} strokeWidth={2.2} />
                   </div>
 
-                  <h3 className="text-sm font-bold text-foreground mb-1">{opt.title}</h3>
+                  <h3 className="text-sm font-bold text-foreground mb-1">{t(opt.titleKey)}</h3>
                   <p className="text-[11px] leading-snug text-muted-foreground max-w-[180px] mb-2.5">
-                    {opt.description}
+                    {t(opt.descKey)}
                   </p>
 
                   <div className={cn(

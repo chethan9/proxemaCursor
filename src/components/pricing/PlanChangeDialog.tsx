@@ -1,3 +1,4 @@
+import { useTranslation } from "next-i18next";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { formatPrice } from "@/services/planService";
 import type { Tables } from "@/integrations/supabase/helpers";
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function PlanChangeDialog({ open, onOpenChange, mode, currentPlan, newPlan, currency, periodEnd, onConfirm, loading }: Props) {
+  const { t } = useTranslation("billing");
   if (!newPlan) return null;
   const newPrice = (newPlan.prices as Record<string, number>)[currency];
   const periodEndDate = periodEnd ? new Date(periodEnd).toLocaleDateString(undefined, { dateStyle: "long" }) : null;
@@ -26,28 +28,32 @@ export function PlanChangeDialog({ open, onOpenChange, mode, currentPlan, newPla
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {mode === "upgrade" ? `Upgrade to ${newPlan.name}?` : `Downgrade to ${newPlan.name}?`}
+            {mode === "upgrade"
+              ? t("planChange.upgradeTitle", { name: newPlan.name })
+              : t("planChange.downgradeTitle", { name: newPlan.name })}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3 pt-1">
               {mode === "upgrade" ? (
                 <>
                   <p>
-                    You&apos;ll be charged {newPrice ? formatPrice(newPrice, currency) : "the new amount"} per month.
-                    We&apos;ll prorate the difference based on days remaining in your current billing period.
+                    {newPrice
+                      ? t("planChange.upgradeDesc", { price: formatPrice(newPrice, currency) })
+                      : t("planChange.upgradeDescNoPrice")}
                   </p>
-                  <p className="text-sm">New features and quota limits apply immediately after payment.</p>
+                  <p className="text-sm">{t("planChange.upgradeNote")}</p>
                 </>
               ) : (
                 <>
                   <p>
-                    Your plan will change to <strong>{newPlan.name}</strong>
-                    {periodEndDate ? ` on ${periodEndDate}` : " at the end of your current billing period"}.
+                    {periodEndDate
+                      ? t("planChange.downgradeDesc", { name: newPlan.name, date: periodEndDate })
+                      : t("planChange.downgradeDescNoDate", { name: newPlan.name })}
                   </p>
-                  <p className="text-sm">You&apos;ll keep all your current features until then. No refunds for the current period.</p>
+                  <p className="text-sm">{t("planChange.downgradeNote")}</p>
                   {currentPlan && (
                     <p className="text-sm text-warning">
-                      Note: if you&apos;re over {newPlan.name}&apos;s quotas (sites, products, users), you&apos;ll need to reduce usage before the change takes effect.
+                      {t("planChange.quotaWarning", { name: newPlan.name })}
                     </p>
                   )}
                 </>
@@ -56,9 +62,13 @@ export function PlanChangeDialog({ open, onOpenChange, mode, currentPlan, newPla
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{t("planChange.cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} disabled={loading}>
-            {loading ? "Processing..." : mode === "upgrade" ? "Confirm upgrade" : "Schedule downgrade"}
+            {loading
+              ? t("planChange.processing")
+              : mode === "upgrade"
+              ? t("planChange.confirmUpgrade")
+              : t("planChange.scheduleDowngrade")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
