@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { wooRequest, type StoreCreds } from "@/lib/woo-client";
+import { wooRequest, type WooStoreCreds } from "@/lib/woo-client";
 
 type Kind = "categories" | "tags" | "brands";
 
@@ -16,7 +16,7 @@ const TABLE: Record<Kind, "categories" | "tags" | "brands"> = {
 };
 
 export async function refreshTaxonomyCounts(
-  creds: StoreCreds,
+  creds: WooStoreCreds,
   storeId: string,
   kind: Kind,
   wooIds: number[],

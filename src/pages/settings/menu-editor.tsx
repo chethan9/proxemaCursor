@@ -1,11 +1,19 @@
-<![CDATA[
-import { useEffect, useState, useCallback, useMemo } from "react";
-import type { GetServerSidePr
-...
-ps: {
+import type { GetServerSideProps } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { SettingsLayout } from "@/components/layout/SettingsLayout";
+
+export default function MenuEditorPage() {
+  return (
+    <SettingsLayout title="Menu editor">
+      <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+        Menu editor is being rebuilt. Check back soon.
+      </div>
+    </SettingsLayout>
+  );
+}
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
     ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
   },
 });
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 13769 chars.]
