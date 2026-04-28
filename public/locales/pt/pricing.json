@@ -1,0 +1,23 @@
+{
+  "title": "Preços que crescem com você",
+  "subtitle": "Comece grátis, faça upgrade ao crescer. Todos os planos incluem sincronização WooCommerce em tempo real, acesso à API e recuperação de dados prioritária.",
+  "header": {
+    "billing": "Faturamento",
+    "login": "Entrar",
+    "signup": "Cadastre-se"
+  },
+  "localeNote": "Preços em {{currency}} com base na sua localização. Mude a moeda a qualquer momento.",
+  "questions": {
+    "title": "Ainda tem dúvidas?",
+    "body": "Nossa equipe está pronta para ajudar a escolher o plano certo.",
+    "cta": "Falar com vendas"
+  },
+  "toast": {
+    "downgradeScheduled": "Downgrade agendado",
+    "downgradeOn": "Seu plano será alterado em {{date}}.",
+    "downgradePeriodEnd": "Será aplicado no fim do período.",
+    "errorTitle": "Não foi possível mudar o plano",
+    "unknownError": "Erro desconhecido",
+    "noActiveSubscription": "Sem assinatura ativa"
+  }
+}

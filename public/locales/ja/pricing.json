@@ -1,0 +1,23 @@
+{
+  "title": "成長に合わせたプライシング",
+  "subtitle": "無料で始め、成長に合わせてアップグレード。全プランにリアルタイムの WooCommerce 同期、API アクセス、優先データ復旧が含まれます。",
+  "header": {
+    "billing": "請求",
+    "login": "ログイン",
+    "signup": "登録"
+  },
+  "localeNote": "ご利用地域に基づき価格は {{currency}} で表示されます。通貨はいつでも切り替え可能です。",
+  "questions": {
+    "title": "ご質問はありますか？",
+    "body": "最適なプラン選びをチームがサポートします。",
+    "cta": "営業に相談"
+  },
+  "toast": {
+    "downgradeScheduled": "ダウングレード予約済み",
+    "downgradeOn": "プランは {{date}} に変更されます。",
+    "downgradePeriodEnd": "期間終了時に適用されます。",
+    "errorTitle": "プランを変更できませんでした",
+    "unknownError": "不明なエラー",
+    "noActiveSubscription": "有効なサブスクリプションがありません"
+  }
+}

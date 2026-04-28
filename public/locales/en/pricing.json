@@ -1,0 +1,23 @@
+{
+  "title": "Pricing that scales with you",
+  "subtitle": "Start free, upgrade when you grow. All plans include real-time WooCommerce sync, API access, and priority data recovery.",
+  "header": {
+    "billing": "Billing",
+    "login": "Log in",
+    "signup": "Sign up"
+  },
+  "localeNote": "Prices shown in {{currency}} based on your location. Switch currency anytime.",
+  "questions": {
+    "title": "Still have questions?",
+    "body": "Our team is here to help you pick the right plan.",
+    "cta": "Talk to sales"
+  },
+  "toast": {
+    "downgradeScheduled": "Downgrade scheduled",
+    "downgradeOn": "Your plan will change on {{date}}.",
+    "downgradePeriodEnd": "Will apply at period end.",
+    "errorTitle": "Could not change plan",
+    "unknownError": "Unknown error",
+    "noActiveSubscription": "No active subscription"
+  }
+}

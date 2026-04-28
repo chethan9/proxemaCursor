@@ -1,0 +1,23 @@
+{
+  "title": "Une tarification qui évolue avec vous",
+  "subtitle": "Commencez gratuitement, évoluez à votre rythme. Tous les plans incluent la synchronisation WooCommerce en temps réel, l'accès à l'API et la récupération prioritaire des données.",
+  "header": {
+    "billing": "Facturation",
+    "login": "Connexion",
+    "signup": "Inscription"
+  },
+  "localeNote": "Prix affichés en {{currency}} selon votre localisation. Changez de devise quand vous voulez.",
+  "questions": {
+    "title": "Encore des questions ?",
+    "body": "Notre équipe est là pour vous aider à choisir le bon plan.",
+    "cta": "Contacter les ventes"
+  },
+  "toast": {
+    "downgradeScheduled": "Rétrogradation programmée",
+    "downgradeOn": "Votre plan changera le {{date}}.",
+    "downgradePeriodEnd": "S'appliquera en fin de période.",
+    "errorTitle": "Impossible de changer de plan",
+    "unknownError": "Erreur inconnue",
+    "noActiveSubscription": "Aucun abonnement actif"
+  }
+}

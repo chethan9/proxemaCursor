@@ -1,0 +1,23 @@
+{
+  "title": "Preise, die mit Ihnen wachsen",
+  "subtitle": "Kostenlos starten, bei Wachstum upgraden. Alle Pläne enthalten Echtzeit-WooCommerce-Sync, API-Zugriff und priorisierte Datenwiederherstellung.",
+  "header": {
+    "billing": "Abrechnung",
+    "login": "Anmelden",
+    "signup": "Registrieren"
+  },
+  "localeNote": "Preise in {{currency}} basierend auf Ihrem Standort. Sie können die Währung jederzeit ändern.",
+  "questions": {
+    "title": "Noch Fragen?",
+    "body": "Unser Team hilft Ihnen, den passenden Plan zu finden.",
+    "cta": "Vertrieb kontaktieren"
+  },
+  "toast": {
+    "downgradeScheduled": "Downgrade geplant",
+    "downgradeOn": "Ihr Plan ändert sich am {{date}}.",
+    "downgradePeriodEnd": "Wird zum Ende der Periode wirksam.",
+    "errorTitle": "Plan konnte nicht geändert werden",
+    "unknownError": "Unbekannter Fehler",
+    "noActiveSubscription": "Kein aktives Abonnement"
+  }
+}

@@ -2,6 +2,8 @@ import type { GetServerSideProps } from "next";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { resolveCountry, getDefaultCurrencyForCountry, getBrowserTimezoneCountry, getSupportedCountries } from "@/lib/payments/routing";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -25,7 +27,7 @@ type Props = { plans: Plan[]; initialCountry: string; initialCurrency: string; d
 
 const STORAGE_KEY = "proxima-pricing-country";
 
-export const getServerSideProps: GetServerSideProps<Props> = async ({ req }) => {
+export const getServerSideProps: GetServerSideProps<Props> = async ({ req, locale }) => {
   const { country, currency, source } = resolveCountry({ headers: req.headers as Record<string, string | string[] | undefined> });
   const { data } = await supabaseAdmin.from("plans").select("*").eq("is_active", true).order("sort_order");
   return {
@@ -34,6 +36,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ req }) => 
       initialCountry: country,
       initialCurrency: currency,
       detectionSource: source,
+      ...(await serverSideTranslations(locale ?? "en", ["common", "pricing"])),
     },
   };
 };
@@ -42,6 +45,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
   const { user, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation("pricing");
   const { startCheckout, loading: checkoutLoading } = useCheckout();
   const { subscription, refetch } = useSubscription();
 
@@ -134,7 +138,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
         await startCheckout(pendingPlan.id);
       } else {
         const sub = subscription;
-        if (!sub) throw new Error("No active subscription");
+        if (!sub) throw new Error(t("toast.noActiveSubscription"));
         const before = { plan_id: sub.plan_id };
         const after = { scheduled_plan_id: pendingPlan.id, effective_at: sub.current_period_end };
         await supabase.from("subscription_events").insert({
@@ -153,12 +157,21 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
           client_id: profile.client_id,
           diff: { before, after },
         });
-        toast({ title: "Downgrade scheduled", description: sub.current_period_end ? `Your plan will change on ${new Date(sub.current_period_end).toLocaleDateString()}.` : "Will apply at period end." });
+        toast({
+          title: t("toast.downgradeScheduled"),
+          description: sub.current_period_end
+            ? t("toast.downgradeOn", { date: new Date(sub.current_period_end).toLocaleDateString() })
+            : t("toast.downgradePeriodEnd"),
+        });
         refetch();
       }
       setDialogOpen(false);
     } catch (e) {
-      toast({ title: "Could not change plan", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      toast({
+        title: t("toast.errorTitle"),
+        description: e instanceof Error ? e.message : t("toast.unknownError"),
+        variant: "destructive",
+      });
     } finally {
       setChangeLoading(false);
     }
@@ -175,11 +188,11 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
             <LocaleSwitcher variant="compact" />
             <CurrencySwitcher country={country} onChange={handleCountryChange} />
             {user ? (
-              <Link href="/billing" className="text-sm font-medium hover:underline">Billing</Link>
+              <Link href="/billing" className="text-sm font-medium hover:underline">{t("header.billing")}</Link>
             ) : (
               <>
-                <Link href="/auth/login" className="text-sm font-medium hover:underline">Log in</Link>
-                <Link href="/auth/signup" className="text-sm font-medium px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">Sign up</Link>
+                <Link href="/auth/login" className="text-sm font-medium hover:underline">{t("header.login")}</Link>
+                <Link href="/auth/signup" className="text-sm font-medium px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">{t("header.signup")}</Link>
               </>
             )}
           </div>
@@ -188,8 +201,8 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
 
       <main className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <h1 className="text-5xl font-bold tracking-tight">Pricing that scales with you</h1>
-          <p className="text-lg text-muted-foreground mt-4">Start free, upgrade when you grow. All plans include real-time WooCommerce sync, API access, and priority data recovery.</p>
+          <h1 className="text-5xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-lg text-muted-foreground mt-4">{t("subtitle")}</p>
           <div className="mt-8 flex justify-center">
             <BillingIntervalToggle value={billingInterval} onChange={setBillingInterval} />
           </div>
@@ -214,17 +227,17 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
 
         {detectionSource !== "default" && (
           <p className="text-center text-xs text-muted-foreground mt-8">
-            Prices shown in {currency} based on your location. Switch currency anytime.
+            {t("localeNote", { currency })}
           </p>
         )}
 
         <PricingFAQ />
 
         <section className="mt-24 text-center py-12 bg-muted/30 rounded-2xl">
-          <h2 className="text-2xl font-semibold">Still have questions?</h2>
-          <p className="text-muted-foreground mt-2">Our team is here to help you pick the right plan.</p>
+          <h2 className="text-2xl font-semibold">{t("questions.title")}</h2>
+          <p className="text-muted-foreground mt-2">{t("questions.body")}</p>
           <a href="mailto:sales@proxima.app" className="inline-block mt-4 px-6 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium">
-            Talk to sales
+            {t("questions.cta")}
           </a>
         </section>
       </main>
