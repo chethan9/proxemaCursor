@@ -183,5 +183,24 @@
       "planDeleted": "Plan deleted",
       "saveFailed": "Save failed"
     }
+  },
+  "translations": {
+    "title": "Translations",
+    "subtitle": "Download English JSON files, translate offline, then drop them back into public/locales/{{locale}}/.",
+    "howToTitle": "How it works",
+    "howToBody": "English is the source of truth. Download a namespace, translate the values (keep keys identical), and place the file at public/locales/{locale}/{namespace}.json. Reload the app and the new locale appears in the language switcher.",
+    "namespacesTitle": "Namespaces",
+    "downloadAll": "Download all (English)",
+    "downloadEn": "Download EN",
+    "keysCount": "{{count}} keys",
+    "localesTitle": "Locale coverage",
+    "localesSubtitle": "Key parity vs English source. Missing keys fall back to English at runtime.",
+    "loading": "Loading…",
+    "complete": "complete",
+    "missing_one": "{{count}} missing",
+    "missing_other": "{{count}} missing",
+    "extra_one": "{{count}} extra",
+    "extra_other": "{{count}} extra",
+    "nav": "Translations"
   }
 }
