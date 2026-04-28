@@ -155,5 +155,27 @@
       "error": "Fehler"
     },
     "confirmDelete": "Rolle \"{{name}}\" löschen? Benutzer mit dieser Rolle müssen neu zugewiesen werden."
+  },
+  "plans": {
+    "title": "Tarife",
+    "subtitle": "Stufen, lokale Preise und Kontingentregeln.",
+    "newPlan": "Neuer Tarif",
+    "loading": "Lade Tarife…",
+    "empty": "Noch keine Tarife.",
+    "createFirst": "Erstellen Sie den ersten",
+    "columns": {
+      "plan": "Tarif", "prices": "Preise", "sites": "Websites", "products": "Produkte",
+      "users": "Benutzer", "api": "API / Monat", "trial": "Test", "status": "Status"
+    },
+    "contactSales": "Vertrieb kontaktieren",
+    "noPrices": "Keine Preise festgelegt",
+    "trialDays": "{{count}}T",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "Tarif erstellt",
+      "planUpdated": "Tarif aktualisiert",
+      "planDeleted": "Tarif gelöscht",
+      "saveFailed": "Speichern fehlgeschlagen"
+    }
   }
 }

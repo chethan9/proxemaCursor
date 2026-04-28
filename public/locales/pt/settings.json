@@ -155,5 +155,27 @@
       "error": "Erro"
     },
     "confirmDelete": "Excluir a função \"{{name}}\"? Usuários com esta função precisarão de reatribuição."
+  },
+  "plans": {
+    "title": "Planos",
+    "subtitle": "Níveis, preços localizados e regras de cota.",
+    "newPlan": "Novo plano",
+    "loading": "Carregando planos…",
+    "empty": "Ainda sem planos.",
+    "createFirst": "Crie o primeiro",
+    "columns": {
+      "plan": "Plano", "prices": "Preços", "sites": "Sites", "products": "Produtos",
+      "users": "Usuários", "api": "API / mês", "trial": "Teste", "status": "Status"
+    },
+    "contactSales": "Falar com vendas",
+    "noPrices": "Sem preços definidos",
+    "trialDays": "{{count}}d",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "Plano criado",
+      "planUpdated": "Plano atualizado",
+      "planDeleted": "Plano excluído",
+      "saveFailed": "Falha ao salvar"
+    }
   }
 }

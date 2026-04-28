@@ -155,5 +155,27 @@
       "error": "错误"
     },
     "confirmDelete": "删除角色 \"{{name}}\"？拥有此角色的用户需要重新分配。"
+  },
+  "plans": {
+    "title": "套餐",
+    "subtitle": "层级、本地化价格和配额规则。",
+    "newPlan": "新套餐",
+    "loading": "加载套餐中…",
+    "empty": "暂无套餐。",
+    "createFirst": "创建第一个",
+    "columns": {
+      "plan": "套餐", "prices": "价格", "sites": "站点", "products": "产品",
+      "users": "用户", "api": "API / 月", "trial": "试用", "status": "状态"
+    },
+    "contactSales": "联系销售",
+    "noPrices": "未设置价格",
+    "trialDays": "{{count}}天",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "套餐已创建",
+      "planUpdated": "套餐已更新",
+      "planDeleted": "套餐已删除",
+      "saveFailed": "保存失败"
+    }
   }
 }

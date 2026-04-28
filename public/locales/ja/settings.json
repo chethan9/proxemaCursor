@@ -155,5 +155,27 @@
       "error": "エラー"
     },
     "confirmDelete": "役割「{{name}}」を削除しますか？この役割のユーザーは再割り当てが必要です。"
+  },
+  "plans": {
+    "title": "プラン",
+    "subtitle": "ティア、ローカライズされた価格、クォータルール。",
+    "newPlan": "新しいプラン",
+    "loading": "プランを読み込み中…",
+    "empty": "プランはまだありません。",
+    "createFirst": "最初のプランを作成",
+    "columns": {
+      "plan": "プラン", "prices": "価格", "sites": "サイト", "products": "製品",
+      "users": "ユーザー", "api": "API / 月", "trial": "トライアル", "status": "ステータス"
+    },
+    "contactSales": "セールスに問い合わせる",
+    "noPrices": "価格が設定されていません",
+    "trialDays": "{{count}}日",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "プランを作成しました",
+      "planUpdated": "プランを更新しました",
+      "planDeleted": "プランを削除しました",
+      "saveFailed": "保存に失敗しました"
+    }
   }
 }

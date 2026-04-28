@@ -155,5 +155,27 @@
       "error": "Error"
     },
     "confirmDelete": "¿Eliminar el rol \"{{name}}\"? Los usuarios con este rol necesitarán reasignación."
+  },
+  "plans": {
+    "title": "Planes",
+    "subtitle": "Niveles, precios locales y reglas de cuota.",
+    "newPlan": "Nuevo plan",
+    "loading": "Cargando planes…",
+    "empty": "Aún sin planes.",
+    "createFirst": "Crea el primero",
+    "columns": {
+      "plan": "Plan", "prices": "Precios", "sites": "Sitios", "products": "Productos",
+      "users": "Usuarios", "api": "API / mes", "trial": "Prueba", "status": "Estado"
+    },
+    "contactSales": "Contactar con ventas",
+    "noPrices": "Sin precios definidos",
+    "trialDays": "{{count}}d",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "Plan creado",
+      "planUpdated": "Plan actualizado",
+      "planDeleted": "Plan eliminado",
+      "saveFailed": "Error al guardar"
+    }
   }
 }

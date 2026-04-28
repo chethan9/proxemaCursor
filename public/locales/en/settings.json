@@ -155,5 +155,33 @@
       "error": "Error"
     },
     "confirmDelete": "Delete role \"{{name}}\"? Users with this role will need reassignment."
+  },
+  "plans": {
+    "title": "Plans",
+    "subtitle": "Tiers, localized prices, and quota enforcement rules.",
+    "newPlan": "New plan",
+    "loading": "Loading plans…",
+    "empty": "No plans yet.",
+    "createFirst": "Create the first one",
+    "columns": {
+      "plan": "Plan",
+      "prices": "Prices",
+      "sites": "Sites",
+      "products": "Products",
+      "users": "Users",
+      "api": "API / mo",
+      "trial": "Trial",
+      "status": "Status"
+    },
+    "contactSales": "Contact sales",
+    "noPrices": "No prices set",
+    "trialDays": "{{count}}d",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "Plan created",
+      "planUpdated": "Plan updated",
+      "planDeleted": "Plan deleted",
+      "saveFailed": "Save failed"
+    }
   }
 }

@@ -155,5 +155,27 @@
       "error": "خطأ"
     },
     "confirmDelete": "حذف الدور \"{{name}}\"؟ سيحتاج المستخدمون بهذا الدور إلى إعادة تعيين."
+  },
+  "plans": {
+    "title": "الخطط",
+    "subtitle": "المستويات والأسعار المحلية وقواعد الحصص.",
+    "newPlan": "خطة جديدة",
+    "loading": "جارٍ تحميل الخطط…",
+    "empty": "لا توجد خطط بعد.",
+    "createFirst": "أنشئ الأولى",
+    "columns": {
+      "plan": "الخطة", "prices": "الأسعار", "sites": "المواقع", "products": "المنتجات",
+      "users": "المستخدمون", "api": "API / شهر", "trial": "تجريبي", "status": "الحالة"
+    },
+    "contactSales": "تواصل مع المبيعات",
+    "noPrices": "لم تُحدد أسعار",
+    "trialDays": "{{count}} يوم",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "تم إنشاء الخطة",
+      "planUpdated": "تم تحديث الخطة",
+      "planDeleted": "تم حذف الخطة",
+      "saveFailed": "فشل الحفظ"
+    }
   }
 }

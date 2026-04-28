@@ -155,5 +155,27 @@
       "error": "Erreur"
     },
     "confirmDelete": "Supprimer le rôle « {{name}} » ? Les utilisateurs avec ce rôle devront être réaffectés."
+  },
+  "plans": {
+    "title": "Forfaits",
+    "subtitle": "Niveaux, prix localisés et règles de quota.",
+    "newPlan": "Nouveau forfait",
+    "loading": "Chargement des forfaits…",
+    "empty": "Aucun forfait pour le moment.",
+    "createFirst": "Créez le premier",
+    "columns": {
+      "plan": "Forfait", "prices": "Prix", "sites": "Sites", "products": "Produits",
+      "users": "Utilisateurs", "api": "API / mois", "trial": "Essai", "status": "Statut"
+    },
+    "contactSales": "Contacter les ventes",
+    "noPrices": "Aucun prix défini",
+    "trialDays": "{{count}}j",
+    "noValue": "—",
+    "toast": {
+      "planCreated": "Forfait créé",
+      "planUpdated": "Forfait mis à jour",
+      "planDeleted": "Forfait supprimé",
+      "saveFailed": "Échec de l'enregistrement"
+    }
   }
 }
