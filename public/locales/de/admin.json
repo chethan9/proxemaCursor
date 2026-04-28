@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "Aktivitätsprotokoll",
+    "subtitle": "Jede Konfigurationsänderung, Abrechnungsereignis und Admin-Aktion auf der Plattform.",
+    "totalEntries": "{{count}} Einträge insgesamt.",
+    "exportCsv": "CSV exportieren",
+    "exportReady": "Export bereit",
+    "exportRows": "{{count}} Zeilen heruntergeladen.",
+    "exportFailed": "Export fehlgeschlagen",
+    "actorPlaceholder": "E-Mail des Akteurs…",
+    "actionPlaceholder": "Aktion",
+    "entityPlaceholder": "Entitätstyp",
+    "entityIdPlaceholder": "Entitäts-ID…",
+    "allActions": "Alle Aktionen",
+    "allEntities": "Alle Entitäten",
+    "filterActive_one": "{{count}} Filter aktiv",
+    "filterActive_other": "{{count}} Filter aktiv",
+    "showingResults": "{{count}} Ergebnisse angezeigt",
+    "empty": "Keine Aktivität entspricht den Filtern.",
+    "loadMore": "Mehr laden",
+    "unknownError": "Unbekannter Fehler"
+  }
+}

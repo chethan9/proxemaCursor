@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "Journal d'activité",
+    "subtitle": "Chaque changement de configuration, événement de facturation et action d'administrateur sur la plateforme.",
+    "totalEntries": "{{count}} entrées au total.",
+    "exportCsv": "Exporter CSV",
+    "exportReady": "Export prêt",
+    "exportRows": "{{count}} lignes téléchargées.",
+    "exportFailed": "Échec de l'export",
+    "actorPlaceholder": "E-mail de l'auteur…",
+    "actionPlaceholder": "Action",
+    "entityPlaceholder": "Type d'entité",
+    "entityIdPlaceholder": "ID d'entité…",
+    "allActions": "Toutes les actions",
+    "allEntities": "Toutes les entités",
+    "filterActive_one": "{{count}} filtre actif",
+    "filterActive_other": "{{count}} filtres actifs",
+    "showingResults": "{{count}} résultats affichés",
+    "empty": "Aucune activité correspondant aux filtres.",
+    "loadMore": "Charger plus",
+    "unknownError": "Erreur inconnue"
+  }
+}

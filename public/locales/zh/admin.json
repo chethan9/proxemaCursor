@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "活动日志",
+    "subtitle": "平台上所有配置更改、账单事件和管理员操作。",
+    "totalEntries": "共 {{count}} 条记录。",
+    "exportCsv": "导出 CSV",
+    "exportReady": "导出就绪",
+    "exportRows": "已下载 {{count}} 行。",
+    "exportFailed": "导出失败",
+    "actorPlaceholder": "操作者邮箱…",
+    "actionPlaceholder": "操作",
+    "entityPlaceholder": "实体类型",
+    "entityIdPlaceholder": "实体 ID…",
+    "allActions": "全部操作",
+    "allEntities": "全部实体",
+    "filterActive_one": "{{count}} 个筛选生效",
+    "filterActive_other": "{{count}} 个筛选生效",
+    "showingResults": "显示 {{count}} 条结果",
+    "empty": "没有匹配筛选的活动。",
+    "loadMore": "加载更多",
+    "unknownError": "未知错误"
+  }
+}

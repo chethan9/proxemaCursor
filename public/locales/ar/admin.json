@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "سجل النشاط",
+    "subtitle": "كل تغيير في الإعدادات، حدث فوترة، وإجراء إداري عبر المنصة.",
+    "totalEntries": "{{count}} إدخال إجمالي.",
+    "exportCsv": "تصدير CSV",
+    "exportReady": "التصدير جاهز",
+    "exportRows": "تم تنزيل {{count}} صف.",
+    "exportFailed": "فشل التصدير",
+    "actorPlaceholder": "بريد المستخدم…",
+    "actionPlaceholder": "الإجراء",
+    "entityPlaceholder": "نوع الكيان",
+    "entityIdPlaceholder": "معرف الكيان…",
+    "allActions": "جميع الإجراءات",
+    "allEntities": "جميع الكيانات",
+    "filterActive_one": "فلتر {{count}} نشط",
+    "filterActive_other": "{{count}} فلاتر نشطة",
+    "showingResults": "عرض {{count}} نتيجة",
+    "empty": "لا يوجد نشاط مطابق للفلاتر.",
+    "loadMore": "تحميل المزيد",
+    "unknownError": "خطأ غير معروف"
+  }
+}

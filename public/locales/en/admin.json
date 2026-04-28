@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "Activity Log",
+    "subtitle": "Every config change, billing event, and admin action across the platform.",
+    "totalEntries": "{{count}} total entries.",
+    "exportCsv": "Export CSV",
+    "exportReady": "Export ready",
+    "exportRows": "{{count}} rows downloaded.",
+    "exportFailed": "Export failed",
+    "actorPlaceholder": "Actor email…",
+    "actionPlaceholder": "Action",
+    "entityPlaceholder": "Entity type",
+    "entityIdPlaceholder": "Entity ID…",
+    "allActions": "All actions",
+    "allEntities": "All entities",
+    "filterActive_one": "{{count}} filter active",
+    "filterActive_other": "{{count}} filters active",
+    "showingResults": "Showing {{count}} results",
+    "empty": "No activity matching your filters.",
+    "loadMore": "Load more",
+    "unknownError": "Unknown error"
+  }
+}

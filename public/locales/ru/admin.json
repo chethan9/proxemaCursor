@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "Журнал активности",
+    "subtitle": "Все изменения конфигурации, биллинговые события и действия администраторов на платформе.",
+    "totalEntries": "Всего {{count}} записей.",
+    "exportCsv": "Экспорт CSV",
+    "exportReady": "Экспорт готов",
+    "exportRows": "Скачано {{count}} строк.",
+    "exportFailed": "Ошибка экспорта",
+    "actorPlaceholder": "Email пользователя…",
+    "actionPlaceholder": "Действие",
+    "entityPlaceholder": "Тип сущности",
+    "entityIdPlaceholder": "ID сущности…",
+    "allActions": "Все действия",
+    "allEntities": "Все сущности",
+    "filterActive_one": "{{count}} фильтр активен",
+    "filterActive_other": "{{count}} фильтров активно",
+    "showingResults": "Показано {{count}} результатов",
+    "empty": "Нет активности, соответствующей фильтрам.",
+    "loadMore": "Загрузить ещё",
+    "unknownError": "Неизвестная ошибка"
+  }
+}

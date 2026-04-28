@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import type { GetServerSideProps } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +34,7 @@ function downloadCsv(content: string, filename: string) {
 }
 
 export default function AdminActivityPage() {
+  const { t } = useTranslation("admin");
   const { toast } = useToast();
   const [rows, setRows] = useState<ActivityLogEntry[]>([]);
   const [count, setCount] = useState<number | null>(null);
@@ -101,11 +105,11 @@ export default function AdminActivityPage() {
       const csv = activityToCsv(all);
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       downloadCsv(csv, `activity-log-${stamp}.csv`);
-      toast({ title: "Export ready", description: `${all.length} rows downloaded.` });
+      toast({ title: t("activity.exportReady"), description: t("activity.exportRows", { count: all.length }) });
     } catch (e) {
       toast({
-        title: "Export failed",
-        description: e instanceof Error ? e.message : "Unknown error",
+        title: t("activity.exportFailed"),
+        description: e instanceof Error ? e.message : t("activity.unknownError"),
         variant: "destructive",
       });
     }
@@ -114,17 +118,17 @@ export default function AdminActivityPage() {
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   return (
-    <AppLayout title="Activity Log" requireSuperAdmin>
+    <AppLayout title={t("activity.title")} requireSuperAdmin>
       <div className="p-6 space-y-5 max-w-6xl mx-auto">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              Activity Log
+              {t("activity.title")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Every config change, billing event, and admin action across the platform.
-              {count !== null && <span className="ml-2">{count.toLocaleString()} total entries.</span>}
+              {t("activity.subtitle")}
+              {count !== null && <span className="ml-2">{t("activity.totalEntries", { count })}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -132,7 +136,7 @@ export default function AdminActivityPage() {
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             </Button>
             <Button variant="outline" size="sm" onClick={exportCsv} className="gap-1.5">
-              <Download className="h-3.5 w-3.5" /> Export CSV
+              <Download className="h-3.5 w-3.5" /> {t("activity.exportCsv")}
             </Button>
           </div>
         </div>
@@ -141,7 +145,7 @@ export default function AdminActivityPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <Input
-                placeholder="Actor email…"
+                placeholder={t("activity.actorPlaceholder")}
                 value={filters.actorEmail || ""}
                 onChange={(e) => applyFilter({ actorEmail: e.target.value || undefined })}
               />
@@ -149,9 +153,9 @@ export default function AdminActivityPage() {
                 value={filters.action || "__all"}
                 onValueChange={(v) => applyFilter({ action: v === "__all" ? undefined : v })}
               >
-                <SelectTrigger><SelectValue placeholder="Action" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("activity.actionPlaceholder")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all">All actions</SelectItem>
+                  <SelectItem value="__all">{t("activity.allActions")}</SelectItem>
                   {actions.map((a) => (
                     <SelectItem key={a} value={a}>{a}</SelectItem>
                   ))}
@@ -161,16 +165,16 @@ export default function AdminActivityPage() {
                 value={filters.entityType || "__all"}
                 onValueChange={(v) => applyFilter({ entityType: v === "__all" ? undefined : v })}
               >
-                <SelectTrigger><SelectValue placeholder="Entity type" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("activity.entityPlaceholder")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all">All entities</SelectItem>
-                  {entityTypes.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  <SelectItem value="__all">{t("activity.allEntities")}</SelectItem>
+                  {entityTypes.map((tp) => (
+                    <SelectItem key={tp} value={tp}>{tp}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Input
-                placeholder="Entity ID…"
+                placeholder={t("activity.entityIdPlaceholder")}
                 value={filters.entityId || ""}
                 onChange={(e) => applyFilter({ entityId: e.target.value || undefined })}
               />
@@ -192,8 +196,8 @@ export default function AdminActivityPage() {
             </div>
             {activeFilterCount > 0 && (
               <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                <Badge variant="secondary">{activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active</Badge>
-                <span>Showing {rows.length} results</span>
+                <Badge variant="secondary">{t("activity.filterActive", { count: activeFilterCount })}</Badge>
+                <span>{t("activity.showingResults", { count: rows.length })}</span>
               </div>
             )}
           </CardContent>
@@ -208,7 +212,7 @@ export default function AdminActivityPage() {
           {!loading && rows.length === 0 && (
             <Card>
               <CardContent className="py-16 text-center text-sm text-muted-foreground">
-                No activity matching your filters.
+                {t("activity.empty")}
               </CardContent>
             </Card>
           )}
@@ -221,7 +225,7 @@ export default function AdminActivityPage() {
           <div className="flex justify-center py-4">
             <Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Load more
+              {t("activity.loadMore")}
             </Button>
           </div>
         )}
@@ -229,3 +233,9 @@ export default function AdminActivityPage() {
     </AppLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "admin"])),
+  },
+});

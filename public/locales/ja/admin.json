@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "アクティビティログ",
+    "subtitle": "プラットフォーム上の設定変更、請求イベント、管理者操作の履歴。",
+    "totalEntries": "合計 {{count}} 件。",
+    "exportCsv": "CSV エクスポート",
+    "exportReady": "エクスポート完了",
+    "exportRows": "{{count}} 行をダウンロードしました。",
+    "exportFailed": "エクスポート失敗",
+    "actorPlaceholder": "実行者メール…",
+    "actionPlaceholder": "アクション",
+    "entityPlaceholder": "エンティティ種別",
+    "entityIdPlaceholder": "エンティティ ID…",
+    "allActions": "すべてのアクション",
+    "allEntities": "すべてのエンティティ",
+    "filterActive_one": "{{count}} 件のフィルター適用中",
+    "filterActive_other": "{{count}} 件のフィルター適用中",
+    "showingResults": "{{count}} 件の結果を表示",
+    "empty": "フィルターに一致するアクティビティがありません。",
+    "loadMore": "さらに読み込む",
+    "unknownError": "不明なエラー"
+  }
+}

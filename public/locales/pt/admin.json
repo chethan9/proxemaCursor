@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "Registro de atividade",
+    "subtitle": "Cada mudança de configuração, evento de faturamento e ação de administrador na plataforma.",
+    "totalEntries": "{{count}} entradas no total.",
+    "exportCsv": "Exportar CSV",
+    "exportReady": "Exportação pronta",
+    "exportRows": "{{count}} linhas baixadas.",
+    "exportFailed": "Falha na exportação",
+    "actorPlaceholder": "E-mail do ator…",
+    "actionPlaceholder": "Ação",
+    "entityPlaceholder": "Tipo de entidade",
+    "entityIdPlaceholder": "ID da entidade…",
+    "allActions": "Todas as ações",
+    "allEntities": "Todas as entidades",
+    "filterActive_one": "{{count}} filtro ativo",
+    "filterActive_other": "{{count}} filtros ativos",
+    "showingResults": "Exibindo {{count}} resultados",
+    "empty": "Nenhuma atividade correspondente aos filtros.",
+    "loadMore": "Carregar mais",
+    "unknownError": "Erro desconhecido"
+  }
+}

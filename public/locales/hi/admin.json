@@ -1,0 +1,23 @@
+{
+  "activity": {
+    "title": "गतिविधि लॉग",
+    "subtitle": "प्लेटफ़ॉर्म पर हर कॉन्फ़िग बदलाव, बिलिंग ईवेंट और एडमिन कार्रवाई।",
+    "totalEntries": "कुल {{count}} प्रविष्टियाँ।",
+    "exportCsv": "CSV निर्यात करें",
+    "exportReady": "निर्यात तैयार",
+    "exportRows": "{{count}} पंक्तियाँ डाउनलोड हुईं।",
+    "exportFailed": "निर्यात विफल",
+    "actorPlaceholder": "एक्टर ईमेल…",
+    "actionPlaceholder": "क्रिया",
+    "entityPlaceholder": "इकाई प्रकार",
+    "entityIdPlaceholder": "इकाई आईडी…",
+    "allActions": "सभी क्रियाएँ",
+    "allEntities": "सभी इकाइयाँ",
+    "filterActive_one": "{{count}} फ़िल्टर सक्रिय",
+    "filterActive_other": "{{count}} फ़िल्टर सक्रिय",
+    "showingResults": "{{count}} परिणाम दिख रहे हैं",
+    "empty": "फ़िल्टर से मेल खाती कोई गतिविधि नहीं।",
+    "loadMore": "और लोड करें",
+    "unknownError": "अज्ञात त्रुटि"
+  }
+}
