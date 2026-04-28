@@ -24,6 +24,7 @@ import { makeQueryClient } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 import { initPostHog, capturePostHogPageView } from "@/lib/posthog";
 import { isRtl } from "@/lib/i18n";
+import { NAMESPACES } from "@/lib/i18n";
 
 function LocaleDirSync() {
   const { i18n } = useTranslation();
@@ -133,6 +134,7 @@ function Providers({ children }: { children: React.ReactNode }) {
           <RecentMutationsProvider>
             <LoadingProvider>
               <LocaleDirSync />
+              <DbTranslationOverlay />
               <TopProgressBar />
               <Shell>{children}</Shell>
               <GlobalScrollButton />
@@ -178,6 +180,32 @@ function App({ Component, pageProps }: AppProps) {
       </Providers>
     </PersistQueryClientProvider>
   );
+}
+
+function DbTranslationOverlay() {
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    let cancelled = false;
+    const lang = i18n.language;
+    if (!lang) return;
+    (async () => {
+      try {
+        await Promise.all(
+          NAMESPACES.map(async (ns) => {
+            const res = await fetch(`/api/i18n/${lang}/${ns}`);
+            if (!res.ok) return;
+            const merged = await res.json();
+            if (cancelled) return;
+            i18n.addResourceBundle(lang, ns, merged, true, true);
+          })
+        );
+      } catch {
+        /* network errors → keep file-based fallback */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [i18n, i18n.language]);
+  return null;
 }
 
 export default appWithTranslation(App, nextI18NextConfig);
