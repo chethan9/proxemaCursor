@@ -52,13 +52,13 @@ DB takes precedence over JSON files. Add an i18next backend that hits `/api/i18n
 
 ## Checklist
 
-- [ ] Migration: locales + translations tables, seed 10 locales
-- [ ] /admin/languages list page
+- [x] Migration: locales + translations tables, seed 10 locales
+- [x] /admin/languages list page
 - [ ] /admin/languages/[code] edit page
-- [ ] /api/admin/translations endpoints (list, update, bulk-import)
+- [x] /api/admin/translations endpoints (list, update, bulk-import)
 - [ ] /api/i18n/[locale]/[namespace] runtime endpoint (merges JSON + DB)
 - [ ] Custom i18next backend that uses runtime endpoint
-- [ ] activity_log entries
+- [x] activity_log entries
 
 ## Acceptance
 

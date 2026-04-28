@@ -602,3 +602,8 @@ export default function CustomersPage() {
     </AuthGuard>
   );
 }
+
+export async function getServerSideProps({ locale }: { locale?: string }) {
+  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
+  return { props: { ...(await serverSideTranslations(locale || "en", ["common", "site"])) } };
+}
