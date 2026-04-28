@@ -378,7 +378,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       document.documentElement.dir = getLocaleMeta(code).dir;
       document.documentElement.lang = code;
     }
-    // Fire and forget: persist preference + audit log without blocking UI
+    // Instant client-side switch — next-i18next fetches new namespaces over HTTP and re-renders
+    void i18n.changeLanguage(code);
+    // Background: persist preference + audit log (non-blocking)
     if (user?.id) {
       void (async () => {
         try {
@@ -386,13 +388,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           await logActivity({ action: "profile.locale_changed", entityType: "profile", entityId: user.id, metadata: { locale: code } });
         } catch { /* non-fatal */ }
       })();
-    }
-    // Trigger SSR re-render with new locale so all server-rendered strings update at once
-    try {
-      await router.replace(router.asPath, router.asPath, { locale: code, scroll: false });
-    } catch {
-      // Fallback: change client-side i18n if router routing not configured
-      await i18n.changeLanguage(code);
     }
   }
 
