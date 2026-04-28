@@ -71,5 +71,44 @@
     "pending": "Pending",
     "error": "Error",
     "success": "Success"
+  },
+  "settings": {
+    "title": "Settings",
+    "groups": {
+      "account": "Account",
+      "appearance": "Appearance",
+      "team": "Team",
+      "admin": "Admin"
+    },
+    "items": {
+      "myProfile": "My Profile",
+      "myActivity": "My Activity",
+      "theme": "Theme",
+      "branding": "Branding",
+      "users": "Users",
+      "roles": "Roles",
+      "plans": "Plans",
+      "subscriptions": "Subscriptions",
+      "menuEditor": "Menu Editor",
+      "paymentMethods": "Payment Methods",
+      "translations": "Translations"
+    }
+  },
+  "connect": {
+    "setupInProgress": "Setup in progress"
+  },
+  "incompleteSite": {
+    "title": "Edit incomplete setup",
+    "description": "Update basic info before resuming. Credentials and webhooks will be configured when you resume setup.",
+    "siteName": "Site Name",
+    "storeUrl": "Store URL",
+    "client": "Client",
+    "unassigned": "Unassigned",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "invalidUrl": "Invalid URL",
+    "updated": "Updated",
+    "updateFailed": "Update failed"
   }
 }

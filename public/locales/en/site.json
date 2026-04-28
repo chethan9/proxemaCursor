@@ -228,6 +228,20 @@
       "scheduledGeneric": "Scheduled: {{action}}"
     }
   },
+  "productType": {
+    "title": "What type of product are you adding?",
+    "subtitle": "Choose the best option that fits your product",
+    "simple": {
+      "title": "Simple Product",
+      "description": "For products with a single price, one SKU, and no variations.",
+      "badge": "Easy"
+    },
+    "variable": {
+      "title": "Variable Product",
+      "description": "For products with options like size, color, style, or other variations.",
+      "badge": "Advanced"
+    }
+  },
   "productEdit": {
     "title": "Edit product",
     "newTitle": "New product",

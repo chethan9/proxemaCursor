@@ -71,5 +71,44 @@
     "pending": "قيد الانتظار",
     "error": "خطأ",
     "success": "نجاح"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "groups": {
+      "account": "الحساب",
+      "appearance": "المظهر",
+      "team": "الفريق",
+      "admin": "الإدارة"
+    },
+    "items": {
+      "myProfile": "ملفي الشخصي",
+      "myActivity": "نشاطي",
+      "theme": "السمة",
+      "branding": "العلامة التجارية",
+      "users": "المستخدمون",
+      "roles": "الأدوار",
+      "plans": "الخطط",
+      "subscriptions": "الاشتراكات",
+      "menuEditor": "محرر القائمة",
+      "paymentMethods": "طرق الدفع",
+      "translations": "الترجمات"
+    }
+  },
+  "connect": {
+    "setupInProgress": "الإعداد جارٍ"
+  },
+  "incompleteSite": {
+    "title": "تعديل الإعداد غير المكتمل",
+    "description": "حدّث البيانات الأساسية قبل المتابعة. سيتم ضبط بيانات الاعتماد والـ webhooks عند استئناف الإعداد.",
+    "siteName": "اسم الموقع",
+    "storeUrl": "رابط المتجر",
+    "client": "العميل",
+    "unassigned": "غير مُعيّن",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "saving": "جاري الحفظ...",
+    "invalidUrl": "رابط غير صحيح",
+    "updated": "تم التحديث",
+    "updateFailed": "فشل التحديث"
   }
 }
