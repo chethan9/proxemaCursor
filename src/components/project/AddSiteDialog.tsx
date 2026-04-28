@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, EyeOff, AlertTriangle, ExternalLink, HelpCircle, CheckCircle2, PlayCircle } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, ExternalLink, HelpCircle, CheckCircle2, PlayCircle, Copy } from "lucide-react";
 import { buildWooCommerceAuthUrl, validateStoreUrl, cleanStoreUrl } from "@/lib/woocommerce-auth";
 import { useCreateStore } from "@/hooks/queries/useStores";
 import type { Client } from "@/services/clientService";
@@ -48,6 +48,8 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
   const [showSecrets, setShowSecrets] = useState(false);
   const [manualConfirmed, setManualConfirmed] = useState(false);
   const [existingIncomplete, setExistingIncomplete] = useState<{ id: string; name: string } | null>(null);
+  const [existingDuplicate, setExistingDuplicate] = useState<{ id: string; name: string } | null>(null);
+  const [duplicateConfirmText, setDuplicateConfirmText] = useState("");
   const [newStore, setNewStore] = useState({
     name: "",
     url: "",
@@ -68,6 +70,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     const v = validateStoreUrl(newStore.url);
     if (!v.valid || !v.cleanedUrl) {
       setExistingIncomplete(null);
+      setExistingDuplicate(null);
       return;
     }
     const cleaned = v.cleanedUrl;
@@ -76,11 +79,19 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
         .from("stores")
         .select("id, name, url, onboarding_completed_at")
         .ilike("url", cleaned)
-        .is("onboarding_completed_at", null)
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (data) setExistingIncomplete({ id: data.id, name: data.name });
-      else setExistingIncomplete(null);
+      if (data && !data.onboarding_completed_at) {
+        setExistingIncomplete({ id: data.id, name: data.name });
+        setExistingDuplicate(null);
+      } else if (data && data.onboarding_completed_at) {
+        setExistingDuplicate({ id: data.id, name: data.name });
+        setExistingIncomplete(null);
+      } else {
+        setExistingIncomplete(null);
+        setExistingDuplicate(null);
+      }
     }, 400);
     return () => clearTimeout(tm);
   }, [newStore.url]);
@@ -92,6 +103,8 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     setShowSecrets(false);
     setManualConfirmed(false);
     setExistingIncomplete(null);
+    setExistingDuplicate(null);
+    setDuplicateConfirmText("");
   };
 
   const handleSelectManual = () => {
@@ -222,6 +235,31 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
                 </Button>
               </div>
             )}
+            {existingDuplicate && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 space-y-2">
+                <div className="flex items-start gap-2">
+                  <Copy className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-destructive">Site already exists</p>
+                    <p className="text-[11px] text-foreground/80">
+                      <span className="font-medium">{existingDuplicate.name}</span> is already connected with this URL. Adding a duplicate will count toward your plan&apos;s site quota and may cause sync conflicts.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-foreground/80">
+                    Type <span className="font-mono font-semibold text-destructive">ADD ANYWAY</span> to confirm:
+                  </Label>
+                  <Input
+                    value={duplicateConfirmText}
+                    onChange={(e) => setDuplicateConfirmText(e.target.value)}
+                    placeholder="ADD ANYWAY"
+                    className="h-8 font-mono text-xs"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 pt-1">
@@ -304,8 +342,27 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" disabled={creating}>{t("addSite.cancel")}</Button>
-          <Button onClick={handleCreate} disabled={creating || !newStore.name.trim() || !newStore.url.trim() || !!existingIncomplete} size="sm">
-            {creating ? (authMode === "oauth" ? t("addSite.redirecting") : t("addSite.creating")) : authMode === "oauth" ? t("addSite.connectStore") : t("addSite.addSite")}
+          <Button
+            onClick={handleCreate}
+            disabled={
+              creating ||
+              !newStore.name.trim() ||
+              !newStore.url.trim() ||
+              !!existingIncomplete ||
+              (!!existingDuplicate && duplicateConfirmText.trim() !== "ADD ANYWAY")
+            }
+            size="sm"
+            variant={existingDuplicate ? "destructive" : "default"}
+          >
+            {creating
+              ? authMode === "oauth"
+                ? t("addSite.redirecting")
+                : t("addSite.creating")
+              : existingDuplicate
+              ? "Add duplicate site"
+              : authMode === "oauth"
+              ? t("addSite.connectStore")
+              : t("addSite.addSite")}
           </Button>
         </DialogFooter>
       </DialogContent>
