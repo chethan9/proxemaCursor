@@ -50,16 +50,6 @@ type OrderRow = {
   shipping_lines?: ShippingLine[] | null;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  completed: t("orders.statuses.completed"),
-  processing: t("orders.statuses.processing"),
-  "on-hold": t("orders.statuses.onHold"),
-  pending: t("orders.statuses.pending"),
-  cancelled: t("orders.statuses.cancelled"),
-  refunded: t("orders.statuses.refunded"),
-  failed: t("orders.statuses.failed"),
-};
-
 const STATUS_FILTERS = ["all", "pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"] as const;
 
 function statusClasses(status: string): { pill: string; dot: string } {
