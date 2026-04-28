@@ -371,9 +371,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const initials = (profile?.full_name || profile?.email || "?").slice(0, 2).toUpperCase();
   const currentLocaleMeta = getLocaleMeta(i18n.language);
 
-  const tItemLabel = (node: ResolvedMenuNode) => t(`appNav.${node.id}`, { defaultValue: node.label });
-  const tGroupLabel = (node: ResolvedMenuNode) => t(`appNavGroups.${node.label}`, { defaultValue: node.label });
-
   async function handleLocaleChange(code: LocaleCode) {
     if (code === i18n.language) return;
     await i18n.changeLanguage(code);

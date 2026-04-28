@@ -19,6 +19,7 @@ import { fetchOrders } from "@/services/orderService";
 import { fetchCategories, fetchTags, fetchBrands } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
+import { useTranslation } from "next-i18next";
 
 type Props = { siteId: string };
 
@@ -48,6 +49,7 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
 export function SiteSidebar({ siteId }: Props) {
   const router = useRouter();
   const { profile, isSuperAdmin, can } = useAuth();
+  const { t } = useTranslation("common");
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -171,6 +173,14 @@ export function SiteSidebar({ siteId }: Props) {
     const isBulkJobs = node.href.endsWith("/bulk-jobs");
     const showPending = isBulkJobs && bulkJobsCounts.pending > 0;
     const showRecent = isBulkJobs && bulkJobsCounts.recent > 0;
+    // Map href section → nav.<key>; falls back to stored label so user customizations win.
+    const sectionMatch = node.href.match(/\/sites\/[^/]+\/?([^/?#]*)/);
+    const section = sectionMatch ? sectionMatch[1] : "";
+    const navKey =
+      section === "" ? "home" :
+      section === "bulk-jobs" ? "bulkJobs" :
+      section;
+    const label = t(`nav.${navKey}`, { defaultValue: node.label });
     return (
       <li key={node.id}>
         <Link
@@ -190,7 +200,7 @@ export function SiteSidebar({ siteId }: Props) {
             <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />
           )}
           <Icon className={cn("h-4 w-4 shrink-0", active ? "text-foreground" : "text-foreground/60")} style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden />
-          <span className="truncate flex-1">{node.label}</span>
+          <span className="truncate flex-1">{label}</span>
           {showPending && (
             <span
               title={`${bulkJobsCounts.pending} job${bulkJobsCounts.pending === 1 ? "" : "s"} running`}
@@ -287,7 +297,7 @@ export function SiteSidebar({ siteId }: Props) {
           return (
             <div key={node.id} className="mb-3 px-2">
               <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {node.label}
+                {t(`siteNavGroups.${node.label}`, { defaultValue: node.label })}
               </p>
               <ul className="space-y-0.5">{node.children?.map(renderItem)}</ul>
             </div>
