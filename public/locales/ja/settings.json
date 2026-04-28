@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "マイプロフィール",
+    "email": "メール",
+    "fullName": "氏名",
+    "save": "保存",
+    "saving": "保存中…",
+    "saved": "プロフィールを保存しました",
+    "saveFailed": "保存に失敗しました",
+    "uploadFailed": "アップロードに失敗しました",
+    "user": "ユーザー",
+    "language": {
+      "title": "言語",
+      "description": "インターフェースの言語。プロフィールに保存されます。"
+    },
+    "region": {
+      "title": "地域と通貨",
+      "description": "請求通貨と決済ゲートウェイのルーティングを制御します。",
+      "country": "国",
+      "selectCountry": "国を選択",
+      "currency": "請求通貨",
+      "currencyHint": "国から自動的に決定されます。",
+      "save": "地域を保存",
+      "saved": "地域を保存しました",
+      "confirmTitle": "請求通貨を変更しますか？",
+      "confirmBody": "{{from}} から {{to}} への変更により、サブスクリプション価格と決済ゲートウェイが変わる可能性があります。既存の有効なサブスクリプションは更新まで現在の通貨が維持されます。",
+      "cancel": "キャンセル",
+      "confirm": "変更を確定"
+    }
+  }
+}

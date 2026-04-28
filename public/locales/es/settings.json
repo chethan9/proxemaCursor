@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "Mi perfil",
+    "email": "Correo electrónico",
+    "fullName": "Nombre completo",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Perfil guardado",
+    "saveFailed": "Error al guardar",
+    "uploadFailed": "Error al subir",
+    "user": "Usuario",
+    "language": {
+      "title": "Idioma",
+      "description": "Idioma de la interfaz. Se guarda en tu perfil."
+    },
+    "region": {
+      "title": "Región y moneda",
+      "description": "Controla la moneda de facturación y el enrutamiento de la pasarela de pago.",
+      "country": "País",
+      "selectCountry": "Seleccionar país",
+      "currency": "Moneda de facturación",
+      "currencyHint": "Derivada automáticamente del país.",
+      "save": "Guardar región",
+      "saved": "Región guardada",
+      "confirmTitle": "¿Cambiar moneda de facturación?",
+      "confirmBody": "Cambiar de {{from}} a {{to}} puede modificar el precio de tu suscripción y la pasarela de pago. Las suscripciones activas mantienen su moneda actual hasta la renovación.",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar cambio"
+    }
+  }
+}

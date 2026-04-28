@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "Mein Profil",
+    "email": "E-Mail",
+    "fullName": "Vollständiger Name",
+    "save": "Speichern",
+    "saving": "Speichern…",
+    "saved": "Profil gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "uploadFailed": "Upload fehlgeschlagen",
+    "user": "Benutzer",
+    "language": {
+      "title": "Sprache",
+      "description": "Oberflächensprache. Wird in Ihrem Profil gespeichert."
+    },
+    "region": {
+      "title": "Region & Währung",
+      "description": "Steuert Abrechnungswährung und Payment-Gateway-Routing.",
+      "country": "Land",
+      "selectCountry": "Land auswählen",
+      "currency": "Abrechnungswährung",
+      "currencyHint": "Automatisch aus dem Land abgeleitet.",
+      "save": "Region speichern",
+      "saved": "Region gespeichert",
+      "confirmTitle": "Abrechnungswährung ändern?",
+      "confirmBody": "Wechsel von {{from}} zu {{to}} kann Ihren Abonnementpreis und das Payment-Gateway ändern. Aktive Abonnements behalten ihre Währung bis zur Verlängerung.",
+      "cancel": "Abbrechen",
+      "confirm": "Änderung bestätigen"
+    }
+  }
+}

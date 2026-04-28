@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "我的资料",
+    "email": "邮箱",
+    "fullName": "全名",
+    "save": "保存",
+    "saving": "保存中…",
+    "saved": "资料已保存",
+    "saveFailed": "保存失败",
+    "uploadFailed": "上传失败",
+    "user": "用户",
+    "language": {
+      "title": "语言",
+      "description": "界面语言。保存到您的资料。"
+    },
+    "region": {
+      "title": "地区与货币",
+      "description": "控制结算货币和支付网关路由。",
+      "country": "国家/地区",
+      "selectCountry": "选择国家/地区",
+      "currency": "结算货币",
+      "currencyHint": "根据国家/地区自动推导。",
+      "save": "保存地区",
+      "saved": "地区已保存",
+      "confirmTitle": "更改结算货币？",
+      "confirmBody": "从 {{from}} 切换到 {{to}} 可能会更改您的订阅价格和支付网关。现有活动订阅在续订前保持当前货币。",
+      "cancel": "取消",
+      "confirm": "确认更改"
+    }
+  }
+}

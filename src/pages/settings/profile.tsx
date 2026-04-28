@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
+import type { GetServerSideProps } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +39,7 @@ const COUNTRIES = [
 export default function ProfilePage() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation("settings");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState("");
@@ -70,7 +74,7 @@ export default function ProfilePage() {
     const path = `avatars/${user.id}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
     if (error) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      toast({ title: t("profile.uploadFailed"), description: error.message, variant: "destructive" });
       setUploading(false);
       return;
     }
@@ -86,11 +90,11 @@ export default function ProfilePage() {
     const { error } = await supabase.from("profiles").update({ full_name: fullName, avatar_url: avatarUrl }).eq("id", user.id);
     setSaving(false);
     if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast({ title: t("profile.saveFailed"), description: error.message, variant: "destructive" });
       return;
     }
     setInitial((p) => ({ ...p, fullName, avatarUrl: avatarUrl || "" }));
-    toast({ title: "Profile saved" });
+    toast({ title: t("profile.saved") });
   }
 
   async function doSaveRegion() {
@@ -100,11 +104,11 @@ export default function ProfilePage() {
     setSaving(false);
     setConfirmOpen(false);
     if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast({ title: t("profile.saveFailed"), description: error.message, variant: "destructive" });
       return;
     }
     setInitial((p) => ({ ...p, country, currency }));
-    toast({ title: "Region saved" });
+    toast({ title: t("profile.region.saved") });
   }
 
   function onCountryChange(code: string) {
@@ -116,11 +120,11 @@ export default function ProfilePage() {
   const initials = (fullName || user?.email || "?").split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <SettingsLayout title="My Profile">
+    <SettingsLayout title={t("profile.title")}>
       <div className="space-y-4 max-w-2xl">
         <div className="flex items-center gap-2">
           <UserIcon className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold tracking-tight">My Profile</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t("profile.title")}</h1>
         </div>
 
         <Card>
@@ -159,11 +163,11 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs">Email</Label>
+                  <Label htmlFor="email" className="text-xs">{t("profile.email")}</Label>
                   <Input id="email" value={user?.email || ""} disabled className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="fullname" className="text-xs">Full name</Label>
+                  <Label htmlFor="fullname" className="text-xs">{t("profile.fullName")}</Label>
                   <Input id="fullname" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-9" />
                 </div>
               </div>
@@ -171,7 +175,7 @@ export default function ProfilePage() {
               <div className="flex justify-end pt-1">
                 <Button type="submit" size="sm" disabled={!profileDirty || saving}>
                   <Save className="h-3.5 w-3.5 mr-1.5" />
-                  {saving ? "Saving…" : "Save"}
+                  {saving ? t("profile.saving") : t("profile.save")}
                 </Button>
               </div>
             </form>
@@ -182,9 +186,9 @@ export default function ProfilePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Languages className="h-4 w-4 text-muted-foreground" />
-              Language
+              {t("profile.language.title")}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Interface language. Saved to your profile.</p>
+            <p className="text-xs text-muted-foreground">{t("profile.language.description")}</p>
           </CardHeader>
           <CardContent>
             <LocaleSwitcher variant="select" />
@@ -195,25 +199,25 @@ export default function ProfilePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Globe className="h-4 w-4 text-muted-foreground" />
-              Region & Currency
+              {t("profile.region.title")}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Controls billing currency and payment gateway routing.</p>
+            <p className="text-xs text-muted-foreground">{t("profile.region.description")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Country</Label>
+                <Label className="text-xs">{t("profile.region.country")}</Label>
                 <Select value={country} onValueChange={onCountryChange}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectTrigger className="h-9"><SelectValue placeholder={t("profile.region.selectCountry")} /></SelectTrigger>
                   <SelectContent>
                     {COUNTRIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Billing currency</Label>
+                <Label className="text-xs">{t("profile.region.currency")}</Label>
                 <Input value={currency} readOnly placeholder="USD" className="h-9 bg-muted/40" />
-                <p className="text-[11px] text-muted-foreground">Auto-derived from country.</p>
+                <p className="text-[11px] text-muted-foreground">{t("profile.region.currencyHint")}</p>
               </div>
             </div>
             <div className="flex justify-end">
@@ -223,7 +227,7 @@ export default function ProfilePage() {
                 onClick={() => (currencyChanging ? setConfirmOpen(true) : doSaveRegion())}
               >
                 <Save className="h-3.5 w-3.5 mr-1.5" />
-                Save region
+                {t("profile.region.save")}
               </Button>
             </div>
           </CardContent>
@@ -233,17 +237,23 @@ export default function ProfilePage() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Change billing currency?</AlertDialogTitle>
+            <AlertDialogTitle>{t("profile.region.confirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Switching from {initial.currency} to {currency} may change your subscription pricing and payment gateway. Existing active subscriptions keep their current currency until renewal.
+              {t("profile.region.confirmBody", { from: initial.currency, to: currency })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doSaveRegion}>Confirm change</AlertDialogAction>
+            <AlertDialogCancel>{t("profile.region.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={doSaveRegion}>{t("profile.region.confirm")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </SettingsLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
+  },
+});

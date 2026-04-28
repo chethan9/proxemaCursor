@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "My Profile",
+    "email": "Email",
+    "fullName": "Full name",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Profile saved",
+    "saveFailed": "Save failed",
+    "uploadFailed": "Upload failed",
+    "user": "User",
+    "language": {
+      "title": "Language",
+      "description": "Interface language. Saved to your profile."
+    },
+    "region": {
+      "title": "Region & Currency",
+      "description": "Controls billing currency and payment gateway routing.",
+      "country": "Country",
+      "selectCountry": "Select country",
+      "currency": "Billing currency",
+      "currencyHint": "Auto-derived from country.",
+      "save": "Save region",
+      "saved": "Region saved",
+      "confirmTitle": "Change billing currency?",
+      "confirmBody": "Switching from {{from}} to {{to}} may change your subscription pricing and payment gateway. Existing active subscriptions keep their current currency until renewal.",
+      "cancel": "Cancel",
+      "confirm": "Confirm change"
+    }
+  }
+}

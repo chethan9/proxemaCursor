@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "Meu perfil",
+    "email": "E-mail",
+    "fullName": "Nome completo",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "saved": "Perfil salvo",
+    "saveFailed": "Falha ao salvar",
+    "uploadFailed": "Falha no upload",
+    "user": "Usuário",
+    "language": {
+      "title": "Idioma",
+      "description": "Idioma da interface. Salvo no seu perfil."
+    },
+    "region": {
+      "title": "Região e moeda",
+      "description": "Controla a moeda de cobrança e o roteamento do gateway de pagamento.",
+      "country": "País",
+      "selectCountry": "Selecionar país",
+      "currency": "Moeda de cobrança",
+      "currencyHint": "Derivada automaticamente do país.",
+      "save": "Salvar região",
+      "saved": "Região salva",
+      "confirmTitle": "Alterar moeda de cobrança?",
+      "confirmBody": "Trocar de {{from}} para {{to}} pode mudar o preço da sua assinatura e o gateway de pagamento. Assinaturas ativas mantêm a moeda atual até a renovação.",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar alteração"
+    }
+  }
+}

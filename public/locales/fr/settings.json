@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "title": "Mon profil",
+    "email": "E-mail",
+    "fullName": "Nom complet",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Profil enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "uploadFailed": "Échec de l'envoi",
+    "user": "Utilisateur",
+    "language": {
+      "title": "Langue",
+      "description": "Langue de l'interface. Enregistrée dans votre profil."
+    },
+    "region": {
+      "title": "Région et devise",
+      "description": "Contrôle la devise de facturation et le routage de la passerelle de paiement.",
+      "country": "Pays",
+      "selectCountry": "Sélectionner un pays",
+      "currency": "Devise de facturation",
+      "currencyHint": "Déduite automatiquement du pays.",
+      "save": "Enregistrer la région",
+      "saved": "Région enregistrée",
+      "confirmTitle": "Changer la devise de facturation ?",
+      "confirmBody": "Passer de {{from}} à {{to}} peut modifier le prix de votre abonnement et la passerelle de paiement. Les abonnements actifs conservent leur devise jusqu'au renouvellement.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer le changement"
+    }
+  }
+}
