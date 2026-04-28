@@ -92,11 +92,13 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-2">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              {status === "done" ? <CheckCircle2 className="h-6 w-6 text-success" /> : null}
+          {status === "done" && (
+            <div className="flex justify-center mb-2">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-success" />
+              </div>
             </div>
-          </div>
+          )}
           <CardTitle>{status === "done" ? t("reset.doneTitle") : t("reset.title")}</CardTitle>
           <CardDescription>{status === "done" ? t("reset.doneDesc") : t("reset.intro")}</CardDescription>
         </CardHeader>
