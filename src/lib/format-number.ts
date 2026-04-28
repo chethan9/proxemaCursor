@@ -1,13 +1,16 @@
 /**
- * Locale-aware number and currency formatters.
+ * Locale-aware number, currency, and date formatters.
  *
- * Pair with `useRouter().locale` or `i18n.language` from next-i18next to get
- * locale-aware output. For Arabic we force Latin numerals so operator
- * dashboards stay consistent with backend/log data.
+ * Pair with `useRouter().locale` or `i18n.language` from next-i18next.
+ * Defaults to "en" when no locale is provided.
+ *
+ * For Arabic, we force Latin (Western Arabic) numerals via the `-u-nu-latn`
+ * extension so operator dashboards stay readable across locales. If a future
+ * project wants Arabic-Indic numerals, remove the resolveLocale mapping.
  */
 
-function resolveLocale(locale?: string | null): string | undefined {
-  if (!locale) return undefined;
+function resolveLocale(locale?: string | null): string {
+  if (!locale) return "en";
   if (locale.startsWith("ar")) return "ar-u-nu-latn";
   return locale;
 }
@@ -17,7 +20,7 @@ export function formatNumber(
   locale?: string | null,
   options?: Intl.NumberFormatOptions
 ): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
   try {
     return new Intl.NumberFormat(resolveLocale(locale), options).format(value);
   } catch {
@@ -26,23 +29,20 @@ export function formatNumber(
 }
 
 export function formatCurrency(
-  value: number | string | null | undefined,
-  currency: string | null | undefined,
+  value: number | null | undefined,
+  currency: string,
   locale?: string | null,
   options?: Omit<Intl.NumberFormatOptions, "style" | "currency">
 ): string {
-  if (value === null || value === undefined || value === "") return "";
-  const n = typeof value === "string" ? parseFloat(value) : value;
-  if (Number.isNaN(n)) return "";
-  const code = (currency || "USD").toUpperCase();
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
   try {
     return new Intl.NumberFormat(resolveLocale(locale), {
       style: "currency",
-      currency: code,
+      currency,
       ...options,
-    }).format(n);
+    }).format(value);
   } catch {
-    return `${code} ${n.toFixed(2)}`;
+    return `${currency} ${value.toFixed(2)}`;
   }
 }
 
@@ -51,7 +51,7 @@ export function formatPercent(
   locale?: string | null,
   fractionDigits = 0
 ): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
   try {
     return new Intl.NumberFormat(resolveLocale(locale), {
       style: "percent",
@@ -67,7 +67,7 @@ export function formatCompact(
   value: number | null | undefined,
   locale?: string | null
 ): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
   try {
     return new Intl.NumberFormat(resolveLocale(locale), {
       notation: "compact",
@@ -76,4 +76,47 @@ export function formatCompact(
   } catch {
     return String(value);
   }
+}
+
+export function formatDate(
+  value: string | number | Date | null | undefined,
+  locale?: string | null,
+  options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }
+): string {
+  if (!value) return "—";
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat(resolveLocale(locale), options).format(d);
+  } catch {
+    return "—";
+  }
+}
+
+export function formatDateTime(
+  value: string | number | Date | null | undefined,
+  locale?: string | null,
+  options: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }
+): string {
+  if (!value) return "—";
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat(resolveLocale(locale), options).format(d);
+  } catch {
+    return "—";
+  }
+}
+
+export function formatTime(
+  value: string | number | Date | null | undefined,
+  locale?: string | null,
+  options: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" }
+): string {
+  return formatDateTime(value, locale, options);
 }
