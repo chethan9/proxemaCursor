@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
 
 export interface ProductRow {
   id: string;
@@ -48,17 +49,26 @@ export interface FetchProductsOptions {
   useLive?: boolean;
 }
 
+type CategoryFilterMeta = {
+  wooId?: number;
+  name: string;
+  slug?: string;
+};
+
 /** Woo REST `category` query param expects the category's numeric ID. */
-async function getWooCategoryIdForLiveFilter(storeId: string, categoryName: string): Promise<number | undefined> {
+async function getCategoryFilterMeta(storeId: string, categoryName: string): Promise<CategoryFilterMeta> {
   const { data } = await supabase
     .from("categories")
-    .select("woo_id")
+    .select("woo_id,name,slug")
     .eq("store_id", storeId)
     .ilike("name", categoryName)
     .limit(1)
     .maybeSingle();
-  const id = data?.woo_id;
-  return typeof id === "number" ? id : undefined;
+  return {
+    wooId: typeof data?.woo_id === "number" ? data.woo_id : undefined,
+    name: (data?.name as string) || categoryName,
+    slug: (data?.slug as string) || undefined,
+  };
 }
 
 function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRow {
@@ -92,8 +102,11 @@ function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRo
 export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number; live?: boolean }> {
   const { storeId, page, pageSize = 50, search, sortField = "woo_date_created", sortDirection = "desc", statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, useLive } = opts;
 
-  const effectiveCategory =
-    categoryFilter && categoryFilter !== "all" ? categoryFilter : undefined;
+  const effectiveCategory = normalizeSelectFilter(categoryFilter);
+
+  const categoryMeta = effectiveCategory
+    ? await getCategoryFilterMeta(storeId, effectiveCategory)
+    : null;
 
   if (useLive) {
     const qs = new URLSearchParams();
@@ -104,9 +117,8 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     if (stockStatusFilter && stockStatusFilter !== "all") qs.set("stock_status", stockStatusFilter);
     if (priceMin !== undefined) qs.set("min_price", String(priceMin));
     if (priceMax !== undefined) qs.set("max_price", String(priceMax));
-    if (effectiveCategory) {
-      const wooCatId = await getWooCategoryIdForLiveFilter(storeId, effectiveCategory);
-      if (wooCatId !== undefined) qs.set("category", String(wooCatId));
+    if (categoryMeta?.wooId !== undefined) {
+      qs.set("category", String(categoryMeta.wooId));
     }
     const orderMap: Record<string, string> = { name: "title", price: "price", woo_date_created: "date", created_at: "date", updated_at: "modified" };
     qs.set("orderby", orderMap[sortField] || "date");
@@ -139,9 +151,13 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
   if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
   if (stockStatusFilter && stockStatusFilter !== "all") query = query.eq("stock_status", stockStatusFilter);
   if (excludeOutOfStock) query = query.neq("stock_status", "outofstock");
-  if (effectiveCategory) {
-    // Use jsonb containment — reliable across jsonb-to-text formatting variants
-    query = query.contains("categories", [{ name: effectiveCategory }]);
+  if (categoryMeta) {
+    // supabase-js treats array args to .contains() as Postgres array literals, breaking JSONB containment.
+    // Pass a JSON-stringified array so PostgREST receives `cs.[{"id":62}]` for proper @> containment.
+    const needle = categoryMeta.wooId !== undefined
+      ? [{ id: categoryMeta.wooId }]
+      : [{ name: categoryMeta.name }];
+    query = query.contains("categories", JSON.stringify(needle));
   }
   if (priceMin !== undefined && !isNaN(priceMin)) query = query.gte("price", String(priceMin));
   if (priceMax !== undefined && !isNaN(priceMax)) query = query.lte("price", String(priceMax));

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/helpers";
+import { normalizeSelectFilter, normalizeSearch } from "@/lib/normalize-explorer-filters";
 
 export type OrderRow = Database["public"]["Tables"]["orders"]["Row"] & {
   refunds?: unknown;
@@ -64,13 +65,16 @@ function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
 
 export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: OrderRow[]; count: number; live?: boolean }> {
   const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", statusFilter, paymentMethodFilter, totalMin, totalMax, dateFrom, dateTo, useLive } = opts;
+  const effectiveSearch = normalizeSearch(search);
+  const effectiveStatus = normalizeSelectFilter(statusFilter);
+  const effectivePayment = normalizeSelectFilter(paymentMethodFilter);
 
   if (useLive) {
     const qs = new URLSearchParams();
     qs.set("page", String(page + 1));
     qs.set("per_page", String(pageSize));
-    if (search) qs.set("search", search);
-    if (statusFilter && statusFilter !== "all") qs.set("status", statusFilter);
+    if (effectiveSearch) qs.set("search", effectiveSearch);
+    if (effectiveStatus) qs.set("status", effectiveStatus);
     if (dateFrom) qs.set("after", dateFrom);
     if (dateTo) qs.set("before", dateTo);
     const orderMap: Record<string, string> = { date_created: "date", total: "total", order_number: "id", created_at: "date" };
@@ -85,14 +89,14 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
   }
 
   let query = supabase.from("orders").select("id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, shipping, line_items, shipping_lines, fee_lines, coupon_lines, date_created, date_modified, synced_at, created_at", { count: "exact" }).eq("store_id", storeId);
-  if (search && search.trim()) {
-    const s = search.trim();
+  if (effectiveSearch) {
+    const s = effectiveSearch;
     query = query.or(
       `order_number.ilike.%${s}%,billing->>email.ilike.%${s}%,billing->>first_name.ilike.%${s}%,billing->>last_name.ilike.%${s}%,billing->>phone.ilike.%${s}%,billing->>address_1.ilike.%${s}%,billing->>address_2.ilike.%${s}%,billing->>city.ilike.%${s}%,billing->>state.ilike.%${s}%,billing->>postcode.ilike.%${s}%`
     );
   }
-  if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
-  if (paymentMethodFilter && paymentMethodFilter !== "all") query = query.eq("payment_method", paymentMethodFilter);
+  if (effectiveStatus) query = query.eq("status", effectiveStatus);
+  if (effectivePayment) query = query.eq("payment_method", effectivePayment);
   if (totalMin !== undefined && !isNaN(totalMin)) query = query.gte("total", String(totalMin));
   if (totalMax !== undefined && !isNaN(totalMax)) query = query.lte("total", String(totalMax));
   if (dateFrom) query = query.gte("date_created", dateFrom);

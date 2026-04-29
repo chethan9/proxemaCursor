@@ -54,6 +54,7 @@ import { usePaymentMethods } from "@/hooks/queries/usePaymentMethods";
 import { OrderRowExpanded } from "./OrderRowExpanded";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
+import { normalizeNumberInput, normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
 import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
@@ -310,6 +311,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     return { from: undefined, to: undefined };
   }, [dateRange, customFrom, customTo]);
 
+  const normalizedStatusFilter = normalizeSelectFilter(statusFilter) ?? "all";
+  const normalizedPaymentFilter = normalizeSelectFilter(paymentFilter) ?? "all";
+  const normalizedTotalMin = normalizeNumberInput(totalMin);
+  const normalizedTotalMax = normalizeNumberInput(totalMax);
+
   const { data: ordersResult, isLoading: loading, isFetching, isPlaceholderData } = useOrders({
     storeId,
     page,
@@ -317,10 +323,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
-    statusFilter,
-    paymentMethodFilter: paymentFilter,
-    totalMin: totalMin ? parseFloat(totalMin) : undefined,
-    totalMax: totalMax ? parseFloat(totalMax) : undefined,
+    statusFilter: normalizedStatusFilter,
+    paymentMethodFilter: normalizedPaymentFilter,
+    totalMin: normalizedTotalMin,
+    totalMax: normalizedTotalMax,
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
     enabled: isHydrated,
@@ -441,13 +447,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
-    statusFilter,
-    paymentMethodFilter: paymentFilter,
-    totalMin: totalMin ? Number(totalMin) : undefined,
-    totalMax: totalMax ? Number(totalMax) : undefined,
+    statusFilter: normalizedStatusFilter,
+    paymentMethodFilter: normalizedPaymentFilter,
+    totalMin: normalizedTotalMin,
+    totalMax: normalizedTotalMax,
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, paymentFilter, totalMin, totalMax, dateBounds.from, dateBounds.to]);
+  }), [storeId, debouncedSearch, sort.field, sort.direction, normalizedStatusFilter, normalizedPaymentFilter, normalizedTotalMin, normalizedTotalMax, dateBounds.from, dateBounds.to]);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("orders-col-order", JSON.stringify(columnOrder));

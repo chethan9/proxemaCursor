@@ -34,6 +34,7 @@ import { useProducts, useProductCategoryOptions } from "@/hooks/queries/useProdu
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
+import { normalizeNumberInput, normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
 import { createBulkJob } from "@/services/bulkJobService";
@@ -266,6 +267,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     return router.asPath || `/sites/${storeId}/products`;
   }, [router, storeId]);
 
+  const normalizedCategoryFilter = normalizeSelectFilter(categoryFilter);
+  const normalizedStatusFilter = normalizeSelectFilter(statusFilter) ?? "all";
+  const normalizedStockFilter = normalizeSelectFilter(stockStatusFilter) ?? "all";
+  const normalizedPriceMin = normalizeNumberInput(priceMin);
+  const normalizedPriceMax = normalizeNumberInput(priceMax);
+
   const { data: productsResult, isLoading: loading, isFetching } = useProducts({
     storeId,
     page,
@@ -273,12 +280,12 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
-    statusFilter,
+    statusFilter: normalizedStatusFilter,
     excludeOutOfStock,
-    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-    stockStatusFilter,
-    priceMin: priceMin ? Number(priceMin) : undefined,
-    priceMax: priceMax ? Number(priceMax) : undefined,
+    categoryFilter: normalizedCategoryFilter,
+    stockStatusFilter: normalizedStockFilter,
+    priceMin: normalizedPriceMin,
+    priceMax: normalizedPriceMax,
     enabled: isHydrated,
   });
   const products = productsResult?.data ?? [];
@@ -343,13 +350,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
-    statusFilter,
+    statusFilter: normalizedStatusFilter,
     excludeOutOfStock,
-    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
-    stockStatusFilter,
-    priceMin: priceMin ? Number(priceMin) : undefined,
-    priceMax: priceMax ? Number(priceMax) : undefined,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+    categoryFilter: normalizedCategoryFilter,
+    stockStatusFilter: normalizedStockFilter,
+    priceMin: normalizedPriceMin,
+    priceMax: normalizedPriceMax,
+  }), [storeId, debouncedSearch, sort.field, sort.direction, normalizedStatusFilter, excludeOutOfStock, normalizedCategoryFilter, normalizedStockFilter, normalizedPriceMin, normalizedPriceMax]);
 
   useBackgroundPagination({
     enabled: !!storeId && productCount > 0,
