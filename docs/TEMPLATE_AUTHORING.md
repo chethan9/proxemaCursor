@@ -1,6 +1,6 @@
 # HTML Template Authoring Rules
 
-Hand this to any developer or AI generating invoice / pick-slip templates for WooSync. Follow it and PDFs will render cleanly without orphan footers, mid-row page breaks, or overflow artifacts.
+Hand this to any developer or AI generating invoice / pick-slip templates for Proxima Cursor. Follow it and PDFs will render cleanly without orphan footers, mid-row page breaks, or overflow artifacts.
 
 ---
 

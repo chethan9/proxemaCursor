@@ -1,5 +1,7 @@
 Production target for this repository (do not switch).
 
+GitHub (canonical source): https://github.com/chethan9/proxemaCursor — use `origin`; do not point CI or clones at retired repo URLs.
+
 Vercel project: proximacursor (see project.json).
 Default production domain: https://proximacursor.vercel.app
 

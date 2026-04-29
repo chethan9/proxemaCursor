@@ -1,5 +1,5 @@
 <![CDATA[
-# WooSync Sitemap
+# Proxima Cursor — Sitemap
 
 Generated: 2026-04-23
 Total routes: 47 pages + 55 API endpoints

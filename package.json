@@ -1,7 +1,11 @@
 {
-  "name": "softgen-starter",
+  "name": "proxemacursor",
   "version": "2.4.4",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chethan9/proxemaCursor.git"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

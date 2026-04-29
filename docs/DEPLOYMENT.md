@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Safe-deploy workflow for WooSync. Read this before every production push.
+Safe-deploy workflow for Proxima Cursor. Read this before every production push.
 
 ## Environments
 
@@ -8,7 +8,7 @@ Canonical Supabase refs for this codebase live in **`supabase/current-project.js
 
 | Env | Domain | Supabase project | Purpose |
 |---|---|---|---|
-| Dev | localhost:3000 / softgen preview | dev DB of your choice | Daily development |
+| Dev | localhost:3000 / Vercel preview | dev DB of your choice | Daily development |
 | Staging (future) | (optional) | separate Supabase project | Pre-prod smoke tests |
 | Production | e.g. `proximacursor.vercel.app` | **`fyqvmbrgyncthksbgrrr`** (`woosync-live-prod`) | Live customer data |
 
@@ -27,7 +27,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
 NEXT_PUBLIC_APP_URL=https://proximacursor.vercel.app
 ```
 
-Dev `.env.local` uses the same keys pointing at `woosync-dev` and `NEXT_PUBLIC_APP_URL` set to your softgen preview URL.
+Dev `.env.local` uses the same keys pointing at your dev Supabase project and `NEXT_PUBLIC_APP_URL` set to your preview URL (e.g. Vercel preview hostname).
 
 `NEXT_PUBLIC_APP_URL` drives webhook delivery URLs. Getting this wrong = webhooks go to the wrong domain. Double-check it on every environment.
 

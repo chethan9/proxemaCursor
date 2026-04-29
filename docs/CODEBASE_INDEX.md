@@ -1,4 +1,6 @@
-# WooSync Codebase Index
+# Proxima Cursor — Codebase Index
+
+**Repository:** https://github.com/chethan9/proxemaCursor
 
 Living map of the project. Update when structure changes meaningfully (new top-level folders, new API surface, new DB tables, new major features). Last updated: 2026-04-20.
 
