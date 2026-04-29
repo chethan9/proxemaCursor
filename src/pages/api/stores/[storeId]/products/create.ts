@@ -189,6 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const parentPayload = { ...body };
     delete parentPayload.variations;
 
+
     const validation = await validateCreatePayload(storeId, parentPayload, variations);
     if (validation.errors.length > 0) {
       return res.status(400).json({ error: "Validation failed", errors: validation.errors });
@@ -214,8 +215,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const wooId = created.id as number;
 
     if (variations.length > 0 && created.type === "variable") {
+      const userGalleryByCreateIdx: Array<Array<{ id: number; src: string; alt?: string }>> = [];
       const createPayload = variations.map((v) => {
         const img = v.image && (v.image.id || v.image.src) ? { image: v.image.id ? { id: v.image.id } : { src: v.image.src!, alt: v.image.alt || "" } } : {};
+        const userGallery = Array.isArray((v as unknown as { gallery?: unknown[] }).gallery)
+          ? ((v as unknown as { gallery?: Array<{ id?: number; src?: string; alt?: string }> }).gallery || [])
+              .filter((g) => typeof g?.id === "number" && g.id > 0)
+              .map((g) => ({ id: g.id as number, src: g.src || "", alt: g.alt || "" }))
+          : [];
+        const galleryMetaForWoo = userGallery.length > 0
+          ? { meta_data: [{ key: "_wc_additional_variation_images", value: userGallery.map((g) => g.id) }] }
+          : { meta_data: [{ key: "_wc_additional_variation_images", value: [] }] };
+        userGalleryByCreateIdx.push(userGallery);
         return {
           regular_price: v.regular_price || "",
           sale_price: v.sale_price || "",
@@ -228,6 +239,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           description: v.description || "",
           attributes: v.attributes,
           ...img,
+          ...galleryMetaForWoo,
         };
       });
       try {
@@ -264,7 +276,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (parentErr) throw new Error(`DB upsert (parent) failed: ${parentErr.message} [code=${parentErr.code}] [details=${parentErr.details}]`);
           const parentId = parentInserted!.id;
 
-          const varRows = createdVars.map((v) => ({
+          const varRows = createdVars.map((v, idx) => {
+            const galleryMeta = Array.isArray((v as Record<string, unknown>).meta_data)
+              ? ((v as Record<string, unknown>).meta_data as { key: string; value: unknown }[]).find((m) => m.key === "_wc_additional_variation_images")
+              : undefined;
+            const galleryIds = Array.isArray(galleryMeta?.value) ? (galleryMeta!.value as number[]) : [];
+            const userGallery = userGalleryByCreateIdx[idx] || [];
+            const userById = new Map(userGallery.map((g) => [g.id, g]));
+            const finalGallery = galleryIds.map((id) => {
+              const u = userById.get(id);
+              return u ? { id: u.id, src: u.src || "", alt: u.alt || "" } : { id, src: "" };
+            });
+            return {
             store_id: storeId,
             product_id: parentId,
             woo_parent_id: wooId,
@@ -285,11 +308,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             description: (v.description as string) || null,
             attributes: JSON.parse(JSON.stringify(v.attributes || [])) as Json,
             image: v.image ? (JSON.parse(JSON.stringify(v.image)) as Json) : null,
-            gallery: [] as unknown as Json,
+            gallery: JSON.parse(JSON.stringify(finalGallery)) as Json,
             menu_order: (v.menu_order as number) || 0,
             raw_data: JSON.parse(JSON.stringify(v)) as Json,
             synced_at: now,
-          }));
+          };
+          });
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { error: varErr } = await (supabaseAdmin as any)
             .from("product_variations")
