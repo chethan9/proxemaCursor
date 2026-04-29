@@ -44,6 +44,12 @@ function formatBytes(value: unknown): string | null {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatOutputMode(value: unknown): string | null {
+  if (value === "single-pdf") return "Single PDF";
+  if (value === "zip") return "ZIP";
+  return typeof value === "string" ? value : null;
+}
+
 function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
   const { t, i18n } = useTranslation("site");
@@ -353,7 +359,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
   const payload = job.payload as Record<string, unknown> | null;
   const isDeleteJob = job.job_type === "delete_products" || job.job_type === "delete_orders";
   const artifactSize = formatBytes(payload?.artifact_size_bytes);
-  const outputMode = typeof payload?.output_mode === "string" ? payload.output_mode.replace("-", " ") : null;
+  const outputMode = formatOutputMode(payload?.output_mode);
   const fmt = (d: string | null) => d ? formatDateTime(d, i18n.language) : "—";
   const dur = (() => {
     if (!job.started_at) return "—";
@@ -421,11 +427,12 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
                   <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.progress")}</p>
                   <p className="text-sm text-muted-foreground">
                     <span className="font-mono tabular-nums text-foreground">{job.processed}/{job.total}</span>
-                    {outputMode ? <span className="capitalize"> · {outputMode}</span> : null}
+                    <span className="font-mono tabular-nums font-semibold text-primary"> ({pct}%)</span>
+                    {outputMode ? <span> · {outputMode}</span> : null}
                     {artifactSize ? <span> · {artifactSize}</span> : null}
                   </p>
                 </div>
-                <div className="self-start sm:self-auto shrink-0 rounded-full border bg-background px-3 py-1 text-sm font-semibold font-mono tabular-nums shadow-sm">
+                <div className="self-start sm:self-auto shrink-0 rounded-full border border-primary/20 bg-background px-3 py-1 text-sm font-semibold font-mono tabular-nums text-primary shadow-sm">
                   {pct}%
                 </div>
               </div>
