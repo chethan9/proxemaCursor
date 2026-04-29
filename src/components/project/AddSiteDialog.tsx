@@ -60,6 +60,30 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
     client_id: "",
   });
 
+  const displayCleanUrl = useMemo(() => {
+    if (!newStore.url.trim()) return "";
+    try {
+      return cleanStoreUrl(newStore.url);
+    } catch {
+      return newStore.url.trim();
+    }
+  }, [newStore.url]);
+
+  const duplicateDescHtml = useMemo(() => {
+    if (!existingDuplicate) return "";
+    const raw = t("addSite.duplicateDesc", { name: existingDuplicate.name ?? "" });
+    return typeof raw === "string" ? raw : String(raw ?? "");
+  }, [existingDuplicate, t]);
+
+  const duplicateConfirmLabelHtml = useMemo(() => {
+    if (!existingDuplicate) return "";
+    const raw = t("addSite.duplicateConfirmLabel");
+    return typeof raw === "string" ? raw : String(raw ?? "");
+  }, [existingDuplicate, t]);
+
+  const duplicateDescText = useMemo(() => duplicateDescHtml.replace(/<[^>]*>/g, ""), [duplicateDescHtml]);
+  const duplicateConfirmLabelText = useMemo(() => duplicateConfirmLabelHtml.replace(/<[^>]*>/g, ""), [duplicateConfirmLabelHtml]);
+
   const wcRestApiUrl = useMemo(() => {
     if (!newStore.url.trim()) return null;
     const v = validateStoreUrl(newStore.url);
@@ -84,6 +108,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+
       if (data && !data.onboarding_completed_at) {
         setExistingIncomplete({ id: data.id, name: data.name });
         setExistingDuplicate(null);
@@ -211,7 +236,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
             <Input id="store-url" placeholder={t("addSite.storeUrlPlaceholder")} value={newStore.url} onChange={(e) => { setNewStore({ ...newStore, url: e.target.value }); setUrlError(null); }} className={`h-9 ${urlError ? "border-destructive" : ""}`} />
             {urlError && <p className="text-xs text-destructive">{urlError}</p>}
             {newStore.url.trim() && !urlError && !existingIncomplete && (
-              <p className="text-[11px] text-muted-foreground">{t("addSite.connectingTo")} <span className="font-mono text-foreground">{cleanStoreUrl(newStore.url)}</span></p>
+              <p className="text-[11px] text-muted-foreground">{t("addSite.connectingTo")} <span className="font-mono text-foreground">{displayCleanUrl}</span></p>
             )}
             {existingIncomplete && (
               <div className="rounded-md border border-warning/40 bg-warning/5 px-3 py-2 flex items-start gap-2">
@@ -245,15 +270,13 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
                     <p className="text-xs font-medium text-destructive">{t("addSite.duplicateTitle")}</p>
                     <p
                       className="text-[11px] text-foreground/80"
-                      dangerouslySetInnerHTML={{ __html: t("addSite.duplicateDesc", { name: existingDuplicate.name }) }}
-                    />
+                    >
+                      {duplicateDescText}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label
-                    className="text-[11px] text-foreground/80"
-                    dangerouslySetInnerHTML={{ __html: t("addSite.duplicateConfirmLabel") }}
-                  />
+                  <Label className="text-[11px] text-foreground/80">{duplicateConfirmLabelText}</Label>
                   <Input
                     value={duplicateConfirmText}
                     onChange={(e) => setDuplicateConfirmText(e.target.value)}
