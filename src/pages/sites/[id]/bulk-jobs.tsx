@@ -32,6 +32,18 @@ function effectiveStatus(job: BulkJob): string {
   return job.status;
 }
 
+function progressPct(job: BulkJob): number {
+  if (!job.total) return 0;
+  return Math.min(100, Math.max(0, Math.round((job.processed / job.total) * 100)));
+}
+
+function formatBytes(value: unknown): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
   const { t, i18n } = useTranslation("site");
@@ -236,85 +248,89 @@ function BulkJobsInner() {
           <CardTitle className="text-base">{t("bulkJobs.history")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("bulkJobs.columns.type")}</TableHead>
-                <TableHead>{t("bulkJobs.columns.status")}</TableHead>
-                <TableHead className="w-[240px]">{t("bulkJobs.columns.progress")}</TableHead>
-                <TableHead className="text-right">{t("bulkJobs.columns.succeeded")}</TableHead>
-                <TableHead className="text-right">{t("bulkJobs.columns.failed")}</TableHead>
-                <TableHead>{t("bulkJobs.columns.duration")}</TableHead>
-                <TableHead>{t("bulkJobs.columns.started")}</TableHead>
-                <TableHead className="text-right">{t("bulkJobs.columns.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />{t("bulkJobs.loading")}
-                </TableCell></TableRow>
-              ) : filteredJobs.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
-                  <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  {jobs.length === 0 ? t("bulkJobs.empty.none") : t("bulkJobs.empty.noMatches")}
-                </TableCell></TableRow>
-              ) : (
-                filteredJobs.map((j) => {
-                  const eff = effectiveStatus(j);
-                  const meta = STATUS_META[eff] ?? STATUS_META.pending;
-                  const Icon = meta.icon;
-                  const pct = j.total > 0 ? Math.round((j.processed / j.total) * 100) : 0;
-                  const running = j.status === "running" || j.status === "pending";
-                  return (
-                    <TableRow key={j.id}>
-                      <TableCell className="font-medium text-sm">
-                        {JOB_TYPE_LABEL[j.job_type as keyof typeof JOB_TYPE_LABEL] || j.job_type}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
-                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                            <span className="font-mono">{j.processed}/{j.total}</span>
-                            <span>{pct}%</span>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[980px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("bulkJobs.columns.type")}</TableHead>
+                  <TableHead>{t("bulkJobs.columns.status")}</TableHead>
+                  <TableHead className="min-w-[220px]">{t("bulkJobs.columns.progress")}</TableHead>
+                  <TableHead className="text-right">{t("bulkJobs.columns.succeeded")}</TableHead>
+                  <TableHead className="text-right">{t("bulkJobs.columns.failed")}</TableHead>
+                  <TableHead>{t("bulkJobs.columns.duration")}</TableHead>
+                  <TableHead>{t("bulkJobs.columns.started")}</TableHead>
+                  <TableHead className="text-right">{t("bulkJobs.columns.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />{t("bulkJobs.loading")}
+                  </TableCell></TableRow>
+                ) : filteredJobs.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
+                    <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    {jobs.length === 0 ? t("bulkJobs.empty.none") : t("bulkJobs.empty.noMatches")}
+                  </TableCell></TableRow>
+                ) : (
+                  filteredJobs.map((j) => {
+                    const eff = effectiveStatus(j);
+                    const meta = STATUS_META[eff] ?? STATUS_META.pending;
+                    const Icon = meta.icon;
+                    const pct = progressPct(j);
+                    const running = j.status === "running" || j.status === "pending";
+                    return (
+                      <TableRow key={j.id}>
+                        <TableCell className="font-medium text-sm min-w-[150px]">
+                          <span className="line-clamp-2">
+                            {JOB_TYPE_LABEL[j.job_type as keyof typeof JOB_TYPE_LABEL] || j.job_type}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
+                            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
                           </div>
-                          <Progress value={pct} className="h-1.5" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-emerald-600">{j.succeeded}</TableCell>
-                      <TableCell className="text-right font-mono text-xs text-destructive">{j.failed}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground font-mono">
-                        {formatDuration(j.started_at, j.completed_at)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatDate(j.started_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {j.error_message && (
-                            <span title={j.error_message} className="text-[11px] text-destructive inline-flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" /> {t("bulkJobs.row.error")}
-                            </span>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedJob(j)}>
-                            {t("bulkJobs.row.view")}
-                          </Button>
-                          {running && (
-                            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleCancel(j)}>
-                              {t("bulkJobs.row.cancel")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-[11px] text-muted-foreground">
+                              <span className="font-mono">{j.processed}/{j.total}</span>
+                              <span className="font-mono tabular-nums text-foreground">{pct}%</span>
+                            </div>
+                            <Progress value={pct} className="h-1.5" />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-emerald-600">{j.succeeded}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-destructive">{j.failed}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono">
+                          {formatDuration(j.started_at, j.completed_at)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(j.started_at)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {j.error_message && (
+                              <span title={j.error_message} className="text-[11px] text-destructive inline-flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" /> {t("bulkJobs.row.error")}
+                              </span>
+                            )}
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedJob(j)}>
+                              {t("bulkJobs.row.view")}
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                            {running && (
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleCancel(j)}>
+                                {t("bulkJobs.row.cancel")}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -332,10 +348,12 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
   const eff = effectiveStatus(job);
   const meta = STATUS_META[eff] ?? STATUS_META.pending;
   const Icon = meta.icon;
-  const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
+  const pct = progressPct(job);
   const errors = Array.isArray(job.errors) ? (job.errors as Array<{ id: number | string; error: string }>) : [];
   const payload = job.payload as Record<string, unknown> | null;
   const isDeleteJob = job.job_type === "delete_products" || job.job_type === "delete_orders";
+  const artifactSize = formatBytes(payload?.artifact_size_bytes);
+  const outputMode = typeof payload?.output_mode === "string" ? payload.output_mode.replace("-", " ") : null;
   const fmt = (d: string | null) => d ? formatDateTime(d, i18n.language) : "—";
   const dur = (() => {
     if (!job.started_at) return "—";
@@ -366,43 +384,52 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
 
   return (
     <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pr-8">
+          <DialogTitle className="flex flex-wrap items-center gap-2 leading-tight">
             <Icon className={`h-5 w-5 ${meta.cls}`} />
-            {JOB_TYPE_LABEL[job.job_type as keyof typeof JOB_TYPE_LABEL] || job.job_type}
-            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
+            <span>{JOB_TYPE_LABEL[job.job_type as keyof typeof JOB_TYPE_LABEL] || job.job_type}</span>
+            <Badge variant="outline" className={`shrink-0 text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
           </DialogTitle>
-          <DialogDescription>{t("bulkJobs.details.jobId")} <code className="text-xs">{job.id}</code></DialogDescription>
+          <DialogDescription className="break-all">{t("bulkJobs.details.jobId")} <code className="text-xs">{job.id}</code></DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0 pr-3">
           <div className="space-y-5 pb-2">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-lg border p-3">
                 <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.total")}</p>
-                <p className="text-lg font-semibold font-mono">{job.total}</p>
+                <p className="text-lg font-semibold font-mono tabular-nums">{job.total}</p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.processed")}</p>
-                <p className="text-lg font-semibold font-mono">{job.processed}</p>
+                <p className="text-lg font-semibold font-mono tabular-nums">{job.processed}</p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.succeeded")}</p>
-                <p className="text-lg font-semibold font-mono text-emerald-600">{job.succeeded}</p>
+                <p className="text-lg font-semibold font-mono tabular-nums text-emerald-600">{job.succeeded}</p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.failed")}</p>
-                <p className="text-lg font-semibold font-mono text-destructive">{job.failed}</p>
+                <p className="text-lg font-semibold font-mono tabular-nums text-destructive">{job.failed}</p>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{t("bulkJobs.details.progress")}</span>
-                <span className="font-mono">{pct}%</span>
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{t("bulkJobs.details.progress")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-mono tabular-nums text-foreground">{job.processed}/{job.total}</span>
+                    {outputMode ? <span className="capitalize"> · {outputMode}</span> : null}
+                    {artifactSize ? <span> · {artifactSize}</span> : null}
+                  </p>
+                </div>
+                <div className="self-start sm:self-auto shrink-0 rounded-full border bg-background px-3 py-1 text-sm font-semibold font-mono tabular-nums shadow-sm">
+                  {pct}%
+                </div>
               </div>
-              <Progress value={pct} className="h-2" />
+              <Progress value={pct} className="h-2.5 bg-background" />
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
