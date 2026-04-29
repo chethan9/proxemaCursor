@@ -117,7 +117,7 @@ export default function SignupPage() {
               <p className="text-xs text-muted-foreground">{t("signUp.passwordHint")}</p>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {loading && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
               {t("signUp.submit")}
             </Button>
             <p className="text-center text-sm text-muted-foreground">

@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
                 <PasswordInput id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {loading && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                 {t("reset.submit")}
               </Button>
             </form>

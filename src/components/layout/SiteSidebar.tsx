@@ -179,6 +179,8 @@ export function SiteSidebar({ siteId }: Props) {
     const navKey =
       section === "" ? "home" :
       section === "bulk-jobs" ? "bulkJobs" :
+      section === "sync-runs" ? "syncRuns" :
+      section === "settings" ? "configuration" :
       section;
     const label = t(`nav.${navKey}`, { defaultValue: node.label });
     return (
@@ -197,13 +199,13 @@ export function SiteSidebar({ siteId }: Props) {
           onFocus={() => node.href && prefetchForHref(node.href)}
         >
           {active && (
-            <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />
+            <span aria-hidden className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-e-full bg-foreground" />
           )}
           <Icon className={cn("h-4 w-4 shrink-0", active ? "text-foreground" : "text-foreground/60")} style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden />
           <span className="truncate flex-1">{label}</span>
           {showPending && (
             <span
-              title={`${bulkJobsCounts.pending} job${bulkJobsCounts.pending === 1 ? "" : "s"} running`}
+              title={t("bulkJobsBadge.running", { count: bulkJobsCounts.pending })}
               className="inline-flex items-center justify-center min-w-[1.25rem] h-[1.125rem] px-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] font-semibold tabular-nums"
             >
               {bulkJobsCounts.pending}
@@ -211,7 +213,7 @@ export function SiteSidebar({ siteId }: Props) {
           )}
           {showRecent && !showPending && (
             <span
-              title={`${bulkJobsCounts.recent} recently completed`}
+              title={t("bulkJobsBadge.completed", { count: bulkJobsCounts.recent })}
               className="inline-flex items-center justify-center min-w-[1.25rem] h-[1.125rem] px-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold tabular-nums"
             >
               {bulkJobsCounts.recent}
@@ -230,15 +232,15 @@ export function SiteSidebar({ siteId }: Props) {
           <PopoverTrigger asChild>
             <button
               className="w-full flex items-center gap-2 rounded-md border border-border px-2 py-1.5 hover:bg-accent/60 transition-colors"
-              aria-label="Switch site"
+              aria-label={t("siteSwitcher.switchSite")}
             >
               {currentSite ? (
                 <>
                   <SiteIcon site={currentSite} size={20} />
-                  <span className="flex-1 text-left text-sm font-medium truncate">{currentSite.name}</span>
+                  <span className="flex-1 text-start text-sm font-medium truncate">{currentSite.name}</span>
                 </>
               ) : (
-                <span className="flex-1 text-left text-sm text-muted-foreground">Select site…</span>
+                <span className="flex-1 text-start text-sm text-muted-foreground">{t("siteSwitcher.selectSite")}</span>
               )}
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             </button>
@@ -246,19 +248,19 @@ export function SiteSidebar({ siteId }: Props) {
           <PopoverContent className="w-64 p-0" align="start">
             <div className="p-2 border-b border-border">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Search className="absolute start-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                 <Input
                   autoFocus
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search sites…"
-                  className="h-8 pl-7 text-sm"
+                  placeholder={t("siteSwitcher.searchSites")}
+                  className="h-8 ps-7 text-sm"
                 />
               </div>
             </div>
             <div className="max-h-72 overflow-y-auto py-1">
               {filteredSites.length === 0 ? (
-                <div className="py-6 text-center text-xs text-muted-foreground">No sites found</div>
+                <div className="py-6 text-center text-xs text-muted-foreground">{t("siteSwitcher.noSitesFound")}</div>
               ) : filteredSites.map((s) => {
                 const active = s.id === siteId;
                 return (
@@ -269,7 +271,7 @@ export function SiteSidebar({ siteId }: Props) {
                       active && "bg-accent/40 font-medium")}
                   >
                     <SiteIcon site={s} size={20} />
-                    <span className="flex-1 text-left truncate">{s.name}</span>
+                    <span className="flex-1 text-start truncate">{s.name}</span>
                     <span className={cn("h-1.5 w-1.5 rounded-full shrink-0",
                       s.status === "connected" ? "bg-success" : "bg-muted-foreground/30")} />
                     {active && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
@@ -278,7 +280,7 @@ export function SiteSidebar({ siteId }: Props) {
               })}
             </div>
             <div className="px-3 py-1.5 border-t border-border text-[11px] text-muted-foreground">
-              {sites.length} site{sites.length !== 1 ? "s" : ""}
+              {t("siteSwitcher.siteCount", { count: sites.length })}
             </div>
           </PopoverContent>
         </Popover>

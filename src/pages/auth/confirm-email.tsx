@@ -116,7 +116,7 @@ export default function ConfirmEmailPage() {
               <Button asChild className="w-full">
                 <Link href={destHref}>
                   {t("confirm.goNow", { label: destLabel })}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4 rtl:rotate-180" />
                 </Link>
               </Button>
             </>

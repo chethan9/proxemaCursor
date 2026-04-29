@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {loading && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                 {t("forgot.submit")}
               </Button>
             </form>

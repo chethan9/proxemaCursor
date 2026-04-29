@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import type { GetStaticProps } from "next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +13,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 
 export default function BootstrapPage() {
   const router = useRouter();
+  const { t } = useTranslation(["auth", "common"]);
   const { user, profile, refresh, loading: authLoading } = useAuth();
   const [canBootstrap, setCanBootstrap] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -54,11 +58,11 @@ export default function BootstrapPage() {
                 <Lock className="h-6 w-6 text-muted-foreground" />
               </div>
             </div>
-            <CardTitle>Already provisioned</CardTitle>
-            <CardDescription>A super admin has already been created. This page is permanently disabled.</CardDescription>
+            <CardTitle>{t("auth:bootstrap.alreadyTitle")}</CardTitle>
+            <CardDescription>{t("auth:bootstrap.alreadyDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Link href="/auth/login" className="text-sm text-primary hover:underline">Go to sign in</Link>
+            <Link href="/auth/login" className="text-sm text-primary hover:underline">{t("auth:bootstrap.goToSignIn")}</Link>
           </CardContent>
         </Card>
       </div>
@@ -75,12 +79,12 @@ export default function BootstrapPage() {
                 <Shield className="h-6 w-6 text-primary" />
               </div>
             </div>
-            <CardTitle>Bootstrap super admin</CardTitle>
-            <CardDescription>Sign up or sign in first, then return here to claim super admin access.</CardDescription>
+            <CardTitle>{t("auth:bootstrap.needAccountTitle")}</CardTitle>
+            <CardDescription>{t("auth:bootstrap.needAccountDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-center">
-            <Link href="/auth/signup" className="block"><Button className="w-full">Create account</Button></Link>
-            <Link href="/auth/login" className="block text-sm text-primary hover:underline">I already have an account</Link>
+            <Link href="/auth/signup" className="block"><Button className="w-full">{t("auth:bootstrap.createAccount")}</Button></Link>
+            <Link href="/auth/login" className="block text-sm text-primary hover:underline">{t("auth:bootstrap.haveAccount")}</Link>
           </CardContent>
         </Card>
       </div>
@@ -96,17 +100,17 @@ export default function BootstrapPage() {
               {done ? <CheckCircle2 className="h-6 w-6 text-success" /> : <Shield className="h-6 w-6 text-primary" />}
             </div>
           </div>
-          <CardTitle>{done ? "You are now super admin" : "Claim super admin"}</CardTitle>
+          <CardTitle>{done ? t("auth:bootstrap.doneTitle") : t("auth:bootstrap.claimTitle")}</CardTitle>
           <CardDescription>
-            {done ? "Redirecting..." : `Grant super admin privileges to ${user.email}. This is a one-time action.`}
+            {done ? t("auth:bootstrap.redirecting") : t("auth:bootstrap.claimDesc", { email: user.email })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           {!done && (
             <Button onClick={handleBootstrap} disabled={submitting} className="w-full">
-              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Make me super admin
+              {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+              {t("auth:bootstrap.submit")}
             </Button>
           )}
         </CardContent>
@@ -114,3 +118,9 @@ export default function BootstrapPage() {
     </div>
   );
 }
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "auth"])),
+  },
+});

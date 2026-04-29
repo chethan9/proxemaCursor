@@ -119,7 +119,7 @@ export default function LoginPage() {
               <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">{t("signIn.remember")}</Label>
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
               {t("signIn.submit")}
             </Button>
             <div className="space-y-2 pt-1">

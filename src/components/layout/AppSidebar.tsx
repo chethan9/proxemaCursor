@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "next-i18next";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingProvider";
@@ -113,6 +113,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
   const { profile, role, can, isSuperAdmin, signOut, permissions, loading: authLoading, user } = useAuth();
+  const canRef = useRef(can);
+  const isSuperAdminRef = useRef(isSuperAdmin);
+  canRef.current = can;
+  isSuperAdminRef.current = isSuperAdmin;
   const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
@@ -189,10 +193,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       if (serialize(exactCache) !== serialize(menuTree)) setMenuTree(exactCache);
       setMenuReady(true);
     } else {
-      // No cache — build initial tree synchronously so user sees something immediately
-      const initial = buildInitialTree(can, isSuperAdmin);
-      setMenuTree(initial);
-      setMenuReady(true);
+      // No cache: wait for DB-backed menu_configs — sync buildInitialTree showed the full default
+      // registry (plus permission-free items) before hidden/admin-approved items applied, which looked like a glitch.
+      setMenuTree([]);
+      setMenuReady(false);
     }
     getMenuConfig(roleKey).then((cfg) => {
       const { tree } = mergeMenu(cfg);
@@ -201,13 +205,19 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       try { localStorage.setItem(menuStorageKey(roleKey), JSON.stringify(resolved)); } catch { /* ignore */ }
       setMenuTree((prev) => (serialize(prev) === serialize(resolved) ? prev : resolved));
       setMenuReady(true);
-    }).catch(() => { setMenuReady(true); });
+    }).catch(() => {
+      setMenuTree(buildInitialTree(canRef.current, isSuperAdminRef.current));
+      setMenuReady(true);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin, user?.id]);
 
-  // Safety net: never let the skeleton stay visible for more than 2s
+  // Safety net: never let the skeleton stay visible for more than 2s (slow/failed fetch still gets a tree)
   useEffect(() => {
-    const t = setTimeout(() => setMenuReady(true), 2000);
+    const t = setTimeout(() => {
+      setMenuReady(true);
+      setMenuTree((prev) => (prev.length > 0 ? prev : buildInitialTree(canRef.current, isSuperAdminRef.current)));
+    }, 2000);
     return () => clearTimeout(t);
   }, []);
 
@@ -296,7 +306,32 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     return router.pathname === href;
   };
 
-  const tItemLabel = (node: ResolvedMenuNode) => t(`appNav.${node.id}`, { defaultValue: node.label });
+  const APP_NAV_KEY_BY_ID: Record<string, string> = {
+    "dashboard": "health",
+    "clients": "clients",
+    "sites": "projects",
+    "explore": "explore",
+    "templates": "templates",
+    "sync-runs": "syncRuns",
+    "webhooks": "webhooks",
+    "webhooks-activity": "webhooksActivity",
+    "api": "apiManagement",
+    "billing": "billingOverview",
+    "payment-methods": "paymentMethods",
+    "pricing": "plansPricing",
+    "users": "users",
+    "roles": "roles",
+    "admin-payment-gateways": "adminPaymentGateways",
+    "admin-payment-logs": "adminPaymentLogs",
+    "admin-activity": "adminActivity",
+    "settings": "settings",
+  };
+
+  const tItemLabel = (node: ResolvedMenuNode) => {
+    const navKey = APP_NAV_KEY_BY_ID[node.id];
+    if (navKey) return t(`nav.${navKey}`, { defaultValue: node.label });
+    return t(`appNav.${node.id}`, { defaultValue: node.label });
+  };
   const tGroupLabel = (node: ResolvedMenuNode) => t(`appNavGroups.${node.label}`, { defaultValue: node.label });
 
   const renderItem = (node: ResolvedMenuNode, indent = false) => {
@@ -318,7 +353,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         )}
       >
         {active && !collapsed && (
-          <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
+          <span aria-hidden="true" className="absolute start-0 top-1 bottom-1 w-0.5 rounded-e-full bg-sidebar-primary" />
         )}
         <Icon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden="true" />
         {!collapsed && <span className="truncate">{label}</span>}
@@ -339,10 +374,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const sitesPopoverContent = (
     <PopoverContent side="right" align="start" sideOffset={8} className="w-72 p-0 z-[100]">
       <Command>
-        <CommandInput placeholder="Search sites..." />
+        <CommandInput placeholder={t("sidebar.searchSites")} />
         <CommandList>
-          <CommandEmpty>No sites found.</CommandEmpty>
-          <CommandGroup heading={`${sortedSites.length} site${sortedSites.length === 1 ? "" : "s"}`}>
+          <CommandEmpty>{t("sidebar.noSitesFound")}</CommandEmpty>
+          <CommandGroup heading={t("sidebar.siteCount", { count: sortedSites.length })}>
             {sortedSites.map((site) => {
               const isActive = site.id === activeSiteId;
               return (
@@ -361,7 +396,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     {site.url && <p className="text-[10px] text-muted-foreground truncate">{site.url}</p>}
                   </div>
                   <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-muted-foreground/40")} />
-                  {isActive && <Check className="h-3.5 w-3.5 text-primary ml-1" />}
+                  {isActive && <Check className="h-3.5 w-3.5 text-primary ms-1" />}
                 </CommandItem>
               );
             })}
@@ -440,8 +475,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             )}
           >
             <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
-            <span className="truncate flex-1 text-left">{groupLabel}</span>
-            <PanelRight className={cn("h-3 w-3 shrink-0 transition-opacity", isOpen ? "opacity-100" : "opacity-50")} />
+            <span className="truncate flex-1 text-start">{groupLabel}</span>
+            <PanelRight className={cn("h-3 w-3 shrink-0 transition-opacity rtl:rotate-180", isOpen ? "opacity-100" : "opacity-50")} />
           </button>
         </div>
       );
@@ -511,8 +546,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           aria-expanded={isExpanded}
         >
           <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
-          <span className="truncate flex-1 text-left">{groupLabel}</span>
-          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !isExpanded && "-rotate-90")} />
+          <span className="truncate flex-1 text-start">{groupLabel}</span>
+          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !isExpanded && "-rotate-90 rtl:rotate-90")} />
         </button>
         {isExpanded && (
           <ul className="mt-0.5 space-y-0.5">
@@ -535,7 +570,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     <TooltipProvider delayDuration={0}>
       <>
       <aside
-        aria-label="Primary navigation"
+        aria-label={t("sidebar.primaryNav")}
         className={cn(
           "flex shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200",
           collapsed ? "w-14" : "w-44"
@@ -549,7 +584,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 setCollapsedPref(false);
                 if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", "0");
               }}
-              aria-label="Expand sidebar"
+              aria-label={t("sidebar.expand")}
               className="flex items-center justify-center rounded-md p-1 hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary"
             >
               <BrandLogo size="sm" />
@@ -558,9 +593,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             <button
               type="button"
               onClick={() => { if (!locked) toggle(); }}
-              aria-label={locked ? "Sidebar locked" : "Collapse sidebar"}
+              aria-label={locked ? t("sidebar.locked") : t("sidebar.collapse")}
               className={cn(
-                "flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary min-w-0 flex-1 text-left",
+                "flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary min-w-0 flex-1 text-start",
                 locked && "cursor-default"
               )}
             >
@@ -571,13 +606,13 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           {!collapsed && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={toggleLock} aria-label={locked ? "Unlock sidebar" : "Lock sidebar expanded"}
-                  className={cn("p-1 rounded-md hover:bg-sidebar-accent/60 ml-1",
+                <button onClick={toggleLock} aria-label={locked ? t("sidebar.unlock") : t("sidebar.lockExpanded")}
+                  className={cn("p-1 rounded-md hover:bg-sidebar-accent/60 ms-1",
                     locked ? "text-sidebar-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground")}>
                   {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">{locked ? "Unlock sidebar" : "Keep sidebar expanded"}</TooltipContent>
+              <TooltipContent side="bottom">{locked ? t("sidebar.unlock") : t("sidebar.keepExpanded")}</TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -614,7 +649,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                                 <Link href={href} onMouseEnter={() => prefetchStore(site.id)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                                   isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
-                                  <span className={cn("absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
+                                  <span className={cn("absolute top-0.5 end-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
                                     site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
                                 </Link>
                               </TooltipTrigger>
@@ -634,11 +669,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                               : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                           )}>
                             {isActive && (
-                              <span aria-hidden="true" className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-sidebar-primary" />
+                              <span aria-hidden="true" className="absolute start-0 top-1 bottom-1 w-0.5 rounded-e-full bg-sidebar-primary" />
                             )}
                             <SiteIcon site={site} size="sm" />
                             <span className="truncate">{site.name}</span>
-                            <span className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
+                            <span className={cn("ms-auto h-1.5 w-1.5 rounded-full shrink-0", site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/30")} />
                           </Link>
                         </li>
                       );
@@ -653,17 +688,17 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                                 <PopoverTrigger asChild>
                                   <button
                                     type="button"
-                                    aria-label={`Show ${overflowCount} more sites`}
+                                    aria-label={t("sidebar.moreSitesShow", { count: overflowCount })}
                                     className="relative flex items-center justify-center rounded-md h-9 w-9 mx-auto text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                                   >
                                     <MoreHorizontal className="h-4 w-4" />
-                                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-sidebar-primary text-[9px] font-semibold text-sidebar-primary-foreground flex items-center justify-center ring-1 ring-sidebar">
+                                    <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-sidebar-primary text-[9px] font-semibold text-sidebar-primary-foreground flex items-center justify-center ring-1 ring-sidebar">
                                       +{overflowCount}
                                     </span>
                                   </button>
                                 </PopoverTrigger>
                               </TooltipTrigger>
-                              <TooltipContent side="right" sideOffset={8} className="z-[100]">{overflowCount} more sites</TooltipContent>
+                              <TooltipContent side="right" sideOffset={8} className="z-[100]">{t("sidebar.moreSitesCount", { count: overflowCount })}</TooltipContent>
                             </Tooltip>
                           ) : (
                             <PopoverTrigger asChild>
@@ -672,7 +707,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                                 className="w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-colors"
                               >
                                 <MoreHorizontal className="h-4 w-4 shrink-0" />
-                                <span className="truncate">+{overflowCount} more site{overflowCount === 1 ? "" : "s"}</span>
+                                <span className="truncate">{t("sidebar.moreSitesCount", { count: overflowCount })}</span>
                               </button>
                             </PopoverTrigger>
                           )}
@@ -692,12 +727,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={cn("w-full flex items-center gap-2 rounded-md p-1.5 hover:bg-sidebar-accent/60 transition-colors", collapsed && "justify-center")}
-                aria-label="User menu">
+                aria-label={t("sidebar.userMenu")}>
                 <Avatar className="h-7 w-7 flex-shrink-0">
                   <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-xs">{initials}</AvatarFallback>
                 </Avatar>
                 {!collapsed && (
-                  <div className="flex-1 min-w-0 text-left">
+                  <div className="flex-1 min-w-0 text-start">
                     <p className="text-xs font-medium truncate">{profile?.full_name || profile?.email}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{role?.name || profile?.role}</p>
                   </div>
@@ -715,15 +750,15 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               {showLanguageMenu && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    <Globe className="h-4 w-4 mr-2" />
+                    <Globe className="h-4 w-4 me-2" />
                     <span>{t("userMenu.language")}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
+                    <span className="ms-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-52">
                     {visibleLocales.map((l) => (
                       <DropdownMenuItem key={l.code} onSelect={() => handleLocaleChange(l.code)}>
                         <span className="flex-1">{l.nativeName}</span>
-                        <span className="text-xs text-muted-foreground mr-1">{l.name}</span>
+                        <span className="text-xs text-muted-foreground me-1">{l.name}</span>
                         {l.code === i18n.language && <Check className="h-3.5 w-3.5" />}
                       </DropdownMenuItem>
                     ))}
@@ -733,23 +768,23 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               {showLanguageMenu && <DropdownMenuSeparator />}
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{t("userMenu.theme")}</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTheme("light")}>
-                <Sun className="h-4 w-4 mr-2" />
+                <Sun className="h-4 w-4 me-2" />
                 {t("userMenu.light")}
-                {currentTheme === "light" && <Check className="h-3.5 w-3.5 ml-auto" />}
+                {currentTheme === "light" && <Check className="h-3.5 w-3.5 ms-auto" />}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("dark")}>
-                <Moon className="h-4 w-4 mr-2" />
+                <Moon className="h-4 w-4 me-2" />
                 {t("userMenu.dark")}
-                {currentTheme === "dark" && <Check className="h-3.5 w-3.5 ml-auto" />}
+                {currentTheme === "dark" && <Check className="h-3.5 w-3.5 ms-auto" />}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("system")}>
-                <Monitor className="h-4 w-4 mr-2" />
+                <Monitor className="h-4 w-4 me-2" />
                 {t("userMenu.system")}
-                {currentTheme === "system" && <Check className="h-3.5 w-3.5 ml-auto" />}
+                {currentTheme === "system" && <Check className="h-3.5 w-3.5 ms-auto" />}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut}>
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4 me-2" />
                 {t("userMenu.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -758,20 +793,20 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       </aside>
       {activePanelNode && !collapsed && (
         <aside
-          aria-label={`${activePanelNode.label} menu`}
+          aria-label={t("sidebar.panelMenu", { name: tGroupLabel(activePanelNode) })}
           className="flex shrink-0 flex-col w-52 bg-background border-r border-border"
         >
           <div className="h-12 flex items-center px-3 border-b border-border">
             <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex-1">
-              {activePanelNode.label}
+              {tGroupLabel(activePanelNode)}
             </span>
             <button
               type="button"
               onClick={() => setActivePanelId(null)}
-              aria-label="Close panel"
+              aria-label={t("sidebar.closePanel")}
               className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
             >
-              <ChevronDown className="h-3.5 w-3.5 rotate-90" />
+              <ChevronDown className="h-3.5 w-3.5 rotate-90 rtl:-rotate-90" />
             </button>
           </div>
           <nav className="flex-1 overflow-y-auto py-2 px-2">
@@ -792,9 +827,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                           : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
                       )}
                     >
-                      {active && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-foreground" />}
+                      {active && <span aria-hidden className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-e-full bg-foreground" />}
                       <Icon className="h-4 w-4 shrink-0" style={child.iconColor ? { color: child.iconColor } : undefined} />
-                      <span className="truncate">{child.label}</span>
+                      <span className="truncate">{tItemLabel(child)}</span>
                     </Link>
                   </li>
                 );
