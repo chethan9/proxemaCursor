@@ -61,6 +61,7 @@ export function LocaleSwitcher({ variant = "menu", align = "end" }: Props) {
 
   async function handleSelect(code: LocaleCode) {
     if (code === current) return;
+    const startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now());
     setBusy(true);
     try {
       if (typeof document !== "undefined") {

@@ -12,7 +12,9 @@
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node scripts/migrate.mjs",
-    "deploy:prod": "vercel deploy --prod --yes"
+    "deploy:prod": "vercel deploy --prod --yes",
+    "i18n:translate": "node scripts/translate-i18n.mjs",
+    "i18n:translate:dry": "node scripts/translate-i18n.mjs --dry-run"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

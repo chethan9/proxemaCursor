@@ -1,4 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import type { GetServerSideProps } from "next";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -27,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatNumber } from "@/lib/format-number";
 import {
   RefreshCw,
   Search,
@@ -124,6 +128,7 @@ function parseBlockingService(errorMessage: string | null | undefined): Blocking
 const PAGE_SIZE = 50;
 
 export default function SyncRunsPage() {
+  const { t, i18n } = useTranslation("site");
   const { isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const [selectedRun, setSelectedRun] = useState<SyncRunRow | null>(null);
@@ -218,13 +223,13 @@ export default function SyncRunsPage() {
 
   const formatDate = (d: string | null) => {
     if (!d) return "—";
-    return new Date(d).toLocaleString("en-US", {
+    return new Intl.DateTimeFormat(i18n.language?.startsWith("ar") ? "ar-u-nu-latn" : (i18n.language || "en"), {
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-    });
+    }).format(new Date(d));
   };
 
   const getStatusIcon = (status: string) => {
@@ -287,39 +292,37 @@ export default function SyncRunsPage() {
   };
 
   return (
-    <AppLayout title="Sync Runs">
+    <AppLayout title={t("syncRuns.title")}>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Sync Runs</h1>
-            <p className="text-sm text-muted-foreground">
-              Complete history of all sync operations across all sites
-            </p>
+            <h1 className="text-2xl font-semibold">{t("syncRuns.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("syncRuns.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exportCsv}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
+              <Download className="h-4 w-4 me-2" />
+              {t("syncRuns.exportCsv")}
             </Button>
             {stats.failed > 0 && isSuperAdmin && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear Failed
+                    <Trash2 className="h-4 w-4 me-2" />
+                    {t("syncRuns.clearFailed")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Clear failed sync runs?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("syncRuns.clearFailedTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete all {stats.failed} failed sync run records across all sites.
+                      {t("syncRuns.clearFailedDesc", { count: stats.failed })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t("syncRuns.cancel")}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleClearFailed} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Clear Failed Runs
+                      {t("syncRuns.confirmClearFailed")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -329,29 +332,29 @@ export default function SyncRunsPage() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All
+                    <Trash2 className="h-4 w-4 me-2" />
+                    {t("syncRuns.clearAll")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Clear all sync runs?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("syncRuns.clearAllTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete all {stats.total} sync run records across all sites. This cannot be undone.
+                      {t("syncRuns.clearAllDesc", { count: stats.total })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t("syncRuns.cancel")}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Delete All Runs
+                      {t("syncRuns.confirmClearAll")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             )}
             <Button variant="outline" size="sm" onClick={() => { resetAndLoad(); loadStats(); }}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+              <RefreshCw className="h-4 w-4 me-2" />
+              {t("syncRuns.refresh")}
             </Button>
           </div>
         </div>
@@ -365,7 +368,7 @@ export default function SyncRunsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total Runs</p>
+                  <p className="text-xs text-muted-foreground">{t("syncRuns.stats.total")}</p>
                 </div>
               </div>
             </CardContent>
@@ -378,7 +381,7 @@ export default function SyncRunsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.completed}</p>
-                  <p className="text-xs text-muted-foreground">Completed</p>
+                  <p className="text-xs text-muted-foreground">{t("syncRuns.stats.completed")}</p>
                 </div>
               </div>
             </CardContent>
@@ -391,7 +394,7 @@ export default function SyncRunsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.failed}</p>
-                  <p className="text-xs text-muted-foreground">Failed</p>
+                  <p className="text-xs text-muted-foreground">{t("syncRuns.stats.failed")}</p>
                 </div>
               </div>
             </CardContent>
@@ -404,7 +407,7 @@ export default function SyncRunsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{stats.running}</p>
-                  <p className="text-xs text-muted-foreground">Running</p>
+                  <p className="text-xs text-muted-foreground">{t("syncRuns.stats.running")}</p>
                 </div>
               </div>
             </CardContent>
@@ -416,8 +419,8 @@ export default function SyncRunsPage() {
                   <Package className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-semibold">{stats.totalRecords.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Records Processed</p>
+                  <p className="text-2xl font-semibold">{formatNumber(stats.totalRecords, i18n.language)}</p>
+                  <p className="text-xs text-muted-foreground">{t("syncRuns.stats.records")}</p>
                 </div>
               </div>
             </CardContent>
@@ -430,7 +433,7 @@ export default function SyncRunsPage() {
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 <CardTitle className="text-sm font-medium text-red-700">
-                  Recent Errors ({failedRuns.length} on this page)
+                  {t("syncRuns.errorsHeading", { count: failedRuns.length })}
                 </CardTitle>
               </div>
             </CardHeader>
@@ -450,7 +453,7 @@ export default function SyncRunsPage() {
                       </div>
                       <span className="text-xs text-muted-foreground">{formatDate(run.started_at)}</span>
                     </div>
-                    <p className="text-xs text-red-600 mt-1 truncate pl-5">{run.error_message || "Unknown error"}</p>
+                    <p className="text-xs text-red-600 mt-1 truncate ps-5">{run.error_message || t("syncRuns.unknownError")}</p>
                   </button>
                 ))}
               </div>
@@ -463,20 +466,20 @@ export default function SyncRunsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <div className="relative flex-1 min-w-[200px] max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
-                  placeholder="Search error messages..."
+                  placeholder={t("syncRuns.filters.search")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
               <Select value={filterStore} onValueChange={setFilterStore}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Stores" />
+                  <SelectValue placeholder={t("syncRuns.filters.allStores")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Stores</SelectItem>
+                  <SelectItem value="all">{t("syncRuns.filters.allStores")}</SelectItem>
                   {stores.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
@@ -484,27 +487,27 @@ export default function SyncRunsPage() {
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder={t("syncRuns.filters.allStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="running">Running</SelectItem>
+                  <SelectItem value="all">{t("syncRuns.filters.allStatus")}</SelectItem>
+                  <SelectItem value="completed">{t("syncRuns.status.completed")}</SelectItem>
+                  <SelectItem value="failed">{t("syncRuns.status.failed")}</SelectItem>
+                  <SelectItem value="running">{t("syncRuns.status.running")}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterAspect} onValueChange={setFilterAspect}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Aspects" />
+                  <SelectValue placeholder={t("syncRuns.filters.allAspects")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Aspects</SelectItem>
-                  <SelectItem value="products">Products</SelectItem>
-                  <SelectItem value="orders">Orders</SelectItem>
-                  <SelectItem value="customers">Customers</SelectItem>
-                  <SelectItem value="categories">Categories</SelectItem>
-                  <SelectItem value="tags">Tags</SelectItem>
-                  <SelectItem value="coupons">Coupons</SelectItem>
+                  <SelectItem value="all">{t("syncRuns.filters.allAspects")}</SelectItem>
+                  <SelectItem value="products">{t("syncRuns.aspects.products")}</SelectItem>
+                  <SelectItem value="orders">{t("syncRuns.aspects.orders")}</SelectItem>
+                  <SelectItem value="customers">{t("syncRuns.aspects.customers")}</SelectItem>
+                  <SelectItem value="categories">{t("syncRuns.aspects.categories")}</SelectItem>
+                  <SelectItem value="tags">{t("syncRuns.aspects.tags")}</SelectItem>
+                  <SelectItem value="coupons">{t("syncRuns.aspects.coupons")}</SelectItem>
                 </SelectContent>
               </Select>
               <Input
@@ -512,7 +515,7 @@ export default function SyncRunsPage() {
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 className="w-[150px]"
-                placeholder="From"
+                placeholder={t("syncRuns.filters.from")}
               />
               <Input
                 type="date"
@@ -641,7 +644,7 @@ export default function SyncRunsPage() {
             )}
             {!hasMore && runs.length > 0 && (
               <div className="text-center py-3 border-t">
-                <span className="text-xs text-muted-foreground">All {totalCount.toLocaleString()} runs loaded</span>
+                <span className="text-xs text-muted-foreground">All {formatNumber(totalCount, i18n.language)} runs loaded</span>
               </div>
             )}
           </CardContent>
@@ -778,8 +781,8 @@ export default function SyncRunsPage() {
       <Dialog open={!!diagnoseStoreId} onOpenChange={(open) => !open && setDiagnoseStoreId(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Connection Diagnostic</DialogTitle>
-            <DialogDescription>Run live probes to identify what is blocking sync.</DialogDescription>
+            <DialogTitle>{t("syncRuns.details.diagnostic", { defaultValue: "Connection Diagnostic" })}</DialogTitle>
+            <DialogDescription>{t("syncRuns.details.description")}</DialogDescription>
           </DialogHeader>
           {diagnoseStoreId && (
             <ConnectionDiagnostic storeId={diagnoseStoreId} autoRun />
@@ -789,3 +792,9 @@ export default function SyncRunsPage() {
     </AppLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
+  },
+});

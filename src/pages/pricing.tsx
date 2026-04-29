@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
+import { formatDate } from "@/lib/format-number";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { resolveCountry, getDefaultCurrencyForCountry, getBrowserTimezoneCountry, getSupportedCountries } from "@/lib/payments/routing";
@@ -45,7 +46,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
   const { user, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { t } = useTranslation("pricing");
+  const { t, i18n } = useTranslation("pricing");
   const { startCheckout, loading: checkoutLoading } = useCheckout();
   const { subscription, refetch } = useSubscription();
 
@@ -160,7 +161,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
         toast({
           title: t("toast.downgradeScheduled"),
           description: sub.current_period_end
-            ? t("toast.downgradeOn", { date: new Date(sub.current_period_end).toLocaleDateString() })
+            ? t("toast.downgradeOn", { date: formatDate(sub.current_period_end, i18n.language) })
             : t("toast.downgradePeriodEnd"),
         });
         refetch();

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthProvider";
+import { formatDate, formatCurrency } from "@/lib/format-number";
 import { useBillingUsage } from "@/hooks/queries/useBillingUsage";
 import { supabase } from "@/integrations/supabase/client";
 import { Receipt, Download, RefreshCw, ExternalLink, Loader2, CreditCard, FileText } from "lucide-react";
@@ -22,7 +23,7 @@ type Invoice = Tables<"invoices">;
 
 function BillingInner() {
   const { profile } = useAuth();
-  const { t } = useTranslation("billing");
+  const { t, i18n } = useTranslation("billing");
   const usage = useBillingUsage(profile?.client_id || "");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,8 +110,8 @@ function BillingInner() {
                       return (
                         <TableRow key={inv2.id}>
                           <TableCell className="font-mono text-xs">{inv2.invoice_number || inv2.id.slice(0, 8)}</TableCell>
-                          <TableCell className="text-sm">{new Date(inv2.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-sm font-medium">{((inv2.amount_minor || 0) / 100).toFixed(2)} {inv2.currency || "USD"}</TableCell>
+                          <TableCell className="text-sm">{formatDate(inv2.created_at, i18n.language)}</TableCell>
+                          <TableCell className="text-sm font-medium">{formatCurrency((inv2.amount_minor || 0) / 100, inv2.currency || "USD", i18n.language)}</TableCell>
                           <TableCell>{statusBadge(inv2.status || null)}</TableCell>
                           <TableCell className="text-xs text-muted-foreground capitalize">{inv2.gateway || "—"}</TableCell>
                           <TableCell className="text-right">

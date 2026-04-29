@@ -40,8 +40,14 @@
     "savedDescription": "النمط: {{preset}}",
     "saveFailed": "فشل الحفظ",
     "presets": {
-      "classic": { "name": "كلاسيكي Shopify", "tagline": "نمط Polaris نظيف، حواف حادة" },
-      "modern": { "name": "حديث", "tagline": "أسطح ناعمة، زوايا مدورة" }
+      "classic": {
+        "name": "كلاسيكي Shopify",
+        "tagline": "نمط Polaris نظيف، حواف حادة"
+      },
+      "modern": {
+        "name": "حديث",
+        "tagline": "أسطح ناعمة، زوايا مدورة"
+      }
     }
   },
   "myActivity": {
@@ -90,7 +96,12 @@
     "superAdminCount_one": "{{count}} مسؤول كبير",
     "superAdminCount_other": "{{count}} مسؤولون كبار",
     "empty": "لا يوجد مستخدمون بعد",
-    "columns": { "user": "المستخدم", "role": "الدور", "client": "العميل", "active": "نشط" },
+    "columns": {
+      "user": "المستخدم",
+      "role": "الدور",
+      "client": "العميل",
+      "active": "نشط"
+    },
     "you": "أنت",
     "unnamed": "بدون اسم",
     "noClient": "— لا شيء —",
@@ -129,8 +140,14 @@
     "noPermissions": "لا توجد أذونات معينة",
     "editPermissions": "تحرير الأذونات",
     "groups": {
-      "Clients": "العملاء", "Sites": "المواقع", "Sync": "المزامنة", "Webhooks": "Webhooks",
-      "API": "API", "Users": "المستخدمون", "Roles": "الأدوار", "Settings": "الإعدادات"
+      "Clients": "العملاء",
+      "Sites": "المواقع",
+      "Sync": "المزامنة",
+      "Webhooks": "Webhooks",
+      "API": "API",
+      "Users": "المستخدمون",
+      "Roles": "الأدوار",
+      "Settings": "الإعدادات"
     },
     "dialog": {
       "createTitle": "إنشاء دور جديد",
@@ -164,8 +181,14 @@
     "empty": "لا توجد خطط بعد.",
     "createFirst": "أنشئ الأولى",
     "columns": {
-      "plan": "الخطة", "prices": "الأسعار", "sites": "المواقع", "products": "المنتجات",
-      "users": "المستخدمون", "api": "API / شهر", "trial": "تجريبي", "status": "الحالة"
+      "plan": "الخطة",
+      "prices": "الأسعار",
+      "sites": "المواقع",
+      "products": "المنتجات",
+      "users": "المستخدمون",
+      "api": "API / شهر",
+      "trial": "تجريبي",
+      "status": "الحالة"
     },
     "contactSales": "تواصل مع المبيعات",
     "noPrices": "لم تُحدد أسعار",
@@ -316,5 +339,69 @@
     "resetConfirm": "إعادة قائمة {{role}} إلى الافتراضي؟",
     "reset": "إعادة",
     "resetDesc": "تمت استعادة القائمة الافتراضية."
+  },
+  "translations": {
+    "title": "Translations",
+    "subtitle": "Download English JSON files, translate offline, then drop them back into public/locales/{{locale}}/.",
+    "howToTitle": "How it works",
+    "howToBody": "English is the source of truth. Download a namespace, translate the values (keep keys identical), and place the file at public/locales/{locale}/{namespace}.json. Reload the app and the new locale appears in the language switcher.",
+    "namespacesTitle": "Namespaces",
+    "downloadAll": "Download all (English)",
+    "downloadEn": "Download EN",
+    "keysCount": "{{count}} keys",
+    "localesTitle": "Locale coverage",
+    "localesSubtitle": "Key parity vs English source. Missing keys fall back to English at runtime.",
+    "loading": "Loading…",
+    "complete": "complete",
+    "missing_one": "{{count}} missing",
+    "missing_other": "{{count}} missing",
+    "extra_one": "{{count}} extra",
+    "extra_other": "{{count}} extra",
+    "nav": "Translations"
+  },
+  "paymentMethods": {
+    "title": "Payment Methods",
+    "subtitle": "Define payment gateways. The <code>key</code> must match the exact WooCommerce <code>payment_method</code> value.",
+    "addMethod": "Add method",
+    "superAdminRequired": "Super admin access required.",
+    "columns": {
+      "icon": "Icon",
+      "label": "Label",
+      "key": "Key",
+      "description": "Description",
+      "actions": "Actions"
+    },
+    "empty": "No payment methods defined yet",
+    "addFirst": "Add your first",
+    "dialog": {
+      "addTitle": "Add payment method",
+      "editTitle": "Edit payment method",
+      "description": "The <strong>key</strong> must match exactly what WooCommerce sends in <code>payment_method</code> (e.g. <code>myfatoorah_v2</code>, <code>stripe</code>, <code>cod</code>).",
+      "keyLabel": "Key *",
+      "labelLabel": "Label *",
+      "iconUrlLabel": "Icon URL",
+      "descriptionLabel": "Description",
+      "keyPlaceholder": "myfatoorah_v2",
+      "labelPlaceholder": "MyFatoorah",
+      "iconUrlPlaceholder": "https://...",
+      "cancel": "Cancel",
+      "update": "Update",
+      "create": "Create"
+    },
+    "delete": {
+      "title": "Delete payment method?",
+      "body": "Delete \"{{label}}\"? Orders with this method will fall back to showing the raw key.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "loadFailed": "Failed to load",
+      "keyLabelRequired": "Key and label required",
+      "updated": "Updated",
+      "created": "Created",
+      "saveFailed": "Save failed",
+      "deleted": "Deleted",
+      "deleteFailed": "Delete failed"
+    }
   }
 }

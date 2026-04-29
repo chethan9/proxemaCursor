@@ -23,6 +23,12 @@ function Inner() {
   const { id, store, loading } = useSiteFromRoute();
   const { locked: syncLocked, ready: syncReady } = useSyncLocked(id);
   const initialType = router.query.type === "variable" ? "variable" : "simple";
+  const fallbackReturn = `/sites/${id}/products`;
+  const rawReturnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "";
+  const returnTo = rawReturnTo && rawReturnTo.startsWith("/") ? rawReturnTo : fallbackReturn;
+  const goBack = () => {
+    router.push(returnTo);
+  };
   const [mode, setMode] = useState<"basic" | "advanced">(initialType === "variable" ? "advanced" : "basic");
   const [form, setForm] = useState<ProductFormState>(() => {
     const base = emptyProductForm();
@@ -63,7 +69,7 @@ function Inner() {
     onSuccessExtra: () => {
       setSavedOnce(true);
       setInitialFormJson(JSON.stringify(form));
-      setTimeout(() => router.push(`/sites/${id}/products`), 50);
+      setTimeout(() => router.push(returnTo), 50);
     },
     onErrorExtra: (err) => {
       const e = err as Error & { validationErrors?: ProductValidationIssue[] };
@@ -79,7 +85,7 @@ function Inner() {
     return (
       <div className="p-6 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="sm" asChild><Link href={`/sites/${id}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
         </div>
         <div className="rounded-xl border border-warning/30 bg-warning/5 p-8 text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-warning/15 mb-4">
@@ -90,7 +96,7 @@ function Inner() {
             Your store is still doing its initial sync. To avoid data conflicts, creating new products is disabled until the import finishes — usually just a few minutes.
           </p>
           <p className="text-sm text-muted-foreground mb-5">You can keep browsing in live preview mode in the meantime.</p>
-          <Button asChild variant="outline"><Link href={`/sites/${id}/products`}>Back to products</Link></Button>
+          <Button asChild variant="outline"><Link href={returnTo}>Back to products</Link></Button>
         </div>
       </div>
     );
@@ -121,7 +127,7 @@ function Inner() {
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild><Link href={`/sites/${id}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
           <h1 className="text-xl font-semibold">Add new product</h1>
         </div>
         <div className="flex items-center gap-0 rounded-full bg-muted/60 p-1">
@@ -150,7 +156,7 @@ function Inner() {
       )}
 
       {mode === "basic" ? (
-        <BasicEditor storeId={id} form={form} setForm={setForm} saving={create.isPending} onCancel={() => router.push(`/sites/${id}/products`)} onPublish={submit} isEdit={false} />
+        <BasicEditor storeId={id} form={form} setForm={setForm} saving={create.isPending} onCancel={goBack} onPublish={submit} isEdit={false} />
       ) : (
         <AdvancedShell
           form={form}
@@ -158,7 +164,7 @@ function Inner() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           canAdvance={canAdvance}
-          onCancel={() => router.push(`/sites/${id}/products`)}
+          onCancel={goBack}
           onPublish={submit}
           saving={create.isPending}
           isEdit={false}

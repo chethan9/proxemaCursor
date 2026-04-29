@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +17,7 @@ interface Props {
 
 export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Props) {
   const { toast } = useToast();
+  const router = useRouter();
   const [regularPrice, setRegularPrice] = useState<string>(product.regular_price?.toString() || "");
   const [salePrice, setSalePrice] = useState<string>(product.sale_price?.toString() || "");
   const [manageStock, setManageStock] = useState<boolean>(!!(product.raw_data as Record<string, unknown>)?.manage_stock);
@@ -133,7 +135,7 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
         <div className="space-y-2">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Actions</div>
           <Link
-            href={`/sites/${product.store_id}/products/edit/${product.id}`}
+            href={{ pathname: `/sites/${product.store_id}/products/edit/${product.id}`, query: { returnTo: router.asPath || `/sites/${product.store_id}/products` } }}
             className="flex items-center gap-2 px-3 h-10 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />

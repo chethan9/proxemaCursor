@@ -6,13 +6,15 @@ import { useStore } from "@/hooks/queries/useStores";
 import { useToast } from "@/hooks/use-toast";
 import { InitialSyncBanner } from "@/components/site/InitialSyncBanner";
 import { useSyncCompletionInvalidation } from "@/hooks/queries/useSyncCompletionInvalidation";
+import { useTranslation } from "next-i18next";
 
 type Props = { children: React.ReactNode };
 
 export function SiteLayout({ children }: Props) {
   const router = useRouter();
+  const { t } = useTranslation("common");
   const siteId = typeof router.query.id === "string" ? router.query.id : undefined;
-  const { data: store, isLoading, isFetched } = useStore(siteId);
+  const { data: store, isLoading, isFetched, isFetching } = useStore(siteId);
   const { toast } = useToast();
   const redirectedRef = useRef(false);
   useSyncCompletionInvalidation(siteId);
@@ -23,7 +25,7 @@ export function SiteLayout({ children }: Props) {
     if (redirectedRef.current) return;
     if (isFetched && !isLoading && store === null) {
       redirectedRef.current = true;
-      toast({ title: "Site no longer exists", description: "Redirecting to your projects", variant: "destructive" });
+      toast({ title: t("siteLayout.siteNotFound.title"), description: t("siteLayout.siteNotFound.description"), variant: "destructive" });
       router.replace("/projects");
     }
   }, [siteId, isFetched, isLoading, store, router, toast]);

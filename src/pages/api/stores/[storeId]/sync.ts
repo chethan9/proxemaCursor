@@ -2,6 +2,14 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { fetchPagesChunked, basicAuth } from "@/lib/sync-engine";
+import {
+  getWooSyncHeavyAspectConcurrency,
+  getWooSyncMaxPagesPerChunk,
+  getWooSyncPageConcurrency,
+  getWooSyncPersistBatchSize,
+  getWooSyncTaxonomyAspectConcurrency,
+  getWooSyncTaxonomyPageConcurrency,
+} from "@/lib/sync-config";
 import { getAppUrl } from "@/lib/app-url";
 import { waitUntil } from "@vercel/functions";
 import { getEffectiveHistoryFrom } from "@/lib/history-window";
@@ -9,8 +17,16 @@ import { getEffectiveHistoryFrom } from "@/lib/history-window";
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
 
-const MAX_PAGES_PER_INVOCATION = 10;
 const PER_PAGE = 100;
+
+/** If the first waves finish before this elapsed time (ms), run one more chunk per aspect still incomplete — reduces cron round-trips. Must stay below `maxDuration` (300s). */
+const INLINE_CHAIN_ELAPSED_CAP_MS = 240_000;
+
+/** Taxonomy first so filters/lists warm before heavy product/order pulls (Phase 1 UX). */
+const ASPECT_WAVE_TAXONOMY = ["categories", "tags", "brands"] as const;
+const ASPECT_WAVE_HEAVY = ["products", "orders", "customers", "coupons"] as const;
+
+const TAXONOMY_ASPECT_SET = new Set<string>(ASPECT_WAVE_TAXONOMY as unknown as string[]);
 
 interface StoreToSync {
   id: string;
@@ -185,48 +201,66 @@ async function persistAndCheckpoint(
   storeId: string,
   runId: string,
   page: number,
-  counters: Counters
+  counters: Counters,
+  opts?: { skipExistingLookup?: boolean }
 ): Promise<void> {
   if (rows.length === 0) return;
-  const ids = rows.map((r) => r.woo_id as number);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any)
-    .from(table)
-    .select("woo_id")
-    .eq("store_id", storeId)
-    .in("woo_id", ids);
-  const existingSet = new Set((existing || []).map((e: { woo_id: number }) => e.woo_id));
+  const maxPersistBatch = getWooSyncPersistBatchSize();
+  const skipLookup = opts?.skipExistingLookup === true;
+  for (let offset = 0; offset < rows.length; offset += maxPersistBatch) {
+    const slice = rows.slice(offset, offset + maxPersistBatch);
 
-  // Upsert with deadlock retry: PG can deadlock when concurrent chunks touch overlapping (store_id, woo_id) keys.
-  let lastErr: { message: string; code?: string } | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+    let existingSet = new Set<number>();
+    if (!skipLookup) {
+      const ids = slice.map((r) => r.woo_id as number);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existing } = await (supabase as any)
+        .from(table)
+        .select("woo_id")
+        .eq("store_id", storeId)
+        .in("woo_id", ids);
+      existingSet = new Set((existing || []).map((e: { woo_id: number }) => e.woo_id));
+    }
+
+    // Upsert with deadlock retry: PG can deadlock when concurrent chunks touch overlapping (store_id, woo_id) keys.
+    let lastErr: { message: string; code?: string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from(table)
+        .upsert(slice, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
+      if (!error) { lastErr = null; break; }
+      lastErr = error;
+      const isDeadlock = error.code === "40P01" || /deadlock/i.test(error.message || "");
+      const isSerialization = error.code === "40001";
+      if (!isDeadlock && !isSerialization) break;
+      const backoffMs = 200 * Math.pow(2, attempt) + Math.floor(Math.random() * 100);
+      console.warn(`[Sync] ${table} upsert ${error.code} (attempt ${attempt + 1}/3) — retrying in ${backoffMs}ms`);
+      await new Promise((r) => setTimeout(r, backoffMs));
+    }
+    if (lastErr) throw new Error(`${table} upsert failed: ${lastErr.message}`);
+
+    const n = slice.length;
+    if (skipLookup) {
+      // Onboarding full sync: skip extra SELECT per batch — approximate counts (upsert still exact).
+      counters.processed += n;
+      counters.updated += n;
+    } else {
+      const newCount = slice.filter((r) => !existingSet.has(r.woo_id as number)).length;
+      counters.created += newCount;
+      counters.updated += n - newCount;
+      counters.processed += n;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from(table)
-      .upsert(rows, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
-    if (!error) { lastErr = null; break; }
-    lastErr = error;
-    const isDeadlock = error.code === "40P01" || /deadlock/i.test(error.message || "");
-    const isSerialization = error.code === "40001";
-    if (!isDeadlock && !isSerialization) break;
-    const backoffMs = 200 * Math.pow(2, attempt) + Math.floor(Math.random() * 100);
-    console.warn(`[Sync] ${table} upsert ${error.code} (attempt ${attempt + 1}/3) — retrying in ${backoffMs}ms`);
-    await new Promise((r) => setTimeout(r, backoffMs));
+    await (supabase as any).from("sync_runs").update({
+      cursor_page: page,
+      last_heartbeat_at: new Date().toISOString(),
+      records_processed: counters.processed,
+      records_created: counters.created,
+      records_updated: counters.updated,
+    }).eq("id", runId);
   }
-  if (lastErr) throw new Error(`${table} upsert failed: ${lastErr.message}`);
-
-  const newCount = rows.filter((r) => !existingSet.has(r.woo_id as number)).length;
-  counters.created += newCount;
-  counters.updated += rows.length - newCount;
-  counters.processed += rows.length;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from("sync_runs").update({
-    cursor_page: page,
-    last_heartbeat_at: new Date().toISOString(),
-    records_processed: counters.processed,
-    records_created: counters.created,
-    records_updated: counters.updated,
-  }).eq("id", runId);
 }
 
 interface AspectResult extends Counters {
@@ -234,6 +268,36 @@ interface AspectResult extends Counters {
   runId: string;
   error?: string;
   aspect: string;
+}
+
+async function fetchRunningAspectRun(storeId: string, aspectName: string): Promise<SyncRunRow | null> {
+  const { data } = await supabase
+    .from("sync_runs")
+    .select(
+      "id, store_id, aspect, status, started_at, cursor_page, total_pages, records_processed, records_created, records_updated, last_heartbeat_at, is_initial"
+    )
+    .eq("store_id", storeId)
+    .eq("aspect", aspectName)
+    .eq("status", "running")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? (data as unknown as SyncRunRow) : null;
+}
+
+async function runAspectWave(
+  aspectNames: readonly string[],
+  concurrency: number,
+  worker: (name: string) => Promise<AspectResult>
+): Promise<AspectResult[]> {
+  const out: AspectResult[] = [];
+  const width = Math.max(1, concurrency);
+  for (let i = 0; i < aspectNames.length; i += width) {
+    const batch = aspectNames.slice(i, i + width);
+    const batchResults = await Promise.all(batch.map((name) => worker(name)));
+    out.push(...batchResults);
+  }
+  return out;
 }
 
 async function runAspectChunk(
@@ -282,16 +346,29 @@ async function runAspectChunk(
     params.after = ordersHistoryFrom;
   }
 
+  /** Keep created/updated counters accurate (including onboarding runs). */
+  const skipExistingLookup = false;
+
+  const pageConcurrency = TAXONOMY_ASPECT_SET.has(aspectName)
+    ? getWooSyncTaxonomyPageConcurrency()
+    : getWooSyncPageConcurrency();
+
   try {
     const result = await fetchPagesChunked(store.url, store.auth, cfg.endpoint, params, {
       startPage,
-      maxPages: MAX_PAGES_PER_INVOCATION,
+      maxPages: getWooSyncMaxPagesPerChunk(),
       perPage: PER_PAGE,
-      concurrency: 4,
+      concurrency: pageConcurrency,
       onBatch: async (items, page) => {
         const batchNow = new Date().toISOString();
-        const rows = items.map((item) => cfg.toRow(item, store, batchNow));
-        await persistAndCheckpoint(cfg.table, rows, store.id, run!.id, page, counters);
+        const persistItems =
+          aspectName === "products"
+            ? (items as Record<string, unknown>[]).filter((i) => i.type !== "variation")
+            : items;
+        const rows = persistItems.map((item) => cfg.toRow(item, store, batchNow));
+        await persistAndCheckpoint(cfg.table, rows, store.id, run!.id, page, counters, {
+          skipExistingLookup,
+        });
       },
     });
 
@@ -335,12 +412,18 @@ async function runAspectChunk(
     console.error(`[Sync] ${aspectName} chunk failed:`, msg);
     if (run) {
       await supabase.from("sync_runs").update({
-        status: "failed",
-        completed_at: new Date().toISOString(),
+        // Keep resumable on transient failures/timeouts: cron scheduler will pick this back up.
+        status: "running",
+        completed_at: null,
+        last_heartbeat_at: new Date().toISOString(),
+        cursor_page: Math.max(0, (run.cursor_page || 0)),
+        records_processed: counters.processed,
+        records_created: counters.created,
+        records_updated: counters.updated,
         error_message: msg,
       }).eq("id", run.id);
     }
-    return { ...counters, hasMore: false, runId: run?.id || "", aspect: aspectName, error: msg };
+    return { ...counters, hasMore: true, runId: run?.id || "", aspect: aspectName, error: msg };
   }
 }
 
@@ -459,6 +542,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { store, isInitial, modifiedAfter, ordersHistoryFrom, allRunId, allStartedAt, rawStore } = ctx;
 
+    const syncRequestStartedAt = Date.now();
+
     await supabase.from("stores").update({ status: "syncing" }).eq("id", storeId);
 
     // ---------- RESUME single aspect ----------
@@ -527,11 +612,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, store_id: storeId, results: { [targetAspect]: result } });
     }
 
-    // ---------- Fresh "all" sync — first chunk for each aspect in parallel ----------
-    const aspectNames = Object.keys(ASPECTS);
-    const results = await Promise.all(
-      aspectNames.map((name) => runAspectChunk(store, name, modifiedAfter, isInitial, null, ordersHistoryFrom))
+    // ---------- Fresh "all" sync — taxonomy wave first (filters usable sooner), then heavy aspects ----------
+    const aspectNames = [...ASPECT_WAVE_TAXONOMY, ...ASPECT_WAVE_HEAVY];
+    const waveTaxonomy = await runAspectWave(
+      ASPECT_WAVE_TAXONOMY,
+      getWooSyncTaxonomyAspectConcurrency(),
+      (name) => runAspectChunk(store, name, modifiedAfter, isInitial, null, ordersHistoryFrom)
     );
+    const waveHeavy = await runAspectWave(
+      ASPECT_WAVE_HEAVY,
+      getWooSyncHeavyAspectConcurrency(),
+      (name) => runAspectChunk(store, name, modifiedAfter, isInitial, null, ordersHistoryFrom)
+    );
+    let results = [...waveTaxonomy, ...waveHeavy];
+
+    // Phase 2.1: one extra in-process chunk per aspect still incomplete (avoids waiting on cron) when within time budget.
+    const elapsedAfterWaves = Date.now() - syncRequestStartedAt;
+    if (elapsedAfterWaves < INLINE_CHAIN_ELAPSED_CAP_MS && results.some((r) => r.hasMore && !r.error)) {
+      const byAspect = new Map<string, AspectResult>();
+      aspectNames.forEach((name, i) => byAspect.set(name, results[i]));
+
+      const applySecondChunk = async (name: string): Promise<AspectResult> => {
+        const r = byAspect.get(name);
+        if (!r || !r.hasMore || r.error) return r!;
+        const runRow = await fetchRunningAspectRun(storeId, name);
+        if (!runRow) return r;
+        return runAspectChunk(store, name, modifiedAfter, isInitial, runRow, ordersHistoryFrom);
+      };
+
+      const secondTaxonomy = await runAspectWave(
+        ASPECT_WAVE_TAXONOMY,
+        getWooSyncTaxonomyAspectConcurrency(),
+        applySecondChunk
+      );
+      const secondHeavy = await runAspectWave(
+        ASPECT_WAVE_HEAVY,
+        getWooSyncHeavyAspectConcurrency(),
+        applySecondChunk
+      );
+      results = [...secondTaxonomy, ...secondHeavy];
+    }
 
     const totals = results.reduce((a, r) => ({
       processed: a.processed + r.processed,

@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ComposedChart } from "recharts";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { useTranslation } from "next-i18next";
+import { formatDate, formatCurrency, formatNumber } from "@/lib/format-number";
 
 interface Props {
   data: { day: string; orders: number; revenue: number }[];
@@ -11,10 +12,10 @@ interface Props {
 }
 
 export function SalesTrendCard({ data, currency, loading }: Props) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const chartData = data.map((d) => ({
     ...d,
-    label: format(parseISO(d.day), "MMM d"),
+    label: formatDate(parseISO(d.day), i18n.language, { month: "short", day: "numeric" }),
   }));
   const revenueLabel = t("home.cards.salesTrend.revenue");
   const ordersLabel = t("home.cards.salesTrend.orders");
@@ -53,8 +54,8 @@ export function SalesTrendCard({ data, currency, loading }: Props) {
                   }}
                   labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                   formatter={(value: number, name: string) => {
-                    if (name === revenueLabel) return [`${value.toFixed(2)} ${currency}`, name];
-                    return [value, name];
+                    if (name === revenueLabel) return [formatCurrency(value, currency, i18n.language), name];
+                    return [formatNumber(value, i18n.language), name];
                   }}
                 />
                 <Area yAxisId="left" type="monotone" dataKey="revenue" name={revenueLabel} stroke="hsl(var(--primary))" fill="url(#revGrad)" strokeWidth={2} />

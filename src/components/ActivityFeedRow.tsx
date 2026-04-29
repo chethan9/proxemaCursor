@@ -8,6 +8,8 @@ import {
   formatActionLabel,
   summarizeDiff,
 } from "@/services/activityLogService";
+import { useTranslation } from "next-i18next";
+import { formatDate, formatDateTime } from "@/lib/format-number";
 
 const actorIcon = {
   user: User,
@@ -16,7 +18,7 @@ const actorIcon = {
   api: Key,
 } as const;
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, locale?: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
@@ -25,7 +27,7 @@ function timeAgo(dateStr: string): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+  return formatDate(dateStr, locale);
 }
 
 function formatValue(v: unknown): string {
@@ -40,6 +42,7 @@ function formatValue(v: unknown): string {
 }
 
 export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
+  const { i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const ActorIcon = actorIcon[entry.actor_type] || User;
   const initials = (entry.actor_email || "?").slice(0, 2).toUpperCase();
@@ -94,7 +97,7 @@ export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
           )}
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-          {timeAgo(entry.created_at)}
+          {timeAgo(entry.created_at, i18n.language)}
         </span>
         {canExpand && (
           <span className="flex-shrink-0 text-muted-foreground">
@@ -127,7 +130,7 @@ export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
             </div>
           ))}
           <div className="pt-2 mt-2 border-t border-border/50 text-[11px] text-muted-foreground">
-            {new Date(entry.created_at).toLocaleString()}
+            {formatDateTime(entry.created_at, i18n.language)}
           </div>
         </div>
       )}

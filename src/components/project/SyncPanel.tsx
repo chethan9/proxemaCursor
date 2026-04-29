@@ -12,6 +12,8 @@ import { SYNC_ASPECTS } from "./constants";
 import { formatDate, formatDuration, formatRelativeTime } from "./formatters";
 import type { Store } from "@/services/storeService";
 import type { SyncRun } from "@/services/syncService";
+import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 interface SyncProgress { current: number; total: number; aspect: string; }
 
@@ -33,6 +35,7 @@ export function SyncPanel({
   store, syncing, syncProgress, dataCounts, syncRuns,
   onSyncAll, onCancelSync, onSyncAspect, onClearHistory, onSelectRun, getStatusIcon,
 }: SyncPanelProps) {
+  const { i18n } = useTranslation();
   const totalRecords = Object.values(dataCounts).reduce((a, b) => a + b, 0);
 
   return (
@@ -88,7 +91,7 @@ export function SyncPanel({
                           <div className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-muted mb-1 group-hover:ring-2 group-hover:ring-primary/50 transition-all">
                             <AspectIcon className={`h-5 w-5 ${aspect.color}`} />
                           </div>
-                          <p className="text-lg font-semibold">{count.toLocaleString()}</p>
+                          <p className="text-lg font-semibold">{formatNumber(count, i18n.language)}</p>
                           <p className="text-xs text-muted-foreground">{aspect.label}</p>
                         </button>
                       </TooltipTrigger>
@@ -105,7 +108,7 @@ export function SyncPanel({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="p-4"><div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><Database className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-2xl font-semibold">{totalRecords.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total Records</p></div>
+          <div><p className="text-2xl font-semibold">{formatNumber(totalRecords, i18n.language)}</p><p className="text-xs text-muted-foreground">Total Records</p></div>
         </div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-success" /></div>
@@ -113,7 +116,7 @@ export function SyncPanel({
         </div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center"><TrendingUp className="h-5 w-5 text-warning" /></div>
-          <div><p className="text-2xl font-semibold">{syncRuns.reduce((s, r) => s + (r.records_created || 0), 0).toLocaleString()}</p><p className="text-xs text-muted-foreground">Records Created</p></div>
+          <div><p className="text-2xl font-semibold">{formatNumber(syncRuns.reduce((s, r) => s + (r.records_created || 0), 0), i18n.language)}</p><p className="text-xs text-muted-foreground">Records Created</p></div>
         </div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center"><Calendar className="h-5 w-5 text-muted-foreground" /></div>

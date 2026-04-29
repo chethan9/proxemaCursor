@@ -227,7 +227,12 @@
     "planLimitReached": "Plan limit reached",
     "failedToCreate": "Failed to create site",
     "upgrade": "Upgrade",
-    "invalidUrl": "Invalid URL"
+    "invalidUrl": "Invalid URL",
+    "duplicateTitle": "Site already exists",
+    "duplicateDesc": "<strong>{{name}}</strong> is already connected with this URL. Adding a duplicate will count toward your plan's site quota and may cause sync conflicts.",
+    "duplicateConfirmLabel": "Type <strong>ADD ANYWAY</strong> to confirm:",
+    "duplicateConfirmPlaceholder": "ADD ANYWAY",
+    "addDuplicate": "Add duplicate site"
   },
   "editSite": {
     "title": "Edit Site",
@@ -312,6 +317,12 @@
       "health": "Health",
       "lastSync": "Last Sync",
       "created": "Created"
+    }
+  },
+  "siteLayout": {
+    "siteNotFound": {
+      "title": "Site no longer exists",
+      "description": "Redirecting to your projects"
     }
   }
 }

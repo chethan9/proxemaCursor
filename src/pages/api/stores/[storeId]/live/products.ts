@@ -6,7 +6,8 @@ import type { TablesInsert } from "@/integrations/supabase/helpers";
 async function warmWriteProducts(storeId: string, items: Record<string, unknown>[]) {
   if (!items.length) return;
   try {
-    const rows: TablesInsert<"products">[] = items.map((p) => ({
+    const catalogOnly = items.filter((p) => (p.type as string) !== "variation");
+    const rows: TablesInsert<"products">[] = catalogOnly.map((p) => ({
       store_id: storeId,
       woo_id: p.id as number,
       name: (p.name as string) ?? "",

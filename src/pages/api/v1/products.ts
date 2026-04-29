@@ -28,7 +28,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ data: [], total: 0 });
     }
 
-    let query = supabase.from("products").select("*", { count: "exact" }).in("store_id", storeIds);
+    let query = supabase
+      .from("products")
+      .select("*", { count: "exact" })
+      .in("store_id", storeIds)
+      .or("type.is.null,type.neq.variation");
     
     if (store_id && typeof store_id === "string") {
       if (!storeIds.includes(store_id)) {

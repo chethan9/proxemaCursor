@@ -4,25 +4,29 @@ import { fetchOrders, type FetchOrdersOptions } from "@/services/orderService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
-export function useOrders(opts: FetchOrdersOptions) {
-  const { data: syncStatus } = useStoreSyncStatus(opts.storeId);
+export function useOrders(opts: FetchOrdersOptions & { enabled?: boolean }) {
+  const { enabled: enabledOverride, ...fetchOpts } = opts;
+  const { data: syncStatus } = useStoreSyncStatus(fetchOpts.storeId);
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   const anySyncRunning = syncStatus?.running || initialSyncRunning;
   return useQuery({
-    queryKey: [...queryKeys.orders(opts.storeId, opts as unknown as Record<string, unknown>), initialSyncRunning ? "live" : "db"] as const,
+    queryKey: [...queryKeys.orders(fetchOpts.storeId, fetchOpts as unknown as Record<string, unknown>), initialSyncRunning ? "live" : "db"] as const,
     queryFn: async () => {
       if (initialSyncRunning) {
         try {
-          return await fetchOrders({ ...opts, useLive: true });
+          return await fetchOrders({ ...fetchOpts, useLive: true });
         } catch (e) {
           console.warn("[useOrders] live fetch failed, falling back to DB:", e);
-          return fetchOrders({ ...opts, useLive: false });
+          return fetchOrders({ ...fetchOpts, useLive: false });
         }
       }
-      return fetchOrders({ ...opts, useLive: false });
+      return fetchOrders({ ...fetchOpts, useLive: false });
     },
     placeholderData: keepPreviousData,
-    enabled: !!opts.storeId && syncStatus !== undefined,
+    enabled: !!fetchOpts.storeId && syncStatus !== undefined && (enabledOverride ?? true),
+    staleTime: anySyncRunning ? 10_000 : 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnMount: false,
     refetchOnWindowFocus: true,
     refetchInterval: anySyncRunning ? 8000 : false,
     retry: 1,

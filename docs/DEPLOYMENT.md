@@ -31,6 +31,17 @@ Dev `.env.local` uses the same keys pointing at your dev Supabase project and `N
 
 `NEXT_PUBLIC_APP_URL` drives webhook delivery URLs. Getting this wrong = webhooks go to the wrong domain. Double-check it on every environment.
 
+### WooCommerce sync tuning (optional)
+
+Large catalogs (for example ~50k orders, ~5k products, ~25k customers) finish via **many resumable chunks** plus cron resume; defaults favor **low parallel load** on the store’s WordPress host.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `WOO_SYNC_PAGE_CONCURRENCY` | `2` (max `8`) | Parallel WC REST **page** requests per chunk for products, orders, customers, coupons. |
+| `WOO_SYNC_MAX_PAGES_PER_CHUNK` | `12` (range `5`–`20`) | Max WC pages per aspect per serverless invocation (`PER_PAGE` is 100). Higher = fewer cron round-trips but longer runs and more Woo load. |
+
+Taxonomy aspects (categories, tags, brands) use slightly higher parallelism than heavy aspects when using defaults. Failed pages are **retried at lower concurrency** inside `fetchPagesChunked` before the chunk aborts (weak shared hosting).
+
 ## Domain or hostname changes (do not skip Supabase)
 
 Whenever production’s canonical URL changes — Vercel project rename, default `*.vercel.app` hostname, or custom domain add/remove — run this checklist in order:
@@ -170,8 +181,42 @@ Vercel → Deployments → prior deploy → Promote to Production. ~30 seconds.
 - **Feature flags column** on `clients` table — gradual rollout per client, instant kill switch
 - **CI-based migration runs** — GitHub Action that runs `npm run db:migrate` before deploy
 
+## i18n: machine-translating non-English locales
+
+English JSON in `public/locales/en/*.json` is the canonical source. Arabic JSON
+in `public/locales/ar/*.json` is curated by hand. The other 8 locales (es, fr,
+de, pt, hi, zh, ja, ru) live in the Supabase `translations` table and are
+seeded by an LLM-driven script with `needs_review = true`, then proofread in
+the admin UI at `/admin/languages/<code>`.
+
+```bash
+# Preview without API calls
+npm run i18n:translate:dry -- --locales fr,de --namespaces common,auth
+
+# Real run (writes to Supabase)
+OPENAI_API_KEY=sk-...                                \
+SUPABASE_URL=https://fyqvmbrgyncthksbgrrr.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=eyJ...                      \
+npm run i18n:translate
+
+# Re-translate existing rows
+OPENAI_API_KEY=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+  npm run i18n:translate -- --force --locales fr
+```
+
+Behavior:
+
+- Reads `public/locales/en/*.json`, flattens to dot-keys, batches of 30.
+- Calls OpenAI (`gpt-4o-mini` by default) with strict instructions to preserve
+  `{{placeholders}}` and inline HTML tags.
+- Upserts into `translations` keyed on `(locale, namespace, key)` with
+  `needs_review = true`.
+- Skips keys already present in the DB unless `--force` is passed.
+- Writes a `_translation_run_<ts>.json` summary at the repo root.
+
 ## Related
 
 - Webhook URL logic: `src/lib/app-url.ts`
 - Fleet webhook repair: `src/pages/api/webhooks/repair-all.ts`
 - Migration runner: `scripts/migrate.mjs`
+- i18n translation pipeline: `scripts/translate-i18n.mjs`

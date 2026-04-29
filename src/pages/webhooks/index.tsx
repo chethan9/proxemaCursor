@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw, CheckCircle2, XCircle, Clock, Webhook, Zap, AlertCircle, ExternalLink, Download } from "lucide-react";
 import { useAllWebhooks, useAllWebhookEvents } from "@/hooks/queries/useWebhooks";
 import { exportCsv } from "@/lib/exportCsv";
+import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 
 const RANGE_OPTIONS = [
   { value: "all", label: "All time" },
@@ -36,6 +38,7 @@ function rangeToMs(range: string): { from: number; to: number } | null {
 
 export default function WebhooksPage() {
   const qc = useQueryClient();
+  const { i18n } = useTranslation();
   const { data: webhooks = [], isLoading: whLoading } = useAllWebhooks();
   const { data: events = [], isLoading: evLoading } = useAllWebhookEvents();
   const loading = whLoading || evLoading;
@@ -80,7 +83,7 @@ export default function WebhooksPage() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    return formatDateTime(dateString, i18n.language, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
   const formatRelativeTime = (dateString: string | null) => {

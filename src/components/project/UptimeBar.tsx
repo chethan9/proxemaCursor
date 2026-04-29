@@ -1,4 +1,6 @@
 import type { UptimePoint } from "@/hooks/queries/useSitesUptime";
+import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 
 interface Props {
   history: UptimePoint[];
@@ -7,6 +9,7 @@ interface Props {
 }
 
 export function UptimeBar({ history, barCount = 14, className = "" }: Props) {
+  const { i18n } = useTranslation();
   const bars: (UptimePoint | null)[] = [];
   for (let i = 0; i < barCount; i++) bars.push(history[i] || null);
   const ordered = bars.reverse();
@@ -21,7 +24,7 @@ export function UptimeBar({ history, barCount = 14, className = "" }: Props) {
           let color = "bg-muted-foreground/15";
           let title = "No data";
           if (h) {
-            const when = h.started_at ? new Date(h.started_at).toLocaleString() : "";
+            const when = h.started_at ? formatDateTime(h.started_at, i18n.language) : "";
             if (h.status === "completed") {
               color = "bg-emerald-500";
               title = `Success — ${when}`;

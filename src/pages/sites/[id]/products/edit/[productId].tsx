@@ -30,6 +30,12 @@ function Inner() {
   const { id: storeId, store, loading: storeLoading } = useSiteFromRoute();
   const productId = typeof router.query.productId === "string" ? router.query.productId : "";
   const { locked: syncLocked, ready: syncReady } = useSyncLocked(storeId);
+  const fallbackReturn = `/sites/${storeId}/products`;
+  const rawReturnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "";
+  const returnTo = rawReturnTo && rawReturnTo.startsWith("/") ? rawReturnTo : fallbackReturn;
+  const goBack = () => {
+    router.push(returnTo);
+  };
 
   const [form, setForm] = useState<ProductFormState | null>(null);
   const [initialFormJson, setInitialFormJson] = useState<string>("");
@@ -130,7 +136,7 @@ function Inner() {
     invalidateKeys: [queryKeys.products(storeId), ["product", productId]],
     siteName: store?.name,
     successToast: "Saved",
-    onSuccessExtra: () => { setSavedOnce(true); router.push(`/sites/${storeId}/products`); },
+    onSuccessExtra: () => { setSavedOnce(true); router.push(returnTo); },
     onErrorExtra: (err) => {
       const e = err as Error & { validationErrors?: ProductValidationIssue[] };
       setServerErrors(e.validationErrors || []);
@@ -149,7 +155,7 @@ function Inner() {
     invalidateKeys: [queryKeys.products(storeId)],
     siteName: store?.name,
     successToast: "Product deleted",
-    onSuccessExtra: () => router.push(`/sites/${storeId}/products`),
+    onSuccessExtra: () => router.push(returnTo),
     onErrorExtra: () => setDeleteOpen(false),
   });
 
@@ -188,7 +194,7 @@ function Inner() {
     return (
       <div className="p-6 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="sm" asChild><Link href={`/sites/${storeId}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
         </div>
         <div className="rounded-xl border border-warning/30 bg-warning/5 p-8 text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-warning/15 mb-4">
@@ -199,7 +205,7 @@ function Inner() {
             Your store is still doing its initial sync. To avoid data conflicts, product edits are disabled until the import finishes — usually just a few minutes.
           </p>
           <p className="text-sm text-muted-foreground mb-5">You can keep browsing in live preview mode in the meantime.</p>
-          <Button asChild variant="outline"><Link href={`/sites/${storeId}/products`}>Back to products</Link></Button>
+          <Button asChild variant="outline"><Link href={returnTo}>Back to products</Link></Button>
         </div>
       </div>
     );
@@ -209,7 +215,7 @@ function Inner() {
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild><Link href={`/sites/${storeId}/products`}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
           <h1 className="text-xl font-semibold">Edit product</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -256,7 +262,7 @@ function Inner() {
       )}
 
       {mode === "basic" ? (
-        <BasicEditor storeId={storeId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} saving={save.isPending} onCancel={() => router.push(`/sites/${storeId}/products`)} onPublish={onPublish} isEdit={true} />
+        <BasicEditor storeId={storeId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} saving={save.isPending} onCancel={goBack} onPublish={onPublish} isEdit={true} />
       ) : (
         <AdvancedShell
           form={form}
@@ -264,7 +270,7 @@ function Inner() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           canAdvance={canAdvance}
-          onCancel={() => router.push(`/sites/${storeId}/products`)}
+          onCancel={goBack}
           onPublish={onPublish}
           saving={save.isPending}
           isEdit={true}

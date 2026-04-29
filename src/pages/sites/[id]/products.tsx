@@ -1,14 +1,24 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import type { GetServerSideProps } from "next";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { ProductsTab } from "@/components/explore/ProductsTab";
+import { getQueryString } from "@/hooks/useUrlState";
 
 function ProductsInner() {
   const { id, store, loading } = useSiteFromRoute();
   const { t } = useTranslation("common");
-  const [search, setSearch] = useState("");
+  const router = useRouter();
+  const [search, setSearch] = useState<string>(() => getQueryString(router.query, "q") ?? "");
+  const querySyncedRef = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || querySyncedRef.current) return;
+    const q = getQueryString(router.query, "q") ?? "";
+    setSearch((prev) => (prev !== q ? q : prev));
+    querySyncedRef.current = true;
+  }, [router.isReady, router.query]);
   if (loading) return <SiteLoadingSkeleton />;
   if (!store) return <div className="p-6">{t("errors.storeNotFound", "Store not found")}</div>;
   return (

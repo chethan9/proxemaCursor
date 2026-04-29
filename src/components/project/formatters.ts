@@ -5,14 +5,15 @@ export const formatDuration = (start: string, end: string | null) => {
   return `${(ms / 1000).toFixed(1)}s`;
 };
 
-export const formatDate = (dateString: string | null) => {
+export const formatDate = (dateString: string | null, locale?: string | null) => {
   if (!dateString) return "-";
-  return new Date(dateString).toLocaleString("en-US", {
+  const lang = locale && locale.startsWith("ar") ? "ar-u-nu-latn" : (locale || "en-US");
+  return new Intl.DateTimeFormat(lang, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(new Date(dateString));
 };
 
 export const formatRelativeTime = (dateString: string | null) => {
@@ -27,9 +28,10 @@ export const formatRelativeTime = (dateString: string | null) => {
   return `${days}d ago`;
 };
 
-export const formatCurrency = (amount: number | null, currency = "USD") => {
+export const formatCurrency = (amount: number | null, currency = "USD", locale?: string | null) => {
   if (amount === null) return "-";
-  return new Intl.NumberFormat("en-US", {
+  const lang = locale && locale.startsWith("ar") ? "ar-u-nu-latn" : (locale || "en-US");
+  return new Intl.NumberFormat(lang, {
     style: "currency",
     currency,
   }).format(amount);

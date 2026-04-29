@@ -24,6 +24,8 @@ import {
   Zap,
 } from "lucide-react";
 import { JsonTableView } from "@/components/JsonTableView";
+import { useTranslation } from "next-i18next";
+import { formatDateTime, formatNumber } from "@/lib/format-number";
 
 interface WebhookEvent {
   id: string;
@@ -51,9 +53,9 @@ const statusConfig: Record<string, { variant: "success" | "error" | "warning" | 
   pending: { variant: "pending", icon: Clock },
 };
 
-function formatDate(d: string | null): string {
+function formatDate(d: string | null, locale?: string): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("en-US", {
+  return formatDateTime(d, locale, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -80,6 +82,7 @@ function topicLabel(topic: string): { entity: string; action: string } {
 }
 
 export default function WebhookActivityLog() {
+  const { i18n } = useTranslation();
   const [events, setEvents] = useState<WebhookEvent[]>([]);
   const [stores, setStores] = useState<StoreInfo[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -261,7 +264,7 @@ export default function WebhookActivityLog() {
                 <span className="text-xs text-muted-foreground font-medium">24h Events</span>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold mt-1">{stats.total.toLocaleString()}</p>
+              <p className="text-2xl font-bold mt-1">{formatNumber(stats.total, i18n.language)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -308,7 +311,7 @@ export default function WebhookActivityLog() {
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-base">Event Stream</CardTitle>
-                <span className="text-xs text-muted-foreground">({total.toLocaleString()} events)</span>
+                <span className="text-xs text-muted-foreground">({formatNumber(total, i18n.language)} events)</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
@@ -401,7 +404,7 @@ export default function WebhookActivityLog() {
                         onClick={() => openDetail(event)}
                       >
                         <TableCell className="font-mono text-xs">
-                          <div>{formatDate(event.created_at)}</div>
+                          <div>{formatDate(event.created_at, i18n.language)}</div>
                           <div className="text-muted-foreground/60">{formatAgo(event.created_at)}</div>
                         </TableCell>
                         <TableCell>
@@ -431,7 +434,7 @@ export default function WebhookActivityLog() {
                           </StatusBadge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {event.processed_at ? formatDate(event.processed_at) : "—"}
+                          {event.processed_at ? formatDate(event.processed_at, i18n.language) : "—"}
                         </TableCell>
                         <TableCell className="max-w-[200px]">
                           {event.error_message ? (
@@ -460,7 +463,7 @@ export default function WebhookActivityLog() {
             )}
             {!hasMore && events.length > 0 && (
               <div className="text-center py-3 border-t">
-                <span className="text-xs text-muted-foreground">All {total.toLocaleString()} events loaded</span>
+                <span className="text-xs text-muted-foreground">All {formatNumber(total, i18n.language)} events loaded</span>
               </div>
             )}
           </CardContent>
@@ -526,11 +529,11 @@ export default function WebhookActivityLog() {
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground font-medium">Received</span>
-                    <p className="text-sm">{formatDate(selectedEvent.created_at)}</p>
+                    <p className="text-sm">{formatDate(selectedEvent.created_at, i18n.language)}</p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground font-medium">Processed</span>
-                    <p className="text-sm">{formatDate(selectedEvent.processed_at)}</p>
+                    <p className="text-sm">{formatDate(selectedEvent.processed_at, i18n.language)}</p>
                   </div>
                 </div>
 

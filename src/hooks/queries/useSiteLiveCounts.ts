@@ -12,7 +12,11 @@ export interface SiteLiveCounts {
 
 async function fetchSiteLiveCounts(storeId: string): Promise<SiteLiveCounts> {
   const [p, o, c, cat, tg, cp] = await Promise.all([
-    supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", storeId)
+      .or("type.is.null,type.neq.variation"),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId),
     supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", storeId),
     supabase.from("categories").select("id", { count: "exact", head: true }).eq("store_id", storeId),

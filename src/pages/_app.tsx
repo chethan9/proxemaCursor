@@ -1,6 +1,6 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -29,15 +29,26 @@ import { NAMESPACES } from "@/lib/i18n";
 function LocaleDirSync() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
+  const cookieLocale = typeof document !== "undefined"
+    ? document.cookie.split("; ").find((row) => row.startsWith("NEXT_LOCALE="))?.split("=")[1]
+    : undefined;
 
   useEffect(() => {
-    if (profile?.locale && profile.locale !== i18n.language) {
-      i18n.changeLanguage(profile.locale);
+    const profileLocale = profile?.locale;
+    const activeLanguage = i18n.language;
+    const shouldTrustCurrentSelection =
+      !!cookieLocale &&
+      !!activeLanguage &&
+      cookieLocale === activeLanguage &&
+      profileLocale !== activeLanguage;
+    if (profileLocale && profileLocale !== activeLanguage && !shouldTrustCurrentSelection) {
+      i18n.changeLanguage(profileLocale);
       if (typeof document !== "undefined") {
-        document.cookie = `NEXT_LOCALE=${profile.locale}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `NEXT_LOCALE=${profileLocale}; path=/; max-age=31536000; SameSite=Lax`;
       }
+    } else if (profileLocale && profileLocale !== activeLanguage && shouldTrustCurrentSelection) {
     }
-  }, [profile?.locale, i18n]);
+  }, [profile?.locale, i18n, cookieLocale]);
 
   useEffect(() => {
     const lang = i18n.language || "en";
@@ -45,6 +56,26 @@ function LocaleDirSync() {
     document.documentElement.lang = lang;
     document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
   }, [i18n.language]);
+  return null;
+}
+
+function NavigationRouteProbe() {
+  const router = useRouter();
+  const t0Ref = useRef(0);
+  useEffect(() => {
+    const onStart = (url: string) => {
+      t0Ref.current = performance.now();
+    };
+    const onComplete = (url: string) => {
+      const deltaMs = Math.round(performance.now() - t0Ref.current);
+    };
+    router.events.on("routeChangeStart", onStart);
+    router.events.on("routeChangeComplete", onComplete);
+    return () => {
+      router.events.off("routeChangeStart", onStart);
+      router.events.off("routeChangeComplete", onComplete);
+    };
+  }, [router.events]);
   return null;
 }
 
@@ -129,6 +160,7 @@ function Providers({ children }: { children: React.ReactNode }) {
     >
       <AuthProvider>
         <CacheBuster />
+        <NavigationRouteProbe />
         <PostHogPageviews />
         <BrandingProvider>
           <RecentMutationsProvider>
@@ -188,6 +220,7 @@ function DbTranslationOverlay() {
     let cancelled = false;
     const lang = i18n.language;
     if (!lang) return;
+    const startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now());
     (async () => {
       try {
         await Promise.all(

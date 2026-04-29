@@ -65,11 +65,12 @@ import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
+import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { PrintInvoicesDialog } from "./PrintInvoicesDialog";
 
@@ -137,7 +138,7 @@ const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIco
 };
 
 export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
   const router = useRouter();
@@ -159,6 +160,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const { data: paymentOptions = [] } = useOrderPaymentOptions(storeId);
   const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
@@ -166,6 +168,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const { locked } = useSyncLocked(storeId);
   const prefsLoaded = useRef(false);
+  const prefsLoading = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
@@ -238,14 +241,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     setCompletingId(orderId);
     try {
       await updateOrderStatus(orderId, "completed");
-      toast({ title: "Order marked complete" });
+      toast({ title: t("orders.toast.markedComplete") });
       await queryClient.invalidateQueries({ queryKey: ["orders", storeId] });
     } catch (err) {
-      toast({ title: "Failed to update", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+      toast({ title: t("orders.toast.updateFailed"), description: err instanceof Error ? err.message : t("orders.toast.unknownError"), variant: "destructive" });
     } finally {
       setCompletingId(null);
     }
-  }, [queryClient, storeId, toast]);
+  }, [queryClient, storeId, toast, t]);
 
   const handlePrintTemplate = useCallback((templateId: string | undefined, orderId: string, type: "invoice" | "pickslip") => {
     if (!templateId) {
@@ -320,17 +323,18 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     totalMax: totalMax ? parseFloat(totalMax) : undefined,
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
+    enabled: isHydrated,
   });
   const orders = ordersResult?.data ?? [];
   const orderCount = ordersResult?.count ?? 0;
+  const showInitialLoading = !isHydrated || loading;
   void isPlaceholderData;
   const showRefetchOverlay = isFetching && !loading && orders.length > 0;
-  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
-    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < orderCount && !isFetching) setPage((p) => p + 1); },
+    onPrev: () => { if (page > 0) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if ((page + 1) * pageSize < orderCount) setPage((p) => p + 1); },
   });
 
   const submitBulk = useCallback(async () => {
@@ -340,12 +344,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
       .map((o) => o.woo_id);
     const skipped = selectedIds.size - orderIds.length;
     if (orderIds.length === 0) {
-      toast({ title: "No eligible orders", description: "All selected orders are already queued in another bulk job.", variant: "destructive" });
+      toast({ title: t("orders.bulk.noEligible"), description: t("orders.bulk.noEligibleDesc"), variant: "destructive" });
       setBulkSubmitting(false);
       return;
     }
     if (skipped > 0) {
-      toast({ title: `${skipped} order${skipped === 1 ? "" : "s"} skipped`, description: "Already queued in another bulk job." });
+      toast({ title: t("orders.bulk.skipped", { count: skipped }), description: t("orders.bulk.skippedDesc") });
     }
     setBulkSubmitting(true);
     try {
@@ -360,21 +364,21 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         payload,
       });
       toast({
-        title: "Bulk job queued",
-        description: `Processing ${orderIds.length} orders in the background. Check progress in the bulk jobs panel.`,
+        title: t("orders.bulk.queued"),
+        description: t("orders.bulk.queuedDesc", { count: orderIds.length }),
       });
       setSelectedIds(new Set());
       setBulkAction(null);
     } catch (err) {
       toast({
-        title: "Failed to queue bulk job",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("orders.toast.updateFailed"),
+        description: err instanceof Error ? err.message : t("orders.toast.unknownError"),
         variant: "destructive",
       });
     } finally {
       setBulkSubmitting(false);
     }
-  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast, isPending, showLockedToast]);
+  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast, isPending, showLockedToast, t]);
 
   const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
 
@@ -458,7 +462,19 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   }, [pageSize]);
 
   useEffect(() => {
-    if (prefsLoaded.current) return;
+    if (prefsLoaded.current || prefsLoading.current) return;
+    if (!router.isReady) return;
+    prefsLoading.current = true;
+    const urlStatus = getQueryString(router.query, "status");
+    const urlPay = getQueryString(router.query, "pay");
+    const urlTmin = getQueryString(router.query, "tmin");
+    const urlTmax = getQueryString(router.query, "tmax");
+    const urlRange = getQueryString(router.query, "range");
+    if (urlStatus !== undefined) setStatusFilter(urlStatus);
+    if (urlPay !== undefined) setPaymentFilter(urlPay);
+    if (urlTmin !== undefined) setTotalMin(urlTmin);
+    if (urlTmax !== undefined) setTotalMax(urlTmax);
+    if (urlRange !== undefined) setDateRange(urlRange);
     fetchPreferences("orders").then((remote) => {
       if (remote) {
         if (Array.isArray(remote.columnOrder)) {
@@ -469,13 +485,17 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         }
         if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
-        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
-        if (typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
+        if (urlStatus === undefined && typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
+        if (urlPay === undefined && typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
       prefsLoaded.current = true;
-    }).catch(() => { prefsLoaded.current = true; });
-  }, []);
+      setIsHydrated(true);
+    }).catch(() => {
+      prefsLoaded.current = true;
+      setIsHydrated(true);
+    });
+  }, [router.isReady, router.query]);
 
   useBackgroundPagination({
     enabled: !!storeId && orderCount > 0,
@@ -484,9 +504,23 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     currentPage: page,
     queryKeyFn: (p) => queryKeys.orders(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
     queryFn: (p) => fetchOrders({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 5000,
+    maxRecords: 20000,
     resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
   });
+
+  // Keep adjacent pages warm so next/prev navigation feels immediate.
+  useEffect(() => {
+    if (!storeId || !isHydrated || orderCount <= 0) return;
+    const totalPages = Math.ceil(orderCount / pageSize);
+    const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
+    for (const p of candidates) {
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.orders(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
+        queryFn: () => fetchOrders({ ...prefetchOpts, page: p, pageSize }),
+        staleTime: 60_000,
+      });
+    }
+  }, [queryClient, storeId, isHydrated, orderCount, page, pageSize, prefetchOpts]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -497,8 +531,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
   }, [search]);
 
   useSyncUrl(
-    { status: statusFilter, pay: paymentFilter, tmin: totalMin, tmax: totalMax, range: dateRange },
-    { status: "all", pay: "all", tmin: "", tmax: "", range: "all" },
+    { status: statusFilter, pay: paymentFilter, tmin: totalMin, tmax: totalMax, range: dateRange, q: debouncedSearch },
+    { status: "all", pay: "all", tmin: "", tmax: "", range: "all", q: "" },
   );
 
   return (
@@ -891,7 +925,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
             <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <ShoppingCart className="h-3.5 w-3.5" />
-                <span className="font-medium">{orderCount.toLocaleString()}</span>
+                <span className="font-medium">{formatNumber(orderCount, i18n.language)}</span>
               </div>
               {orderCount > 0 && (
                 <>
@@ -909,11 +943,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {orderCount.toLocaleString()}
+                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {formatNumber(orderCount, i18n.language)}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount || isFetching}><ChevronRight className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount}><ChevronRight className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>
                 </>
@@ -969,7 +1003,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
               </Button>
             </div>
           )}
-          {loading && orders.length === 0 ? (
+          {showInitialLoading && orders.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
               {t("orders.empty.loading")}
@@ -1252,6 +1286,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
                                 <OrderRowExpanded
                                   order={o}
                                   storeUrl={storeUrl}
+                                  returnTo={router.asPath || `/sites/${storeId}/orders`}
                                   onSaved={() => { /* react-query will refetch */ }}
                                 />
                               </div>

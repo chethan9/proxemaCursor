@@ -28,9 +28,10 @@ async function fetchWoo<T>(storeUrl: string, auth: string, endpoint: string, par
 }
 
 async function upsertProducts(storeId: string, items: Record<string, unknown>[]) {
-  if (items.length === 0) return;
+  const catalog = items.filter((p) => (p.type as string) !== "variation");
+  if (catalog.length === 0) return;
   const now = new Date().toISOString();
-  const rows = items.map((p) => ({
+  const rows = catalog.map((p) => ({
     store_id: storeId,
     woo_id: p.id as number,
     name: p.name as string,
@@ -107,17 +108,62 @@ async function upsertCategories(storeId: string, items: Record<string, unknown>[
   await (supabaseAdmin as any).from("categories").upsert(rows, { onConflict: "store_id,woo_id" });
 }
 
-async function fetchAllCategories(storeUrl: string, auth: string, ua: string): Promise<Record<string, unknown>[]> {
+async function fetchAllPaged(
+  storeUrl: string,
+  auth: string,
+  endpoint: string,
+  ua: string,
+  maxPages = 20
+): Promise<Record<string, unknown>[]> {
   const all: Record<string, unknown>[] = [];
   let page = 1;
-  while (page <= 20) {
-    const chunk = await fetchWoo<Record<string, unknown>>(storeUrl, auth, "products/categories", { per_page: "100", page: String(page) }, ua);
+  while (page <= maxPages) {
+    const chunk = await fetchWoo<Record<string, unknown>>(storeUrl, auth, endpoint, { per_page: "100", page: String(page) }, ua);
     if (chunk.length === 0) break;
     all.push(...chunk);
     if (chunk.length < 100) break;
     page++;
   }
   return all;
+}
+
+async function fetchAllCategories(storeUrl: string, auth: string, ua: string): Promise<Record<string, unknown>[]> {
+  return fetchAllPaged(storeUrl, auth, "products/categories", ua);
+}
+
+async function upsertTags(storeId: string, items: Record<string, unknown>[]) {
+  if (items.length === 0) return;
+  const now = new Date().toISOString();
+  const rows = items.map((t) => ({
+    store_id: storeId,
+    woo_id: t.id as number,
+    name: t.name as string,
+    slug: t.slug as string,
+    description: (t.description as string) || "",
+    count: (t.count as number) || 0,
+    raw_data: toJson(t),
+    synced_at: now,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabaseAdmin as any).from("tags").upsert(rows, { onConflict: "store_id,woo_id" });
+}
+
+async function upsertBrands(storeId: string, items: Record<string, unknown>[]) {
+  if (items.length === 0) return;
+  const now = new Date().toISOString();
+  const rows = items.map((b) => ({
+    store_id: storeId,
+    woo_id: b.id as number,
+    name: b.name as string,
+    slug: b.slug as string,
+    description: (b.description as string) || "",
+    count: (b.count as number) || 0,
+    image: toJson(b.image || null),
+    raw_data: toJson(b),
+    synced_at: now,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabaseAdmin as any).from("brands").upsert(rows, { onConflict: "store_id,woo_id" });
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -142,17 +188,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
     const ua = await getWooUserAgent();
 
-    // Phase 1: prefetch top 50 products, 50 orders, all categories in parallel
-    const [products, orders, categories] = await Promise.all([
+    // Phase 1: warm products, orders, and full taxonomy (categories + tags + brands) for first paint on explorer tabs
+    const [products, orders, categories, tags, brands] = await Promise.all([
       fetchWoo<Record<string, unknown>>(store.url, auth, "products", { per_page: "50", page: "1", orderby: "modified", order: "desc" }, ua),
       fetchWoo<Record<string, unknown>>(store.url, auth, "orders", { per_page: "50", page: "1", orderby: "date", order: "desc" }, ua),
       fetchAllCategories(store.url, auth, ua),
+      fetchAllPaged(store.url, auth, "products/tags", ua),
+      fetchAllPaged(store.url, auth, "products/brands", ua, 10),
     ]);
 
     await Promise.all([
       upsertProducts(storeId, products),
       upsertOrders(storeId, orders),
       upsertCategories(storeId, categories),
+      upsertTags(storeId, tags),
+      upsertBrands(storeId, brands),
     ]);
 
     // Stamp onboarding complete
@@ -186,7 +236,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       body: JSON.stringify({}),
     }).catch((e) => console.error("[prefetch->sync]", e));
 
-    console.log(`[prefetch] ${storeId}: ${products.length}p/${orders.length}o/${categories.length}c prefetched, full sync run ${run?.id} started`);
+    console.log(`[prefetch] ${storeId}: ${products.length}p/${orders.length}o/${categories.length}c/${tags.length}t/${brands.length}b prefetched, full sync run ${run?.id} started`);
   };
 
   runBackground().catch((e) => console.error("[prefetch] bg error:", e));

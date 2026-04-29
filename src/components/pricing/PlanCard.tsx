@@ -5,6 +5,8 @@ import { formatPrice, getPlanPrice } from "@/services/planService";
 import type { Tables } from "@/integrations/supabase/helpers";
 import { Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 type Plan = Tables<"plans">;
 
@@ -19,12 +21,12 @@ interface Props {
   loading?: boolean;
 }
 
-function featuresFor(plan: Plan): string[] {
+function featuresFor(plan: Plan, locale: string): string[] {
   const base = [
-    `Up to ${plan.max_sites.toLocaleString()} ${plan.max_sites === 1 ? "site" : "sites"}`,
-    `${plan.max_products_per_site.toLocaleString()} products per site`,
-    `${plan.max_users.toLocaleString()} team ${plan.max_users === 1 ? "member" : "members"}`,
-    `${plan.max_api_calls_per_month.toLocaleString()} API calls/mo`,
+    `Up to ${formatNumber(plan.max_sites, locale)} ${plan.max_sites === 1 ? "site" : "sites"}`,
+    `${formatNumber(plan.max_products_per_site, locale)} products per site`,
+    `${formatNumber(plan.max_users, locale)} team ${plan.max_users === 1 ? "member" : "members"}`,
+    `${formatNumber(plan.max_api_calls_per_month, locale)} API calls/mo`,
   ];
   const flags = (plan.features as Record<string, boolean>) || {};
   if (flags.webhooks) base.push("Real-time webhook sync");
@@ -37,9 +39,10 @@ function featuresFor(plan: Plan): string[] {
 }
 
 export function PlanCard({ plan, currency, billingInterval, isCurrent, isPopular, action, onAction, loading }: Props) {
+  const { i18n } = useTranslation();
   const priceMinor = getPlanPrice(plan, currency);
   const effective = billingInterval === "year" && priceMinor != null ? Math.round(priceMinor * 12 * 0.83) : priceMinor;
-  const features = featuresFor(plan);
+  const features = featuresFor(plan, i18n.language);
 
   const cta = () => {
     if (action === "current") return "Current plan";

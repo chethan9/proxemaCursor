@@ -208,34 +208,82 @@ export async function fetchPagesChunked<T>(
   let lastProcessed = startPage;
   let aborted = false;
 
-  for (let i = 0; i < remaining.length && !aborted; i += concurrency) {
-    const batch = remaining.slice(i, i + concurrency);
-    const results = await Promise.allSettled(
-      batch.map(async (pageNum) => {
-        const url = buildUrl(storeUrl, endpoint, { ...params, per_page: String(perPage), page: String(pageNum) });
-        const res = await fetchWooWithRetry(url, auth);
-        if (!res.ok) {
-          if (res.status === 400 || res.status === 404) return { page: pageNum, items: [] as T[] };
-          throw new Error(`${endpoint} p${pageNum}: ${res.status}`);
-        }
-        return { page: pageNum, items: (await res.json()) as T[] };
-      })
-    );
+  const fetchOnePage = async (pageNum: number): Promise<{ page: number; items: T[] }> => {
+    const url = buildUrl(storeUrl, endpoint, { ...params, per_page: String(perPage), page: String(pageNum) });
+    const res = await fetchWooWithRetry(url, auth);
+    if (!res.ok) {
+      if (res.status === 400 || res.status === 404) return { page: pageNum, items: [] as T[] };
+      throw new Error(`${endpoint} p${pageNum}: ${res.status}`);
+    }
+    return { page: pageNum, items: (await res.json()) as T[] };
+  };
 
-    const indexed = results.map((r, idx) => ({ r, page: batch[idx] })).sort((a, b) => a.page - b.page);
+  /**
+   * Weak Woo hosts: parallel page fetches may 502/timeout under load.
+   * Outer chunk width stays at configured concurrency; retries lower parallelism only for failed pages.
+   */
+  const outerConcurrency = Math.max(1, concurrency);
+  let sliceStart = 0;
+  while (sliceStart < remaining.length && !aborted) {
+    const batchPages = remaining.slice(sliceStart, sliceStart + outerConcurrency);
+    let liveConcurrency = outerConcurrency;
+    let queue = [...batchPages];
+    let failureRetries = 0;
 
-    for (const { r, page } of indexed) {
-      if (r.status === "fulfilled") {
-        if (r.value.items.length > 0) {
-          await opts.onBatch(r.value.items, r.value.page);
+    while (queue.length > 0 && !aborted) {
+      const take = Math.min(liveConcurrency, queue.length);
+      const chunk = queue.slice(0, take);
+      const settled = await Promise.allSettled(chunk.map((pageNum) => fetchOnePage(pageNum)));
+      const failed: number[] = [];
+      const ok: { page: number; items: T[] }[] = [];
+
+      for (let k = 0; k < settled.length; k++) {
+        const pageNum = chunk[k];
+        const r = settled[k];
+        if (r.status === "fulfilled") {
+          ok.push(r.value);
+        } else {
+          console.warn(`[sync-engine] ${endpoint} p${pageNum}:`, r.reason);
+          failed.push(pageNum);
         }
+      }
+
+      ok.sort((a, b) => a.page - b.page);
+      for (const { page, items } of ok) {
+        if (items.length > 0) await opts.onBatch(items, page);
         lastProcessed = page;
-      } else {
-        console.error(`[sync-engine] ${endpoint} p${page} failed, halting chunk:`, r.reason);
+      }
+
+      const tail = queue.slice(take);
+      if (failed.length === 0) {
+        queue = tail;
+        liveConcurrency = outerConcurrency;
+        failureRetries = 0;
+        continue;
+      }
+
+      failureRetries += 1;
+      if (failureRetries > 8) {
+        console.error(`[sync-engine] ${endpoint} too many failure retries, halting chunk`);
         aborted = true;
         break;
       }
+
+      if (liveConcurrency > 1) {
+        liveConcurrency = Math.max(1, Math.floor(liveConcurrency / 2));
+        console.warn(`[sync-engine] ${endpoint} retrying ${failed.length} page(s) at concurrency=${liveConcurrency}`);
+      } else if (failureRetries >= 3) {
+        console.error(`[sync-engine] ${endpoint} still failing at concurrency=1, halting chunk`);
+        aborted = true;
+        break;
+      }
+
+      queue = [...failed, ...tail];
+      await sleep(300 + failureRetries * 150);
     }
+
+    if (aborted) break;
+    sliceStart += batchPages.length;
   }
 
   const hasMore = lastProcessed < totalPages;

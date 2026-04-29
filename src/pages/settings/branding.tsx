@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ interface ActivityEntry {
 }
 
 export default function BrandingPage() {
-  const { t } = useTranslation("settings");
+  const { t, i18n } = useTranslation("settings");
   const { isSuperAdmin } = useAuth();
   const { brandName, logoUrl, enabledLocales, save, loading } = useBranding();
   const [draftName, setDraftName] = useState(brandName);
@@ -235,7 +236,7 @@ export default function BrandingPage() {
                     <li key={entry.id} className="border rounded-md p-3 text-sm">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="font-medium">{entry.actor_email || t("branding.system")}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(entry.created_at).toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground">{formatDateTime(entry.created_at, i18n.language)}</span>
                       </div>
                       {lines.length === 0 ? (
                         <p className="text-xs text-muted-foreground">—</p>

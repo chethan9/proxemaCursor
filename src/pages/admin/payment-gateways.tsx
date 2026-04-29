@@ -14,6 +14,8 @@ import { Loader2, CheckCircle2, XCircle, Key, RefreshCw, AlertTriangle, Eye, Eye
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 
 type GatewayConfig = {
   id: string;
@@ -58,6 +60,7 @@ const MENA_COUNTRIES = [
 
 export default function PaymentGatewaysPage() {
   const router = useRouter();
+  const { i18n } = useTranslation();
   const { toast } = useToast();
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
@@ -251,7 +254,7 @@ export default function PaymentGatewaysPage() {
                                 ) : (
                                   <><XCircle className="h-4 w-4 text-destructive" /> Last test failed</>
                                 )}
-                                <span>{new Date(config.last_test_at).toLocaleString()}</span>
+                                <span>{formatDateTime(config.last_test_at, i18n.language)}</span>
                               </div>
                             )}
                           </div>

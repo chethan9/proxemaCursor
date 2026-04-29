@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, RefreshCw, Plug, AlertTriangle, Trash2, Clock, Upload, X as XIcon, Image as ImageIcon, CalendarClock, Zap } from "lucide-react";
 import { useTranslation } from "next-i18next";
+import { formatDateTime, formatNumber } from "@/lib/format-number";
 import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteIcon } from "@/components/site/SiteIcon";
@@ -27,7 +28,7 @@ import { DefaultTemplatesCard } from "@/components/site/DefaultTemplatesCard";
 import { StoreProfileCard } from "@/components/site/StoreProfileCard";
 
 function SettingsInner() {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const router = useRouter();
   const { id, store: storeFromRoute, loading: storeLoading } = useSiteFromRoute();
   const [store, setStore] = useState<Store | null>(null);
@@ -136,7 +137,7 @@ function SettingsInner() {
   const isSyncing = !!activeSync?.running;
 
   const formatDate = (d: string | null) =>
-    !d ? "—" : new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    !d ? "—" : formatDateTime(d, i18n.language, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
   const formatRelativeTime = (d: string | null) => {
     if (!d) return "Never";
@@ -190,7 +191,7 @@ function SettingsInner() {
       if (!res.ok) throw new Error(data.message || "Trigger failed");
       const mine = data.results?.find((r: { store_id: string; status: string; records_processed?: number }) => r.store_id === store?.id);
       setCronResult(mine
-        ? `Scheduler ran. This site: ${mine.status} (${mine.records_processed?.toLocaleString() || 0} records)`
+        ? `Scheduler ran. This site: ${mine.status} (${formatNumber(mine.records_processed || 0, i18n.language)} records)`
         : `Scheduler ran but this site was not due yet (${data.stores_synced} store(s) processed).`);
       if (store) {
         const s = await getStore(store.id);

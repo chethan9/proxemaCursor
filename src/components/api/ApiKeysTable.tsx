@@ -6,11 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Key, EyeOff, Trash2 } from "lucide-react";
 import type { ApiKey } from "@/services/apiKeyService";
 import { useBranding } from "@/contexts/BrandingProvider";
-
-function fmtDate(d: string | null) {
-  if (!d) return "\u2014";
-  return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
+import { useTranslation } from "next-i18next";
+import { formatDateTime, formatNumber } from "@/lib/format-number";
 
 interface ApiKeysTableProps {
   keys: ApiKey[];
@@ -22,6 +19,8 @@ interface ApiKeysTableProps {
 
 export function ApiKeysTable({ keys, keyStats, loading, onRevoke, onDelete }: ApiKeysTableProps) {
   const { brandName } = useBranding();
+  const { i18n } = useTranslation();
+  const fmtDate = (d: string | null) => (d ? formatDateTime(d, i18n.language) : "\u2014");
   if (loading) {
     return (
       <Card>
@@ -84,10 +83,10 @@ export function ApiKeysTable({ keys, keyStats, loading, onRevoke, onDelete }: Ap
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs tabular-nums">
-                      {k.rate_limit?.toLocaleString()}/hr
+                      {formatNumber(k.rate_limit ?? 0, i18n.language)}/hr
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs tabular-nums">
-                      {st ? st.last24h.toLocaleString() : "\u2014"}
+                      {st ? formatNumber(st.last24h, i18n.language) : "\u2014"}
                     </TableCell>
                     <TableCell>
                       <StatusBadge variant={k.is_active ? "success" : "error"}>

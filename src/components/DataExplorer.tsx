@@ -90,10 +90,12 @@ const ASPECT_COLUMNS: Record<DataAspect, Column[]> = {
   ],
 };
 
-function formatDate(d: string): string {
+function formatDate(d: string, locale?: string): string {
   if (!d) return "-";
-  try { return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
-  catch { return d; }
+  try {
+    const lang = locale && locale.startsWith("ar") ? "ar-u-nu-latn" : (locale || "en-US");
+    return new Intl.DateTimeFormat(lang, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(d));
+  } catch { return d; }
 }
 
 function StatusPill({ value }: { value: string }) {
@@ -230,7 +232,7 @@ export function DataExplorer({ storeId, aspect, storeName }: DataExplorerProps) 
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-sm text-muted-foreground">{total.toLocaleString()} records</span>
+          <span className="text-sm text-muted-foreground">{new Intl.NumberFormat().format(total)} records</span>
           <Select value={String(perPage)} onValueChange={v => { setPerPage(Number(v)); setPage(1); }}>
             <SelectTrigger className="w-[80px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>

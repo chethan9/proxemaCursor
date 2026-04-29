@@ -47,13 +47,14 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
+import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 const PENDING_LABELS: Record<string, string> = {
   delete: "Scheduled for deletion",
@@ -133,7 +134,7 @@ interface ProductsTabProps {
 }
 
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const queryClient = useQueryClient();
   const { locked } = useSyncLocked(storeId);
   const router = useRouter();
@@ -225,6 +226,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [priceMin, setPriceMin] = useState(() => getQueryString(router.query, "pmin") ?? "");
   const [priceMax, setPriceMax] = useState(() => getQueryString(router.query, "pmax") ?? "");
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
@@ -247,6 +249,23 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     setPage(0);
   }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
 
+  useSyncUrl(
+    {
+      status: statusFilter,
+      cat: categoryFilter,
+      stock: stockStatusFilter,
+      pmin: priceMin,
+      pmax: priceMax,
+      q: debouncedSearch,
+    },
+    { status: "all", cat: "all", stock: "all", pmin: "", pmax: "", q: "" },
+  );
+
+  const buildReturnTo = useCallback(() => {
+    if (typeof window === "undefined") return `/sites/${storeId}/products`;
+    return router.asPath || `/sites/${storeId}/products`;
+  }, [router, storeId]);
+
   const { data: productsResult, isLoading: loading, isFetching } = useProducts({
     storeId,
     page,
@@ -260,16 +279,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     stockStatusFilter,
     priceMin: priceMin ? Number(priceMin) : undefined,
     priceMax: priceMax ? Number(priceMax) : undefined,
+    enabled: isHydrated,
   });
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
+  const showInitialLoading = !isHydrated || loading;
   const showRefetchOverlay = isFetching && !loading && products.length > 0;
-  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
-    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < productCount && !isFetching) setPage((p) => p + 1); },
+    onPrev: () => { if (page > 0) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if ((page + 1) * pageSize < productCount) setPage((p) => p + 1); },
   });
 
   const submitBulk = useCallback(async () => {
@@ -278,11 +298,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     const skippedCount = selectedIds.size - eligibleProducts.length;
     const wooIds = eligibleProducts.map((p) => p.woo_id).filter((id): id is number => id != null);
     if (wooIds.length === 0) {
-      toast({ title: "No eligible products", description: "All selected products are already queued in another bulk job.", variant: "destructive" });
+      toast({ title: t("products.bulk.noEligible"), description: t("products.bulk.noEligibleDesc"), variant: "destructive" });
       return;
     }
     if (skippedCount > 0) {
-      toast({ title: `${skippedCount} product${skippedCount === 1 ? "" : "s"} skipped`, description: "Already queued in another bulk job." });
+      toast({ title: t("products.bulk.skipped", { count: skippedCount }), description: t("products.bulk.skippedDesc") });
     }
     setBulkSubmitting(true);
     try {
@@ -325,7 +345,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     sortDirection: sort.direction,
     statusFilter,
     excludeOutOfStock,
-    categoryFilter,
+    categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
     stockStatusFilter,
     priceMin: priceMin ? Number(priceMin) : undefined,
     priceMax: priceMax ? Number(priceMax) : undefined,
@@ -338,9 +358,23 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     currentPage: page,
     queryKeyFn: (p) => queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
     queryFn: (p) => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 5000,
+    maxRecords: 20000,
     resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
   });
+
+  // Keep adjacent pages warm so next/prev is instant across table/grid/compact views.
+  useEffect(() => {
+    if (!storeId || !isHydrated || productCount <= 0) return;
+    const totalPages = Math.ceil(productCount / pageSize);
+    const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
+    for (const p of candidates) {
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
+        queryFn: () => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
+        staleTime: 60_000,
+      });
+    }
+  }, [queryClient, storeId, isHydrated, productCount, page, pageSize, prefetchOpts]);
 
   const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
     // Inline mutations should invalidate query; placeholder no-op.
@@ -407,25 +441,46 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const { data: activeSyncs = [] } = useAllActiveSyncs();
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const prefsLoaded = useRef(false);
+  const prefsLoading = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (prefsLoaded.current) return;
+    if (prefsLoaded.current || prefsLoading.current) return;
+    if (!router.isReady) return;
+    prefsLoading.current = true;
+    const urlStatus = getQueryString(router.query, "status");
+    const urlCat = getQueryString(router.query, "cat");
+    const urlStock = getQueryString(router.query, "stock");
+    const urlPmin = getQueryString(router.query, "pmin");
+    const urlPmax = getQueryString(router.query, "pmax");
+    // Filters precedence URL > DB > defaults. URL is applied unconditionally first
+    // because the initial useState ran before router.isReady (router.query was empty).
+    if (urlStatus !== undefined) setStatusFilter(urlStatus);
+    if (urlCat !== undefined) setCategoryFilter(urlCat);
+    if (urlStock !== undefined) setStockStatusFilter(urlStock);
+    if (urlPmin !== undefined) setPriceMin(urlPmin);
+    if (urlPmax !== undefined) setPriceMax(urlPmax);
     fetchPreferences("products").then((remote) => {
       if (remote) {
+        // Table preferences (columns/order/page-size/view mode) — DB always wins.
         if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
         if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
-        if (typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
+        // Filters: only apply DB pref when URL didn't override.
+        if (urlStatus === undefined && typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
         if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
-        if (typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
-        if (typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
+        if (urlCat === undefined && typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
+        if (urlStock === undefined && typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
       prefsLoaded.current = true;
-    }).catch(() => { prefsLoaded.current = true; });
-  }, []);
+      setIsHydrated(true);
+    }).catch(() => {
+      prefsLoaded.current = true;
+      setIsHydrated(true);
+    });
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
@@ -536,7 +591,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Download className="h-3.5 w-3.5" />
               <span className="text-xs">{t("products.toolbar.export")}</span>
             </Button>
-            <Link href={`/sites/${storeId}/products/new`} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
+            <Link href={{ pathname: `/sites/${storeId}/products/new`, query: { returnTo: buildReturnTo() } }} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
               <Button size="sm" className="h-9 gap-1.5" onClick={(e) => { if (!locked) { e.preventDefault(); setTypeDialogOpen(true); } }}>
                 <Plus className="h-4 w-4" />
                 {t("products.addProduct")}
@@ -680,7 +735,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 )}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
                   <Package className="h-3.5 w-3.5" />
-                  <span className="font-medium">{productCount.toLocaleString()}</span>
+                  <span className="font-medium">{formatNumber(productCount, i18n.language)}</span>
                 </div>
                 {(productCount > 0 || loading) && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
@@ -696,11 +751,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {loading && productCount === 0 ? "Loading…" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, productCount)} of ${productCount.toLocaleString()}`}
+                      {loading && productCount === 0 ? "Loading…" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, productCount)} of ${formatNumber(productCount, i18n.language)}`}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount || isFetching}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ArrowLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
                     </div>
                   </div>
                 )}
@@ -737,7 +792,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 const gridCls = isCompact
                   ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3"
                   : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
-                if (loading) {
+                if (showInitialLoading) {
                   return (
                     <div className={gridCls}>
                       {Array.from({ length: isCompact ? 14 : 8 }).map((_, i) => (
@@ -908,7 +963,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); if (!locked && !pending) router.push(`/sites/${storeId}/products/edit/${p.id}`); }}
+                              onClick={(e) => { e.stopPropagation(); if (!locked && !pending) router.push({ pathname: `/sites/${storeId}/products/edit/${p.id}`, query: { returnTo: buildReturnTo() } }); }}
                               disabled={locked || pending}
                               title={locked ? "Available after initial sync completes" : pending ? "This product is queued in a bulk job. Edits are disabled until it finishes." : "Edit product"}
                               className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:cursor-not-allowed disabled:opacity-0"
@@ -1038,7 +1093,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {showInitialLoading ? (
                     Array.from({ length: 10 }).map((_, i) => (
                       <TableRow key={`sk-${i}`}>
                         <TableCell className="w-8 pl-3 pr-0"><Checkbox disabled /></TableCell>
@@ -1313,7 +1368,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         onOpenChange={setTypeDialogOpen}
         onSelect={(type) => {
           setTypeDialogOpen(false);
-          router.push(`/sites/${storeId}/products/new?type=${type}`);
+          router.push({ pathname: `/sites/${storeId}/products/new`, query: { type, returnTo: buildReturnTo() } });
         }}
       />
 
@@ -1327,16 +1382,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {bulkDialog === "price" && "Update price"}
-              {bulkDialog === "stock" && "Update stock"}
-              {bulkDialog === "status" && "Update status"}
-              {bulkDialog === "category" && "Update categories"}
-              {bulkDialog === "delete" && "Delete products"}
+              {bulkDialog === "price" && t("products.bulk.dialog.updatePrice")}
+              {bulkDialog === "stock" && t("products.bulk.dialog.updateStock")}
+              {bulkDialog === "status" && t("products.bulk.dialog.updateStatus")}
+              {bulkDialog === "category" && t("products.bulk.dialog.updateCategories")}
+              {bulkDialog === "delete" && t("products.bulk.dialog.deleteProducts")}
             </DialogTitle>
             <DialogDescription>
               {bulkDialog === "delete"
-                ? `Permanently delete ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? This cannot be undone.`
-                : `Apply this change to ${selectedIds.size} selected product${selectedIds.size === 1 ? "" : "s"}.`}
+                ? t("products.bulk.dialog.deleteConfirm", { count: selectedIds.size })
+                : t("products.bulk.dialog.applyTo", { count: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
 

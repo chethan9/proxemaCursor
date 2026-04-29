@@ -144,6 +144,7 @@ export async function getProductsByStore(storeId: string, limit = 100): Promise<
     .from("products")
     .select("*")
     .eq("store_id", storeId)
+    .or("type.is.null,type.neq.variation")
     .order("synced_at", { ascending: false })
     .limit(limit);
 
@@ -237,7 +238,11 @@ export async function getCustomer(id: string): Promise<Customer | null> {
 // Data counts
 export async function getDataCounts(storeId: string) {
   const [products, orders, customers] = await Promise.all([
-    supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", storeId)
+      .or("type.is.null,type.neq.variation"),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId),
     supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", storeId),
   ]);

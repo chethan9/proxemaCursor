@@ -9,6 +9,8 @@ import { useSubscription } from "@/hooks/queries/useSubscription";
 import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "next-i18next";
+import { formatCurrency, formatDate } from "@/lib/format-number";
 
 interface PlanRow {
   id: string;
@@ -24,6 +26,7 @@ export function CurrentPlanCard() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const { toast } = useToast();
+  const { i18n } = useTranslation();
 
   useEffect(() => {
     if (!subscription?.plan_id) return;
@@ -84,13 +87,13 @@ export function CurrentPlanCard() {
       <CardContent className="space-y-3">
         <div>
           <div className="text-2xl font-semibold">{plan?.name || "—"}</div>
-          <div className="text-sm text-muted-foreground">{currency} {amount.toLocaleString()} / {interval}</div>
+          <div className="text-sm text-muted-foreground">{formatCurrency(amount, currency, i18n.language)} / {interval}</div>
         </div>
 
         {periodEnd && (
           <div className="text-xs text-muted-foreground">
             {isCancelScheduled ? "Cancels on " : "Renews on "}
-            <span className="font-medium text-foreground">{periodEnd.toLocaleDateString()}</span>
+            <span className="font-medium text-foreground">{formatDate(periodEnd, i18n.language)}</span>
           </div>
         )}
 
@@ -100,7 +103,7 @@ export function CurrentPlanCard() {
               <AlertTriangle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
               <div className="flex-1">
                 <p className="font-medium">Cancellation scheduled</p>
-                <p className="text-muted-foreground mt-0.5">Your subscription will end on {periodEnd?.toLocaleDateString()}. You can revert this anytime before then.</p>
+                <p className="text-muted-foreground mt-0.5">Your subscription will end on {periodEnd ? formatDate(periodEnd, i18n.language) : ""}. You can revert this anytime before then.</p>
               </div>
             </div>
           </div>
@@ -130,7 +133,7 @@ export function CurrentPlanCard() {
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>Your <span className="font-medium text-foreground">{plan?.name}</span> plan will remain active until{" "}
-                  <span className="font-medium text-foreground">{periodEnd?.toLocaleDateString() || "the end of your billing period"}</span>.</p>
+                  <span className="font-medium text-foreground">{periodEnd ? formatDate(periodEnd, i18n.language) : "the end of your billing period"}</span>.</p>
                 <p>After that date you&apos;ll lose access to paid features and your sites will become read-only. You can resume anytime before then with no penalty.</p>
               </div>
             </AlertDialogDescription>

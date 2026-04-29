@@ -29,6 +29,7 @@ import type { SubscriptionStatus } from "@/lib/subscription-state";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
+import { formatDate as fmtIntlDate } from "@/lib/format-number";
 
 const STATUS_COLORS: Record<string, string> = {
   trialing: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300",
@@ -41,14 +42,14 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUSES: SubscriptionStatus[] = ["trialing", "active", "past_due", "locked", "canceled"];
 
-function fmtDate(s: string | null) {
+function fmtDate(s: string | null, locale?: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString();
+  return fmtIntlDate(s, locale);
 }
 
 export default function SubscriptionsAdmin() {
   const { toast } = useToast();
-  const { t } = useTranslation("settings");
+  const { t, i18n } = useTranslation("settings");
   const [subs, setSubs] = useState<AdminSubscription[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,9 +141,9 @@ export default function SubscriptionsAdmin() {
                       <TableCell className="font-medium text-sm">{s.client?.name || "—"}</TableCell>
                       <TableCell className="text-sm">{s.plan?.name || "—"}</TableCell>
                       <TableCell><Badge variant="outline" className={`text-[10px] capitalize ${STATUS_COLORS[s.status] || ""}`}>{statusLabel(s.status || "")}</Badge></TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(s.current_period_end)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{fmtDate(s.current_period_end, i18n.language)}</TableCell>
                       <TableCell className="text-center text-xs">{s.grace_period_days ?? 7}d</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(s.updated_at)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{fmtDate(s.updated_at, i18n.language)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -261,7 +262,7 @@ function DetailDrawer({ subscription, plans, onClose, onMutated }: {
   onMutated: () => void;
 }) {
   const { toast } = useToast();
-  const { t } = useTranslation("settings");
+  const { t, i18n } = useTranslation("settings");
   const [planId, setPlanId] = useState("");
   const [status, setStatus] = useState<SubscriptionStatus>("active");
   const [periodEnd, setPeriodEnd] = useState("");
@@ -312,7 +313,7 @@ function DetailDrawer({ subscription, plans, onClose, onMutated }: {
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{t("subscriptionsAdmin.drawer.periodEnd")}</span>
-              <span className="font-mono">{fmtDate(subscription.current_period_end)}</span>
+              <span className="font-mono">{fmtDate(subscription.current_period_end, i18n.language)}</span>
             </div>
           </CardContent></Card>
 

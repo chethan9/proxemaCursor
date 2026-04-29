@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { fetchProducts } from "@/services/productService";
 import { fetchOrders } from "@/services/orderService";
 import { fetchCategories, fetchTags, fetchBrands } from "@/services/taxonomyService";
+import { fetchCustomers } from "@/services/customerService";
+import { fetchSiteHomeStats } from "@/services/siteStatsService";
+import { listSiteDownloads } from "@/services/downloadsService";
+import { listBulkJobs } from "@/services/bulkJobService";
+import { getStore } from "@/services/storeService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 import { useTranslation } from "next-i18next";
@@ -46,6 +52,15 @@ function roleKeyFor(profileRole: string | undefined, isSuperAdmin: boolean): Rol
   return "user";
 }
 
+function collectMenuHrefs(nodes: ResolvedMenuNode[]): string[] {
+  const out: string[] = [];
+  for (const n of nodes) {
+    if (n.type === "item" && n.href) out.push(n.href);
+    if (n.children?.length) out.push(...collectMenuHrefs(n.children));
+  }
+  return out;
+}
+
 export function SiteSidebar({ siteId }: Props) {
   const router = useRouter();
   const { profile, isSuperAdmin, can } = useAuth();
@@ -61,6 +76,8 @@ export function SiteSidebar({ siteId }: Props) {
     return buildInitialSiteTree(siteId, can);
   });
   const queryClient = useQueryClient();
+  /** Immediate tab highlight while Next.js loads the page chunk (router.asPath updates late). */
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
 
   const { data: bulkJobs = [] } = useStoreBulkJobs(siteId, 50);
   const bulkJobsCounts = useMemo(() => {
@@ -104,6 +121,52 @@ export function SiteSidebar({ siteId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleKey, siteId]);
 
+  useEffect(() => {
+    const clear = () => setPendingPath(null);
+    router.events.on("routeChangeComplete", clear);
+    router.events.on("routeChangeError", clear);
+    return () => {
+      router.events.off("routeChangeComplete", clear);
+      router.events.off("routeChangeError", clear);
+    };
+  }, [router.events]);
+
+  useEffect(() => {
+    if (!pendingPath) return;
+    const cur = router.asPath.split("?")[0].split("#")[0];
+    const pend = pendingPath.split("?")[0].split("#")[0];
+    if (cur === pend || cur.startsWith(pend + "/")) setPendingPath(null);
+  }, [router.asPath, pendingPath]);
+
+  const beginSiteNavigation = useCallback((href: string) => {
+    const p = href.split("?")[0].split("#")[0];
+    flushSync(() => setPendingPath(p));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hrefs = [...new Set(collectMenuHrefs(menuTree))];
+    if (hrefs.length === 0) return;
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      for (const href of hrefs) void router.prefetch(href);
+    };
+    const ric = window.requestIdleCallback?.bind(window);
+    if (ric) {
+      const id = ric(run, { timeout: 1500 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback?.(id);
+      };
+    }
+    const t = window.setTimeout(run, 1);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [menuTree, router]);
+
   const filteredSites = useMemo(() => {
     if (!search.trim()) return sites;
     const q = search.toLowerCase();
@@ -120,51 +183,92 @@ export function SiteSidebar({ siteId }: Props) {
   const switchToSite = (newId: string) => {
     if (newId === siteId) { setOpen(false); return; }
     const sub = getCurrentSubPath();
-    router.push(`/sites/${newId}${sub}`);
+    const next = `/sites/${newId}${sub}`;
+    beginSiteNavigation(next);
+    router.push(next);
     setOpen(false);
     setSearch("");
   };
 
-  const isItemActive = (href: string): boolean => {
-    const current = router.asPath.split("?")[0].split("#")[0];
-    if (href === `/sites/${siteId}`) return current === href;
-    return current === href || current.startsWith(href + "/");
-  };
+  const isItemActive = useCallback(
+    (href: string): boolean => {
+      const norm = (p: string) => p.split("?")[0].split("#")[0];
+      const current = norm(pendingPath ?? router.asPath);
+      if (href === `/sites/${siteId}`) return current === href;
+      return current === href || current.startsWith(href + "/");
+    },
+    [pendingPath, router.asPath, siteId]
+  );
 
-  const prefetchForHref = (href: string) => {
-    // Match /sites/:id/(products|orders|categories|tags|brands)
-    const m = href.match(/^\/sites\/([^/]+)\/(products|orders|categories|tags|brands)$/);
-    if (!m) return;
-    const [, sid, section] = m;
-    if (section === "products") {
-      const opts = { storeId: sid, page: 0, pageSize: 50 };
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.products(sid, opts as unknown as Record<string, unknown>),
-        queryFn: () => fetchProducts(opts),
-      });
-    } else if (section === "orders") {
-      const opts = { storeId: sid, page: 0, pageSize: 50 };
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.orders(sid, opts as unknown as Record<string, unknown>),
-        queryFn: () => fetchOrders(opts),
-      });
-    } else if (section === "categories") {
-      queryClient.prefetchQuery({
-        queryKey: ["taxonomy", "categories", sid, "", 0, 50] as const,
-        queryFn: () => fetchCategories(sid, "", 0, 50),
-      });
-    } else if (section === "tags") {
-      queryClient.prefetchQuery({
-        queryKey: ["taxonomy", "tags", sid, "", 0, 50] as const,
-        queryFn: () => fetchTags(sid, "", 0, 50),
-      });
-    } else if (section === "brands") {
-      queryClient.prefetchQuery({
-        queryKey: ["taxonomy", "brands", sid, "", 0, 50] as const,
-        queryFn: () => fetchBrands(sid, "", 0, 50),
-      });
-    }
-  };
+  /** Next.js route chunk + list/cache data — mirrors AppSidebar `prefetchNavRoute` + data warmup. */
+  const warmRouteAndData = useCallback(
+    (href: string | undefined) => {
+      if (!href) return;
+      const norm = href.split("?")[0].split("#")[0];
+      void router.prefetch(norm);
+
+      const pathMatch = norm.match(/^\/sites\/([^/]+)\/([^/?#]+)/);
+      if (!pathMatch) return;
+      const sid = pathMatch[1];
+      const section = pathMatch[2];
+
+      if (section === "products") {
+        const opts = { storeId: sid, page: 0, pageSize: 50 };
+        queryClient.prefetchQuery({
+          queryKey: queryKeys.products(sid, opts as unknown as Record<string, unknown>),
+          queryFn: () => fetchProducts(opts),
+        });
+      } else if (section === "orders") {
+        const opts = { storeId: sid, page: 0, pageSize: 50 };
+        queryClient.prefetchQuery({
+          queryKey: queryKeys.orders(sid, opts as unknown as Record<string, unknown>),
+          queryFn: () => fetchOrders(opts),
+        });
+      } else if (section === "categories") {
+        queryClient.prefetchQuery({
+          queryKey: ["taxonomy", "categories", sid, "", 0, 50] as const,
+          queryFn: () => fetchCategories(sid, "", 0, 50),
+        });
+      } else if (section === "tags") {
+        queryClient.prefetchQuery({
+          queryKey: ["taxonomy", "tags", sid, "", 0, 50] as const,
+          queryFn: () => fetchTags(sid, "", 0, 50),
+        });
+      } else if (section === "brands") {
+        queryClient.prefetchQuery({
+          queryKey: ["taxonomy", "brands", sid, "", 0, 50] as const,
+          queryFn: () => fetchBrands(sid, "", 0, 50),
+        });
+      } else if (section === "home") {
+        queryClient.prefetchQuery({
+          queryKey: ["site-home-stats", sid, null],
+          queryFn: () => fetchSiteHomeStats(sid, undefined),
+        });
+      } else if (section === "customers") {
+        const opts = { storeId: sid, page: 0, pageSize: 50 };
+        queryClient.prefetchQuery({
+          queryKey: ["customers", sid, opts, "db"] as const,
+          queryFn: () => fetchCustomers({ ...opts, useLive: false }),
+        });
+      } else if (section === "downloads") {
+        queryClient.prefetchQuery({
+          queryKey: ["site-downloads", sid],
+          queryFn: () => listSiteDownloads(sid),
+        });
+      } else if (section === "bulk-jobs") {
+        queryClient.prefetchQuery({
+          queryKey: ["bulk-jobs", "store", sid, 50],
+          queryFn: () => listBulkJobs(sid, 50),
+        });
+      } else if (section === "settings") {
+        queryClient.prefetchQuery({
+          queryKey: queryKeys.store(sid),
+          queryFn: () => getStore(sid),
+        });
+      }
+    },
+    [queryClient, router]
+  );
 
   const renderItem = (node: ResolvedMenuNode) => {
     if (node.type !== "item" || !node.href) return null;
@@ -187,6 +291,7 @@ export function SiteSidebar({ siteId }: Props) {
       <li key={node.id}>
         <Link
           href={node.href}
+          onClick={() => beginSiteNavigation(node.href!)}
           aria-current={active ? "page" : undefined}
           className={cn(
             "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
@@ -195,8 +300,8 @@ export function SiteSidebar({ siteId }: Props) {
               ? "bg-foreground/[0.08] text-foreground font-semibold"
               : "font-medium text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           )}
-          onMouseEnter={() => node.href && prefetchForHref(node.href)}
-          onFocus={() => node.href && prefetchForHref(node.href)}
+          onMouseEnter={() => node.href && warmRouteAndData(node.href)}
+          onFocus={() => node.href && warmRouteAndData(node.href)}
         >
           {active && (
             <span aria-hidden className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-e-full bg-foreground" />

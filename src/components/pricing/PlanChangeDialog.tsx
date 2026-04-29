@@ -18,10 +18,11 @@ interface Props {
 }
 
 export function PlanChangeDialog({ open, onOpenChange, mode, currentPlan, newPlan, currency, periodEnd, onConfirm, loading }: Props) {
-  const { t } = useTranslation("billing");
+  const { t, i18n } = useTranslation("billing");
   if (!newPlan) return null;
   const newPrice = (newPlan.prices as Record<string, number>)[currency];
-  const periodEndDate = periodEnd ? new Date(periodEnd).toLocaleDateString(undefined, { dateStyle: "long" }) : null;
+  const lang = i18n.language?.startsWith("ar") ? "ar-u-nu-latn" : (i18n.language || undefined);
+  const periodEndDate = periodEnd ? new Date(periodEnd).toLocaleDateString(lang, { dateStyle: "long" }) : null;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
+import { formatDateTime, formatNumber } from "@/lib/format-number";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,16 +53,16 @@ function formatBytes(b: number | null): string {
   return `${(b / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function formatDate(d: string | null): string {
+function formatDate(d: string | null, locale?: string): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("en-US", {
+  return formatDateTime(d, locale, {
     month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 }
 
 function DownloadsInner() {
   const { id, store, loading } = useSiteFromRoute();
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const { data: files = [], isLoading, isFetching } = useSiteDownloads(id);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -228,7 +229,7 @@ function DownloadsInner() {
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-2xl font-semibold tabular-nums">{ti.count.toLocaleString()}</p>
+                      <p className="text-2xl font-semibold tabular-nums">{formatNumber(ti.count, i18n.language)}</p>
                       <p className="text-xs text-muted-foreground truncate">{ti.label}</p>
                     </div>
                   </div>
@@ -357,7 +358,7 @@ function DownloadsInner() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{f.reference ?? "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{f.customer ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatDate(f.generated_at)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(f.generated_at, i18n.language)}</TableCell>
                       <TableCell className={`text-xs font-mono ${exp.cls}`}>{exp.label}</TableCell>
                       <TableCell className="text-right text-xs font-mono text-muted-foreground">{formatBytes(f.size_bytes)}</TableCell>
                       <TableCell className="text-right">

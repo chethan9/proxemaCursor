@@ -15,6 +15,7 @@ import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useTranslation } from "next-i18next";
+import { formatDate as fmtIntlDate, formatDateTime as fmtIntlDateTime } from "@/lib/format-number";
 
 type LineItem = {
   name?: string;
@@ -63,15 +64,15 @@ function statusClasses(status: string): { pill: string; dot: string } {
   }
 }
 
-function fmtDate(d?: string | null) { if (!d) return "—"; try { return new Date(d).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }); } catch { return "—"; } }
-function fmtDateTime(d?: string | null) { if (!d) return "—"; try { return new Date(d).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return "—"; } }
+function fmtDate(d?: string | null, locale?: string) { if (!d) return "—"; return fmtIntlDate(d, locale, { day: "2-digit", month: "short", year: "numeric" }); }
+function fmtDateTime(d?: string | null, locale?: string) { if (!d) return "—"; return fmtIntlDateTime(d, locale, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
 function fmtMoney(n: number | string | null | undefined, currency = "KD") { const v = typeof n === "string" ? parseFloat(n) : (n || 0); if (isNaN(v as number)) return `0.00 ${currency}`; return `${(v as number).toFixed(2)} ${currency}`; }
 
 function CustomerDetailsInner() {
   const router = useRouter();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const { id: siteId, store, loading: siteLoading } = useSiteFromRoute();
   const customerId = router.query.customerId as string | undefined;
   const { data: customer, isLoading } = useCustomer(customerId);
@@ -250,7 +251,7 @@ function CustomerDetailsInner() {
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("customerDetail.summary.orders")}</div>
             <div className="font-semibold text-base">{t("customerDetail.summary.ordersCount", { count: totalOrders })}</div>
-            <div className="text-xs text-muted-foreground">{t("customerDetail.summary.lastOrderedOn", { date: fmtDate(stats?.lastOrderDate) })}</div>
+            <div className="text-xs text-muted-foreground">{t("customerDetail.summary.lastOrderedOn", { date: fmtDate(stats?.lastOrderDate, i18n.language) })}</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("customerDetail.summary.spent")}</div>
@@ -280,9 +281,9 @@ function CustomerDetailsInner() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
               <Field label={t("customerDetail.fields.accountStatus")} value={<span className="text-emerald-600 font-medium">{t("customerDetail.fields.active")}</span>} />
               <Field label={t("customerDetail.fields.customerType")} value={customer.role === "customer" ? t("customerDetail.fields.registeredUser") : customer.role || t("customerDetail.fields.guest")} />
-              <Field label={t("customerDetail.fields.customerSince")} value={fmtDate(customer.date_created)} />
-              <Field label={t("customerDetail.fields.lastActive")} value={fmtDateTime(customer.synced_at)} />
-              <Field label={t("customerDetail.fields.lastOrderDate")} value={fmtDate(stats?.lastOrderDate)} />
+              <Field label={t("customerDetail.fields.customerSince")} value={fmtDate(customer.date_created, i18n.language)} />
+              <Field label={t("customerDetail.fields.lastActive")} value={fmtDateTime(customer.synced_at, i18n.language)} />
+              <Field label={t("customerDetail.fields.lastOrderDate")} value={fmtDate(stats?.lastOrderDate, i18n.language)} />
               <Field label={t("customerDetail.fields.preferredPayment")} value={stats?.preferredPayment || "—"} />
               <Field label={t("customerDetail.fields.preferredDelivery")} value={t("customerDetail.fields.standardDelivery")} />
               <Field label={t("customerDetail.fields.deliveryIssues")} value={t("customerDetail.fields.none")} />
@@ -392,6 +393,7 @@ function StatTile({ icon, label, value, sub, tone = "slate" }: { icon: React.Rea
 }
 
 function OrderCard({ order, siteId, expanded, onToggle, statusLabel, t }: { order: OrderRow; siteId: string; expanded: boolean; onToggle: () => void; statusLabel: string; t: (k: string, opts?: Record<string, unknown>) => string }) {
+  const { i18n } = useTranslation("site");
   const status = order.status || "pending";
   const sc = statusClasses(status);
   const items = Array.isArray(order.line_items) ? order.line_items : [];
@@ -419,7 +421,7 @@ function OrderCard({ order, siteId, expanded, onToggle, statusLabel, t }: { orde
         >
           #{order.order_number || order.woo_id}
         </Link>
-        <div className="text-xs text-muted-foreground">{fmtDate(order.date_created)}</div>
+        <div className="text-xs text-muted-foreground">{fmtDate(order.date_created, i18n.language)}</div>
         <div className="hidden md:block text-xs text-muted-foreground truncate max-w-[200px]">{order.payment_method_title || "—"}</div>
         {items.length > 0 && (
           <div className="flex items-center -space-x-1 ml-auto md:ml-0">

@@ -242,20 +242,22 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
                 <div className="flex items-start gap-2">
                   <Copy className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-destructive">Site already exists</p>
-                    <p className="text-[11px] text-foreground/80">
-                      <span className="font-medium">{existingDuplicate.name}</span> is already connected with this URL. Adding a duplicate will count toward your plan&apos;s site quota and may cause sync conflicts.
-                    </p>
+                    <p className="text-xs font-medium text-destructive">{t("addSite.duplicateTitle")}</p>
+                    <p
+                      className="text-[11px] text-foreground/80"
+                      dangerouslySetInnerHTML={{ __html: t("addSite.duplicateDesc", { name: existingDuplicate.name }) }}
+                    />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-foreground/80">
-                    Type <span className="font-mono font-semibold text-destructive">ADD ANYWAY</span> to confirm:
-                  </Label>
+                  <Label
+                    className="text-[11px] text-foreground/80"
+                    dangerouslySetInnerHTML={{ __html: t("addSite.duplicateConfirmLabel") }}
+                  />
                   <Input
                     value={duplicateConfirmText}
                     onChange={(e) => setDuplicateConfirmText(e.target.value)}
-                    placeholder="ADD ANYWAY"
+                    placeholder={t("addSite.duplicateConfirmPlaceholder")}
                     className="h-8 font-mono text-xs"
                     autoComplete="off"
                   />
@@ -361,7 +363,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
                 ? t("addSite.redirecting")
                 : t("addSite.creating")
               : existingDuplicate
-              ? "Add duplicate site"
+              ? t("addSite.addDuplicate")
               : authMode === "oauth"
               ? t("addSite.connectStore")
               : t("addSite.addSite")}

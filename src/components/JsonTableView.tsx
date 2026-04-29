@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { TableProperties, Braces, Copy, Check } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 interface JsonTableViewProps {
   data: unknown;
@@ -17,15 +19,15 @@ function isArrayOfObjects(val: unknown): val is Record<string, unknown>[] {
   return Array.isArray(val) && val.length > 0 && isObject(val[0]);
 }
 
-function formatValue(val: unknown): string {
+function formatValue(val: unknown, locale?: string): string {
   if (val === null || val === undefined) return "—";
   if (typeof val === "boolean") return val ? "Yes" : "No";
-  if (typeof val === "number") return val.toLocaleString();
+  if (typeof val === "number") return formatNumber(val, locale);
   if (typeof val === "string") return val;
   return JSON.stringify(val);
 }
 
-function RenderValue({ value, depth }: { value: unknown; depth: number }) {
+function RenderValue({ value, depth, locale }: { value: unknown; depth: number; locale?: string }) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground">—</span>;
   }
@@ -37,7 +39,7 @@ function RenderValue({ value, depth }: { value: unknown; depth: number }) {
     );
   }
   if (typeof value === "number") {
-    return <span className="font-mono text-sm">{value.toLocaleString()}</span>;
+    return <span className="font-mono text-sm">{formatNumber(value, locale)}</span>;
   }
   if (typeof value === "string") {
     if (value.length > 120) {
@@ -46,14 +48,14 @@ function RenderValue({ value, depth }: { value: unknown; depth: number }) {
     return <span className="text-sm">{value}</span>;
   }
   if (isArrayOfObjects(value) && depth < 2) {
-    return <NestedArrayTable data={value} depth={depth + 1} />;
+    return <NestedArrayTable data={value} depth={depth + 1} locale={locale} />;
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return <span className="text-muted-foreground text-sm">Empty list</span>;
     return (
       <div className="space-y-1">
         {value.slice(0, 5).map((item, i) => (
-          <div key={i} className="text-sm">{formatValue(item)}</div>
+          <div key={i} className="text-sm">{formatValue(item, locale)}</div>
         ))}
         {value.length > 5 && (
           <span className="text-xs text-muted-foreground">+{value.length - 5} more</span>
@@ -62,12 +64,12 @@ function RenderValue({ value, depth }: { value: unknown; depth: number }) {
     );
   }
   if (isObject(value) && depth < 2) {
-    return <NestedObjectTable data={value} depth={depth + 1} />;
+    return <NestedObjectTable data={value} depth={depth + 1} locale={locale} />;
   }
   return <span className="font-mono text-xs text-muted-foreground">{JSON.stringify(value)}</span>;
 }
 
-function NestedObjectTable({ data, depth }: { data: Record<string, unknown>; depth: number }) {
+function NestedObjectTable({ data, depth, locale }: { data: Record<string, unknown>; depth: number; locale?: string }) {
   const entries = Object.entries(data).filter(([, v]) => v !== null && v !== undefined && v !== "");
   if (entries.length === 0) return <span className="text-muted-foreground text-sm">Empty</span>;
 
@@ -81,7 +83,7 @@ function NestedObjectTable({ data, depth }: { data: Record<string, unknown>; dep
                 {key.replace(/_/g, " ")}
               </TableCell>
               <TableCell className="py-1.5 px-3">
-                <RenderValue value={val} depth={depth} />
+                <RenderValue value={val} depth={depth} locale={locale} />
               </TableCell>
             </TableRow>
           ))}
@@ -91,7 +93,7 @@ function NestedObjectTable({ data, depth }: { data: Record<string, unknown>; dep
   );
 }
 
-function NestedArrayTable({ data, depth }: { data: Record<string, unknown>[]; depth: number }) {
+function NestedArrayTable({ data, depth, locale }: { data: Record<string, unknown>[]; depth: number; locale?: string }) {
   if (data.length === 0) return <span className="text-muted-foreground text-sm">Empty list</span>;
 
   const columns = Array.from(new Set(data.flatMap(row => Object.keys(row)))).filter(col => {
@@ -124,7 +126,7 @@ function NestedArrayTable({ data, depth }: { data: Record<string, unknown>[]; de
             <TableRow key={i}>
               {sortedColumns.map(col => (
                 <TableCell key={col} className="py-1.5 px-3 text-sm">
-                  <RenderValue value={row[col]} depth={depth} />
+                  <RenderValue value={row[col]} depth={depth} locale={locale} />
                 </TableCell>
               ))}
             </TableRow>
@@ -145,6 +147,8 @@ function NestedArrayTable({ data, depth }: { data: Record<string, unknown>[]; de
 export function JsonTableView({ data, maxDepth = 2 }: JsonTableViewProps) {
   const [viewMode, setViewMode] = useState<"json" | "table">("json");
   const [copied, setCopied] = useState(false);
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
 
   if (data === null || data === undefined) {
     return <span className="text-muted-foreground">No data</span>;
@@ -197,17 +201,17 @@ export function JsonTableView({ data, maxDepth = 2 }: JsonTableViewProps) {
       ) : (
         <div className="space-y-2">
           {isArrayOfObjects(data) ? (
-            <NestedArrayTable data={data} depth={0} />
+            <NestedArrayTable data={data} depth={0} locale={locale} />
           ) : isObject(data) ? (
-            <NestedObjectTable data={data as Record<string, unknown>} depth={0} />
+            <NestedObjectTable data={data as Record<string, unknown>} depth={0} locale={locale} />
           ) : Array.isArray(data) ? (
             <div className="border rounded-md p-3">
               {data.map((item, i) => (
-                <div key={i} className="text-sm py-1 border-b last:border-b-0">{formatValue(item)}</div>
+                <div key={i} className="text-sm py-1 border-b last:border-b-0">{formatValue(item, locale)}</div>
               ))}
             </div>
           ) : (
-            <div className="text-sm">{formatValue(data)}</div>
+            <div className="text-sm">{formatValue(data, locale)}</div>
           )}
         </div>
       )}

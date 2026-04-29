@@ -8,10 +8,13 @@ import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } f
 import { useToast } from "@/hooks/use-toast";
 import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
 import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
+import { useTranslation } from "next-i18next";
+import { formatDate } from "@/lib/format-number";
 
 interface Props {
   order: OrderRow;
   storeUrl?: string | null;
+  returnTo?: string;
   onSaved: (o: OrderRow) => void;
 }
 
@@ -27,7 +30,8 @@ const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; rin
 
 const STATUS_CHANGE_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
-export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
+export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) {
+  const { i18n } = useTranslation();
   const { toast } = useToast();
   const { track, markSaved, markFailed } = useRecentMutations();
   const [saving, setSaving] = useState<string | null>(null);
@@ -269,7 +273,10 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Actions</div>
           <div className="space-y-1">
-            <Link href={`/sites/${order.store_id}/orders/${order.id}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+            <Link
+              href={{ pathname: `/sites/${order.store_id}/orders/${order.id}`, query: { returnTo: returnTo || `/sites/${order.store_id}/orders` } }}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
               <FileText className="h-2.5 w-2.5" />
               <span className="font-medium">Open order details</span>
               <span className="ml-auto">→</span>
@@ -314,7 +321,7 @@ export function OrderRowExpanded({ order, storeUrl, onSaved }: Props) {
 
         <div className="text-[10px] text-muted-foreground pt-2 border-t border-border space-y-0.5">
           <div>Woo ID: <span className="font-mono text-foreground">{order.woo_id}</span></div>
-          {order.date_created && <div>{new Date(order.date_created).toLocaleDateString()}</div>}
+          {order.date_created && <div>{formatDate(order.date_created, i18n.language)}</div>}
         </div>
       </div>
     </div>

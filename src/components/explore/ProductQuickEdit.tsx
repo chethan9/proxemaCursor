@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,8 @@ import { Loader2, Pencil } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "next-i18next";
+import { formatDate } from "@/lib/format-number";
 
 async function patchProduct(storeId: string, productId: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
   const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
@@ -48,6 +51,8 @@ type Props = {
 
 export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Props) {
   const { toast } = useToast();
+  const { i18n } = useTranslation();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [regular, setRegular] = useState("");
@@ -241,7 +246,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           </div>
           <div className="flex justify-between text-[11px] text-muted-foreground">
             <span>Last sync</span>
-            <span>{product.synced_at ? new Date(product.synced_at).toLocaleDateString() : "—"}</span>
+            <span>{product.synced_at ? formatDate(product.synced_at, i18n.language) : "—"}</span>
           </div>
         </div>
         <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 pt-2 border-t mt-1">
@@ -252,7 +257,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
             className="gap-1.5"
           >
             <Link
-              href={`/sites/${product.store_id}/products/edit/${product.id}`}
+              href={{ pathname: `/sites/${product.store_id}/products/edit/${product.id}`, query: { returnTo: router.asPath || `/sites/${product.store_id}/products` } }}
               onClick={() => onOpenChange(false)}
             >
               <Pencil className="h-3.5 w-3.5" />

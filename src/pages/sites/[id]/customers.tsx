@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "rea
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
+import { formatDate, formatNumber } from "@/lib/format-number";
 import { SitePageShell } from "@/components/site/shared";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
   useCustomers,
   useCustomerLastOrders,
 } from "@/hooks/queries/useCustomers";
+import { fetchCustomers } from "@/services/customerService";
 import {
   getCustomerName,
   getCustomerInitials,
@@ -49,16 +51,18 @@ import {
   type SortDirection,
 } from "@/services/customerService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
+import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { useToast } from "@/hooks/use-toast";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoCustomersIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
+import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
+import { useQueryClient } from "@tanstack/react-query";
 
 type ColumnKey =
   | "name"
@@ -107,7 +111,7 @@ function formatMoney(v: number | string | null | undefined, currency = "KWD") {
 }
 
 function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; storeId: string }) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const { data: lastOrders = [] } = useCustomerLastOrders(storeId, customer.woo_id, 3);
   const billing = getCustomerBilling(customer);
   const addr = [billing.address_1, billing.city, billing.state, billing.country].filter(Boolean).join(", ");
@@ -142,7 +146,7 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
                       {status}
                     </span>
                     <span className="font-mono text-xs text-muted-foreground">#{o.order_number || o.woo_id}</span>
-                    <span className="text-xs text-muted-foreground flex-1 truncate">{o.date_created ? new Date(o.date_created).toLocaleDateString() : "—"}</span>
+                    <span className="text-xs text-muted-foreground flex-1 truncate">{o.date_created ? formatDate(o.date_created, i18n.language) : "—"}</span>
                     <span className="text-xs text-muted-foreground truncate max-w-[180px]">{o.payment_method_title || "—"}</span>
                     <span className="font-mono text-xs font-semibold">{formatMoney(o.total, o.currency || "KWD")}</span>
                   </Link>
@@ -182,8 +186,9 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
 }
 
 function CustomersInner() {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const storeId = typeof router.query.id === "string" ? router.query.id : "";
   const { toast } = useToast();
   const { locked } = useSyncLocked(storeId);
@@ -290,13 +295,44 @@ function CustomersInner() {
   const customers = result?.data ?? [];
   const count = result?.count ?? 0;
   const showRefetchOverlay = isFetching && !isLoading && customers.length > 0;
-  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
-    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < count && !isFetching) setPage((p) => p + 1); },
+    onPrev: () => { if (page > 0) setPage((p) => Math.max(0, p - 1)); },
+    onNext: () => { if ((page + 1) * pageSize < count) setPage((p) => p + 1); },
   });
+
+  const prefetchOpts = useMemo(() => ({
+    storeId,
+    search: debouncedSearch,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+  }), [storeId, debouncedSearch, sort.field, sort.direction]);
+
+  useBackgroundPagination({
+    enabled: !!storeId && count > 0,
+    totalCount: count,
+    pageSize,
+    currentPage: page,
+    queryKeyFn: (p) => ["customers", storeId, { ...prefetchOpts, page: p, pageSize }, "db"] as const,
+    queryFn: (p) => fetchCustomers({ ...prefetchOpts, page: p, pageSize }),
+    maxRecords: 20000,
+    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
+  });
+
+  // Keep adjacent pages warm for instant next/prev navigation.
+  useEffect(() => {
+    if (!storeId || count <= 0) return;
+    const totalPages = Math.ceil(count / pageSize);
+    const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
+    for (const p of candidates) {
+      void queryClient.prefetchQuery({
+        queryKey: ["customers", storeId, { ...prefetchOpts, page: p, pageSize }, "db"] as const,
+        queryFn: () => fetchCustomers({ ...prefetchOpts, page: p, pageSize }),
+        staleTime: 60_000,
+      });
+    }
+  }, [queryClient, storeId, count, page, pageSize, prefetchOpts]);
 
   const hasActiveFilters = !!search;
 
@@ -424,7 +460,7 @@ function CustomersInner() {
             <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Users className="h-3.5 w-3.5" />
-                <span className="font-medium">{count.toLocaleString()}</span>
+                <span className="font-medium">{formatNumber(count, i18n.language)}</span>
               </div>
               {count > 0 && (
                 <>
@@ -442,11 +478,11 @@ function CustomersInner() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {count.toLocaleString()}
+                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {formatNumber(count, i18n.language)}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count || isFetching}><ChevronRight className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count}><ChevronRight className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>
                 </>
@@ -560,8 +596,8 @@ function CustomersInner() {
                             if (col.key === "aov") return <TableCell key={col.key} className="text-right font-mono text-xs text-muted-foreground">{formatMoney(getAOV(c))}</TableCell>;
                             if (col.key === "city") return <TableCell key={col.key} className="text-xs text-muted-foreground max-w-[140px] truncate">{b.city || "—"}</TableCell>;
                             if (col.key === "country") return <TableCell key={col.key} className="text-xs font-mono text-muted-foreground">{b.country || "—"}</TableCell>;
-                            if (col.key === "registered") return <TableCell key={col.key} className="text-xs text-muted-foreground whitespace-nowrap">{c.date_created ? new Date(c.date_created).toLocaleDateString() : "—"}</TableCell>;
-                            if (col.key === "last_active") return <TableCell key={col.key} className="text-xs text-muted-foreground whitespace-nowrap">{c.synced_at ? new Date(c.synced_at).toLocaleDateString() : "—"}</TableCell>;
+                            if (col.key === "registered") return <TableCell key={col.key} className="text-xs text-muted-foreground whitespace-nowrap">{c.date_created ? formatDate(c.date_created, i18n.language) : "—"}</TableCell>;
+                            if (col.key === "last_active") return <TableCell key={col.key} className="text-xs text-muted-foreground whitespace-nowrap">{c.synced_at ? formatDate(c.synced_at, i18n.language) : "—"}</TableCell>;
                             return <TableCell key={col.key}>—</TableCell>;
                           })}
                         </TableRow>

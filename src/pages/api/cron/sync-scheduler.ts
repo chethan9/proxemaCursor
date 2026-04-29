@@ -117,6 +117,7 @@ async function syncProducts(store: StoreToSync): Promise<SyncResult> {
   let created = 0, updated = 0;
 
   for (const product of products) {
+    if ((product.type as string) === "variation") continue;
     const data = {
       store_id: store.id, woo_id: product.id, name: (product.name as string) || "", slug: (product.slug as string) || "",
       sku: (product.sku as string) || null,

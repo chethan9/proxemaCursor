@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
+import { formatDateTime, formatNumber } from "@/lib/format-number";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ function effectiveStatus(job: BulkJob): string {
 
 function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const { data: jobs = [], isLoading, isFetching } = useStoreBulkJobs(id, 200);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -83,7 +84,7 @@ function BulkJobsInner() {
 
   const formatDate = (d: string | null) => {
     if (!d) return "—";
-    return new Date(d).toLocaleString("en-US", {
+    return formatDateTime(d, i18n.language, {
       month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
     });
   };
@@ -183,7 +184,7 @@ function BulkJobsInner() {
                 <CheckCircle2 className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-semibold">{stats.totalProcessed.toLocaleString()}</p>
+                <p className="text-2xl font-semibold">{formatNumber(stats.totalProcessed, i18n.language)}</p>
                 <p className="text-xs text-muted-foreground">{t("bulkJobs.stats.processed")}</p>
               </div>
             </div>
@@ -323,7 +324,7 @@ function BulkJobsInner() {
 }
 
 function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () => void }) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const { toast } = useToast();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
@@ -335,7 +336,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
   const errors = Array.isArray(job.errors) ? (job.errors as Array<{ id: number | string; error: string }>) : [];
   const payload = job.payload as Record<string, unknown> | null;
   const isDeleteJob = job.job_type === "delete_products" || job.job_type === "delete_orders";
-  const fmt = (d: string | null) => d ? new Date(d).toLocaleString() : "—";
+  const fmt = (d: string | null) => d ? formatDateTime(d, i18n.language) : "—";
   const dur = (() => {
     if (!job.started_at) return "—";
     const end = job.completed_at ? new Date(job.completed_at).getTime() : Date.now();

@@ -47,6 +47,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
 import { useBlockingEffect } from "@/contexts/LoadingProvider";
 import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; ring: string; label: string; Icon: LucideIcon }> = {
   processing: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", label: "Processing", Icon: CircleDashed },
@@ -60,17 +61,13 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; rin
 
 const STATUS_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
-function fmtDateTime(s?: string | null) {
+function fmtDateTime(s?: string | null, locale?: string) {
   if (!s) return "—";
-  try {
-    return new Date(s).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return s;
-  }
+  return formatDateTime(s, locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid?: string; dateCompleted?: string }) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const status = order.status || "pending";
   const placed = { label: t("orderDetail.stepper.orderPlaced"), date: order.date_created, done: true };
   const processing = { label: t("orderDetail.stepper.processing"), date: datePaid || order.date_modified, done: ["processing", "on-hold", "completed"].includes(status) };
@@ -96,7 +93,7 @@ function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid
                 <Icon className={cn("h-5 w-5 shrink-0", step.done ? "text-emerald-600" : "text-muted-foreground/40")} />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{step.label}</div>
-                  <div className="text-[11px] text-muted-foreground truncate">{step.done ? fmtDateTime(step.date) : t("orderDetail.stepper.notYet")}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{step.done ? fmtDateTime(step.date, i18n.language) : t("orderDetail.stepper.notYet")}</div>
                 </div>
               </div>
             );
@@ -106,7 +103,7 @@ function Stepper({ order, datePaid, dateCompleted }: { order: OrderRow; datePaid
           <div className="mt-3 flex items-center gap-2 p-3 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20">
             {(() => { const I = branchIcon; return <I className="h-5 w-5 text-rose-600 shrink-0" />; })()}
             <div className="text-sm font-medium text-rose-700 dark:text-rose-300">{branchLabel}</div>
-            <div className="text-[11px] text-muted-foreground ml-auto">{fmtDateTime(order.date_modified)}</div>
+            <div className="text-[11px] text-muted-foreground ml-auto">{fmtDateTime(order.date_modified, i18n.language)}</div>
           </div>
         )}
       </CardContent>
@@ -118,8 +115,11 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const storeId = typeof router.query.id === "string" ? router.query.id : "";
   const orderId = typeof router.query.orderId === "string" ? router.query.orderId : "";
+  const fallbackReturn = `/sites/${storeId}/orders`;
+  const rawReturnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "";
+  const returnTo = rawReturnTo && rawReturnTo.startsWith("/") ? rawReturnTo : fallbackReturn;
   const { toast } = useToast();
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState("");
   const [noteIsCustomer, setNoteIsCustomer] = useState(false);
@@ -272,12 +272,12 @@ export default function OrderDetailsPage() {
         <div className="px-6 py-5 max-w-[1400px] mx-auto">
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
-            <Link href={`/sites/${storeId}/orders`}>
+            <Link href={returnTo}>
               <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4" /></Button>
             </Link>
             <div className="min-w-0 flex-1">
               <div className="text-xs text-muted-foreground">
-                <Link href={`/sites/${storeId}/orders`} className="hover:text-foreground">{t("orderDetail.breadcrumb")}</Link> / {t("orderDetail.title")}
+                <Link href={returnTo} className="hover:text-foreground">{t("orderDetail.breadcrumb")}</Link> / {t("orderDetail.title")}
               </div>
               <h1 className="text-xl font-semibold leading-tight">
                 {isLoading ? <Skeleton className="h-6 w-40" /> : t("orderDetail.orderNumber", { number: order?.order_number || order?.woo_id || "—" })}
@@ -334,11 +334,11 @@ export default function OrderDetailsPage() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3"><Package className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.details.title")}</h3></div>
                       <dl className="text-sm space-y-1.5">
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.placedOn")}</dt><dd className="text-right">{fmtDateTime(order.date_created)}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.placedOn")}</dt><dd className="text-right">{fmtDateTime(order.date_created, i18n.language)}</dd></div>
                         <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.payment")}</dt><dd className="text-right truncate">{order.payment_method_title || order.payment_method || "—"}</dd></div>
                         {raw.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.txnId")}</dt><dd className="text-right font-mono text-xs truncate">{raw.transaction_id}</dd></div>}
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.paidOn")}</dt><dd className="text-right">{fmtDateTime(raw.date_paid)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.updated")}</dt><dd className="text-right">{fmtDateTime(order.date_modified)}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.paidOn")}</dt><dd className="text-right">{fmtDateTime(raw.date_paid, i18n.language)}</dd></div>
+                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.updated")}</dt><dd className="text-right">{fmtDateTime(order.date_modified, i18n.language)}</dd></div>
                         {raw.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">{t("orderDetail.details.customerNote")}</dt><dd className="text-xs">{raw.customer_note}</dd></div>}
                       </dl>
                     </CardContent>
@@ -469,7 +469,7 @@ export default function OrderDetailsPage() {
                         <div key={i} className={cn("rounded-md p-2.5 border", n.customer_note ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900" : "bg-muted/40 border-border")}>
                           <div className="text-xs leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: n.note }} />
                           <div className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1.5 flex-wrap">
-                            <span>{fmtDateTime(n.date_created)}</span>
+                            <span>{fmtDateTime(n.date_created, i18n.language)}</span>
                             {n.author && <span className="text-muted-foreground/60">· {n.author}</span>}
                             {n.customer_note && <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">{t("orderDetail.notes.sentToCustomer")}</span>}
                           </div>

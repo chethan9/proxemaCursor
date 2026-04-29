@@ -48,6 +48,19 @@ export interface FetchProductsOptions {
   useLive?: boolean;
 }
 
+/** Woo REST `category` query param expects the category's numeric ID. */
+async function getWooCategoryIdForLiveFilter(storeId: string, categoryName: string): Promise<number | undefined> {
+  const { data } = await supabase
+    .from("categories")
+    .select("woo_id")
+    .eq("store_id", storeId)
+    .ilike("name", categoryName)
+    .limit(1)
+    .maybeSingle();
+  const id = data?.woo_id;
+  return typeof id === "number" ? id : undefined;
+}
+
 function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRow {
   return {
     id: `live-${p.id}`,
@@ -79,6 +92,9 @@ function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRo
 export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number; live?: boolean }> {
   const { storeId, page, pageSize = 50, search, sortField = "woo_date_created", sortDirection = "desc", statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, useLive } = opts;
 
+  const effectiveCategory =
+    categoryFilter && categoryFilter !== "all" ? categoryFilter : undefined;
+
   if (useLive) {
     const qs = new URLSearchParams();
     qs.set("page", String(page + 1));
@@ -88,6 +104,10 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     if (stockStatusFilter && stockStatusFilter !== "all") qs.set("stock_status", stockStatusFilter);
     if (priceMin !== undefined) qs.set("min_price", String(priceMin));
     if (priceMax !== undefined) qs.set("max_price", String(priceMax));
+    if (effectiveCategory) {
+      const wooCatId = await getWooCategoryIdForLiveFilter(storeId, effectiveCategory);
+      if (wooCatId !== undefined) qs.set("category", String(wooCatId));
+    }
     const orderMap: Record<string, string> = { name: "title", price: "price", woo_date_created: "date", created_at: "date", updated_at: "modified" };
     qs.set("orderby", orderMap[sortField] || "date");
     qs.set("order", sortDirection);
@@ -96,20 +116,32 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     const res = await fetch(`/api/stores/${storeId}/live/products?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
-    return { data: (json.data as Record<string, unknown>[]).map((p) => wooProductToRow(p, storeId)), count: json.count, live: true };
+    const mapped = (json.data as Record<string, unknown>[])
+      .filter((p) => (p.type as string) !== "variation")
+      .map((p) => wooProductToRow(p, storeId));
+    return { data: mapped, count: json.count, live: true };
   }
 
-  let query = supabase.from("products").select("*", { count: "exact" }).eq("store_id", storeId);
+  let query = supabase
+    .from("products")
+    .select("*", { count: "exact" })
+    .eq("store_id", storeId);
+
+  // Catalog list: exclude Woo variation rows. Chaining two `.or()` calls overwrites the first in the client; use one `.or()` when searching.
   if (search && search.trim()) {
     const s = search.trim();
-    query = query.or(`name.ilike.%${s}%,sku.ilike.%${s}%`);
+    query = query.or(
+      `and(type.is.null,name.ilike.%${s}%),and(type.neq.variation,name.ilike.%${s}%),and(type.is.null,sku.ilike.%${s}%),and(type.neq.variation,sku.ilike.%${s}%)`,
+    );
+  } else {
+    query = query.or("type.is.null,type.neq.variation");
   }
   if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
   if (stockStatusFilter && stockStatusFilter !== "all") query = query.eq("stock_status", stockStatusFilter);
   if (excludeOutOfStock) query = query.neq("stock_status", "outofstock");
-  if (categoryFilter) {
+  if (effectiveCategory) {
     // Use jsonb containment — reliable across jsonb-to-text formatting variants
-    query = query.contains("categories", [{ name: categoryFilter }]);
+    query = query.contains("categories", [{ name: effectiveCategory }]);
   }
   if (priceMin !== undefined && !isNaN(priceMin)) query = query.gte("price", String(priceMin));
   if (priceMax !== undefined && !isNaN(priceMax)) query = query.lte("price", String(priceMax));

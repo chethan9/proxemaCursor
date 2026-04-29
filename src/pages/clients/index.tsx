@@ -27,10 +27,13 @@ import { useRouter } from "next/router";
 import { type Client } from "@/services/clientService";
 import { useClientsWithCounts, useCreateClient, useUpdateClient, useDeleteClient } from "@/hooks/queries/useClients";
 import { getStoresByClient } from "@/services/storeService";
+import { useTranslation } from "next-i18next";
+import { formatDate as fmtIntlDate } from "@/lib/format-number";
 
 export default function ClientsPage() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { i18n } = useTranslation();
   const { data: clients = [], isLoading: loading } = useClientsWithCounts();
   const createMutation = useCreateClient();
   const updateMutation = useUpdateClient();
@@ -87,7 +90,7 @@ export default function ClientsPage() {
   );
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    fmtIntlDate(d, i18n.language, { year: "numeric", month: "short", day: "numeric" });
 
   return (
     <AppLayout title="Clients">

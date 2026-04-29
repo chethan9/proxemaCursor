@@ -8,6 +8,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { JsonTableView } from "@/components/JsonTableView";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "next-i18next";
+import { formatNumber, formatDateTime } from "@/lib/format-number";
 import {
   ArrowRight,
   ChevronDown,
@@ -72,10 +74,10 @@ const changeTypeConfig: Record<string, { label: string; color: string; icon: typ
   update_failed: { label: "Update Failed", color: "bg-red-100 text-red-800", icon: AlertTriangle },
 };
 
-function formatFieldValue(val: unknown): string {
+function formatFieldValue(val: unknown, locale?: string): string {
   if (val === null || val === undefined) return "—";
   if (typeof val === "boolean") return val ? "Yes" : "No";
-  if (typeof val === "number") return val.toLocaleString();
+  if (typeof val === "number") return formatNumber(val, locale);
   if (typeof val === "string") return val.length > 60 ? val.substring(0, 60) + "..." : val;
   if (typeof val === "object") return JSON.stringify(val).substring(0, 60) + "...";
   return String(val);
@@ -101,6 +103,7 @@ export function EntityHistory({
   title = "Change History",
 }: EntityHistoryProps) {
   const { toast } = useToast();
+  const { i18n } = useTranslation();
   const [changes, setChanges] = useState<EntityChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -337,13 +340,13 @@ export function EntityHistory({
                               {f.field.replace(/_/g, " ")}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground py-1.5 font-mono">
-                              {formatFieldValue(f.old)}
+                              {formatFieldValue(f.old, i18n.language)}
                             </TableCell>
                             <TableCell className="py-1.5">
                               <ArrowRight className="h-3 w-3 text-muted-foreground" />
                             </TableCell>
                             <TableCell className="text-xs py-1.5 font-mono font-medium">
-                              {formatFieldValue(f.new)}
+                              {formatFieldValue(f.new, i18n.language)}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -364,7 +367,7 @@ export function EntityHistory({
                       View Full Snapshots
                     </Button>
                     <span className="text-xs text-muted-foreground">
-                      {change.created_at ? new Date(change.created_at).toLocaleString() : ""}
+                      {change.created_at ? formatDateTime(change.created_at, i18n.language) : ""}
                     </span>
                   </div>
                 </div>

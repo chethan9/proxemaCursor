@@ -9,10 +9,11 @@ import { listMyActivity, type ActivityLogEntry } from "@/services/activityLogSer
 import { ActivityFeedRow } from "@/components/ActivityFeedRow";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { formatNumber } from "@/lib/format-number";
 
 export default function MyActivityPage() {
   const { user } = useAuth();
-  const { t } = useTranslation("settings");
+  const { t, i18n } = useTranslation("settings");
   const [rows, setRows] = useState<ActivityLogEntry[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [page, setPage] = useState(0);
@@ -47,7 +48,7 @@ export default function MyActivityPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {t("myActivity.subtitle")}
-            {count !== null && <span className="ml-2">{count.toLocaleString()}</span>}
+            {count !== null && <span className="ml-2">{formatNumber(count, i18n.language)}</span>}
           </p>
         </div>
 

@@ -11,6 +11,8 @@ import { queryKeys } from "@/lib/query-client";
 import { UptimeBar } from "./UptimeBar";
 import type { UptimePoint } from "@/hooks/queries/useSitesUptime";
 import { useSiteScreenshot } from "@/hooks/queries/useSiteScreenshot";
+import { useTranslation } from "next-i18next";
+import { formatDate } from "@/lib/format-number";
 
 interface Props {
   store: StoreWithClient;
@@ -21,7 +23,7 @@ interface Props {
   uptimeHistory?: UptimePoint[];
 }
 
-function formatRelative(d: string | null): string {
+function formatRelative(d: string | null, locale?: string): string {
   if (!d) return "Never";
   const diff = Date.now() - new Date(d).getTime();
   const mins = Math.floor(diff / 60000);
@@ -31,7 +33,7 @@ function formatRelative(d: string | null): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d ago`;
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatDate(d, locale, { month: "short", day: "numeric" });
 }
 
 function SiteScreenshot({ storeId, url, name }: { storeId: string; url: string; name: string }) {
@@ -80,6 +82,7 @@ function SiteScreenshot({ storeId, url, name }: { storeId: string; url: string; 
 
 export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEdit, uptimeHistory }: Props) {
   const router = useRouter();
+  const { i18n } = useTranslation();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
@@ -188,7 +191,7 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
             <div className="text-[10px] text-muted-foreground mt-0.5">Health</div>
           </div>
           <div className="text-center px-1 border-x border-border">
-            <div className="text-sm font-semibold truncate">{isIncomplete ? "—" : formatRelative(store.last_sync_at)}</div>
+            <div className="text-sm font-semibold truncate">{isIncomplete ? "—" : formatRelative(store.last_sync_at, i18n.language)}</div>
             <div className="text-[10px] text-muted-foreground mt-0.5">Last Sync</div>
           </div>
           <div className="text-center px-1">

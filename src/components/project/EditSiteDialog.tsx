@@ -205,7 +205,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="h-8 w-full" onClick={() => router.push(`/sites/connect/${site.id}?reauth=1`)}>
-                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> {t("editSite.reauthorize")}
+                    <ExternalLink className="h-3.5 w-3.5 me-1.5" /> {t("editSite.reauthorize")}
                   </Button>
                 </>
               ) : (
@@ -231,7 +231,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                   {wpUsername && <div className="text-xs text-muted-foreground">{t("editSite.username")} <span className="font-medium text-foreground">{wpUsername}</span></div>}
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="h-8 flex-1" onClick={() => router.push(`/sites/connect/${site.id}?wp=1`)}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> {t("editSite.reauthorizeWp")}
+                      <ExternalLink className="h-3.5 w-3.5 me-1.5" /> {t("editSite.reauthorizeWp")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -248,7 +248,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                         }
                       }}
                     >
-                      <Unlink className="h-3.5 w-3.5 mr-1.5" /> {t("editSite.disconnect")}
+                      <Unlink className="h-3.5 w-3.5 me-1.5" /> {t("editSite.disconnect")}
                     </Button>
                   </div>
                 </>
@@ -270,7 +270,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                 </div>
               </div>
               <Button variant="outline" size="sm" className="h-8 border-amber-400 text-amber-900 hover:bg-amber-100" onClick={handleReleaseSyncLock} disabled={saving || deleting}>
-                <Unlock className="h-3.5 w-3.5 mr-1.5" /> {t("editSite.releaseLock")}
+                <Unlock className="h-3.5 w-3.5 me-1.5" /> {t("editSite.releaseLock")}
               </Button>
             </div>
           )}
@@ -286,7 +286,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={deleting || saving}>
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> {t("editSite.deleteSite")}
+                  <Trash2 className="h-3.5 w-3.5 me-1.5" /> {t("editSite.deleteSite")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

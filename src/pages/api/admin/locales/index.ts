@@ -22,7 +22,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order("is_default", { ascending: false })
         .order("code");
       if (error) return res.status(500).json({ error: error.message });
-      return res.status(200).json({ locales: data });
+
+      const { data: counts, error: countErr } = await supabaseAdmin
+        .from("translations")
+        .select("locale,needs_review");
+      if (countErr) return res.status(500).json({ error: countErr.message });
+
+      const stats = new Map<string, { total: number; needs_review: number }>();
+      for (const row of counts || []) {
+        const cur = stats.get(row.locale) || { total: 0, needs_review: 0 };
+        cur.total += 1;
+        if (row.needs_review) cur.needs_review += 1;
+        stats.set(row.locale, cur);
+      }
+
+      const enriched = (data || []).map((l) => {
+        const s = stats.get(l.code) || { total: 0, needs_review: 0 };
+        return { ...l, translation_count: s.total, needs_review_count: s.needs_review };
+      });
+      return res.status(200).json({ locales: enriched });
     }
     return res.status(405).json({ error: "Method not allowed" });
   } catch (e) {

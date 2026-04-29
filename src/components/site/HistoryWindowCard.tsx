@@ -8,6 +8,8 @@ import { Calendar, History as HistoryIcon, AlertCircle, RefreshCw, Database } fr
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/lib/activity-log";
+import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 interface Props {
   storeId: string;
@@ -25,6 +27,7 @@ interface PlanInfo {
 export function HistoryWindowCard({ storeId, clientId, ordersHistoryFrom, onSaved }: Props) {
   const { toast } = useToast();
   const router = useRouter();
+  const { i18n } = useTranslation();
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [siteFrom, setSiteFrom] = useState<string>("");
   const [origSiteFrom, setOrigSiteFrom] = useState<string>("");
@@ -212,7 +215,7 @@ export function HistoryWindowCard({ storeId, clientId, ordersHistoryFrom, onSave
             {counts && (
               <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
                 <Database className="h-3 w-3" />
-                Currently synced: {counts.orders.toLocaleString()} orders · {counts.customers.toLocaleString()} customers
+                Currently synced: {formatNumber(counts.orders, i18n.language)} orders · {formatNumber(counts.customers, i18n.language)} customers
               </div>
             )}
 

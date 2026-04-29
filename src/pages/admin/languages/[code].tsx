@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next";
@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { NAMESPACES, type Namespace, getLocaleMeta } from "@/lib/i18n";
-import { Loader2, ArrowLeft, Search, Save, Check, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Search, Save, Check, AlertCircle, Download, Upload } from "lucide-react";
 
 type Translation = { id: string; locale: string; namespace: string; key: string; value: string; needs_review: boolean; updated_at: string };
 
@@ -25,11 +25,14 @@ export default function EditTranslationsPage() {
 
   const [activeNs, setActiveNs] = useState<Namespace>("common");
   const [search, setSearch] = useState("");
+  const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
   const [source, setSource] = useState<Record<string, Record<string, string>>>({});
   const [translations, setTranslations] = useState<Record<string, Translation>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"export" | "import" | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -61,11 +64,20 @@ export default function EditTranslationsPage() {
 
   const sourceKeys = useMemo(() => source[activeNs] || {}, [source, activeNs]);
   const filteredKeys = useMemo(() => {
-    const entries = Object.entries(sourceKeys);
+    let entries = Object.entries(sourceKeys);
+    if (needsReviewOnly) {
+      entries = entries.filter(([k]) => translations[`${activeNs}::${k}`]?.needs_review);
+    }
     const q = search.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter(([k, v]) => k.toLowerCase().includes(q) || v.toLowerCase().includes(q));
-  }, [sourceKeys, search]);
+    if (q) entries = entries.filter(([k, v]) => k.toLowerCase().includes(q) || v.toLowerCase().includes(q));
+    return entries;
+  }, [sourceKeys, search, needsReviewOnly, translations, activeNs]);
+
+  const needsReviewCount = useMemo(() => {
+    let n = 0;
+    for (const t of Object.values(translations)) if (t.needs_review) n++;
+    return n;
+  }, [translations]);
 
   const completeness = useMemo(() => {
     const result: Record<string, { translated: number; total: number }> = {};
@@ -119,12 +131,63 @@ export default function EditTranslationsPage() {
     await saveTranslation(key, t.value, { needs_review: !t.needs_review });
   };
 
+  const handleExport = async () => {
+    setBusy("export");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/translations/export?locale=${code}&namespace=${activeNs}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Export failed");
+      const json = await res.json();
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${code}-${activeNs}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Exported", description: `${code}-${activeNs}.json downloaded` });
+    } catch (e) {
+      toast({ title: "Export failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    setBusy("import");
+    try {
+      const text = await file.text();
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new Error("File is not valid JSON");
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/translations/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ locale: code, namespace: activeNs, json: parsed }),
+      });
+      const out = await res.json();
+      if (!res.ok) throw new Error(out.error || "Import failed");
+      toast({ title: "Imported", description: `${out.count} keys upserted into ${activeNs}` });
+      await loadAll();
+    } catch (e) {
+      toast({ title: "Import failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 max-w-6xl mx-auto space-y-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/languages"><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
+            <Link href="/admin/languages"><ArrowLeft className="h-4 w-4 me-1 rtl:rotate-180" />Back</Link>
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl font-semibold flex items-center gap-2">
@@ -132,7 +195,37 @@ export default function EditTranslationsPage() {
               <Badge variant="outline" className="font-mono text-xs">{code}</Badge>
               <span className="text-sm text-muted-foreground" dir={meta.dir}>{meta.nativeName}</span>
             </h1>
-            <p className="text-sm text-muted-foreground">{totalComplete}% translated overall</p>
+            <p className="text-sm text-muted-foreground">
+              {totalComplete}% translated overall
+              {needsReviewCount > 0 && <> · <span className="text-warning">{needsReviewCount} needs review</span></>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={busy !== null} onClick={handleExport} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">Export {activeNs}.json</span>
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleImportFile(f);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => fileInputRef.current?.click()}
+              className="gap-1.5"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span className="text-xs">Import {activeNs}.json</span>
+            </Button>
           </div>
         </div>
 
@@ -151,14 +244,30 @@ export default function EditTranslationsPage() {
           </TabsList>
         </Tabs>
 
-        <div className="relative">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search keys or English text…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="h-4 w-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search keys or English text…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="ps-9"
+            />
+          </div>
+          <Button
+            variant={needsReviewOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => setNeedsReviewOnly((v) => !v)}
+            className="gap-1.5"
+          >
+            <AlertCircle className="h-3.5 w-3.5" />
+            <span className="text-xs">Needs review only</span>
+            {needsReviewCount > 0 && (
+              <Badge variant={needsReviewOnly ? "secondary" : "outline"} className="ms-1 text-[10px] h-5">
+                {needsReviewCount}
+              </Badge>
+            )}
+          </Button>
         </div>
 
         <Card>

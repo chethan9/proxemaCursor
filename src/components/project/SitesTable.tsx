@@ -33,6 +33,8 @@ import { useDeleteStore } from "@/hooks/queries/useStores";
 import { useToast } from "@/hooks/use-toast";
 import { IncompleteSiteDialog } from "./IncompleteSiteDialog";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 
 interface Props {
   stores: StoreWithClient[];
@@ -49,15 +51,16 @@ const ASPECT_ICON: Record<string, typeof Package> = {
   categories: FolderTree, tags: Tag, coupons: Ticket,
 };
 
-const formatDate = (dateString: string | null) => {
+const formatDate = (dateString: string | null, locale?: string) => {
   if (!dateString) return "Never";
-  return new Date(dateString).toLocaleDateString("en-US", {
+  return formatDateTime(dateString, locale, {
     month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 };
 
 export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selectedIds, onToggleSelect }: Props) {
   const router = useRouter();
+  const { i18n } = useTranslation();
   const qc = useQueryClient();
   const { toast } = useToast();
   const { isSuperAdmin } = useAuth();
@@ -228,7 +231,7 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selec
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{isIncomplete ? "—" : formatDate(store.last_sync_at)}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{isIncomplete ? "—" : formatDate(store.last_sync_at, i18n.language)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 justify-end">
                         {isIncomplete ? (

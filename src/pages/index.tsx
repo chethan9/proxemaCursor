@@ -11,6 +11,8 @@ import { useStores } from "@/hooks/queries/useStores";
 import { useSyncRuns } from "@/hooks/queries/useSyncRuns";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useBranding } from "@/contexts/BrandingProvider";
+import { useTranslation } from "next-i18next";
+import { formatDate, formatNumber, formatTime } from "@/lib/format-number";
 import {
   PieChart,
   Pie,
@@ -33,6 +35,7 @@ export default function Dashboard() {
   const { data: stores = [], isLoading: sLoading } = useStores();
   const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
   const { brandName } = useBranding();
+  const { i18n } = useTranslation();
 
   const loading = sLoading || rLoading;
 
@@ -102,7 +105,7 @@ export default function Dashboard() {
   const aspectChartData = Object.values(syncsByAspect);
 
   const syncsByDay = syncRuns.reduce((acc, run) => {
-    const date = new Date(run.started_at || "").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const date = formatDate(run.started_at || "", i18n.language, { month: "short", day: "numeric" });
     if (!acc[date]) acc[date] = { date, successful: 0, failed: 0 };
     if (run.status === "completed") acc[date].successful++;
     else if (run.status === "failed") acc[date].failed++;
@@ -174,7 +177,7 @@ export default function Dashboard() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalRecords.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{formatNumber(stats.totalRecords, i18n.language)}</div>
                 <p className="text-xs text-muted-foreground">Total records processed</p>
               </CardContent>
             </Card>
@@ -421,7 +424,7 @@ export default function Dashboard() {
                               <span className="capitalize">{run.aspect}</span>
                               <span>•</span>
                               <Clock className="h-3 w-3" />
-                              <span>{new Date(run.started_at || "").toLocaleTimeString()}</span>
+                              <span>{formatTime(run.started_at || "", i18n.language)}</span>
                             </div>
                           </div>
                           <StatusBadge

@@ -24,7 +24,18 @@
     "syncRuns": "عمليات المزامنة",
     "webhooks": "الويب هوك",
     "apiManagement": "إدارة الـ API",
-    "moreSites": "+{{count}} موقع إضافي"
+    "moreSites": "+{{count}} موقع إضافي",
+    "billingOverview": "Overview",
+    "webhooksActivity": "Activity",
+    "projects": "Projects",
+    "configuration": "Configuration",
+    "users": "Users",
+    "roles": "Roles",
+    "paymentMethods": "Payment Methods",
+    "plansPricing": "Plans",
+    "adminPaymentGateways": "Payment Gateways",
+    "adminPaymentLogs": "Payment Logs",
+    "adminActivity": "Activity Log"
   },
   "siteNavGroups": {
     "Catalog": "الكتالوج",
@@ -32,7 +43,8 @@
     "Analytics": "التحليلات",
     "Developer": "المطوّر",
     "Administration": "الإدارة",
-    "Settings": "الإعدادات"
+    "Settings": "الإعدادات",
+    "Main": "Main"
   },
   "userMenu": {
     "user": "المستخدم",
@@ -160,7 +172,12 @@
     "planLimitReached": "تم بلوغ حد الخطة",
     "failedToCreate": "فشل إنشاء الموقع",
     "upgrade": "ترقية",
-    "invalidUrl": "رابط غير صحيح"
+    "invalidUrl": "رابط غير صحيح",
+    "duplicateTitle": "Site already exists",
+    "duplicateDesc": "<strong>{{name}}</strong> is already connected with this URL. Adding a duplicate will count toward your plan's site quota and may cause sync conflicts.",
+    "duplicateConfirmLabel": "Type <strong>ADD ANYWAY</strong> to confirm:",
+    "duplicateConfirmPlaceholder": "ADD ANYWAY",
+    "addDuplicate": "Add duplicate site"
   },
   "editSite": {
     "title": "تعديل الموقع",
@@ -246,5 +263,66 @@
       "lastSync": "آخر مزامنة",
       "created": "تاريخ الإنشاء"
     }
+  },
+  "siteLayout": {
+    "siteNotFound": {
+      "title": "الموقع لم يعد موجوداً",
+      "description": "جارٍ إعادة التوجيه إلى مشاريعك"
+    }
+  },
+  "appNavGroups": {
+    "Overview": "Overview",
+    "Management": "Management",
+    "Stores": "Stores",
+    "Developer": "Developer",
+    "Billing": "Billing",
+    "Administration": "Administration",
+    "System": "System",
+    "Unassigned (new)": "Unassigned (new)"
+  },
+  "sidebar": {
+    "primaryNav": "Primary navigation",
+    "userMenu": "User menu",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "locked": "Sidebar locked",
+    "lockExpanded": "Lock sidebar expanded",
+    "unlock": "Unlock sidebar",
+    "keepExpanded": "Keep sidebar expanded",
+    "searchSites": "Search sites...",
+    "noSitesFound": "No sites found.",
+    "siteCount_one": "{{count}} site",
+    "siteCount_other": "{{count}} sites",
+    "moreSitesShow": "Show {{count}} more sites",
+    "moreSitesCount_one": "+{{count}} more site",
+    "moreSitesCount_other": "+{{count}} more sites",
+    "closePanel": "Close panel",
+    "panelMenu": "{{name}} menu"
+  },
+  "siteSwitcher": {
+    "switchSite": "Switch site",
+    "selectSite": "Select site…",
+    "searchSites": "Search sites…",
+    "noSitesFound": "No sites found",
+    "siteCount_one": "{{count}} site",
+    "siteCount_other": "{{count}} sites"
+  },
+  "bulkJobsBadge": {
+    "running_one": "{{count}} job running",
+    "running_other": "{{count}} jobs running",
+    "completed_one": "{{count}} recently completed",
+    "completed_other": "{{count}} recently completed"
+  },
+  "errors": {
+    "unknown": "Unknown",
+    "unknownError": "Unknown error",
+    "loadFailed": "Failed to load",
+    "saveFailed": "Save failed"
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None"
   }
 }

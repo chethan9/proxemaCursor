@@ -10,6 +10,8 @@ import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, XCircle, Clock, Search } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { formatDateTime } from "@/lib/format-number";
 
 type PaymentLog = {
   id: string;
@@ -24,6 +26,7 @@ type PaymentLog = {
 
 export default function PaymentLogsPage() {
   const router = useRouter();
+  const { i18n } = useTranslation();
   const { profile, isSuperAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [gatewayFilter, setGatewayFilter] = useState<string>("all");
@@ -134,7 +137,7 @@ export default function PaymentLogsPage() {
                   {filteredLogs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-mono text-xs">
-                        {new Date(log.created_at).toLocaleString()}
+                        {formatDateTime(log.created_at, i18n.language)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{log.gateway}</Badge>

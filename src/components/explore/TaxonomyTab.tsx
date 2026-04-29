@@ -1,5 +1,6 @@
 import { useState, Fragment, useRef } from "react";
 import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 import { ChevronRight, ChevronDown, Search, Download, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import { exportCsv } from "@/lib/exportCsv";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
-import { useLoadingEffect, ProgressSlot } from "@/contexts/LoadingProvider";
+import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -48,7 +49,7 @@ const SORT_OPTIONS: { field: TaxonomySortField; direction: TaxonomySortDirection
 ];
 
 export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }: Props) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const { toast } = useToast();
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
@@ -68,7 +69,6 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
   const total = pageRes?.count || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const showRefetchOverlay = isFetching && !isLoading && items.length > 0;
-  useLoadingEffect(isFetching);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({
     searchRef: searchInputRef,
@@ -175,7 +175,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
             <div className="flex items-center gap-2 rounded-md border border-border bg-background h-9 px-2.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Icon className="h-3.5 w-3.5" />
-                <span className="font-medium">{total.toLocaleString()}</span>
+                <span className="font-medium">{formatNumber(total, i18n.language)}</span>
               </div>
               {total > 0 && (
                 <>
@@ -193,7 +193,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
+                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {formatNumber(total, i18n.language)}
                     </span>
                     <div className="flex items-center gap-0.5">
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ChevronRight className="h-3.5 w-3.5 rotate-180" /></Button>

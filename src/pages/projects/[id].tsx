@@ -46,6 +46,8 @@ import { DeletedRecordsArchive } from "@/components/project/DeletedRecordsArchiv
 import { formatDate, formatDuration, formatRelativeTime, formatCurrency } from "@/components/project/formatters";
 import { SYNC_INTERVALS } from "@/components/project/constants";
 import { useSiteLiveCounts } from "@/hooks/queries/useSiteLiveCounts";
+import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 interface SyncProgress { current: number; total: number; aspect: string; }
 
@@ -54,6 +56,7 @@ const CACHE_TTL = 30000;
 
 export default function SiteWorkspacePage() {
   const router = useRouter();
+  const { i18n } = useTranslation();
   const { id } = router.query;
   const [store, setStore] = useState<Store | null>(null);
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
@@ -93,7 +96,11 @@ export default function SiteWorkspacePage() {
 
   const getExtendedDataCounts = async (storeId: string) => {
     const [p, o, c, cat, tg, cp] = await Promise.all([
-      supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId),
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", storeId)
+        .or("type.is.null,type.neq.variation"),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId),
       supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", storeId),
       supabase.from("categories").select("id", { count: "exact", head: true }).eq("store_id", storeId),
@@ -134,12 +141,12 @@ export default function SiteWorkspacePage() {
         const total = recent.reduce((s, r) => s + (r.records_processed || 0), 0);
         setSyncProgress({
           current: Math.min(done, 6), total: 6,
-          aspect: running ? `Syncing ${running.aspect}... (${total.toLocaleString()} records)` : "Syncing...",
+          aspect: running ? `Syncing ${running.aspect}... (${formatNumber(total, i18n.language)} records)` : "Syncing...",
         });
       } else if (!hasRunning && syncing) {
         const recent = runsData.slice(0, 6);
         const total = recent.reduce((s, r) => s + (r.records_processed || 0), 0);
-        setSyncProgress({ current: 6, total: 6, aspect: `Done — ${total.toLocaleString()} records synced` });
+        setSyncProgress({ current: 6, total: 6, aspect: `Done — ${formatNumber(total, i18n.language)} records synced` });
         setTimeout(() => { setSyncing(false); setSyncProgress(null); }, 3000);
       }
     } catch (error) {
@@ -199,7 +206,7 @@ export default function SiteWorkspacePage() {
       const r = await res.json();
       setSyncProgress({
         current: 6, total: 6,
-        aspect: `Done — ${r.totals?.processed?.toLocaleString() || 0} records (${r.totals?.created || 0} new, ${r.totals?.updated || 0} updated)`,
+        aspect: `Done — ${formatNumber(r.totals?.processed || 0, i18n.language)} records (${r.totals?.created || 0} new, ${r.totals?.updated || 0} updated)`,
       });
       await loadData();
     } catch (error) {
@@ -228,7 +235,7 @@ export default function SiteWorkspacePage() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Sync failed"); }
       const r = await res.json();
       const ar = r.results?.[aspect];
-      setSyncProgress({ current: 1, total: 1, aspect: `Done — ${ar?.processed?.toLocaleString() || 0} ${aspect} synced` });
+      setSyncProgress({ current: 1, total: 1, aspect: `Done — ${formatNumber(ar?.processed || 0, i18n.language)} ${aspect} synced` });
       await loadData();
     } catch (error) {
       setSyncProgress({ current: 0, total: 1, aspect: error instanceof Error ? error.message : "Sync failed" });
@@ -269,7 +276,7 @@ export default function SiteWorkspacePage() {
       if (!res.ok) throw new Error(data.message || "Trigger failed");
       const mine = data.results?.find((r: { store_id: string; status: string; records_processed?: number }) => r.store_id === store?.id);
       setCronResult(mine
-        ? `Scheduler ran. This site: ${mine.status} (${mine.records_processed?.toLocaleString() || 0} records)`
+        ? `Scheduler ran. This site: ${mine.status} (${formatNumber(mine.records_processed || 0, i18n.language)} records)`
         : `Scheduler ran but this site was not due yet (${data.stores_synced} store(s) processed). Next sync: ${store?.next_sync_at ? formatDate(store.next_sync_at) : "not scheduled"}.`);
       await loadData(); await loadCronLogs();
     } catch (err) {

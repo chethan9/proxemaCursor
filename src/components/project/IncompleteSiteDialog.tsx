@@ -58,7 +58,7 @@ export function IncompleteSiteDialog({ open, onOpenChange, store, clients, isSup
       onSaved?.();
       onOpenChange(false);
     } catch (e) {
-      toast({ title: t("incompleteSite.updateFailed"), description: e instanceof Error ? e.message : "Unknown", variant: "destructive" });
+      toast({ title: t("incompleteSite.updateFailed"), description: e instanceof Error ? e.message : t("errors.unknownError"), variant: "destructive" });
     } finally {
       setSaving(false);
     }

@@ -19,6 +19,8 @@ type Locale = {
   enabled: boolean;
   is_default: boolean;
   updated_at: string;
+  translation_count?: number;
+  needs_review_count?: number;
 };
 
 export default function AdminLanguagesPage() {
@@ -88,6 +90,7 @@ export default function AdminLanguagesPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Code</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Language</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Direction</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Translations</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Enabled</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Default</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
@@ -103,6 +106,16 @@ export default function AdminLanguagesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant="outline" className="text-[10px] uppercase">{l.dir}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant="secondary" className="text-[10px]">{l.translation_count ?? 0} keys</Badge>
+                          {(l.needs_review_count ?? 0) > 0 && (
+                            <Badge variant="outline" className="text-[10px] text-warning border-warning">
+                              {l.needs_review_count} need review
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Switch

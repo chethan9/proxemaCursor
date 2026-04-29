@@ -251,7 +251,10 @@
       "inventory": "المخزون والشحن",
       "variants": "المتغيرات",
       "attributes": "الخصائص",
-      "advanced": "متقدم"
+      "advanced": "متقدم",
+      "basicInfo": "Basic info",
+      "pricingTax": "Pricing & tax",
+      "inventoryShipping": "Inventory & shipping"
     },
     "fields": {
       "name": "اسم المنتج",
@@ -268,7 +271,16 @@
       "tags": "الوسوم",
       "brands": "العلامات التجارية",
       "images": "الصور",
-      "featuredImage": "الصورة الرئيسية"
+      "featuredImage": "الصورة الرئيسية",
+      "slug": "Slug",
+      "stockStatus": "Stock status",
+      "length": "Length",
+      "width": "Width",
+      "height": "Height",
+      "brand": "Brand",
+      "featured": "Featured product",
+      "virtual": "Virtual",
+      "downloadable": "Downloadable"
     },
     "actions": {
       "save": "حفظ المنتج",
@@ -280,12 +292,31 @@
       "saved": "تم حفظ المنتج",
       "saveError": "فشل حفظ المنتج",
       "unsavedChanges": "لديك تغييرات غير محفوظة"
+    },
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saveAndClose": "Save & close",
+    "cancel": "Cancel",
+    "discardWarning": "You have unsaved changes. Discard them?",
+    "savedToast": "Product saved",
+    "saveFailedToast": "Save failed",
+    "preview": {
+      "title": "Live preview",
+      "subtitle": "How this product looks in your storefront"
     }
   },
   "orders": {
     "title": "الطلبات",
     "search": "ابحث عن الطلبات بالرقم أو العميل أو البريد...",
-    "empty": "لا توجد طلبات بعد",
+    "empty": {
+      "title": "لا توجد طلبات بعد",
+      "description": "عندما يقوم العملاء بإنشاء طلبات على متجرك، ستظهر هنا لإدارتها.",
+      "noMatch": "لا توجد طلبات تطابق التصفية",
+      "noMatchDescription": "جرّب مسح التصفية أو تعديلها لرؤية نتائج أكثر.",
+      "loading": "جاري تحميل الطلبات…",
+      "syncing": "جاري مزامنة طلباتك…",
+      "syncProgress": "{{percent}}% مكتمل — ستظهر الطلبات الجديدة تلقائياً"
+    },
     "columns": {
       "order": "الطلب",
       "customer": "العميل",
@@ -343,15 +374,6 @@
       "orderNumDesc": "رقم الطلب تنازلي",
       "recentlySynced": "تمت المزامنة مؤخراً"
     },
-    "empty": {
-      "title": "لا توجد طلبات بعد",
-      "description": "عندما يقوم العملاء بإنشاء طلبات على متجرك، ستظهر هنا لإدارتها.",
-      "noMatch": "لا توجد طلبات تطابق التصفية",
-      "noMatchDescription": "جرّب مسح التصفية أو تعديلها لرؤية نتائج أكثر.",
-      "loading": "جاري تحميل الطلبات…",
-      "syncing": "جاري مزامنة طلباتك…",
-      "syncProgress": "{{percent}}% مكتمل — ستظهر الطلبات الجديدة تلقائياً"
-    },
     "bulk": {
       "selected": "محدد",
       "maxLimit": "(الحد الأقصى {{max}} لكل مهمة)",
@@ -388,6 +410,11 @@
       "statusChange": "مجدول لتغيير الحالة",
       "scheduledGeneric": "مجدول: {{action}}",
       "lockedTooltip": "هذا الطلب في طابور مهمة جماعية. التعديلات معطلة حتى انتهائها."
+    },
+    "toast": {
+      "markedComplete": "Order marked complete",
+      "updateFailed": "Failed to update",
+      "unknownError": "Unknown error"
     }
   },
   "orderDetail": {
@@ -885,10 +912,27 @@
     }
   },
   "banners": {
-    "initialSync": "المزامنة الأولية قيد التشغيل — قد لا تكون البيانات كاملة بعد.",
+    "initialSync": {
+      "title": "المزامنة الأولية قيد التقدم",
+      "subtitle": "نقوم حالياً باستيراد بيانات متجرك. يمكنك متابعة استخدام التطبيق، وسيختفي هذا التنبيه عند اكتمال المزامنة.",
+      "progress": "{{done}} من {{total}} عنصر"
+    },
     "siteBlocked": "تم تعطيل هذا الموقع بسبب مشاكل في الاتصال. حلّ المشكلة لاستئناف المزامنة.",
     "syncLocked": "المزامنة معلقة — اشتراكك في فترة سماح أو ملغى.",
-    "incompleteOnboarding": "أكمل إعداد الموقع لتفعيل جميع الميزات."
+    "incompleteOnboarding": "أكمل إعداد الموقع لتفعيل جميع الميزات.",
+    "syncLock": {
+      "title": "Sync is currently locked",
+      "subtitle": "Editing is disabled while a critical sync runs."
+    },
+    "blocked": {
+      "title": "Site connection blocked",
+      "subtitle": "We can't reach your WooCommerce store. Check credentials and firewall settings."
+    },
+    "incomplete": {
+      "title": "Site setup incomplete",
+      "subtitle": "Finish onboarding to start syncing data.",
+      "continue": "Continue setup"
+    }
   },
   "common": {
     "loading": "جاري التحميل…",
@@ -897,6 +941,211 @@
     "page": "صفحة",
     "of": "من",
     "rowsPerPage": "صفوف لكل صفحة",
-    "showingResults": "عرض {{from}}–{{to}} من {{total}}"
+    "showingResults": "عرض {{from}}–{{to}} من {{total}}",
+    "saving": "Saving…",
+    "noResults": "No results match your filters.",
+    "tryClearing": "Try clearing filters or searching with different terms.",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "viewMore": "View more",
+    "viewLess": "View less",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "syncRuns": {
+    "title": "Sync Runs",
+    "subtitle": "Complete history of all sync operations across all sites",
+    "exportCsv": "Export CSV",
+    "clearFailed": "Clear Failed",
+    "clearAll": "Clear All",
+    "refresh": "Refresh",
+    "clearFailedTitle": "Clear failed sync runs?",
+    "clearFailedDesc": "This will permanently delete all {{count}} failed sync run records across all sites.",
+    "clearAllTitle": "Clear all sync runs?",
+    "clearAllDesc": "This will permanently delete all {{count}} sync run records across all sites. This cannot be undone.",
+    "cancel": "Cancel",
+    "confirmClearFailed": "Clear Failed Runs",
+    "confirmClearAll": "Delete All Runs",
+    "stats": {
+      "total": "Total Runs",
+      "completed": "Completed",
+      "failed": "Failed",
+      "running": "Running",
+      "records": "Records Processed"
+    },
+    "errorsHeading": "Recent Errors ({{count}} on this page)",
+    "unknownError": "Unknown error",
+    "filters": {
+      "search": "Search error messages...",
+      "allStores": "All Stores",
+      "allStatus": "All Status",
+      "allAspects": "All Aspects",
+      "from": "From",
+      "to": "To",
+      "clearFilters": "Clear filters"
+    },
+    "status": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "running": "Running",
+      "pending": "Pending"
+    },
+    "aspects": {
+      "products": "Products",
+      "orders": "Orders",
+      "customers": "Customers",
+      "categories": "Categories",
+      "tags": "Tags",
+      "coupons": "Coupons"
+    },
+    "table": {
+      "store": "Store",
+      "aspect": "Aspect",
+      "status": "Status",
+      "processed": "Processed",
+      "created": "Created",
+      "updated": "Updated",
+      "error": "Error",
+      "started": "Started",
+      "duration": "Duration",
+      "actions": "Actions"
+    },
+    "loadMore": "Load more",
+    "noRuns": "No sync runs yet.",
+    "details": {
+      "title": "Sync Run Details",
+      "description": "Complete information about this sync run.",
+      "diagnostic": "Run connection diagnostic"
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "subtitle": "Manage webhook subscriptions across your sites",
+    "register": "Register webhooks",
+    "registering": "Registering…",
+    "registered": "Webhooks registered",
+    "registerFailed": "Failed to register webhooks",
+    "diagnose": "Diagnose",
+    "deliveries": "Deliveries",
+    "site": "Site",
+    "topic": "Topic",
+    "status": "Status",
+    "lastDelivery": "Last delivery",
+    "actions": "Actions",
+    "active": "Active",
+    "paused": "Paused",
+    "disabled": "Disabled",
+    "noWebhooks": "No webhooks configured.",
+    "viewDeliveries": "View deliveries",
+    "removeFailed": "Failed to remove webhook",
+    "removed": "Webhook removed",
+    "remove": "Remove",
+    "selectStoreToRegister": "Select a store to register webhooks",
+    "registerForStore": "Register webhooks for {{name}}",
+    "selectTopics": "Select topics",
+    "noStoresYet": "Add a store first to register webhooks.",
+    "activity": {
+      "title": "Webhook Activity",
+      "subtitle": "Recent webhook deliveries from your sites",
+      "search": "Search deliveries…",
+      "allTopics": "All topics",
+      "allStatuses": "All statuses",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "pending": "Pending",
+      "noDeliveries": "No webhook deliveries yet.",
+      "viewPayload": "View payload",
+      "retry": "Retry"
+    }
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Manage client accounts and access",
+    "addClient": "Add client",
+    "search": "Search clients…",
+    "name": "Name",
+    "email": "Email",
+    "sites": "Sites",
+    "users": "Users",
+    "subscription": "Subscription",
+    "createdAt": "Created",
+    "actions": "Actions",
+    "noClients": "No clients yet.",
+    "noMatches": "No clients match your filters.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete client?",
+    "deleteConfirmDesc": "Permanently remove <strong>{{name}}</strong> and unassign all sites and users.",
+    "cancel": "Cancel",
+    "deleted": "Client deleted",
+    "deleteFailed": "Delete failed",
+    "saved": "Client saved",
+    "saveFailed": "Save failed",
+    "dialog": {
+      "addTitle": "Add client",
+      "editTitle": "Edit client",
+      "namePlaceholder": "Acme Inc.",
+      "emailPlaceholder": "billing@acme.com",
+      "save": "Save",
+      "create": "Create"
+    }
+  },
+  "templates": {
+    "title": "Templates",
+    "subtitle": "Manage your invoice, order, and label templates",
+    "newTemplate": "New template",
+    "search": "Search templates…",
+    "type": "Type",
+    "name": "Name",
+    "updatedAt": "Updated",
+    "actions": "Actions",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "preview": "Preview",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "duplicated": "Template duplicated",
+    "duplicateFailed": "Duplicate failed",
+    "deleted": "Template deleted",
+    "deleteFailed": "Delete failed",
+    "published": "Template published",
+    "unpublished": "Template unpublished",
+    "publishFailed": "Publish failed",
+    "deleteConfirmTitle": "Delete template?",
+    "deleteConfirmDesc": "This permanently deletes <strong>{{name}}</strong>.",
+    "cancel": "Cancel",
+    "noTemplates": "No templates yet.",
+    "createFirst": "Create your first template"
+  },
+  "apiManagement": {
+    "title": "API Management",
+    "subtitle": "Issue and revoke API tokens for programmatic access",
+    "newToken": "New token",
+    "name": "Name",
+    "scopes": "Scopes",
+    "lastUsed": "Last used",
+    "createdAt": "Created",
+    "expiresAt": "Expires",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "expired": "Expired",
+    "revoked": "Revoked",
+    "revoke": "Revoke",
+    "revokeConfirmTitle": "Revoke this token?",
+    "revokeConfirmDesc": "<strong>{{name}}</strong> will stop working immediately. This cannot be undone.",
+    "revoked_toast": "Token revoked",
+    "revokeFailed": "Revoke failed",
+    "created_toast": "Token created",
+    "createFailed": "Create token failed",
+    "copyToken": "Copy token",
+    "copied": "Copied to clipboard",
+    "noTokens": "No tokens yet.",
+    "tokenSavedOnce": "Save this token now — it will not be shown again.",
+    "cancel": "Cancel"
   }
 }

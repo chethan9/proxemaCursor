@@ -3,8 +3,6 @@ import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation, Trans } from "next-i18next";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { SettingsLayout } from "@/components/layout/SettingsLayout";
-import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +33,7 @@ const PERMISSION_GROUPS: Record<string, string[]> = {
   Settings: ["settings.read", "settings.write"],
 };
 
-function RolesContent() {
+export default function RolesPage() {
   const { t } = useTranslation("settings");
   const { toast } = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
@@ -51,7 +49,9 @@ function RolesContent() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function openCreate() {
     setEditing(null);
@@ -112,117 +112,109 @@ function RolesContent() {
   }
 
   return (
-    <SettingsLayout>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("roles.title")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("roles.subtitle")}</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t("roles.newRole")}
-        </Button>
-      </div>
-
-      <div className="grid gap-4">
-        {loading ? null : roles.map((role) => (
-          <Card key={role.id}>
-            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  {role.name}
-                  {role.is_system ? <Badge variant="secondary" className="text-[10px]">{t("roles.system")}</Badge> : null}
-                </CardTitle>
-                {role.description ? <p className="text-sm text-muted-foreground mt-1">{role.description}</p> : null}
-              </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(role)} aria-label={t("roles.editPermissions")}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                {!role.is_system && (
-                  <Button variant="ghost" size="sm" onClick={() => remove(role)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs text-muted-foreground mb-2">
-                {role.permissions?.includes("*")
-                  ? t("roles.allPermissions")
-                  : role.permissions?.length
-                  ? t("roles.permissionCount", { count: role.permissions.length })
-                  : t("roles.noPermissions")}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {(role.permissions ?? []).slice(0, 12).map((p) => (
-                  <Badge key={p} variant="outline" className="text-[10px] font-mono">{p}</Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editing ? <Trans i18nKey="roles.dialog.editTitle" t={t} values={{ name: editing.name }} /> : t("roles.dialog.createTitle")}
-            </DialogTitle>
-            <DialogDescription>
-              {editing ? t("roles.dialog.editDescription") : t("roles.dialog.createDescription")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium block mb-1">{t("roles.dialog.name")}</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("roles.dialog.namePlaceholder")} />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1">{t("roles.dialog.description")}</label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("roles.dialog.descriptionPlaceholder")} rows={2} />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-2">{t("roles.dialog.permissions")}</label>
-              <div className="grid grid-cols-2 gap-3 max-h-72 overflow-y-auto border rounded-md p-3">
-                {Object.entries(PERMISSION_GROUPS).map(([group, perms]) => (
-                  <div key={group}>
-                    <div className="text-xs font-semibold text-muted-foreground mb-1">{t(`roles.groups.${group}`, { defaultValue: group })}</div>
-                    <div className="space-y-1">
-                      {perms.map((perm) => (
-                        <label key={perm} className="flex items-center gap-2 text-xs cursor-pointer">
-                          <Checkbox checked={form.permissions.includes(perm)} onCheckedChange={() => togglePermission(perm)} />
-                          <span className="font-mono">{perm}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+    <AppLayout title={t("roles.title")} requireSuperAdmin>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">{t("roles.title")}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t("roles.subtitle")}</p>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowDialog(false)}>{t("roles.dialog.cancel")}</Button>
-            <Button onClick={save}>{editing ? t("roles.dialog.save") : t("roles.dialog.create")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </SettingsLayout>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("roles.newRole")}
+          </Button>
+        </div>
+
+        <div className="grid gap-4">
+          {loading ? null : roles.map((role) => (
+            <Card key={role.id}>
+              <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {role.name}
+                    {role.is_system ? <Badge variant="secondary" className="text-[10px]">{t("roles.system")}</Badge> : null}
+                  </CardTitle>
+                  {role.description ? <p className="text-sm text-muted-foreground mt-1">{role.description}</p> : null}
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(role)} aria-label={t("roles.editPermissions")}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  {!role.is_system && (
+                    <Button variant="ghost" size="sm" onClick={() => remove(role)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xs text-muted-foreground mb-2">
+                  {role.permissions?.includes("*")
+                    ? t("roles.allPermissions")
+                    : role.permissions?.length
+                    ? t("roles.permissionCount", { count: role.permissions.length })
+                    : t("roles.noPermissions")}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(role.permissions ?? []).slice(0, 12).map((p) => (
+                    <Badge key={p} variant="outline" className="text-[10px] font-mono">{p}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editing ? <Trans i18nKey="roles.dialog.editTitle" t={t} values={{ name: editing.name }} /> : t("roles.dialog.createTitle")}
+              </DialogTitle>
+              <DialogDescription>
+                {editing ? t("roles.dialog.editDescription") : t("roles.dialog.createDescription")}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1">{t("roles.dialog.name")}</label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("roles.dialog.namePlaceholder")} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">{t("roles.dialog.description")}</label>
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("roles.dialog.descriptionPlaceholder")} rows={2} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-2">{t("roles.dialog.permissions")}</label>
+                <div className="grid grid-cols-2 gap-3 max-h-72 overflow-y-auto border rounded-md p-3">
+                  {Object.entries(PERMISSION_GROUPS).map(([group, perms]) => (
+                    <div key={group}>
+                      <div className="text-xs font-semibold text-muted-foreground mb-1">{t(`roles.groups.${group}`, { defaultValue: group })}</div>
+                      <div className="space-y-1">
+                        {perms.map((perm) => (
+                          <label key={perm} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <Checkbox checked={form.permissions.includes(perm)} onCheckedChange={() => togglePermission(perm)} />
+                            <span className="font-mono">{perm}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setShowDialog(false)}>{t("roles.dialog.cancel")}</Button>
+              <Button onClick={save}>{editing ? t("roles.dialog.save") : t("roles.dialog.create")}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AppLayout>
   );
 }
 
-export default function RolesPage() {
-  return (
-    <AuthGuard requireSuperAdmin>
-      <AppLayout>
-        <RolesContent />
-      </AppLayout>
-    </AuthGuard>
-  );
-}
-
-export const getStaticProps: GetServerSideProps = async ({ locale }) => ({
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
   props: {
     ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
   },

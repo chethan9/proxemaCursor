@@ -16,7 +16,7 @@ export default function Document() {
         {/* No-flash locale dir: read NEXT_LOCALE cookie and set lang+dir before paint. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=document.cookie.match(/(?:^|;)\\s*NEXT_LOCALE=([^;]+)/);var l=m?decodeURIComponent(m[1]):'en';document.documentElement.lang=l;document.documentElement.dir=(l==='ar')?'rtl':'ltr';}catch(e){}})();`,
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|;)\\s*NEXT_LOCALE=([^;]+)/);var l=m?decodeURIComponent(m[1]):'en';document.documentElement.lang=l;document.documentElement.dir=(l&&l.toLowerCase().indexOf('ar')===0)?'rtl':'ltr';}catch(e){}})();`,
           }}
         />
         {/*

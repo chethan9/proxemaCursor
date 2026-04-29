@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "next-i18next";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingProvider";
@@ -99,7 +100,7 @@ function serialize(tree: ResolvedMenuNode[]): string {
 }
 
 function extractActiveSiteId(asPath: string): string | null {
-  const m = asPath.match(/^\/(?:sites|explore)\/([^/?#]+)/);
+  const m = asPath.match(/^\/sites\/([^/?#]+)/);
   return m ? m[1] : null;
 }
 
@@ -288,6 +289,72 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   const overflowCount = Math.max(0, sortedSites.length - visibleSites.length);
 
+  /** Immediate highlight while Next.js loads the route chunk (pathname/asPath update late). */
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const clear = () => setPendingPath(null);
+    router.events.on("routeChangeComplete", clear);
+    router.events.on("routeChangeError", clear);
+    return () => {
+      router.events.off("routeChangeComplete", clear);
+      router.events.off("routeChangeError", clear);
+    };
+  }, [router.events]);
+
+  useEffect(() => {
+    if (!pendingPath) return;
+    const cur = router.asPath.split("?")[0].split("#")[0];
+    const pend = pendingPath.split("?")[0].split("#")[0];
+    if (cur === pend || cur.startsWith(pend + "/")) setPendingPath(null);
+  }, [router.asPath, pendingPath]);
+
+  /** Paint active state immediately (same idea as SiteSidebar); avoids waiting for router.asPath. */
+  const beginSidebarNavigation = useCallback((href: string) => {
+    const p = href.split("?")[0].split("#")[0];
+    flushSync(() => setPendingPath(p));
+  }, []);
+
+  const prefetchNavRoute = useCallback(
+    (href: string | undefined) => {
+      if (!href) return;
+      void router.prefetch(href.split("?")[0].split("#")[0]);
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!menuReady || menuTree.length === 0) return;
+    const hrefs: string[] = [];
+    const walk = (nodes: ResolvedMenuNode[]) => {
+      for (const n of nodes) {
+        if (n.type === "item" && n.href) hrefs.push(n.href);
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(menuTree);
+    const unique = [...new Set(hrefs)];
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      for (const href of unique) void router.prefetch(href);
+    };
+    const ric = window.requestIdleCallback?.bind(window);
+    if (ric) {
+      const id = ric(run, { timeout: 1500 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback?.(id);
+      };
+    }
+    const t = window.setTimeout(run, 1);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [menuReady, menuTree, router]);
+
   const toggle = () => {
     if (forceCollapsed) return;
     const next = !collapsedPref;
@@ -301,16 +368,46 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (typeof window !== "undefined") localStorage.setItem("sidebar-locked", next ? "1" : "0");
   };
 
+  /** All sidebar item hrefs — used so parent items are not active when a longer sibling path matches. */
+  const menuItemHrefs = useMemo(() => {
+    const hrefs: string[] = [];
+    const walk = (nodes: ResolvedMenuNode[]) => {
+      for (const n of nodes) {
+        if (n.type === "item" && n.href) hrefs.push(n.href);
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(menuTree);
+    return [...new Set(hrefs)];
+  }, [menuTree]);
+
   const isItemActive = (href: string) => {
-    if (href === "/settings/profile") return router.pathname.startsWith("/settings");
-    return router.pathname === href;
+    const base = (pendingPath ?? router.asPath).split("?")[0].split("#")[0];
+    // Top-level "Settings" links to profile but must not stay active on Administration
+    // routes that live under /settings (users, roles).
+    if (href === "/settings/profile") {
+      if (!base.startsWith("/settings")) return false;
+      if (base.startsWith("/settings/users") || base.startsWith("/settings/roles")) return false;
+      return true;
+    }
+    const pathMatches =
+      base === href || base.startsWith(href + "/") || router.pathname === href;
+    if (!pathMatches) return false;
+    // Same pattern as /settings vs /settings/users: /webhooks vs /webhooks/activity, /billing vs /billing/payment-methods
+    if (base === href || base.startsWith(href + "/")) {
+      for (const other of menuItemHrefs) {
+        if (other === href) continue;
+        if (!other.startsWith(href + "/")) continue;
+        if (base === other || base.startsWith(other + "/")) return false;
+      }
+    }
+    return true;
   };
 
   const APP_NAV_KEY_BY_ID: Record<string, string> = {
     "dashboard": "health",
     "clients": "clients",
     "sites": "projects",
-    "explore": "explore",
     "templates": "templates",
     "sync-runs": "syncRuns",
     "webhooks": "webhooks",
@@ -342,6 +439,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const link = (
       <Link
         href={node.href}
+        onClick={() => beginSidebarNavigation(node.href!)}
+        onMouseEnter={() => prefetchNavRoute(node.href)}
+        onFocus={() => prefetchNavRoute(node.href)}
         aria-current={active ? "page" : undefined}
         className={cn(
           "group relative flex items-center rounded-md text-[13px] font-medium transition-colors",
@@ -386,6 +486,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   value={`${site.name} ${site.url || ""}`}
                   onSelect={() => {
                     setSitePopoverOpen(false);
+                    beginSidebarNavigation(`/sites/${site.id}/home`);
                     router.push(`/sites/${site.id}/home`);
                   }}
                   className="gap-2"
@@ -411,6 +512,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
 
   async function handleLocaleChange(code: LocaleCode) {
     if (code === i18n.language) return;
+    const startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now());
     if (typeof document !== "undefined") {
       document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=31536000; SameSite=Lax`;
       document.documentElement.dir = getLocaleMeta(code).dir;
@@ -461,11 +563,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
               if (isOpen) {
                 setActivePanelId(null);
               } else if (firstChild?.href) {
+                beginSidebarNavigation(firstChild.href);
                 router.push(firstChild.href);
               } else {
                 setActivePanelId(node.id);
               }
             }}
+            onMouseEnter={() => firstChild?.href && prefetchNavRoute(firstChild.href)}
+            onFocus={() => firstChild?.href && prefetchNavRoute(firstChild.href)}
             aria-expanded={isOpen}
             className={cn(
               "relative w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
@@ -515,6 +620,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     <li key={child.id}>
                       <Link
                         href={child.href}
+                        onClick={() => beginSidebarNavigation(child.href!)}
+                        onMouseEnter={() => prefetchNavRoute(child.href)}
+                        onFocus={() => prefetchNavRoute(child.href)}
                         className={cn(
                           "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
                           active ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"
@@ -640,13 +748,14 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     {node.children?.map((c) => renderItem(c))}
                     {can(PERMISSIONS.SITES_VIEW) && visibleSites.map((site) => {
                       const href = `/sites/${site.id}/home`;
-                      const isActive = site.id === activeSiteId;
+                      const pendingSite = pendingPath?.match(/^\/sites\/([^/]+)/)?.[1];
+                      const isActive = pendingSite ? site.id === pendingSite : site.id === activeSiteId;
                       if (collapsed) {
                         return (
                           <li key={site.id}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Link href={href} onMouseEnter={() => prefetchStore(site.id)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
+                                <Link href={href} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                                   isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
                                   <span className={cn("absolute top-0.5 end-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
@@ -662,7 +771,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                       }
                       return (
                         <li key={site.id}>
-                          <Link href={href} onMouseEnter={() => prefetchStore(site.id)} aria-current={isActive ? "page" : undefined} className={cn(
+                          <Link href={href} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} aria-current={isActive ? "page" : undefined} className={cn(
                             "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
                             isActive
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -739,7 +848,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="end" className="w-56">
+            <DropdownMenuContent side="right" align="end" className="w-48">
               <DropdownMenuLabel>
                 <div>
                   <p className="text-sm font-medium">{profile?.full_name || t("userMenu.user", { defaultValue: "User" })}</p>
@@ -751,10 +860,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <Globe className="h-4 w-4 me-2" />
-                    <span>{t("userMenu.language")}</span>
-                    <span className="ms-auto text-xs text-muted-foreground">{currentLocaleMeta.nativeName}</span>
+                    <span className="truncate">{currentLocaleMeta.name}</span>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-52">
+                  <DropdownMenuSubContent className="w-44">
                     {visibleLocales.map((l) => (
                       <DropdownMenuItem key={l.code} onSelect={() => handleLocaleChange(l.code)}>
                         <span className="flex-1">{l.nativeName}</span>
@@ -819,6 +927,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   <li key={child.id}>
                     <Link
                       href={child.href}
+                      onClick={() => beginSidebarNavigation(child.href!)}
+                      onMouseEnter={() => prefetchNavRoute(child.href)}
+                      onFocus={() => prefetchNavRoute(child.href)}
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",

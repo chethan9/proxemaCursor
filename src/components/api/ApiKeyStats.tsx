@@ -1,5 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Key, Shield, Activity, Ban, TrendingUp } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { formatNumber } from "@/lib/format-number";
 
 interface ApiKeyStatsProps {
   totalKeys: number;
@@ -9,31 +11,32 @@ interface ApiKeyStatsProps {
 }
 
 export function ApiKeyStats({ totalKeys, activeKeys, totalCalls, revokedKeys }: ApiKeyStatsProps) {
+  const { i18n } = useTranslation();
   const stats = [
     {
       label: "Total Keys",
-      value: totalKeys.toLocaleString(),
+      value: formatNumber(totalKeys, i18n.language),
       icon: Key,
       iconClass: "text-slate-700 bg-slate-100",
       description: "Across all clients",
     },
     {
       label: "Active",
-      value: activeKeys.toLocaleString(),
+      value: formatNumber(activeKeys, i18n.language),
       icon: Shield,
       iconClass: "text-emerald-700 bg-emerald-50",
       description: `${totalKeys > 0 ? Math.round((activeKeys / totalKeys) * 100) : 0}% of total`,
     },
     {
       label: "API Calls",
-      value: totalCalls.toLocaleString(),
+      value: formatNumber(totalCalls, i18n.language),
       icon: Activity,
       iconClass: "text-blue-700 bg-blue-50",
       description: "Last 24 hours",
     },
     {
       label: "Revoked",
-      value: revokedKeys.toLocaleString(),
+      value: formatNumber(revokedKeys, i18n.language),
       icon: Ban,
       iconClass: "text-rose-700 bg-rose-50",
       description: "No longer active",

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 import { createRequire } from "module";
+import nextI18NextConfig from "./next-i18next.config.js";
 
 // Check if element-tagger is available
 function isElementTaggerAvailable() {
@@ -29,6 +30,13 @@ function getTurboRules() {
 
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: "/explore", destination: "/projects", permanent: true },
+      { source: "/explore/:id", destination: "/sites/:id/products", permanent: true },
+    ];
+  },
+  i18n: nextI18NextConfig.i18n,
   experimental: {
     turbo: {
       rules: getTurboRules(),

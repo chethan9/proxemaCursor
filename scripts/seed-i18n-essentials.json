@@ -1,0 +1,69 @@
+{
+  "_meta": "Hand-curated translations for the most user-visible UI strings. Seeded into Supabase translations table with needs_review=true. Use scripts/translate-i18n.mjs (LLM pipeline) for full coverage.",
+  "common": {
+    "nav": {
+      "home": { "es": "Inicio", "fr": "Accueil", "de": "Startseite", "pt": "Início", "hi": "होम", "zh": "首页", "ja": "ホーム", "ru": "Главная" },
+      "dashboard": { "es": "Panel", "fr": "Tableau de bord", "de": "Dashboard", "pt": "Painel", "hi": "डैशबोर्ड", "zh": "仪表板", "ja": "ダッシュボード", "ru": "Панель" },
+      "health": { "es": "Estado", "fr": "État", "de": "Status", "pt": "Estado", "hi": "स्थिति", "zh": "运行状况", "ja": "ヘルス", "ru": "Состояние" },
+      "clients": { "es": "Clientes", "fr": "Clients", "de": "Kunden", "pt": "Clientes", "hi": "ग्राहक", "zh": "客户", "ja": "クライアント", "ru": "Клиенты" },
+      "developer": { "es": "Desarrollador", "fr": "Développeur", "de": "Entwickler", "pt": "Desenvolvedor", "hi": "डेवलपर", "zh": "开发者", "ja": "開発者", "ru": "Разработчик" },
+      "administration": { "es": "Administración", "fr": "Administration", "de": "Verwaltung", "pt": "Administração", "hi": "प्रशासन", "zh": "管理", "ja": "管理", "ru": "Администрирование" },
+      "billing": { "es": "Facturación", "fr": "Facturation", "de": "Abrechnung", "pt": "Faturamento", "hi": "बिलिंग", "zh": "计费", "ja": "請求", "ru": "Оплата" },
+      "billingOverview": { "es": "Resumen", "fr": "Aperçu", "de": "Übersicht", "pt": "Visão geral", "hi": "अवलोकन", "zh": "概览", "ja": "概要", "ru": "Обзор" },
+      "settings": { "es": "Ajustes", "fr": "Paramètres", "de": "Einstellungen", "pt": "Configurações", "hi": "सेटिंग्स", "zh": "设置", "ja": "設定", "ru": "Настройки" },
+      "explore": { "es": "Explorar", "fr": "Explorer", "de": "Entdecken", "pt": "Explorar", "hi": "एक्सप्लोर", "zh": "探索", "ja": "探す", "ru": "Обзор" },
+      "templates": { "es": "Plantillas", "fr": "Modèles", "de": "Vorlagen", "pt": "Modelos", "hi": "टेम्पलेट", "zh": "模板", "ja": "テンプレート", "ru": "Шаблоны" },
+      "orders": { "es": "Pedidos", "fr": "Commandes", "de": "Bestellungen", "pt": "Pedidos", "hi": "ऑर्डर", "zh": "订单", "ja": "注文", "ru": "Заказы" },
+      "products": { "es": "Productos", "fr": "Produits", "de": "Produkte", "pt": "Produtos", "hi": "उत्पाद", "zh": "产品", "ja": "商品", "ru": "Товары" },
+      "customers": { "es": "Clientes", "fr": "Clients", "de": "Kunden", "pt": "Clientes", "hi": "ग्राहक", "zh": "客户", "ja": "顧客", "ru": "Покупатели" },
+      "categories": { "es": "Categorías", "fr": "Catégories", "de": "Kategorien", "pt": "Categorias", "hi": "श्रेणियाँ", "zh": "分类", "ja": "カテゴリ", "ru": "Категории" },
+      "tags": { "es": "Etiquetas", "fr": "Étiquettes", "de": "Schlagwörter", "pt": "Etiquetas", "hi": "टैग", "zh": "标签", "ja": "タグ", "ru": "Теги" },
+      "brands": { "es": "Marcas", "fr": "Marques", "de": "Marken", "pt": "Marcas", "hi": "ब्रांड", "zh": "品牌", "ja": "ブランド", "ru": "Бренды" },
+      "downloads": { "es": "Descargas", "fr": "Téléchargements", "de": "Downloads", "pt": "Downloads", "hi": "डाउनलोड", "zh": "下载", "ja": "ダウンロード", "ru": "Загрузки" },
+      "bulkJobs": { "es": "Trabajos masivos", "fr": "Tâches en masse", "de": "Massenaufträge", "pt": "Trabalhos em massa", "hi": "बल्क कार्य", "zh": "批量任务", "ja": "一括ジョブ", "ru": "Массовые задания" },
+      "syncRuns": { "es": "Ejecuciones de sync", "fr": "Exécutions de sync", "de": "Sync-Läufe", "pt": "Execuções de sync", "hi": "सिंक रन", "zh": "同步运行", "ja": "同期実行", "ru": "Запуски синхронизации" },
+      "webhooks": { "es": "Webhooks", "fr": "Webhooks", "de": "Webhooks", "pt": "Webhooks", "hi": "वेबहुक", "zh": "Webhook", "ja": "Webhook", "ru": "Webhook" },
+      "webhooksActivity": { "es": "Actividad", "fr": "Activité", "de": "Aktivität", "pt": "Atividade", "hi": "गतिविधि", "zh": "活动", "ja": "アクティビティ", "ru": "Активность" },
+      "apiManagement": { "es": "API", "fr": "API", "de": "API", "pt": "API", "hi": "API", "zh": "API", "ja": "API", "ru": "API" },
+      "projects": { "es": "Proyectos", "fr": "Projets", "de": "Projekte", "pt": "Projetos", "hi": "प्रोजेक्ट", "zh": "项目", "ja": "プロジェクト", "ru": "Проекты" },
+      "configuration": { "es": "Configuración", "fr": "Configuration", "de": "Konfiguration", "pt": "Configuração", "hi": "कॉन्फ़िगरेशन", "zh": "配置", "ja": "設定", "ru": "Конфигурация" },
+      "users": { "es": "Usuarios", "fr": "Utilisateurs", "de": "Benutzer", "pt": "Usuários", "hi": "उपयोगकर्ता", "zh": "用户", "ja": "ユーザー", "ru": "Пользователи" },
+      "roles": { "es": "Roles", "fr": "Rôles", "de": "Rollen", "pt": "Funções", "hi": "भूमिकाएँ", "zh": "角色", "ja": "ロール", "ru": "Роли" },
+      "paymentMethods": { "es": "Métodos de pago", "fr": "Moyens de paiement", "de": "Zahlungsmethoden", "pt": "Métodos de pagamento", "hi": "भुगतान विधियाँ", "zh": "支付方式", "ja": "支払い方法", "ru": "Способы оплаты" },
+      "plansPricing": { "es": "Planes", "fr": "Forfaits", "de": "Tarife", "pt": "Planos", "hi": "प्लान", "zh": "套餐", "ja": "プラン", "ru": "Планы" },
+      "adminPaymentGateways": { "es": "Pasarelas de pago", "fr": "Passerelles de paiement", "de": "Zahlungs-Gateways", "pt": "Gateways de pagamento", "hi": "भुगतान गेटवे", "zh": "支付网关", "ja": "決済ゲートウェイ", "ru": "Платёжные шлюзы" },
+      "adminPaymentLogs": { "es": "Registros de pago", "fr": "Journaux de paiement", "de": "Zahlungsprotokolle", "pt": "Registros de pagamento", "hi": "भुगतान लॉग", "zh": "支付日志", "ja": "決済ログ", "ru": "Журналы платежей" },
+      "adminActivity": { "es": "Registro de actividad", "fr": "Journal d'activité", "de": "Aktivitätsprotokoll", "pt": "Registro de atividade", "hi": "गतिविधि लॉग", "zh": "活动日志", "ja": "アクティビティログ", "ru": "Журнал активности" },
+      "moreSites": { "es": "+{{count}} sitios más", "fr": "+{{count}} sites supplémentaires", "de": "+{{count}} weitere Sites", "pt": "+{{count}} sites adicionais", "hi": "+{{count}} और साइटें", "zh": "还有 {{count}} 个站点", "ja": "他 {{count}} サイト", "ru": "+{{count}} ещё сайтов" }
+    },
+    "userMenu": {
+      "user": { "es": "Usuario", "fr": "Utilisateur", "de": "Benutzer", "pt": "Usuário", "hi": "उपयोगकर्ता", "zh": "用户", "ja": "ユーザー", "ru": "Пользователь" },
+      "language": { "es": "Idioma", "fr": "Langue", "de": "Sprache", "pt": "Idioma", "hi": "भाषा", "zh": "语言", "ja": "言語", "ru": "Язык" },
+      "theme": { "es": "Tema", "fr": "Thème", "de": "Design", "pt": "Tema", "hi": "थीम", "zh": "主题", "ja": "テーマ", "ru": "Тема" },
+      "light": { "es": "Claro", "fr": "Clair", "de": "Hell", "pt": "Claro", "hi": "लाइट", "zh": "浅色", "ja": "ライト", "ru": "Светлая" },
+      "dark": { "es": "Oscuro", "fr": "Sombre", "de": "Dunkel", "pt": "Escuro", "hi": "डार्क", "zh": "深色", "ja": "ダーク", "ru": "Тёмная" },
+      "system": { "es": "Sistema", "fr": "Système", "de": "System", "pt": "Sistema", "hi": "सिस्टम", "zh": "系统", "ja": "システム", "ru": "Системная" },
+      "signOut": { "es": "Cerrar sesión", "fr": "Se déconnecter", "de": "Abmelden", "pt": "Sair", "hi": "साइन आउट", "zh": "退出登录", "ja": "サインアウト", "ru": "Выйти" }
+    },
+    "common": {
+      "yes": { "es": "Sí", "fr": "Oui", "de": "Ja", "pt": "Sim", "hi": "हाँ", "zh": "是", "ja": "はい", "ru": "Да" },
+      "no": { "es": "No", "fr": "Non", "de": "Nein", "pt": "Não", "hi": "नहीं", "zh": "否", "ja": "いいえ", "ru": "Нет" },
+      "all": { "es": "Todo", "fr": "Tout", "de": "Alle", "pt": "Tudo", "hi": "सभी", "zh": "全部", "ja": "すべて", "ru": "Все" },
+      "none": { "es": "Ninguno", "fr": "Aucun", "de": "Keine", "pt": "Nenhum", "hi": "कोई नहीं", "zh": "无", "ja": "なし", "ru": "Нет" }
+    },
+    "errors": {
+      "unknown": { "es": "Desconocido", "fr": "Inconnu", "de": "Unbekannt", "pt": "Desconhecido", "hi": "अज्ञात", "zh": "未知", "ja": "不明", "ru": "Неизвестно" },
+      "unknownError": { "es": "Error desconocido", "fr": "Erreur inconnue", "de": "Unbekannter Fehler", "pt": "Erro desconhecido", "hi": "अज्ञात त्रुटि", "zh": "未知错误", "ja": "不明なエラー", "ru": "Неизвестная ошибка" },
+      "loadFailed": { "es": "Error al cargar", "fr": "Échec du chargement", "de": "Laden fehlgeschlagen", "pt": "Falha ao carregar", "hi": "लोड विफल", "zh": "加载失败", "ja": "読み込みに失敗しました", "ru": "Не удалось загрузить" },
+      "saveFailed": { "es": "Error al guardar", "fr": "Échec de l'enregistrement", "de": "Speichern fehlgeschlagen", "pt": "Falha ao salvar", "hi": "सहेजना विफल", "zh": "保存失败", "ja": "保存に失敗しました", "ru": "Не удалось сохранить" }
+    },
+    "sidebar": {
+      "expand": { "es": "Expandir barra lateral", "fr": "Développer la barre latérale", "de": "Seitenleiste erweitern", "pt": "Expandir barra lateral", "hi": "साइडबार विस्तृत करें", "zh": "展开侧栏", "ja": "サイドバーを展開", "ru": "Развернуть боковую панель" },
+      "collapse": { "es": "Colapsar barra lateral", "fr": "Réduire la barre latérale", "de": "Seitenleiste einklappen", "pt": "Recolher barra lateral", "hi": "साइडबार संक्षिप्त करें", "zh": "折叠侧栏", "ja": "サイドバーを折りたたむ", "ru": "Свернуть боковую панель" },
+      "primaryNav": { "es": "Navegación principal", "fr": "Navigation principale", "de": "Hauptnavigation", "pt": "Navegação principal", "hi": "मुख्य नेविगेशन", "zh": "主导航", "ja": "メインナビゲーション", "ru": "Основная навигация" },
+      "userMenu": { "es": "Menú de usuario", "fr": "Menu utilisateur", "de": "Benutzermenü", "pt": "Menu do usuário", "hi": "उपयोगकर्ता मेनू", "zh": "用户菜单", "ja": "ユーザーメニュー", "ru": "Меню пользователя" },
+      "searchSites": { "es": "Buscar sitios...", "fr": "Rechercher des sites...", "de": "Sites suchen...", "pt": "Pesquisar sites...", "hi": "साइटें खोजें...", "zh": "搜索站点...", "ja": "サイトを検索...", "ru": "Поиск сайтов..." },
+      "noSitesFound": { "es": "No se encontraron sitios.", "fr": "Aucun site trouvé.", "de": "Keine Sites gefunden.", "pt": "Nenhum site encontrado.", "hi": "कोई साइट नहीं मिली।", "zh": "未找到站点。", "ja": "サイトが見つかりません。", "ru": "Сайты не найдены." }
+    }
+  }
+}

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, UserCog, Shield, ListTree, Layers, Sparkles, Activity, Receipt, Languages } from "lucide-react";
+import { User, Palette, CreditCard, ListTree, Layers, Sparkles, Activity, Receipt, Languages } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { PERMISSIONS, type Permission } from "@/lib/permissions";
+import { type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 interface SettingsLayoutProps {
@@ -17,7 +17,7 @@ interface SettingsLayoutProps {
 
 export function SettingsLayout({ children, title, requirePermission, requireSuperAdmin }: SettingsLayoutProps) {
   const router = useRouter();
-  const { can, isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useAuth();
   const { t } = useTranslation("common");
 
   const groups = [
@@ -33,13 +33,6 @@ export function SettingsLayout({ children, title, requirePermission, requireSupe
       items: [
         { href: "/settings/theme", icon: Palette, label: t("settings.items.theme"), show: true },
         { href: "/settings/branding", icon: Sparkles, label: t("settings.items.branding"), show: isSuperAdmin },
-      ],
-    },
-    {
-      label: t("settings.groups.team"),
-      items: [
-        { href: "/settings/users", icon: UserCog, label: t("settings.items.users"), show: can(PERMISSIONS.USERS_VIEW) || isSuperAdmin },
-        { href: "/settings/roles", icon: Shield, label: t("settings.items.roles"), show: can(PERMISSIONS.ROLES_VIEW) || isSuperAdmin },
       ],
     },
     {

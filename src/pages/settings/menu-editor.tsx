@@ -1,4 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import type { GetServerSideProps } from "next";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
@@ -91,6 +94,7 @@ function rebuildTree(rows: FlatRow[], groups: MenuNode[], order: OrderEntry[]): 
 }
 
 function MenuEditorInner() {
+  const { t } = useTranslation("settings");
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [role, setRole] = useState<string>("");
   const [rows, setRows] = useState<FlatRow[]>([]);
@@ -104,7 +108,7 @@ function MenuEditorInner() {
     listRoles().then((rs) => {
       setRoles(rs);
       if (rs.length > 0 && !role) setRole(rs[0].name);
-    }).catch((e) => toast({ title: "Failed to load roles", description: (e as Error).message, variant: "destructive" }));
+    }).catch((e) => toast({ title: t("menuEditor.loadRolesFailed"), description: (e as Error).message, variant: "destructive" }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -195,7 +199,7 @@ function MenuEditorInner() {
 
   const addGroup = () => {
     const id = `group-custom-${Date.now()}`;
-    setGroups((g) => [...g, { id, type: "group", label: "New Group", icon: "Folder", children: [] }]);
+    setGroups((g) => [...g, { id, type: "group", label: t("menuEditor.newGroupLabel"), icon: "Folder", children: [] }]);
     setOrder((o) => [...o, { kind: "group", id }]);
     setDirty(true);
   };
@@ -238,17 +242,17 @@ function MenuEditorInner() {
           window.dispatchEvent(new CustomEvent("menu-config-updated", { detail: { role } }));
         } catch { /* ignore */ }
       }
-      toast({ title: "Saved", description: `Menu for ${humanizeRole(role)} updated.` });
+      toast({ title: t("menuEditor.saved"), description: t("menuEditor.savedDesc", { role: humanizeRole(role) }) });
     } catch (err) {
-      toast({ title: "Save failed", description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("menuEditor.saveFailed"), description: (err as Error).message, variant: "destructive" });
     } finally { setSaving(false); }
   };
 
   const handleReset = async () => {
-    if (!confirm(`Reset menu for ${humanizeRole(role)} to defaults?`)) return;
+    if (!confirm(t("menuEditor.resetConfirm", { role: humanizeRole(role) }))) return;
     await resetMenuConfig(role);
     await load(role);
-    toast({ title: "Reset", description: "Menu restored to defaults." });
+    toast({ title: t("menuEditor.reset"), description: t("menuEditor.resetDesc") });
   };
 
   const toggleGroupMode = (gid: string) => {
@@ -257,10 +261,10 @@ function MenuEditorInner() {
   };
 
   const groupOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [{ value: NONE_GROUP, label: "(no group)" }];
+    const opts: { value: string; label: string }[] = [{ value: NONE_GROUP, label: t("menuEditor.noGroup") }];
     for (const g of groups) opts.push({ value: g.id, label: g.label });
     return opts;
-  }, [groups]);
+  }, [groups, t]);
 
   const rowByItem = useMemo(() => {
     const map = new Map<string, FlatRow>();
@@ -279,7 +283,7 @@ function MenuEditorInner() {
   }, [rows]);
 
   if (roles.length === 0 && !loading) {
-    return <div className="p-6 text-sm text-muted-foreground">No roles found.</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{t("menuEditor.noRoles")}</div>;
   }
 
   const renderRowControls = (r: FlatRow, idx: number, total: number) => (
@@ -306,10 +310,10 @@ function MenuEditorInner() {
           {groupOptions.map((o) => <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>)}
         </SelectContent>
       </Select>
-      <Button size="icon" variant="ghost" onClick={() => updateRow(r.itemId, { hidden: !r.hidden })} title={r.hidden ? "Show" : "Hide"} className="h-7 w-7">
+      <Button size="icon" variant="ghost" onClick={() => updateRow(r.itemId, { hidden: !r.hidden })} title={r.hidden ? t("menuEditor.show") : t("menuEditor.hide")} className="h-7 w-7">
         {r.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </Button>
-      <Button size="icon" variant="ghost" onClick={() => resetRow(r.itemId)} title="Reset to default" className="h-7 w-7">
+      <Button size="icon" variant="ghost" onClick={() => resetRow(r.itemId)} title={t("menuEditor.resetDefault")} className="h-7 w-7">
         <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
       </Button>
     </div>
@@ -326,8 +330,8 @@ function MenuEditorInner() {
   return (
     <div className="p-6 max-w-3xl">
       <div className="mb-4">
-        <h1 className="text-xl font-semibold">Menu Editor</h1>
-        <p className="text-xs text-muted-foreground">Rename, reorder, hide, and group sidebar items per role. Ungrouped items can sit anywhere between groups.</p>
+        <h1 className="text-xl font-semibold">{t("menuEditor.title")}</h1>
+        <p className="text-xs text-muted-foreground">{t("menuEditor.subtitle")}</p>
       </div>
 
       {roles.length > 0 && (
@@ -359,7 +363,7 @@ function MenuEditorInner() {
                             <ArrowDown className="h-3 w-3" />
                           </button>
                         </div>
-                        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground/60">Top level</span>
+                        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground/60">{t("menuEditor.topLevel")}</span>
                       </div>
                       <div className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50">
                         <IconPicker value={r.icon} onChange={(icon) => updateRow(r.itemId, { icon })} />
@@ -370,10 +374,10 @@ function MenuEditorInner() {
                             {groupOptions.map((o) => <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                        <Button size="icon" variant="ghost" onClick={() => updateRow(r.itemId, { hidden: !r.hidden })} title={r.hidden ? "Show" : "Hide"} className="h-7 w-7">
+                        <Button size="icon" variant="ghost" onClick={() => updateRow(r.itemId, { hidden: !r.hidden })} title={r.hidden ? t("menuEditor.show") : t("menuEditor.hide")} className="h-7 w-7">
                           {r.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => resetRow(r.itemId)} title="Reset to default" className="h-7 w-7">
+                        <Button size="icon" variant="ghost" onClick={() => resetRow(r.itemId)} title={t("menuEditor.resetDefault")} className="h-7 w-7">
                           <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                       </div>
@@ -399,12 +403,12 @@ function MenuEditorInner() {
                       <Input value={g.label} onChange={(e) => renameGroup(g.id, e.target.value)} className="h-7 text-[11px] uppercase tracking-wider font-semibold max-w-[220px]" />
                       <span className="text-[10px] text-muted-foreground">({sectionRows.length})</span>
                       <div className="flex-1" />
-                      <Button size="sm" variant={isPanel ? "default" : "outline"} onClick={() => toggleGroupMode(g.id)} title="Inline expands below. Panel opens as second sidebar column." className="h-6 px-2 text-[10px] gap-1">
+                      <Button size="sm" variant={isPanel ? "default" : "outline"} onClick={() => toggleGroupMode(g.id)} title={t("menuEditor.panelTooltip")} className="h-6 px-2 text-[10px] gap-1">
                         <PanelRight className="h-3 w-3" />
-                        {isPanel ? "Panel" : "Inline"}
+                        {isPanel ? t("menuEditor.panel") : t("menuEditor.inline")}
                       </Button>
                       {g.id.startsWith("group-custom-") && (
-                        <Button size="icon" variant="ghost" onClick={() => deleteGroup(g.id)} title="Delete group" className="h-6 w-6">
+                        <Button size="icon" variant="ghost" onClick={() => deleteGroup(g.id)} title={t("menuEditor.deleteGroup")} className="h-6 w-6">
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       )}
@@ -425,23 +429,32 @@ function MenuEditorInner() {
       </Card>
 
       <div className="mt-3 flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={addGroup}><FolderPlus className="h-3.5 w-3.5 mr-1.5" />Add Group</Button>
-        <Button size="sm" variant="outline" onClick={handleReset}>Reset All</Button>
+        <Button size="sm" variant="outline" onClick={addGroup}><FolderPlus className="h-3.5 w-3.5 me-1.5" />{t("menuEditor.addGroup")}</Button>
+        <Button size="sm" variant="outline" onClick={handleReset}>{t("menuEditor.resetAll")}</Button>
         <div className="flex-1" />
-        {dirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-        <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>{saving ? "Saving..." : "Save"}</Button>
-        {topLevelCount > 0 && <span className="text-[10px] text-muted-foreground ml-2">{topLevelCount} top-level</span>}
+        {dirty && <span className="text-xs text-muted-foreground">{t("menuEditor.unsavedChanges")}</span>}
+        <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>{saving ? t("menuEditor.saving") : t("menuEditor.save")}</Button>
+        {topLevelCount > 0 && <span className="text-[10px] text-muted-foreground ms-2">{t("menuEditor.topLevelCount", { count: topLevelCount })}</span>}
       </div>
     </div>
   );
 }
 
+function MenuEditorTitle() {
+  const { t } = useTranslation("settings");
+  return <SettingsLayout title={t("menuEditor.title")}><MenuEditorInner /></SettingsLayout>;
+}
+
 export default function MenuEditorPage() {
   return (
     <AuthGuard requireSuperAdmin>
-      <SettingsLayout title="Menu Editor">
-        <MenuEditorInner />
-      </SettingsLayout>
+      <MenuEditorTitle />
     </AuthGuard>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "settings"])),
+  },
+});

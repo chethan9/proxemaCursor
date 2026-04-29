@@ -4,6 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Activity } from "lucide-react";
 import type { ApiCallLog } from "@/services/apiKeyService";
+import { useTranslation } from "next-i18next";
+import { formatDateTime, formatNumber } from "@/lib/format-number";
 
 const METHOD_COLORS: Record<string, string> = {
   GET: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -12,17 +14,14 @@ const METHOD_COLORS: Record<string, string> = {
   DELETE: "bg-rose-100 text-rose-700 border-rose-200",
 };
 
-function fmtDate(d: string | null) {
-  if (!d) return "\u2014";
-  return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
 interface ApiCallLogsProps {
   logs: ApiCallLog[];
   total: number;
 }
 
 export function ApiCallLogs({ logs, total }: ApiCallLogsProps) {
+  const { i18n } = useTranslation();
+  const fmtDate = (d: string | null) => (d ? formatDateTime(d, i18n.language) : "\u2014");
   if (logs.length === 0) {
     return (
       <Card>
@@ -45,7 +44,7 @@ export function ApiCallLogs({ logs, total }: ApiCallLogsProps) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Recent API Calls</CardTitle>
-        <CardDescription>{total.toLocaleString()} total calls across all keys</CardDescription>
+          <CardDescription>{formatNumber(total, i18n.language)} total calls across all keys</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[500px]">
