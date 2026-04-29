@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { DEFAULT_BRAND_NAME } from '@/lib/brand-constants';
 
 interface SEOProps {
   title?: string;
@@ -9,7 +10,7 @@ interface SEOProps {
 
 // SEO elements that can be used in _document.tsx (returns JSX without Head wrapper)
 export function SEOElements({
-  title = "Proxima",
+  title = DEFAULT_BRAND_NAME,
   description = "Enhancing woo commerce feature",
   image = "/og-image.png",
   url,

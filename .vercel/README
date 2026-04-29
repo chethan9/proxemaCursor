@@ -1,0 +1,22 @@
+Production target for this repository (do not switch).
+
+Vercel project: proximacursor (see project.json).
+Default production domain: https://proximacursor.vercel.app
+
+Deploy: from repo root, `npm run deploy:prod` or `npx vercel deploy --prod --yes` uses the linked project above.
+
+After any production hostname change (rename, new default `*.vercel.app`, custom domain add/remove), do **all** of these — do not skip Supabase:
+
+1. **Vercel → Settings → Environment Variables (Production):** `NEXT_PUBLIC_APP_URL` = canonical origin, e.g. `https://proximacursor.vercel.app` (no trailing slash required; app normalizes). Redeploy after changing.
+
+2. **Supabase Dashboard → Authentication → URL Configuration** (same Supabase project as Vercel env vars):
+   - **Site URL:** same canonical origin as production, e.g. `https://proximacursor.vercel.app`
+   - **Redirect URLs:** include at least `https://proximacursor.vercel.app/**` (and keep `http://localhost:3000/**` for local dev). Without this, login, password reset, and email-confirm redirects can fail with “redirect URL not allowed”.
+
+3. **Vercel → Domains:** confirm the hostname you want is assigned to the project (see `vercel domains add` if the default `*.vercel.app` was removed).
+
+4. If WooCommerce/webhooks targeted the old host: run webhook repair or bump deploy so delivery URLs use the new base (see `docs/DEPLOYMENT.md`).
+
+Rename (CLI in Vercel 52+): `npx vercel@latest project rename <old-name> <new-name>` — then update project.json `projectName` to match.
+
+Database / Supabase: use credentials from this Vercel project's Production environment only. Do not run migrations or connect tools against another team's database or preview projects unless explicitly instructed.

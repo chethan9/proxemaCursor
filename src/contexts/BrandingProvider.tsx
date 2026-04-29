@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ALL_LOCALE_CODES, type LocaleCode } from "@/lib/i18n";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand-constants";
 
 export type ThemePreset = "classic" | "modern";
 
@@ -21,7 +22,7 @@ interface BrandingContextValue extends BrandingSettings {
 }
 
 const DEFAULTS: BrandingSettings = {
-  brandName: "Proxima",
+  brandName: DEFAULT_BRAND_NAME,
   logoUrl: null,
   primaryColor: "#008060",
   sidebarColor: "#1a1a1a",

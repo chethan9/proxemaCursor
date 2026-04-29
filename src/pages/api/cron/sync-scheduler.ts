@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
-import { WOO_USER_AGENT, isRetryableError, nextRetryDelaySeconds, MAX_SYNC_ATTEMPTS } from "@/lib/sync-error";
+import { getBrandNameCached, getWooUserAgent } from "@/lib/brand-name-server";
+import { isRetryableError, nextRetryDelaySeconds, MAX_SYNC_ATTEMPTS } from "@/lib/sync-error";
 
 interface StoreToSync {
   id: string;
@@ -53,6 +54,7 @@ async function fetchAllFromWooCommerce<T>(
   const perPage = 100;
   let hasMore = true;
   const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+  const ua = await getWooUserAgent();
 
   while (hasMore) {
     const url = new URL(`${storeUrl}/wp-json/wc/v3/${endpoint}`);
@@ -69,7 +71,7 @@ async function fetchAllFromWooCommerce<T>(
     let response: Response;
     try {
       response = await fetch(url.toString(), {
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": WOO_USER_AGENT },
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": ua },
         signal: controller.signal,
       });
     } catch (err) {
@@ -287,6 +289,8 @@ async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
 
   if (missingTopics.length === 0) return;
 
+  const [ua, brandName] = await Promise.all([getWooUserAgent(), getBrandNameCached()]);
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL
     || process.env.NEXT_PUBLIC_SITE_URL
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -297,8 +301,8 @@ async function ensureWebhooksRegistered(store: StoreToSync): Promise<void> {
     try {
       const response = await fetch(`${store.url}/wp-json/wc/v3/webhooks`, {
         method: "POST",
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": WOO_USER_AGENT },
-        body: JSON.stringify({ name: `Proxima - ${topic}`, topic, delivery_url: deliveryUrl, status: "active", secret: `woosync_${store.id}_${Date.now()}` }),
+        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "User-Agent": ua },
+        body: JSON.stringify({ name: `${brandName} - ${topic}`, topic, delivery_url: deliveryUrl, status: "active", secret: `woosync_${store.id}_${Date.now()}` }),
       });
       if (response.ok) {
         const wooWebhook = await response.json();

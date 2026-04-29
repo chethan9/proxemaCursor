@@ -1,9 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import {
-  WOO_USER_AGENT,
-  WooApiError,
-  detectBlockingService,
-} from "./sync-error";
+import { getWooUserAgent } from "@/lib/brand-name-server";
+import { WooApiError, detectBlockingService } from "./sync-error";
 
 export interface WooStoreCreds {
   id: string;
@@ -32,7 +29,7 @@ export async function wooHttpRequest(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   const headers = new Headers(init.headers || {});
-  headers.set("User-Agent", WOO_USER_AGENT);
+  headers.set("User-Agent", await getWooUserAgent());
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
   try {

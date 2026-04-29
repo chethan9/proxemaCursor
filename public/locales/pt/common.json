@@ -1,14 +1,1 @@
-<![CDATA[
-{
-  "app": { "name": "Proxema" },
-  "nav": {
-    "home": "Início", "orders": "Pedidos", "prod
-...
-e": "Idioma",
-    "theme": "Tema",
-    "light": "Claro", "dark": "Escuro", "system": "Sistema"
-  }
-}
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 1561 chars.]
+{}

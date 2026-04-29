@@ -4,13 +4,17 @@ Safe-deploy workflow for WooSync. Read this before every production push.
 
 ## Environments
 
+Canonical Supabase refs for this codebase live in **`supabase/current-project.json`** (dashboard URLs live there too).
+
 | Env | Domain | Supabase project | Purpose |
 |---|---|---|---|
-| Dev | localhost:3000 / softgen preview | `woosync-dev` | Daily development |
-| Staging (future) | staging.tryapp.cc | `woosync-staging` | Pre-prod smoke tests |
-| Production | tryapp.cc | `woosync-prod` | Customer data |
+| Dev | localhost:3000 / softgen preview | dev DB of your choice | Daily development |
+| Staging (future) | (optional) | separate Supabase project | Pre-prod smoke tests |
+| Production | e.g. `proximacursor.vercel.app` | **`fyqvmbrgyncthksbgrrr`** (`woosync-live-prod`) | Live customer data |
 
 **Rule:** dev never points at the prod Supabase. Staging is optional today, mandatory once you have >5 paying clients.
+
+**Stale snapshot:** `supabase/prod_full_dump.sql` embeds an older project ref (`zhsmlfdmtlzyxvioppex`). Do **not** treat that file as today’s production database identity — use `current-project.json` and Vercel env vars.
 
 ## Required env vars (per environment)
 
@@ -20,21 +24,37 @@ Set these in Vercel → Project Settings → Environment Variables, scoped to th
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
-NEXT_PUBLIC_APP_URL=https://tryapp.cc
+NEXT_PUBLIC_APP_URL=https://proximacursor.vercel.app
 ```
 
 Dev `.env.local` uses the same keys pointing at `woosync-dev` and `NEXT_PUBLIC_APP_URL` set to your softgen preview URL.
 
 `NEXT_PUBLIC_APP_URL` drives webhook delivery URLs. Getting this wrong = webhooks go to the wrong domain. Double-check it on every environment.
 
+## Domain or hostname changes (do not skip Supabase)
+
+Whenever production’s canonical URL changes — Vercel project rename, default `*.vercel.app` hostname, or custom domain add/remove — run this checklist in order:
+
+1. **Vercel → Environment Variables (Production):** set `NEXT_PUBLIC_APP_URL` to the canonical HTTPS origin (example: `https://proximacursor.vercel.app`). Trigger a production redeploy so the new value is baked into the build.
+
+2. **Vercel → Domains:** ensure the hostname is attached to the correct project.
+
+3. **Supabase Dashboard → Authentication → URL Configuration** (the Supabase project whose URL/keys you use in Vercel):
+   - **Site URL:** same canonical origin as step 1.
+   - **Redirect URLs:** add a wildcard for that host, e.g. `https://proximacursor.vercel.app/**`. Keep `http://localhost:3000/**` for local development. If this step is missed, users see Supabase errors such as redirect URL not allowed for login, signup, password reset, and email confirmation links.
+
+4. **Webhooks:** if store webhooks still point at an old base URL, call `POST /api/webhooks/repair-all` (service role) or follow your webhook refresh procedure after `NEXT_PUBLIC_APP_URL` is correct.
+
 ## One-time: create production Supabase
 
-1. supabase.com → New Project → name `woosync-prod`
-2. Pick region close to your users (and close to Vercel region)
-3. Copy URL, anon key, service_role key from Project Settings → API
-4. Paste into Vercel (Production scope only)
-5. Copy the Database connection string (Session mode, port 5432) from Settings → Database
-6. Run migrations: see next section
+If you are **not** reusing the existing project, create one in the dashboard. Otherwise open **`supabase/current-project.json`** for today’s production ref (`fyqvmbrgyncthksbgrrr`, name `woosync-live-prod`) and its dashboard links.
+
+1. supabase.com → New Project → pick a name (this repo’s production DB is already **`woosync-live-prod`**).
+2. Pick region close to your users (and close to Vercel region).
+3. Copy URL, anon key, service_role key from Project Settings → API.
+4. Paste into Vercel (Production scope only).
+5. Copy the Database connection string (Session mode, port 5432) from Settings → Database (same host pattern as `db.<project-ref>.supabase.co`).
+6. Run migrations: see next section.
 
 ## Running migrations
 

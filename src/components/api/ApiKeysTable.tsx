@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Key, EyeOff, Trash2 } from "lucide-react";
 import type { ApiKey } from "@/services/apiKeyService";
+import { useBranding } from "@/contexts/BrandingProvider";
 
 function fmtDate(d: string | null) {
   if (!d) return "\u2014";
@@ -20,6 +21,7 @@ interface ApiKeysTableProps {
 }
 
 export function ApiKeysTable({ keys, keyStats, loading, onRevoke, onDelete }: ApiKeysTableProps) {
+  const { brandName } = useBranding();
   if (loading) {
     return (
       <Card>
@@ -38,7 +40,7 @@ export function ApiKeysTable({ keys, keyStats, loading, onRevoke, onDelete }: Ap
             <Key className="h-6 w-6 text-muted-foreground/60" />
           </div>
           <p className="mt-4 text-sm font-medium">No API keys yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">Create one to start using the Proxima REST API</p>
+          <p className="mt-1 text-xs text-muted-foreground">Create one to start using the {brandName} REST API</p>
         </CardContent>
       </Card>
     );

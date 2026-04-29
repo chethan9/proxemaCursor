@@ -2,15 +2,15 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { WEBHOOK_TOPICS, generateWebhookSecret } from "@/services/webhookService";
 import { getWebhookDeliveryUrl } from "@/lib/app-url";
-import { WOO_USER_AGENT } from "@/lib/sync-error";
+import { getBrandNameCached, getWooUserAgent } from "@/lib/brand-name-server";
 
 export const config = { maxDuration: 60 };
 
-async function fetchWithTimeout(url: string, init: RequestInit, ms = 8000): Promise<Response> {
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number, userAgent: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   const headers = new Headers(init.headers || {});
-  headers.set("User-Agent", WOO_USER_AGENT);
+  headers.set("User-Agent", userAgent);
   try {
     return await fetch(url, { ...init, headers, signal: controller.signal });
   } finally {
@@ -27,6 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const [ua, brandName] = await Promise.all([getWooUserAgent(), getBrandNameCached()]);
+
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("*")
@@ -45,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const listResp = await fetchWithTimeout(`${store.url}/wp-json/wc/v3/webhooks?per_page=100`, {
         headers: { Authorization: authHeader },
-      }, 10000);
+      }, 10000, ua);
       if (listResp.ok) wooWebhooks = await listResp.json();
     } catch (e) {
       console.warn("Failed to list existing webhooks:", e);
@@ -66,7 +68,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const putResp = await fetchWithTimeout(
               `${store.url}/wp-json/wc/v3/webhooks/${matchingWoo.id}`,
               { method: "PUT", headers: { "Content-Type": "application/json", Authorization: authHeader }, body: JSON.stringify({ status: "active" }) },
-              8000
+              8000,
+              ua,
             );
             if (putResp.ok) {
               await supabase.from("webhooks").update({ status: "active", updated_at: new Date().toISOString() }).eq("id", localRow.id);
@@ -85,8 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const postResp = await fetchWithTimeout(`${store.url}/wp-json/wc/v3/webhooks`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ name: `Proxima - ${name}`, topic, delivery_url: deliveryUrl, status: "active", secret }),
-        }, 8000);
+          body: JSON.stringify({ name: `${brandName} - ${name}`, topic, delivery_url: deliveryUrl, status: "active", secret }),
+        }, 8000, ua);
         if (!postResp.ok) {
           const errorText = await postResp.text();
           return { topic, success: false, action: "create-failed", error: errorText.slice(0, 200) };

@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "next-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useBranding } from "@/contexts/BrandingProvider";
 import { useClients } from "@/hooks/queries/useClients";
 import { updateStore, deleteStore } from "@/services/storeService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -26,6 +27,7 @@ interface EditSiteDialogProps {
 
 export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps) {
   const router = useRouter();
+  const { brandName } = useBranding();
   const { profile } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation("common");
@@ -306,7 +308,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t px-5 py-3 bg-muted/30 rounded-b-lg">
-          <div className="text-[11px] text-muted-foreground">{t("editSite.footerNote")}</div>
+          <div className="text-[11px] text-muted-foreground">{t("editSite.footerNote", { brand: brandName })}</div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9" disabled={saving || deleting}>{t("editSite.cancel")}</Button>
             <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="h-9 min-w-[110px]">

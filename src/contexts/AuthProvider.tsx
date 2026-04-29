@@ -125,6 +125,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          setTimeout(() => {
+            void loadProfileAndRole(session.user.id);
+          }, 0);
+        }
         return;
       }
       if (event === "SIGNED_IN") {

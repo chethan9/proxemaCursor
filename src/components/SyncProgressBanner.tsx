@@ -6,6 +6,7 @@ import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { Button } from "@/components/ui/button";
 import { X, Rocket, Package, ShoppingCart, Users, Tag, FolderTree, Ticket, ChevronRight } from "lucide-react";
 import { pickAnyMessage } from "@/lib/sync-messages";
+import { useBranding } from "@/contexts/BrandingProvider";
 import { SiteIcon } from "@/components/site/SiteIcon";
 
 const ASPECT_META: Record<string, { Icon: typeof Package }> = {
@@ -20,6 +21,7 @@ function formatElapsed(s: number): string {
 }
 
 export function SyncProgressBanner() {
+  const { brandName } = useBranding();
   const router = useRouter();
   const storeId = (router.query.id as string) || null;
   const { data } = useActiveSync(storeId);
@@ -112,7 +114,7 @@ export function SyncProgressBanner() {
 
   const meta = data.currentAspect ? ASPECT_META[data.currentAspect] : null;
   const Icon = meta?.Icon || Rocket;
-  const message = pickAnyMessage(tick);
+  const message = pickAnyMessage(tick, brandName);
   const aspectLabel = data.currentAspect ? data.currentAspect.charAt(0).toUpperCase() + data.currentAspect.slice(1) : "Preparing";
 
   return (

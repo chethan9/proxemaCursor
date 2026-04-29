@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { WOO_USER_AGENT, detectBlockingService, type BlockingService } from "@/lib/sync-error";
+import { getBrandNameCached, getWooUserAgent } from "@/lib/brand-name-server";
+import { detectBlockingService, type BlockingService } from "@/lib/sync-error";
 import { getFixForService } from "@/lib/waf-fixes";
 
 type ProbeName = "root" | "wp_json" | "wc_system_status";
@@ -28,13 +29,14 @@ async function runProbe(
   label: string,
   url: string,
   init: RequestInit,
+  userAgent: string,
   timeoutMs = 12000
 ): Promise<ProbeResult> {
   const started = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const headers = new Headers(init.headers || {});
-  headers.set("User-Agent", WOO_USER_AGENT);
+  headers.set("User-Agent", userAgent);
   headers.set("Accept", "application/json,text/html;q=0.9,*/*;q=0.8");
 
   try {
@@ -94,20 +96,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!store) return res.status(404).json({ error: "Store not found" });
 
+  const [ua, brandName] = await Promise.all([getWooUserAgent(), getBrandNameCached()]);
+
   const baseUrl = store.url.replace(/\/$/, "");
   const authHeader = store.consumer_key && store.consumer_secret
     ? "Basic " + Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64")
     : null;
 
   const probes: ProbeResult[] = [];
-  probes.push(await runProbe("root", "Site root", baseUrl, { method: "GET" }));
-  probes.push(await runProbe("wp_json", "WordPress REST root", `${baseUrl}/wp-json/`, { method: "GET" }));
+  probes.push(await runProbe("root", "Site root", baseUrl, { method: "GET" }, ua));
+  probes.push(await runProbe("wp_json", "WordPress REST root", `${baseUrl}/wp-json/`, { method: "GET" }, ua));
   probes.push(
     await runProbe(
       "wc_system_status",
       "WooCommerce API (authenticated)",
       `${baseUrl}/wp-json/wc/v3/system_status?per_page=1`,
-      { method: "GET", headers: authHeader ? { Authorization: authHeader } : {} }
+      { method: "GET", headers: authHeader ? { Authorization: authHeader } : {} },
+      ua
     )
   );
 
@@ -130,7 +135,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     overallStatus = "unreachable";
   }
 
-  const fix = detectedService ? getFixForService(detectedService) : overallStatus === "blocked" ? getFixForService("unknown") : null;
+  const fix = detectedService
+    ? getFixForService(detectedService, brandName)
+    : overallStatus === "blocked"
+      ? getFixForService("unknown", brandName)
+      : null;
 
   return res.status(200).json({
     overall_status: overallStatus,

@@ -1,0 +1,29 @@
+{
+  "canonical_production": {
+    "project_ref": "fyqvmbrgyncthksbgrrr",
+    "dashboard_name": "proximaCursor",
+    "dashboard_rename_howto": "Supabase Dashboard → Project Settings → General → Project name (display label only; ref fyqvmbrgyncthksbgrrr does not change). Direct link below.",
+    "general_settings": "https://supabase.com/dashboard/project/fyqvmbrgyncthksbgrrr/settings/general",
+    "api_url": "https://fyqvmbrgyncthksbgrrr.supabase.co",
+    "database_settings": "https://supabase.com/dashboard/project/fyqvmbrgyncthksbgrrr/settings/database",
+    "api_keys_settings": "https://supabase.com/dashboard/project/fyqvmbrgyncthksbgrrr/settings/api-keys",
+    "auth_url_allowlist": "https://supabase.com/dashboard/project/fyqvmbrgyncthksbgrrr/auth/url-configuration",
+    "auth_redirect_urls_recommended": [
+      "https://proximacursor.vercel.app/**",
+      "http://localhost:3000/**"
+    ]
+  },
+  "other_projects_same_org": {
+    "woosync_new_20260429": {
+      "project_ref": "ayucistyyoffqcjsqmra",
+      "note": "Separate MCP-created project; not the primary DB used for full migration runs unless you intentionally switched Vercel env to it."
+    }
+  },
+  "stale_do_not_use_for_ops": {
+    "zip_from_old_dump_and_cli": {
+      "project_ref": "zhsmlfdmtlzyxvioppex",
+      "appears_in": ["supabase/prod_full_dump.sql", "supabase/.temp/linked-project.json before 2026-04-29"],
+      "note": "Historical snapshot / old link only. Use canonical_production for dashboards and DATABASE_URL."
+    }
+  }
+}

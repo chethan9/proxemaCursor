@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/contexts/BrandingProvider";
 
 interface Props {
   open: boolean;
@@ -38,6 +39,7 @@ interface Props {
 
 export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCreated }: Props) {
   const router = useRouter();
+  const { brandName } = useBranding();
   const { toast } = useToast();
   const { t } = useTranslation("common");
   const createStoreMutation = useCreateStore();
@@ -141,7 +143,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
       });
 
       if (authMode === "oauth") {
-        const authUrl = buildWooCommerceAuthUrl({ storeUrl: cleanedUrl, storeId: store.id });
+        const authUrl = buildWooCommerceAuthUrl({ storeUrl: cleanedUrl, storeId: store.id, appName: brandName });
         window.location.href = authUrl;
         return;
       } else {
@@ -175,7 +177,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
       <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1">
           <DialogTitle>{t("addSite.title")}</DialogTitle>
-          <DialogDescription className="text-xs">{t("addSite.description")}</DialogDescription>
+          <DialogDescription className="text-xs">{t("addSite.description", { brand: brandName })}</DialogDescription>
         </DialogHeader>
 
         <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 flex items-start gap-2">
@@ -299,7 +301,7 @@ export function AddSiteDialog({ open, onOpenChange, clients, isSuperAdmin, onCre
                         <ol className="list-decimal pl-4 space-y-0.5">
                           <li>{t("addSite.apiKeysHelpStep1")}</li>
                           <li>{t("addSite.apiKeysHelpStep2")}</li>
-                          <li>{t("addSite.apiKeysHelpStep3")}</li>
+                          <li>{t("addSite.apiKeysHelpStep3", { brand: brandName })}</li>
                           <li>{t("addSite.apiKeysHelpStep4")}</li>
                           <li className="font-semibold text-success">{t("addSite.apiKeysHelpStep5")}</li>
                           <li>{t("addSite.apiKeysHelpStep6")}</li>

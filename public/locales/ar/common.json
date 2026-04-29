@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Proxema"
+    "name": "{{brand}}"
   },
   "nav": {
     "home": "الرئيسية",
@@ -113,7 +113,7 @@
   },
   "addSite": {
     "title": "ربط متجر WooCommerce",
-    "description": "أضف متجراً وامنح Proxima صلاحية الوصول إليه.",
+    "description": "أضف متجراً وامنح {{brand}} صلاحية الوصول إليه.",
     "adBlockerWarning": "عطّل مانعات الإعلانات",
     "adBlockerDetail": "قد تمنع رد الاستدعاء.",
     "siteName": "اسم الموقع",
@@ -138,7 +138,7 @@
     "apiKeysHelpTitle": "كيفية إنشاء مفاتيح API:",
     "apiKeysHelpStep1": "في WooCommerce: Settings → Advanced → REST API",
     "apiKeysHelpStep2": "اضغط Add key",
-    "apiKeysHelpStep3": "الوصف: Proxima",
+    "apiKeysHelpStep3": "الوصف: {{brand}}",
     "apiKeysHelpStep4": "المستخدم: أي مدير",
     "apiKeysHelpStep5": "الصلاحيات: Read/Write (مطلوب)",
     "apiKeysHelpStep6": "اضغط Generate API key",
@@ -199,7 +199,7 @@
     "deleteConfirmTitle": "هل تريد حذف هذا الموقع؟",
     "deleteConfirmDesc": "سيتم إزالة <strong>{{name}}</strong> وجميع المنتجات والطلبات والعملاء والسجلات المتزامنة بشكل دائم. لا يمكن التراجع عن ذلك.",
     "deletePermanently": "حذف دائم",
-    "footerNote": "التغييرات تُحفظ في WooSync فقط. بيانات اعتماد WooCommerce تبقى خاصة.",
+    "footerNote": "التغييرات تُحفظ في {{brand}} فقط. بيانات اعتماد WooCommerce تبقى خاصة.",
     "save": "حفظ التغييرات",
     "saving": "جاري الحفظ…",
     "cancel": "إلغاء",

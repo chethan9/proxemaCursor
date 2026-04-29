@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { buildWooCommerceAuthUrl } from "@/lib/woocommerce-auth";
 import { updateStore } from "@/services/storeService";
 import { ConnectionDiagnostic } from "@/components/project/ConnectionDiagnostic";
+import { useBranding } from "@/contexts/BrandingProvider";
 
 type StepStatus = "pending" | "active" | "done" | "error";
 interface Step { id: string; label: string; status: StepStatus; }
@@ -27,6 +28,7 @@ const INITIAL_STEPS: Step[] = [
 
 export default function ConnectSuccessPage() {
   const router = useRouter();
+  const { brandName } = useBranding();
   const { toast } = useToast();
   const { id, success, wp, resume } = router.query;
   const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
@@ -90,8 +92,9 @@ export default function ConnectSuccessPage() {
     const clean = storeUrl.replace(/\/$/, "");
     const successUrl = encodeURIComponent(baseCallback);
     const rejectUrl = encodeURIComponent(`${baseCallback}&rejected=1`);
-    return `${clean}/wp-admin/authorize-application.php?app_name=Proxima&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
-  }, [storeUrl, siteId, baseCallback]);
+    const app = encodeURIComponent(brandName);
+    return `${clean}/wp-admin/authorize-application.php?app_name=${app}&app_id=${siteId}&success_url=${successUrl}&reject_url=${rejectUrl}`;
+  }, [storeUrl, siteId, baseCallback, brandName]);
 
   const launchToProducts = (sid: string) => {
     setStage("prefetching");
@@ -195,7 +198,7 @@ export default function ConnectSuccessPage() {
 
   const handleRestartOAuth = () => {
     if (!siteId || !storeUrl) return;
-    window.location.href = buildWooCommerceAuthUrl({ storeUrl, storeId: siteId });
+    window.location.href = buildWooCommerceAuthUrl({ storeUrl, storeId: siteId, appName: brandName });
   };
 
   const handleSaveManualCreds = async () => {
@@ -371,7 +374,7 @@ export default function ConnectSuccessPage() {
           )}
           <div className="relative z-10 text-center space-y-3 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-5xl">🚀</div>
-            <h1 className="text-3xl font-bold">Welcome to Proxima</h1>
+            <h1 className="text-3xl font-bold">Welcome to {brandName}</h1>
             <p className="text-muted-foreground">Your site is ready</p>
             <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto mt-4" />
           </div>

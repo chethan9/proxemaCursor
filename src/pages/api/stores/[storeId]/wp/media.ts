@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import formidable from "formidable";
 import fs from "fs";
-import { WOO_USER_AGENT } from "@/lib/sync-error";
+import { getWooUserAgent } from "@/lib/brand-name-server";
 
 export const config = { api: { bodyParser: false } };
 
@@ -66,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!creds) return res.status(412).json({ error: "WordPress credentials not configured", code: "WP_CREDS_MISSING" });
 
   const authHeader = "Basic " + Buffer.from(`${creds.user}:${creds.pass}`).toString("base64");
+  const ua = await getWooUserAgent();
 
   try {
     if (req.method === "GET") {
@@ -75,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const qs = new URLSearchParams({ page, per_page, media_type: "image", _fields: "id,date,slug,title,source_url,alt_text,mime_type,media_details" });
       if (search) qs.set("search", search);
       const r = await fetch(`${creds.url}/wp-json/wp/v2/media?${qs.toString()}`, {
-        headers: { Authorization: authHeader, "User-Agent": WOO_USER_AGENT },
+        headers: { Authorization: authHeader, "User-Agent": ua },
       });
       const totalPages = Number(r.headers.get("x-wp-totalpages") || "0");
       const total = Number(r.headers.get("x-wp-total") || "0");
@@ -109,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           Authorization: authHeader,
           "Content-Type": mime,
           "Content-Disposition": `attachment; filename="${filename}"`,
-          "User-Agent": WOO_USER_AGENT,
+          "User-Agent": ua,
         },
         body: buffer,
       });

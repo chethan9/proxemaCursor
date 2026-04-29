@@ -2,7 +2,7 @@ export const SYNC_MESSAGES: Record<string, string[]> = {
   products: [
     "Lining up your products like a well-run storefront 🏬",
     "Making your products look smarter already 🧠",
-    "Teaching Proxima what you sell (it's impressed) 🤖",
+    "Teaching {brand} what you sell (it's impressed) 🤖",
     "Polishing product data to perfection ✨",
     "Your catalog is getting a glow-up ✨",
   ],
@@ -36,7 +36,7 @@ export const SYNC_MESSAGES: Record<string, string[]> = {
     "Your promotions are syncing up ✨",
   ],
   general: [
-    "Feeding the hamsters powering Proxima 🐹",
+    "Feeding the hamsters powering {brand} 🐹",
     "Brewing coffee for your data ☕",
     "This is the part where magic happens ✨",
     "Still faster than doing it manually 😄",
@@ -55,13 +55,18 @@ export const ALL_MESSAGES: string[] = [
   ...SYNC_MESSAGES.general,
 ];
 
-export function pickAnyMessage(tick: number): string {
-  return ALL_MESSAGES[tick % ALL_MESSAGES.length];
+function withBrand(msg: string, brandName: string): string {
+  return msg.replace(/\{brand\}/g, brandName);
 }
 
-export function pickMessage(aspect: string | null, tick: number): string {
+export function pickAnyMessage(tick: number, brandName: string): string {
+  const raw = ALL_MESSAGES[tick % ALL_MESSAGES.length];
+  return withBrand(raw, brandName);
+}
+
+export function pickMessage(aspect: string | null, tick: number, brandName: string): string {
   const pool = tick % 4 === 3
     ? SYNC_MESSAGES.general
     : SYNC_MESSAGES[aspect || "general"] || SYNC_MESSAGES.general;
-  return pool[tick % pool.length];
+  return withBrand(pool[tick % pool.length], brandName);
 }

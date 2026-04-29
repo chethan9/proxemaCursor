@@ -28,8 +28,10 @@ yarn-error.log*
 # local env files
 .env*.local
 
-# vercel
-.vercel
+# vercel (commit project.json so deploys target woosync-live-prod only)
+.vercel/*
+!.vercel/project.json
+!.vercel/README
 
 # typescript
 *.tsbuildinfo

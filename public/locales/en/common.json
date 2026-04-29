@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Proxema"
+    "name": "{{brand}}"
   },
   "nav": {
     "home": "Home",
@@ -113,7 +113,7 @@
   },
   "addSite": {
     "title": "Connect WooCommerce Store",
-    "description": "Add a store and authorize Proxima to access it.",
+    "description": "Add a store and authorize {{brand}} to access it.",
     "adBlockerWarning": "Disable ad blockers",
     "adBlockerDetail": "they can block the callback.",
     "siteName": "Site Name",
@@ -138,7 +138,7 @@
     "apiKeysHelpTitle": "How to create API keys:",
     "apiKeysHelpStep1": "In WooCommerce: Settings → Advanced → REST API",
     "apiKeysHelpStep2": "Click Add key",
-    "apiKeysHelpStep3": "Description: Proxima",
+    "apiKeysHelpStep3": "Description: {{brand}}",
     "apiKeysHelpStep4": "User: any admin user",
     "apiKeysHelpStep5": "Permissions: Read/Write (required)",
     "apiKeysHelpStep6": "Click Generate API key",
@@ -199,7 +199,7 @@
     "deleteConfirmTitle": "Delete this site?",
     "deleteConfirmDesc": "This permanently removes <strong>{{name}}</strong> and all synced products, orders, customers, and logs. This cannot be undone.",
     "deletePermanently": "Delete permanently",
-    "footerNote": "Changes are saved to WooSync only. WooCommerce credentials stay private.",
+    "footerNote": "Changes are saved to {{brand}} only. WooCommerce credentials stay private.",
     "save": "Save changes",
     "saving": "Saving…",
     "cancel": "Cancel",

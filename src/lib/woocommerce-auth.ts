@@ -1,3 +1,5 @@
+import { DEFAULT_BRAND_NAME } from "@/lib/brand-constants";
+
 // WooCommerce App Authentication Helper
 // Docs: https://woocommerce.github.io/woocommerce-rest-api-docs/#authentication-over-http
 
@@ -38,7 +40,7 @@ export function cleanStoreUrl(url: string): string {
 export function buildWooCommerceAuthUrl({
   storeUrl,
   storeId,
-  appName = "Proxima",
+  appName = DEFAULT_BRAND_NAME,
   scope = "read_write",
 }: WooAuthParams): string {
   // Clean and normalize store URL
@@ -90,7 +92,7 @@ export function validateStoreUrl(url: string): { valid: boolean; error?: string;
 export function buildWpAppPasswordUrl({
   storeUrl,
   storeId,
-  appName = "Proxima",
+  appName = DEFAULT_BRAND_NAME,
   returnTo,
 }: {
   storeUrl: string;

@@ -1,3 +1,5 @@
+import { DEFAULT_BRAND_NAME } from "./brand-constants";
+
 export type BlockingService =
   | "cloudflare"
   | "sucuri"
@@ -60,9 +62,21 @@ export function buildCurlCommand(ctx: WooErrorContext, consumerKey?: string, con
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_VERCEL_URL ||
-  "https://woosync.app";
+  "https://example.invalid";
 const APP_URL_NORMALIZED = APP_URL.startsWith("http") ? APP_URL : `https://${APP_URL}`;
-export const WOO_USER_AGENT = `Proxima/1.0 (+${APP_URL_NORMALIZED})`;
+
+/** Alphanumeric token for User-Agent and WAF “contains” rules; derived from Settings → Branding name. */
+export function userAgentProductToken(brandName: string): string {
+  const t = brandName.trim().replace(/[^a-zA-Z0-9]+/g, "");
+  const fallback = DEFAULT_BRAND_NAME.replace(/[^a-zA-Z0-9]+/g, "") || "App";
+  return (t || fallback).slice(0, 40);
+}
+
+/** Full User-Agent string for outbound WooCommerce / WordPress API calls. */
+export function buildWooUserAgentFromBrand(brandName: string): string {
+  const token = userAgentProductToken(brandName);
+  return `${token}/1.0 (+${APP_URL_NORMALIZED})`;
+}
 
 export function detectBlockingService(
   status: number,

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import { WOO_USER_AGENT } from "@/lib/sync-error";
+import { getWooUserAgent } from "@/lib/brand-name-server";
 import { logActivity } from "@/lib/activity-log";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -65,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq("store_id", storeId);
 
   const webhookResults: { id: string; woo_webhook_id: number | null; ok: boolean; error?: string }[] = [];
+  const ua = await getWooUserAgent();
   if (webhooks && store.consumer_key && store.consumer_secret && store.url) {
     const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
     const baseUrl = store.url.replace(/\/$/, "");
@@ -80,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             `${baseUrl}/wp-json/wc/v3/webhooks/${wh.woo_webhook_id}?force=true`,
             {
               method: "DELETE",
-              headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT },
+              headers: { Authorization: `Basic ${auth}`, "User-Agent": ua },
               signal: controller.signal,
             }
           );
@@ -114,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `${baseUrl}/wp-json/wc/v3/keys/${wooKeyId}?force=true`,
         {
           method: "DELETE",
-          headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT },
+          headers: { Authorization: `Basic ${auth}`, "User-Agent": ua },
           signal: controller.signal,
         }
       );

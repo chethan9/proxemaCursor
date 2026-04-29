@@ -1,4 +1,5 @@
-import { WOO_USER_AGENT, detectBlockingService } from "./sync-error";
+import { getWooUserAgent } from "@/lib/brand-name-server";
+import { detectBlockingService } from "./sync-error";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -41,6 +42,7 @@ export async function fetchWooWithRetry(
   const attempts = opts.attempts ?? 3;
   const timeoutMs = opts.timeoutMs ?? 30000;
   let lastError: Error | null = null;
+  const ua = await getWooUserAgent();
 
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
@@ -50,7 +52,7 @@ export async function fetchWooWithRetry(
         headers: {
           Authorization: `Basic ${auth}`,
           "Content-Type": "application/json",
-          "User-Agent": WOO_USER_AGENT,
+          "User-Agent": ua,
         },
         signal: controller.signal,
       });

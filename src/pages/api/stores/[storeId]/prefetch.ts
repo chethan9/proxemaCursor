@@ -2,20 +2,20 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
 import type { Json } from "@/integrations/supabase/database.types";
-import { WOO_USER_AGENT } from "@/lib/sync-error";
+import { getWooUserAgent } from "@/lib/brand-name-server";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
 }
 
-async function fetchWoo<T>(storeUrl: string, auth: string, endpoint: string, params: Record<string, string>): Promise<T[]> {
+async function fetchWoo<T>(storeUrl: string, auth: string, endpoint: string, params: Record<string, string>, ua: string): Promise<T[]> {
   const url = new URL(`${storeUrl.replace(/\/$/, "")}/wp-json/wc/v3/${endpoint}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 20000);
   try {
     const res = await fetch(url.toString(), {
-      headers: { Authorization: `Basic ${auth}`, "User-Agent": WOO_USER_AGENT },
+      headers: { Authorization: `Basic ${auth}`, "User-Agent": ua },
       signal: controller.signal,
     });
     clearTimeout(t);
@@ -107,11 +107,11 @@ async function upsertCategories(storeId: string, items: Record<string, unknown>[
   await (supabaseAdmin as any).from("categories").upsert(rows, { onConflict: "store_id,woo_id" });
 }
 
-async function fetchAllCategories(storeUrl: string, auth: string): Promise<Record<string, unknown>[]> {
+async function fetchAllCategories(storeUrl: string, auth: string, ua: string): Promise<Record<string, unknown>[]> {
   const all: Record<string, unknown>[] = [];
   let page = 1;
   while (page <= 20) {
-    const chunk = await fetchWoo<Record<string, unknown>>(storeUrl, auth, "products/categories", { per_page: "100", page: String(page) });
+    const chunk = await fetchWoo<Record<string, unknown>>(storeUrl, auth, "products/categories", { per_page: "100", page: String(page) }, ua);
     if (chunk.length === 0) break;
     all.push(...chunk);
     if (chunk.length < 100) break;
@@ -140,12 +140,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const runBackground = async () => {
     const auth = Buffer.from(`${store.consumer_key}:${store.consumer_secret}`).toString("base64");
+    const ua = await getWooUserAgent();
 
     // Phase 1: prefetch top 50 products, 50 orders, all categories in parallel
     const [products, orders, categories] = await Promise.all([
-      fetchWoo<Record<string, unknown>>(store.url, auth, "products", { per_page: "50", page: "1", orderby: "modified", order: "desc" }),
-      fetchWoo<Record<string, unknown>>(store.url, auth, "orders", { per_page: "50", page: "1", orderby: "date", order: "desc" }),
-      fetchAllCategories(store.url, auth),
+      fetchWoo<Record<string, unknown>>(store.url, auth, "products", { per_page: "50", page: "1", orderby: "modified", order: "desc" }, ua),
+      fetchWoo<Record<string, unknown>>(store.url, auth, "orders", { per_page: "50", page: "1", orderby: "date", order: "desc" }, ua),
+      fetchAllCategories(store.url, auth, ua),
     ]);
 
     await Promise.all([

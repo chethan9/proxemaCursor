@@ -1,14 +1,1 @@
-<![CDATA[
-{
-  "app": { "name": "Proxema" },
-  "nav": {
-    "home": "首页", "orders": "订单", "products": "商品",
-...
-   "language": "语言",
-    "theme": "主题",
-    "light": "浅色", "dark": "深色", "system": "跟随系统"
-  }
-}
-]]>
-
-[Tool result trimmed: kept first 100 chars and last 100 chars of 1235 chars.]
+{}

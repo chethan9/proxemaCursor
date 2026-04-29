@@ -15,6 +15,7 @@ import type { TemplateType, TemplateRow } from "@/lib/templates/document";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { SEO } from "@/components/SEO";
+import { useBranding } from "@/contexts/BrandingProvider";
 
 const TYPE_META: Record<"invoice" | "pickslip", { label: string; icon: typeof FileText; description: string }> = {
   invoice: { label: "Invoices", icon: Receipt, description: "Customer-facing PDFs sent or downloaded with orders." },
@@ -23,6 +24,7 @@ const TYPE_META: Record<"invoice" | "pickslip", { label: string; icon: typeof Fi
 
 function TemplatesInner() {
   const router = useRouter();
+  const { brandName } = useBranding();
   const { profile } = useAuth();
   const clientId = profile?.client_id ?? null;
   const [activeType, setActiveType] = useState<"invoice" | "pickslip">("invoice");
@@ -77,7 +79,7 @@ function TemplatesInner() {
 
   return (
     <>
-      <SEO title="Templates · WooSync" />
+      <SEO title={`Templates · ${brandName}`} />
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
