@@ -162,7 +162,10 @@
       "subscriptions": "Subscriptions",
       "menuEditor": "Menu Editor",
       "paymentMethods": "Payment Methods",
-      "translations": "Translations"
+      "translations": "Translations",
+      "aiCredits": "AI credits",
+      "adminAiSettings": "AI providers",
+      "adminAiFeatures": "AI features"
     }
   },
   "connect": {

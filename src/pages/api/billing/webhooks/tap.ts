@@ -4,6 +4,7 @@ import { tapGateway } from "@/lib/payments/tap";
 import { logActivity } from "@/lib/activity-log";
 import { recordPaidConversion, recordReversal } from "@/services/referralService.server";
 import { finalizeCheckoutPayment } from "@/lib/billing/finalize-checkout-payment.server";
+import { tryFinalizeAiCreditPurchaseFromWebhook } from "@/lib/billing/finalize-ai-credit-purchase.server";
 
 export const config = { api: { bodyParser: false } };
 
@@ -28,6 +29,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headers: req.headers as Record<string, string | string[] | undefined>,
       rawBody,
     });
+
+    if (event.gatewayRef) {
+      const ps =
+        event.paymentStatus === "paid"
+          ? "paid"
+          : event.paymentStatus === "failed"
+            ? "failed"
+            : event.paymentStatus === "canceled"
+              ? "canceled"
+              : "pending";
+      const { handled } = await tryFinalizeAiCreditPurchaseFromWebhook({
+        gatewayRef: event.gatewayRef,
+        gateway: "tap",
+        paymentStatus: ps,
+      });
+      if (handled) {
+        return res.status(200).json({ ok: true, purpose: "ai_credits" });
+      }
+    }
 
     let clientId: string | null = null;
     let subscriptionId: string | null = null;

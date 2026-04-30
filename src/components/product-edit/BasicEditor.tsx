@@ -13,9 +13,12 @@ import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 import { cn } from "@/lib/utils";
+import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
 
 interface Props {
   storeId: string;
+  /** Product UUID when editing; omit on create flow */
+  productId?: string | null;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
   saving: boolean;
@@ -26,7 +29,7 @@ interface Props {
 
 const BANNER_KEY = "product-basic-banner-dismissed";
 
-export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublish, isEdit }: Props) {
+export function BasicEditor({ storeId, productId, form, setForm, saving, onCancel, onPublish, isEdit }: Props) {
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [catSearch, setCatSearch] = useState("");
@@ -181,7 +184,10 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Product image</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Product image</Label>
+                    <AIProductImageAssistant storeId={storeId} productId={productId} form={form} setForm={setForm} />
+                  </div>
                   <button type="button" onClick={() => setImageOpen("main")} className="h-[140px] w-[140px] rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden relative">
                     {mainImage ? (
                       // eslint-disable-next-line @next/next/no-img-element

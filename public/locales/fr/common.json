@@ -164,7 +164,11 @@
       "subscriptions": "Subscriptions",
       "menuEditor": "Menu Editor",
       "paymentMethods": "Payment Methods",
-      "translations": "Translations"
+      "translations": "Translations",
+      "billingControls": "Billing & enforcement",
+      "aiCredits": "AI credits",
+      "adminAiSettings": "AI providers",
+      "adminAiFeatures": "AI features"
     }
   },
   "connect": {

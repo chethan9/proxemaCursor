@@ -9,14 +9,16 @@ import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
+import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
 
 type Props = {
   storeId: string;
+  productId?: string | null;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
 };
 
-export function BasicInfoTab({ storeId, form, setForm }: Props) {
+export function BasicInfoTab({ storeId, productId, form, setForm }: Props) {
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
   const [catInput, setCatInput] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -95,7 +97,10 @@ export function BasicInfoTab({ storeId, form, setForm }: Props) {
 
       <div className="flex items-start gap-4">
         <div className="space-y-1.5">
-          <Label className="text-xs">Product Image</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs">Product Image</Label>
+            <AIProductImageAssistant storeId={storeId} productId={productId} form={form} setForm={setForm} />
+          </div>
           <button type="button" onClick={() => setImageOpen("main")} className="h-28 w-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden">
             {mainImage ? (
               // eslint-disable-next-line @next/next/no-img-element

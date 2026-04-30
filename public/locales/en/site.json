@@ -102,6 +102,29 @@
       "truncatedDesc": "First {{count}} rows only (limit {{max}}). Narrow filters for a smaller export.",
       "pdfTooManyRows": "PDF is limited to {{max}} rows. Use Excel or CSV, or narrow your filters."
     },
+    "ai": {
+      "open": "AI images",
+      "title": "AI image generation",
+      "feature": "Feature",
+      "source": "Source image",
+      "sourceMain": "Main product image",
+      "sourceGallery": "Gallery image",
+      "gallerySlot": "Slot {{n}}",
+      "outputCount": "Number of outputs",
+      "generate": "Generate",
+      "generating": "Generating…",
+      "failed": "AI generation failed",
+      "noImage": "Add or select an image first.",
+      "creditsUsed": "{{count}} credits used",
+      "applyBest": "Apply best to source slot",
+      "appendAllGallery": "Append all to gallery",
+      "regenerate": "Regenerate",
+      "discard": "Discard",
+      "close": "Close",
+      "applied": "Images applied",
+      "reverted": "Reverted local changes",
+      "revert": "Revert unsaved image changes"
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",
@@ -833,6 +856,26 @@
       "retryQueuedDesc_other": "Re-running {{count}} failed items",
       "retryFailed": "Retry failed"
     }
+  },
+  "settingsAi": {
+    "title": "AI credits",
+    "subtitle": "Usage from your plan and purchased top-ups.",
+    "noSub": "No active subscription — credits are unavailable.",
+    "plan": "Plan",
+    "monthlyUsed": "{{used}} / {{allowance}} monthly credits used",
+    "topupBalance": "Top-up balance",
+    "totalAvailable": "Total available now",
+    "featureCosts": "Credit cost per generation",
+    "topupSoon": "Purchase credits (coming soon)",
+    "buyCredits": "Buy credits",
+    "creditsPack": "Credits",
+    "priceEstimate": "Estimated charge",
+    "checkoutError": "Could not start checkout",
+    "recentPurchases": "Recent purchases",
+    "purchasePending": "Pending",
+    "purchasePaid": "Paid",
+    "purchaseFailed": "Failed",
+    "topupProcessing": "Payment received — credits update shortly."
   },
   "settings": {
     "title": "Configuration",

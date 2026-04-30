@@ -11,6 +11,10 @@ const ALLOWED = new Set([
   "sites.taxonomy.export_csv",
   "sites.invoice.print_queued",
   "templates.version.saved",
+  "sites.product.ai_generate",
+  "sites.product.ai_approve",
+  "sites.product.ai_reject",
+  "sites.product.ai_regenerate",
 ]);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

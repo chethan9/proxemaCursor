@@ -262,7 +262,7 @@ function Inner() {
       )}
 
       {mode === "basic" ? (
-        <BasicEditor storeId={storeId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} saving={save.isPending} onCancel={goBack} onPublish={onPublish} isEdit={true} />
+        <BasicEditor storeId={storeId} productId={productId as string} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} saving={save.isPending} onCancel={goBack} onPublish={onPublish} isEdit={true} />
       ) : (
         <AdvancedShell
           form={form}
@@ -275,7 +275,7 @@ function Inner() {
           saving={save.isPending}
           isEdit={true}
           tabContent={{
-            basic: <BasicInfoTab storeId={storeId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
+            basic: <BasicInfoTab storeId={storeId} productId={productId as string} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
             pricing: <PricingTaxTab form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
             inventory: <InventoryShippingTab form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
             variants: <VariantsTab storeId={storeId} productId={productId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,

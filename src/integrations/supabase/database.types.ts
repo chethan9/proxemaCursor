@@ -1503,6 +1503,198 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_credit_purchases: {
+        Row: {
+          amount_minor: number
+          client_id: string
+          created_at: string
+          credits: number
+          currency: string
+          gateway: string | null
+          gateway_ref: string | null
+          id: string
+          metadata: Json | null
+          status: string
+          subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor?: number
+          client_id: string
+          created_at?: string
+          credits: number
+          currency?: string
+          gateway?: string | null
+          gateway_ref?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          client_id?: string
+          created_at?: string
+          credits?: number
+          currency?: string
+          gateway?: string | null
+          gateway_ref?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_features: {
+        Row: {
+          created_at: string
+          credit_cost_per_output: number
+          default_output_count: number
+          description: string | null
+          id: string
+          is_active: boolean
+          model: string
+          name: string
+          prompt_template: string
+          provider: string
+          slug: string
+          sort_order: number
+          supports_gallery: boolean
+          supports_main: boolean
+          updated_at: string
+          user_input_schema: Json
+        }
+        Insert: {
+          created_at?: string
+          credit_cost_per_output?: number
+          default_output_count?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          model: string
+          name: string
+          prompt_template: string
+          provider: string
+          slug: string
+          sort_order?: number
+          supports_gallery?: boolean
+          supports_main?: boolean
+          updated_at?: string
+          user_input_schema?: Json
+        }
+        Update: {
+          created_at?: string
+          credit_cost_per_output?: number
+          default_output_count?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string
+          name?: string
+          prompt_template?: string
+          provider?: string
+          slug?: string
+          sort_order?: number
+          supports_gallery?: boolean
+          supports_main?: boolean
+          updated_at?: string
+          user_input_schema?: Json
+        }
+        Relationships: []
+      }
+      ai_generations: {
+        Row: {
+          actor_user_id: string | null
+          client_id: string
+          created_at: string
+          credits_spent: number
+          error_message: string | null
+          feature_id: string
+          id: string
+          input_image_urls: string[]
+          model: string | null
+          output_storage_paths: string[]
+          output_wp_ids: number[]
+          product_id: string | null
+          prompt_used: string | null
+          provider: string | null
+          status: string
+          store_id: string
+          updated_at: string
+          user_input: Json
+        }
+        Insert: {
+          actor_user_id?: string | null
+          client_id: string
+          created_at?: string
+          credits_spent?: number
+          error_message?: string | null
+          feature_id: string
+          id?: string
+          input_image_urls?: string[]
+          model?: string | null
+          output_storage_paths?: string[]
+          output_wp_ids?: number[]
+          product_id?: string | null
+          prompt_used?: string | null
+          provider?: string | null
+          status?: string
+          store_id: string
+          updated_at?: string
+          user_input?: Json
+        }
+        Update: {
+          actor_user_id?: string | null
+          client_id?: string
+          created_at?: string
+          credits_spent?: number
+          error_message?: string | null
+          feature_id?: string
+          id?: string
+          input_image_urls?: string[]
+          model?: string | null
+          output_storage_paths?: string[]
+          output_wp_ids?: number[]
+          product_id?: string | null
+          prompt_used?: string | null
+          provider?: string | null
+          status?: string
+          store_id?: string
+          updated_at?: string
+          user_input?: Json
+        }
+        Relationships: []
+      }
+      ai_provider_credentials: {
+        Row: {
+          api_key_encrypted: string | null
+          extra: Json | null
+          is_active: boolean
+          provider: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          extra?: Json | null
+          is_active?: boolean
+          provider: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          extra?: Json | null
+          is_active?: boolean
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           billing_interval: string
@@ -1514,6 +1706,7 @@ export type Database = {
           is_custom: boolean
           is_default_trial: boolean
           max_api_calls_per_month: number
+          monthly_ai_credits: number
           max_initial_history_days: number | null
           max_products_per_site: number
           max_sites: number
@@ -1535,6 +1728,7 @@ export type Database = {
           is_custom?: boolean
           is_default_trial?: boolean
           max_api_calls_per_month?: number
+          monthly_ai_credits?: number
           max_initial_history_days?: number | null
           max_products_per_site?: number
           max_sites?: number
@@ -1556,6 +1750,7 @@ export type Database = {
           is_custom?: boolean
           is_default_trial?: boolean
           max_api_calls_per_month?: number
+          monthly_ai_credits?: number
           max_initial_history_days?: number | null
           max_products_per_site?: number
           max_sites?: number
@@ -2466,6 +2661,8 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          ai_credits_topup_balance: number
+          ai_credits_used_this_period: number
           api_calls_this_period: number
           auto_renew_disabled_reason: string | null
           cancel_at_period_end: boolean
@@ -2491,6 +2688,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_credits_topup_balance?: number
+          ai_credits_used_this_period?: number
           api_calls_this_period?: number
           auto_renew_disabled_reason?: string | null
           cancel_at_period_end?: boolean
@@ -2516,6 +2715,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_credits_topup_balance?: number
+          ai_credits_used_this_period?: number
           api_calls_this_period?: number
           auto_renew_disabled_reason?: string | null
           cancel_at_period_end?: boolean
@@ -3210,6 +3411,7 @@ export type Database = {
     Functions: {
       bootstrap_super_admin: { Args: never; Returns: undefined }
       can_bootstrap_super_admin: { Args: never; Returns: boolean }
+      consume_ai_credits: { Args: { p_client_id: string; p_credits: number }; Returns: boolean }
       current_user_client_id: { Args: never; Returns: string }
       current_user_role: { Args: never; Returns: string }
       decrypt_credential: {

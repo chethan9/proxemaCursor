@@ -29,14 +29,25 @@ function loadScript(src: string): Promise<void> {
 
 export interface TapCardFormProps {
   publishableKey: string;
-  subscriptionId: string;
+  /** Subscription checkout (billing) */
+  subscriptionId?: string;
+  /** AI credits top-up checkout */
+  aiCreditPurchaseId?: string;
   customerEmail?: string;
   customerName?: string;
-  onSuccess: (subscriptionId: string) => void;
+  onSuccess: (subscriptionIdOrPurchaseId: string) => void;
   onCancel?: () => void;
 }
 
-export function TapCardForm({ publishableKey, subscriptionId, customerEmail, customerName, onSuccess, onCancel }: TapCardFormProps) {
+export function TapCardForm({
+  publishableKey,
+  subscriptionId,
+  aiCreditPurchaseId,
+  customerEmail,
+  customerName,
+  onSuccess,
+  onCancel,
+}: TapCardFormProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -76,6 +87,10 @@ export function TapCardForm({ publishableKey, subscriptionId, customerEmail, cus
 
   const handlePay = async () => {
     if (!window.CardSDK) return;
+    if (!aiCreditPurchaseId && !subscriptionId) {
+      setError("Missing checkout context");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -83,10 +98,15 @@ export function TapCardForm({ publishableKey, subscriptionId, customerEmail, cus
       if (!tokenId) throw new Error("Card tokenization failed");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Session expired");
-      const res = await fetch("/api/billing/tap/charge", {
+      const isAiCredits = Boolean(aiCreditPurchaseId);
+      const res = await fetch(isAiCredits ? "/api/ai/credits/tap-charge" : "/api/billing/tap/charge", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ subscriptionId, tokenId }),
+        body: JSON.stringify(
+          isAiCredits
+            ? { purchaseId: aiCreditPurchaseId, tokenId }
+            : { subscriptionId, tokenId }
+        ),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Charge failed");
@@ -94,7 +114,9 @@ export function TapCardForm({ publishableKey, subscriptionId, customerEmail, cus
         window.location.href = data.transactionUrl;
         return;
       }
-      onSuccess(subscriptionId);
+      const doneId = isAiCredits ? aiCreditPurchaseId : subscriptionId;
+      if (!doneId) throw new Error("Missing checkout context");
+      onSuccess(doneId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Payment failed");
       setLoading(false);

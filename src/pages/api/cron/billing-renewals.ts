@@ -194,7 +194,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const charge = await chargeSavedToken(s);
     if (charge.ok) {
       const period = extendPeriod(s);
-      await setStatus(s.id, "active", { ...period, trial_end: null, last_charge_attempt_at: iso, last_charge_failed_at: null });
+      await setStatus(s.id, "active", { ...period, trial_end: null, last_charge_attempt_at: iso, last_charge_failed_at: null, ai_credits_used_this_period: 0 });
       await createInvoice(s, "paid", charge.gatewayRef);
       await logEvent(s.id, "trial_converted", "trialing", "active", { gatewayRef: charge.gatewayRef });
       await sysLog(s, "subscription.trial_converted");
@@ -214,7 +214,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const charge = await chargeSavedToken(s);
     if (charge.ok) {
       const period = extendPeriod(s);
-      await setStatus(s.id, "active", { ...period, last_charge_attempt_at: iso, last_charge_failed_at: null });
+      await setStatus(s.id, "active", { ...period, last_charge_attempt_at: iso, last_charge_failed_at: null, ai_credits_used_this_period: 0 });
       await createInvoice(s, "paid", charge.gatewayRef);
       await logEvent(s.id, "renewed", "active", "active");
       await sysLog(s, "subscription.renewed");
@@ -271,7 +271,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const charge = await chargeSavedToken(s);
     if (charge.ok) {
       const period = extendPeriod(s);
-      await setStatus(s.id, "active", { ...period, last_charge_attempt_at: iso, last_charge_failed_at: null });
+      await setStatus(s.id, "active", { ...period, last_charge_attempt_at: iso, last_charge_failed_at: null, ai_credits_used_this_period: 0 });
       await createInvoice(s, "paid", charge.gatewayRef);
       await logEvent(s.id, "renewed_after_retry", "past_due", "active", { day });
       await sysLog(s, "subscription.recovered", { day });

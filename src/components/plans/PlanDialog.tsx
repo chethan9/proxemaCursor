@@ -40,6 +40,7 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
   const [maxProducts, setMaxProducts] = useState<number | "">("");
   const [maxUsers, setMaxUsers] = useState<number | "">("");
   const [maxApi, setMaxApi] = useState<number | "">("");
+  const [maxMonthlyAi, setMaxMonthlyAi] = useState<number | "">("");
   const [maxHistory, setMaxHistory] = useState<number | "">("");
   const [features, setFeatures] = useState<Record<string, boolean>>({});
 
@@ -62,6 +63,7 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
     setMaxProducts(plan?.max_products_per_site ?? "");
     setMaxUsers(plan?.max_users ?? "");
     setMaxApi(plan?.max_api_calls_per_month ?? "");
+    setMaxMonthlyAi((plan as { monthly_ai_credits?: number } | null)?.monthly_ai_credits ?? "");
     setMaxHistory(plan?.max_initial_history_days ?? "");
     const f = (plan?.features as Record<string, boolean>) || {};
     const fInit: Record<string, boolean> = {};
@@ -94,6 +96,7 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
       max_products_per_site: maxProducts === "" ? null : Number(maxProducts),
       max_users: maxUsers === "" ? null : Number(maxUsers),
       max_api_calls_per_month: maxApi === "" ? null : Number(maxApi),
+      monthly_ai_credits: maxMonthlyAi === "" ? null : Number(maxMonthlyAi),
       max_initial_history_days: maxHistory === "" ? null : Number(maxHistory),
       features,
     };
@@ -220,6 +223,10 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
               <div>
                 <Label className="text-xs">{t("planDialog.apiCallsPerMonth")}</Label>
                 <Input type="number" min={0} placeholder={t("planDialog.unlimited")} value={maxApi} onChange={(e) => setMaxApi(e.target.value === "" ? "" : Number(e.target.value))} />
+              </div>
+              <div>
+                <Label className="text-xs">{t("planDialog.monthlyAiCredits")}</Label>
+                <Input type="number" min={0} placeholder={t("planDialog.unlimited")} value={maxMonthlyAi} onChange={(e) => setMaxMonthlyAi(e.target.value === "" ? "" : Number(e.target.value))} />
               </div>
               <div className="md:col-span-2">
                 <Label className="text-xs flex items-center gap-1">

@@ -223,6 +223,7 @@
     "productsPerSite": "Products / site",
     "maxUsers": "Max users",
     "apiCallsPerMonth": "API calls / month",
+    "monthlyAiCredits": "AI credits / month",
     "maxInitialHistory": "Max initial history (days)",
     "unlimited": "Unlimited",
     "historyHelper": "Cap on how far back orders & customers are fetched on initial/full sync. Empty = unlimited. Suggested: Free 90, Pro 365.",

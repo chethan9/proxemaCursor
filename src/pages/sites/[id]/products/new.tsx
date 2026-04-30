@@ -156,7 +156,7 @@ function Inner() {
       )}
 
       {mode === "basic" ? (
-        <BasicEditor storeId={id} form={form} setForm={setForm} saving={create.isPending} onCancel={goBack} onPublish={submit} isEdit={false} />
+        <BasicEditor storeId={id} productId={null} form={form} setForm={setForm} saving={create.isPending} onCancel={goBack} onPublish={submit} isEdit={false} />
       ) : (
         <AdvancedShell
           form={form}
@@ -169,7 +169,7 @@ function Inner() {
           saving={create.isPending}
           isEdit={false}
           tabContent={{
-            basic: <BasicInfoTab storeId={id} form={form} setForm={setForm} />,
+            basic: <BasicInfoTab storeId={id} productId={null} form={form} setForm={setForm} />,
             pricing: <PricingTaxTab form={form} setForm={setForm} />,
             inventory: <InventoryShippingTab form={form} setForm={setForm} />,
             variants: <VariantsTab storeId={id} form={form} setForm={setForm} />,
