@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooRequest, getStoreCreds } from "@/lib/woo-client";
 import type { Database } from "@/integrations/supabase/helpers";
+import { auditSitesMutation } from "@/lib/audit/log";
 
 type Json = Database["public"]["Tables"]["tags"]["Row"]["raw_data"];
 
@@ -51,6 +52,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       source: "dashboard",
       status: "success",
       snapshot_after: inserted as unknown as Json,
+    });
+
+    void auditSitesMutation({
+      req,
+      action: "tag.create",
+      entityType: "tag",
+      entityId: inserted.id,
+      storeId,
+      before: null,
+      after: inserted as Record<string, unknown>,
+      metadata: { woo_id: row.woo_id },
     });
 
     return res.status(201).json(inserted);

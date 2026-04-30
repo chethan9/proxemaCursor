@@ -30,7 +30,7 @@ import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useProducts, useProductCategoryOptions } from "@/hooks/queries/useProducts";
+import { useProducts, useProductBrandOptions, useProductCategoryOptions, useProductTagOptions } from "@/hooks/queries/useProducts";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
 import { queryKeys } from "@/lib/query-client";
@@ -38,7 +38,7 @@ import { normalizeNumberInput, normalizeSelectFilter } from "@/lib/normalize-exp
 import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
 import { createBulkJob } from "@/services/bulkJobService";
-import { DollarSign, Boxes, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock } from "lucide-react";
+import { Tags, Building2, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
@@ -51,11 +51,17 @@ import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
+import { logClientAuditEvent } from "@/lib/audit/client-log";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "next-i18next";
 import { formatNumber } from "@/lib/format-number";
+import {
+  PRODUCT_CATALOG_COLUMNS as COLUMNS,
+  type CatalogColumnKey as ColumnKey,
+} from "@/lib/product-catalog-columns";
+import { supabase } from "@/integrations/supabase/client";
 
 const PENDING_LABELS: Record<string, string> = {
   delete: "Scheduled for deletion",
@@ -63,53 +69,13 @@ const PENDING_LABELS: Record<string, string> = {
   price_update: "Scheduled for price update",
   stock_update: "Scheduled for stock update",
   category_update: "Scheduled for category update",
+  tag_update: "Scheduled for tag update",
+  brand_update: "Scheduled for brand update",
 };
 function pendingLabel(action?: string | null) {
   if (!action) return "";
   return PENDING_LABELS[action] || `Scheduled: ${action}`;
 }
-
-type ColumnKey =
-  | "image" | "id" | "wooId" | "name" | "slug" | "sku" | "type" | "status" | "permalink" | "parent_id"
-  | "price" | "regular_price" | "sale_price"
-  | "stock" | "stock_status" | "manage_stock"
-  | "tax_status" | "tax_class" | "shipping_required"
-  | "category" | "brands" | "attributes" | "images_count"
-  | "short_desc" | "description"
-  | "date_created" | "date_modified" | "sales" | "created" | "updated";
-
-const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: ProductSortField }[] = [
-  { key: "image", label: "Image", group: "Basic" },
-  { key: "id", label: "ID", group: "Basic" },
-  { key: "wooId", label: "Woo ID", group: "Basic" },
-  { key: "name", label: "Product name", group: "Basic", sortable: "name" },
-  { key: "slug", label: "Slug", group: "Basic" },
-  { key: "sku", label: "SKU", group: "Basic" },
-  { key: "type", label: "Type", group: "Basic" },
-  { key: "status", label: "Status", group: "Basic" },
-  { key: "permalink", label: "Permalink", group: "Basic" },
-  { key: "parent_id", label: "Parent ID", group: "Basic" },
-  { key: "price", label: "Price", group: "Pricing", sortable: "price" },
-  { key: "regular_price", label: "Regular price", group: "Pricing" },
-  { key: "sale_price", label: "Sale price", group: "Pricing" },
-  { key: "stock", label: "Stock qty", group: "Inventory", sortable: "stock_quantity" },
-  { key: "stock_status", label: "Stock status", group: "Inventory" },
-  { key: "manage_stock", label: "Manage stock", group: "Inventory" },
-  { key: "tax_status", label: "Tax status", group: "Tax & Shipping" },
-  { key: "tax_class", label: "Tax class", group: "Tax & Shipping" },
-  { key: "shipping_required", label: "Shipping required", group: "Tax & Shipping" },
-  { key: "category", label: "Categories", group: "Taxonomy" },
-  { key: "brands", label: "Brands", group: "Taxonomy" },
-  { key: "attributes", label: "Attributes", group: "Taxonomy" },
-  { key: "images_count", label: "Images count", group: "Taxonomy" },
-  { key: "short_desc", label: "Short description", group: "Content" },
-  { key: "description", label: "Description", group: "Content" },
-  { key: "date_created", label: "Date created (Woo)", group: "Dates" },
-  { key: "date_modified", label: "Date modified (Woo)", group: "Dates" },
-  { key: "sales", label: "Last synced", group: "Dates", sortable: "synced_at" },
-  { key: "created", label: "Created at (DB)", group: "Dates", sortable: "created_at" },
-  { key: "updated", label: "Updated at (DB)", group: "Dates", sortable: "updated_at" },
-];
 
 const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: string }[] = [
   { field: "woo_date_created", direction: "desc", label: "Newest first" },
@@ -152,19 +118,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const exportingRef = useRef(false);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkDialog, setBulkDialog] = useState<null | "price" | "stock" | "status" | "category" | "delete">(null);
+  const [bulkDialog, setBulkDialog] = useState<null | "status" | "category" | "tag" | "brand" | "delete">(null);
   const [typeDialogOpen, setTypeDialogOpen] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
-  const [priceOp, setPriceOp] = useState<"set" | "increase_pct" | "decrease_pct" | "increase_fixed" | "decrease_fixed" | "set_sale">("set");
-  const [priceValue, setPriceValue] = useState("");
-  const [stockOp, setStockOp] = useState<"set" | "adjust" | "set_status">("set");
-  const [stockValue, setStockValue] = useState("");
-  const [stockStatusVal, setStockStatusVal] = useState<"instock" | "outofstock" | "onbackorder">("instock");
   const [newProductStatus, setNewProductStatus] = useState<"publish" | "draft" | "pending" | "private">("publish");
   const [categoryMode, setCategoryMode] = useState<"add" | "remove" | "replace">("add");
   const [bulkCategoryIds, setBulkCategoryIds] = useState<Set<number>>(new Set());
+  const [tagMode, setTagMode] = useState<"add" | "remove" | "replace">("add");
+  const [bulkTagIds, setBulkTagIds] = useState<Set<number>>(new Set());
+  const [brandMode, setBrandMode] = useState<"add" | "remove" | "replace">("add");
+  const [bulkBrandIds, setBulkBrandIds] = useState<Set<number>>(new Set());
   const MAX_BULK = 500;
   const overLimit = selectedIds.size > MAX_BULK;
   const isPending = (p: ProductRow) => !!p.pending_action;
@@ -313,23 +280,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     }
     setBulkSubmitting(true);
     try {
-      if (bulkDialog === "price") {
-        const num = Number(priceValue);
-        if (!priceValue || Number.isNaN(num)) { setBulkSubmitting(false); return; }
-        await createBulkJob({ store_id: storeId, job_type: "update_product_price", total: wooIds.length, payload: { type: "update_product_price", product_ids: wooIds, operation: priceOp, value: num } });
-      } else if (bulkDialog === "stock") {
-        if (stockOp === "set_status") {
-          await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload: { type: "update_product_stock", product_ids: wooIds, operation: "set_status", stock_status: stockStatusVal } });
-        } else {
-          const num = Number(stockValue);
-          if (!stockValue || Number.isNaN(num)) { setBulkSubmitting(false); return; }
-          await createBulkJob({ store_id: storeId, job_type: "update_product_stock", total: wooIds.length, payload: { type: "update_product_stock", product_ids: wooIds, operation: stockOp, value: num } });
-        }
-      } else if (bulkDialog === "status") {
+      if (bulkDialog === "status") {
         await createBulkJob({ store_id: storeId, job_type: "update_product_status", total: wooIds.length, payload: { type: "update_product_status", product_ids: wooIds, new_status: newProductStatus } });
       } else if (bulkDialog === "category") {
         if (bulkCategoryIds.size === 0) { setBulkSubmitting(false); return; }
         await createBulkJob({ store_id: storeId, job_type: "assign_product_categories", total: wooIds.length, payload: { type: "assign_product_categories", product_ids: wooIds, mode: categoryMode, category_ids: Array.from(bulkCategoryIds) } });
+      } else if (bulkDialog === "tag") {
+        if (bulkTagIds.size === 0) { setBulkSubmitting(false); return; }
+        await createBulkJob({ store_id: storeId, job_type: "assign_product_tags", total: wooIds.length, payload: { type: "assign_product_tags", product_ids: wooIds, mode: tagMode, tag_ids: Array.from(bulkTagIds) } });
+      } else if (bulkDialog === "brand") {
+        if (bulkBrandIds.size === 0) { setBulkSubmitting(false); return; }
+        await createBulkJob({ store_id: storeId, job_type: "assign_product_brands", total: wooIds.length, payload: { type: "assign_product_brands", product_ids: wooIds, mode: brandMode, brand_ids: Array.from(bulkBrandIds) } });
       } else if (bulkDialog === "delete") {
         await createBulkJob({ store_id: storeId, job_type: "delete_products", total: wooIds.length, payload: { type: "delete_products", product_ids: wooIds, force: false } });
         const deleteSet = new Set(wooIds);
@@ -348,13 +309,31 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       await queryClient.invalidateQueries({ queryKey: queryKeys.products(storeId) });
       setSelectedIds(new Set());
       setBulkDialog(null);
-      setPriceValue(""); setStockValue(""); setBulkCategoryIds(new Set());
+      setBulkCategoryIds(new Set());
+      setBulkTagIds(new Set());
+      setBulkBrandIds(new Set());
     } catch (err) {
       console.error("[bulk]", err);
     } finally {
       setBulkSubmitting(false);
     }
-  }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatusVal, newProductStatus, categoryMode, bulkCategoryIds, queryClient]);
+  }, [
+    bulkDialog,
+    selectedIds,
+    overLimit,
+    products,
+    storeId,
+    newProductStatus,
+    categoryMode,
+    bulkCategoryIds,
+    tagMode,
+    bulkTagIds,
+    brandMode,
+    bulkBrandIds,
+    queryClient,
+    t,
+    toast,
+  ]);
 
   useEffect(() => { setSelectedIds(new Set()); }, [storeId, page, pageSize]);
 
@@ -408,56 +387,105 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     [visibleCols, columnOrder]
   );
 
-  const exportCsv = useCallback(() => {
-    if (products.length === 0) return;
-    const cols = visibleColList.filter((c) => c.key !== "image");
-    const header = cols.map((c) => c.label).join(",");
-    const rows = products.map((p) => cols.map((c) => {
-      let v: string | number = "";
-      switch (c.key) {
-        case "id": v = p.id; break;
-        case "name": v = p.name || ""; break;
-        case "status": v = p.status || ""; break;
-        case "sku": v = p.sku || ""; break;
-        case "price": v = (p.price as string) || ""; break;
-        case "regular_price": v = (p.regular_price as string) || ""; break;
-        case "sale_price": v = (p.sale_price as string) || ""; break;
-        case "stock": v = p.stock_quantity ?? ""; break;
-        case "stock_status": v = p.stock_status || ""; break;
-        case "manage_stock": v = String((p.raw_data?.manage_stock as boolean | string) ?? ""); break;
-        case "category": v = getCategoryNames(p.categories); break;
-        case "type": v = p.type || ""; break;
-        case "slug": v = p.slug || ""; break;
-        case "wooId": v = p.woo_id ?? ""; break;
-        case "parent_id": v = (p.raw_data?.parent_id as number) ?? ""; break;
-        case "permalink": v = (p.raw_data?.permalink as string) || ""; break;
-        case "tax_status": v = (p.raw_data?.tax_status as string) || ""; break;
-        case "tax_class": v = (p.raw_data?.tax_class as string) || ""; break;
-        case "shipping_required": v = String((p.raw_data?.shipping_required as boolean) ?? ""); break;
-        case "images_count": v = Array.isArray(p.images) ? p.images.length : 0; break;
-        case "short_desc": v = (p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200); break;
-        case "description": v = (p.description || "").replace(/<[^>]+>/g, "").slice(0, 500); break;
-        case "attributes": v = JSON.stringify(p.attributes || []); break;
-        case "date_created": v = (p.raw_data?.date_created as string) || ""; break;
-        case "date_modified": v = (p.raw_data?.date_modified as string) || ""; break;
-        case "sales": v = p.synced_at || ""; break;
-        case "created": v = p.created_at || ""; break;
-        case "updated": v = p.updated_at || ""; break;
+  const runExport = useCallback(async (format: "csv" | "xlsx" | "pdf") => {
+    if (locked || exportingRef.current || productCount <= 0) return;
+    exportingRef.current = true;
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast({ title: t("products.export.signIn"), variant: "destructive" });
+        return;
       }
-      const s = String(v).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(",")).join("\n");
-    const csv = `${header}\n${rows}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `products-${storeId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, visibleColList, storeId]);
+      const cols = visibleColList.filter((c) => c.key !== "image").map((c) => c.key).join(",");
+      const qs = new URLSearchParams();
+      qs.set("format", format);
+      if (cols) qs.set("cols", cols);
+      if (debouncedSearch) qs.set("search", debouncedSearch);
+      if (normalizedStatusFilter !== "all") qs.set("status", normalizedStatusFilter);
+      if (excludeOutOfStock) qs.set("exclude_out_of_stock", "1");
+      if (normalizedCategoryFilter) qs.set("cat", normalizedCategoryFilter);
+      if (normalizedStockFilter !== "all") qs.set("stock", normalizedStockFilter);
+      if (normalizedPriceMin != null) qs.set("pmin", String(normalizedPriceMin));
+      if (normalizedPriceMax != null) qs.set("pmax", String(normalizedPriceMax));
+      qs.set("sort_field", sort.field);
+      qs.set("sort_direction", sort.direction);
+
+      const res = await fetch(`/api/stores/${storeId}/products/export?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string; code?: string; maxRows?: number };
+        if (err.code === "pdf_row_limit") {
+          toast({
+            title: t("products.export.failed"),
+            description: t("products.export.pdfTooManyRows", { max: err.maxRows ?? 2500 }),
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(err.error || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const rowCount = res.headers.get("X-Export-Row-Count");
+      const truncated = res.headers.get("X-Export-Truncated") === "1";
+      const rowLimitHdr = res.headers.get("X-Export-Row-Limit");
+      const rowLimit = rowLimitHdr ? Number(rowLimitHdr) : 50_000;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = format === "csv" ? "csv" : format === "xlsx" ? "xlsx" : "pdf";
+      a.download = `products-export.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      void logClientAuditEvent({
+        action: "sites.product.export",
+        entityType: "store",
+        entityId: storeId,
+        storeId,
+        metadata: {
+          format,
+          row_count: rowCount ? Number(rowCount) : undefined,
+        },
+      });
+      toast({
+        title: t("products.export.ready"),
+        description: truncated
+          ? t("products.export.truncatedDesc", { count: rowCount || "—", max: rowLimit })
+          : t("products.export.readyDesc", { count: rowCount || "—" }),
+      });
+    } catch (e) {
+      toast({
+        title: t("products.export.failed"),
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      exportingRef.current = false;
+      setExporting(false);
+    }
+  }, [
+    locked,
+    productCount,
+    visibleColList,
+    debouncedSearch,
+    normalizedStatusFilter,
+    excludeOutOfStock,
+    normalizedCategoryFilter,
+    normalizedStockFilter,
+    normalizedPriceMin,
+    normalizedPriceMax,
+    sort.field,
+    sort.direction,
+    storeId,
+    toast,
+    t,
+  ]);
 
   const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
+  const { data: tagOptions = [] } = useProductTagOptions(storeId);
+  const { data: brandOptions = [] } = useProductBrandOptions(storeId);
   const { data: activeSyncs = [] } = useAllActiveSyncs();
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const prefsLoaded = useRef(false);
@@ -524,7 +552,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <SelectContent>
                 <SelectItem value="all">{t("products.filters.allCategories")}</SelectItem>
                 {categoryOptions.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -607,10 +635,26 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0 || locked} title={locked ? t("products.toolbar.lockedHint") : t("products.toolbar.exportCsv")}>
-              <Download className="h-3.5 w-3.5" />
-              <span className="text-xs">{t("products.toolbar.export")}</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-2.5 gap-1.5"
+                  disabled={productCount === 0 || locked || exporting}
+                  title={locked ? t("products.toolbar.lockedHint") : t("products.toolbar.export")}
+                >
+                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  <span className="text-xs">{t("products.toolbar.export")}</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => void runExport("xlsx")}>{t("products.export.excel")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void runExport("csv")}>{t("products.export.csv")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void runExport("pdf")}>{t("products.export.pdf")}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link href={{ pathname: `/sites/${storeId}/products/new`, query: { returnTo: buildReturnTo() } }} aria-disabled={locked} tabIndex={locked ? -1 : undefined} onClick={(e) => { if (locked) e.preventDefault(); }} className={locked ? "pointer-events-none opacity-50" : ""}>
               <Button size="sm" className="h-9 gap-1.5" onClick={(e) => { if (!locked) { e.preventDefault(); setTypeDialogOpen(true); } }}>
                 <Plus className="h-4 w-4" />
@@ -663,7 +707,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
                     {categoryOptions.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -747,10 +791,26 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         </div>
                       </PopoverContent>
                     </Popover>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" onClick={exportCsv} disabled={products.length === 0 || locked} title={locked ? "Available after initial sync completes" : "Export CSV"}>
-                      <Download className="h-3.5 w-3.5" />
-                      <span className="text-xs">Export</span>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-2.5 gap-1.5"
+                          disabled={productCount === 0 || locked || exporting}
+                          title={locked ? t("products.toolbar.lockedHint") : t("products.toolbar.export")}
+                        >
+                          {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                          <span className="text-xs">{t("products.toolbar.export")}</span>
+                          <ChevronDown className="h-3 w-3 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => void runExport("xlsx")}>{t("products.export.excel")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void runExport("csv")}>{t("products.export.csv")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void runExport("pdf")}>{t("products.export.pdf")}</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-2 border-l border-border h-6">
@@ -797,10 +857,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 {locked && <span className="text-[11px] text-warning ml-1">{t("products.bulk.lockedDuringSync")}</span>}
               </div>
               <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("price")}><DollarSign className="h-3.5 w-3.5" />{t("products.bulk.price")}</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("stock")}><Boxes className="h-3.5 w-3.5" />{t("products.bulk.stock")}</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />{t("products.bulk.status")}</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("category")}><TagIcon className="h-3.5 w-3.5" />{t("products.bulk.categories")}</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("tag")}><Tags className="h-3.5 w-3.5" />{t("products.bulk.tags")}</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("brand")}><Building2 className="h-3.5 w-3.5" />{t("products.bulk.brands")}</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit || locked} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />{t("products.bulk.delete")}</Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />{t("products.bulk.clear")}</Button>
             </div>
@@ -1402,10 +1462,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {bulkDialog === "price" && t("products.bulk.dialog.updatePrice")}
-              {bulkDialog === "stock" && t("products.bulk.dialog.updateStock")}
               {bulkDialog === "status" && t("products.bulk.dialog.updateStatus")}
               {bulkDialog === "category" && t("products.bulk.dialog.updateCategories")}
+              {bulkDialog === "tag" && t("products.bulk.dialog.updateTags")}
+              {bulkDialog === "brand" && t("products.bulk.dialog.updateBrands")}
               {bulkDialog === "delete" && t("products.bulk.dialog.deleteProducts")}
             </DialogTitle>
             <DialogDescription>
@@ -1414,63 +1474,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 : t("products.bulk.dialog.applyTo", { count: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
-
-          {bulkDialog === "price" && (
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">Operation</Label>
-                <Select value={priceOp} onValueChange={(v) => setPriceOp(v as typeof priceOp)}>
-                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="set">Set regular price to</SelectItem>
-                    <SelectItem value="set_sale">Set sale price to</SelectItem>
-                    <SelectItem value="increase_pct">Increase by %</SelectItem>
-                    <SelectItem value="decrease_pct">Decrease by %</SelectItem>
-                    <SelectItem value="increase_fixed">Increase by fixed amount</SelectItem>
-                    <SelectItem value="decrease_fixed">Decrease by fixed amount</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Value</Label>
-                <Input type="number" step="0.01" value={priceValue} onChange={(e) => setPriceValue(e.target.value)} className="mt-1" placeholder="0.00" />
-              </div>
-            </div>
-          )}
-
-          {bulkDialog === "stock" && (
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">Operation</Label>
-                <Select value={stockOp} onValueChange={(v) => setStockOp(v as typeof stockOp)}>
-                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="set">Set quantity to</SelectItem>
-                    <SelectItem value="adjust">Adjust quantity by</SelectItem>
-                    <SelectItem value="set_status">Set stock status</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {stockOp === "set_status" ? (
-                <div>
-                  <Label className="text-xs">Stock status</Label>
-                  <Select value={stockStatusVal} onValueChange={(v) => setStockStatusVal(v as typeof stockStatusVal)}>
-                    <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="instock">In stock</SelectItem>
-                      <SelectItem value="outofstock">Out of stock</SelectItem>
-                      <SelectItem value="onbackorder">On backorder</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div>
-                  <Label className="text-xs">Quantity</Label>
-                  <Input type="number" value={stockValue} onChange={(e) => setStockValue(e.target.value)} className="mt-1" placeholder="0" />
-                </div>
-              )}
-            </div>
-          )}
 
           {bulkDialog === "status" && (
             <div>
@@ -1490,43 +1493,122 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           {bulkDialog === "category" && (
             <div className="space-y-3">
               <div>
-                <Label className="text-xs">Mode</Label>
+                <Label className="text-xs">{t("products.bulk.dialog.mode")}</Label>
                 <Select value={categoryMode} onValueChange={(v) => setCategoryMode(v as typeof categoryMode)}>
                   <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="add">Add categories</SelectItem>
-                    <SelectItem value="remove">Remove categories</SelectItem>
-                    <SelectItem value="replace">Replace with</SelectItem>
+                    <SelectItem value="add">{t("products.bulk.dialog.ops.addCats")}</SelectItem>
+                    <SelectItem value="remove">{t("products.bulk.dialog.ops.removeCats")}</SelectItem>
+                    <SelectItem value="replace">{t("products.bulk.dialog.ops.replaceCats")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Categories</Label>
+                <Label className="text-xs">{t("products.bulk.dialog.categoriesField")}</Label>
                 <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border p-2 space-y-1">
                   {categoryOptions.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No categories available</p>
-                  ) : categoryOptions.map((name) => {
-                    const id = name;
-                    const checked = bulkCategoryIds.has(id as unknown as number);
-                    return (
-                      <label key={name} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 p-1 rounded">
+                    <p className="text-xs text-muted-foreground">{t("products.bulk.dialog.noCategoriesAvailable")}</p>
+                  ) : (
+                    categoryOptions.map((c) => (
+                      <label key={c.woo_id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 p-1 rounded">
                         <Checkbox
-                          checked={checked}
+                          checked={bulkCategoryIds.has(c.woo_id)}
                           onCheckedChange={(v) => {
                             setBulkCategoryIds((prev) => {
                               const next = new Set(prev);
-                              if (v) next.add(id as unknown as number);
-                              else next.delete(id as unknown as number);
+                              if (v) next.add(c.woo_id);
+                              else next.delete(c.woo_id);
                               return next;
                             });
                           }}
                         />
-                        <span>{name}</span>
+                        <span>{c.name}</span>
                       </label>
-                    );
-                  })}
+                    ))
+                  )}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.</p>
+              </div>
+            </div>
+          )}
+
+          {bulkDialog === "tag" && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">{t("products.bulk.dialog.mode")}</Label>
+                <Select value={tagMode} onValueChange={(v) => setTagMode(v as typeof tagMode)}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add">{t("products.bulk.dialog.ops.addTags")}</SelectItem>
+                    <SelectItem value="remove">{t("products.bulk.dialog.ops.removeTags")}</SelectItem>
+                    <SelectItem value="replace">{t("products.bulk.dialog.ops.replaceTags")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">{t("products.bulk.dialog.tagsField")}</Label>
+                <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border p-2 space-y-1">
+                  {tagOptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t("products.bulk.dialog.noTagsAvailable")}</p>
+                  ) : (
+                    tagOptions.map((c) => (
+                      <label key={c.woo_id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 p-1 rounded">
+                        <Checkbox
+                          checked={bulkTagIds.has(c.woo_id)}
+                          onCheckedChange={(v) => {
+                            setBulkTagIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(c.woo_id);
+                              else next.delete(c.woo_id);
+                              return next;
+                            });
+                          }}
+                        />
+                        <span>{c.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {bulkDialog === "brand" && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">{t("products.bulk.dialog.mode")}</Label>
+                <Select value={brandMode} onValueChange={(v) => setBrandMode(v as typeof brandMode)}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add">{t("products.bulk.dialog.ops.addBrands")}</SelectItem>
+                    <SelectItem value="remove">{t("products.bulk.dialog.ops.removeBrands")}</SelectItem>
+                    <SelectItem value="replace">{t("products.bulk.dialog.ops.replaceBrands")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">{t("products.bulk.dialog.brandsField")}</Label>
+                <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border p-2 space-y-1">
+                  {brandOptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t("products.bulk.dialog.noBrandsAvailable")}</p>
+                  ) : (
+                    brandOptions.map((c) => (
+                      <label key={c.woo_id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 p-1 rounded">
+                        <Checkbox
+                          checked={bulkBrandIds.has(c.woo_id)}
+                          onCheckedChange={(v) => {
+                            setBulkBrandIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(c.woo_id);
+                              else next.delete(c.woo_id);
+                              return next;
+                            });
+                          }}
+                        />
+                        <span>{c.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -64,6 +64,41 @@ export type Database = {
           },
         ]
       }
+      activity_diff_items: {
+        Row: {
+          id: string
+          activity_log_id: string
+          field_path: string
+          before_value: Json | null
+          after_value: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          activity_log_id: string
+          field_path: string
+          before_value?: Json | null
+          after_value?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          activity_log_id?: string
+          field_path?: string
+          before_value?: Json | null
+          after_value?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_diff_items_activity_log_id_fkey"
+            columns: ["activity_log_id"]
+            isOneToOne: false
+            referencedRelation: "activity_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_call_logs: {
         Row: {
           api_key_id: string | null

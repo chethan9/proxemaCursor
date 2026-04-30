@@ -14,15 +14,18 @@ import {
   listActivity,
   listDistinctActions,
   listDistinctEntityTypes,
-  activityToCsv,
   type ActivityLogEntry,
   type ActivityFilters,
 } from "@/services/activityLogService";
 import { ActivityFeedRow } from "@/components/ActivityFeedRow";
+import { ActivityDetailSheet } from "@/components/ActivityDetailSheet";
 import { useToast } from "@/hooks/use-toast";
+import { AUDIT_MODULES } from "@/lib/audit/log";
+import { buildActivityExportParams } from "@/lib/audit/export-query";
 
-function downloadCsv(content: string, filename: string) {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+const MODULE_OPTIONS = ["", ...Object.values(AUDIT_MODULES)];
+
+function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -43,6 +46,8 @@ export default function AdminActivityPage() {
   const [actions, setActions] = useState<string[]>([]);
   const [entityTypes, setEntityTypes] = useState<string[]>([]);
   const [filters, setFilters] = useState<ActivityFilters>({});
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const effectiveFilters = useMemo(() => filters, [filters]);
 
@@ -101,11 +106,23 @@ export default function AdminActivityPage() {
 
   const exportCsv = async () => {
     try {
-      const { rows: all } = await listActivity(effectiveFilters, 0, 5000);
-      const csv = activityToCsv(all);
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      downloadCsv(csv, `activity-log-${stamp}.csv`);
-      toast({ title: t("activity.exportReady"), description: t("activity.exportRows", { count: all.length }) });
+      const { data: s } = await supabase.auth.getSession();
+      const token = s.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const params = buildActivityExportParams(effectiveFilters);
+      const res = await fetch(`/api/activity/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || res.statusText);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition");
+      const match = cd?.match(/filename="([^"]+)"/);
+      const fallback = `activity-log-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+      downloadBlob(blob, match?.[1] ?? fallback);
+      toast({ title: t("activity.exportReady") });
     } catch (e) {
       toast({
         title: t("activity.exportFailed"),
@@ -130,6 +147,10 @@ export default function AdminActivityPage() {
               {t("activity.subtitle")}
               {count !== null && <span className="ml-2">{t("activity.totalEntries", { count })}</span>}
             </p>
+            <p className="text-xs text-muted-foreground mt-2 max-w-2xl">
+              Cross-tenant view for super admins. Use Client ID to drill into a single tenant. Audit entries cannot be
+              deleted in-app; retention removes rows older than 90 days.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPage(0)} disabled={loading}>
@@ -142,8 +163,8 @@ export default function AdminActivityPage() {
         </div>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
               <Input
                 placeholder={t("activity.actorPlaceholder")}
                 value={filters.actorEmail || ""}
@@ -153,11 +174,15 @@ export default function AdminActivityPage() {
                 value={filters.action || "__all"}
                 onValueChange={(v) => applyFilter({ action: v === "__all" ? undefined : v })}
               >
-                <SelectTrigger><SelectValue placeholder={t("activity.actionPlaceholder")} /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("activity.actionPlaceholder")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all">{t("activity.allActions")}</SelectItem>
                   {actions.map((a) => (
-                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                    <SelectItem key={a} value={a}>
+                      {a}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -165,11 +190,15 @@ export default function AdminActivityPage() {
                 value={filters.entityType || "__all"}
                 onValueChange={(v) => applyFilter({ entityType: v === "__all" ? undefined : v })}
               >
-                <SelectTrigger><SelectValue placeholder={t("activity.entityPlaceholder")} /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("activity.entityPlaceholder")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all">{t("activity.allEntities")}</SelectItem>
                   {entityTypes.map((tp) => (
-                    <SelectItem key={tp} value={tp}>{tp}</SelectItem>
+                    <SelectItem key={tp} value={tp}>
+                      {tp}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -178,24 +207,62 @@ export default function AdminActivityPage() {
                 value={filters.entityId || ""}
                 onChange={(e) => applyFilter({ entityId: e.target.value || undefined })}
               />
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={filters.from?.slice(0, 10) || ""}
-                  onChange={(e) =>
-                    applyFilter({ from: e.target.value ? new Date(e.target.value).toISOString() : undefined })
-                  }
-                  className="flex-1"
-                />
-                {activeFilterCount > 0 && (
-                  <Button variant="ghost" size="icon" onClick={resetFilters} title="Clear filters">
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+              <Input
+                type="date"
+                value={filters.from?.slice(0, 10) || ""}
+                onChange={(e) =>
+                  applyFilter({ from: e.target.value ? new Date(e.target.value).toISOString() : undefined })
+                }
+              />
+              <Input
+                type="date"
+                aria-label={t("activity.toDate")}
+                value={filters.to?.slice(0, 10) || ""}
+                onChange={(e) =>
+                  applyFilter({
+                    to: e.target.value
+                      ? new Date(`${e.target.value}T23:59:59.999Z`).toISOString()
+                      : undefined,
+                  })
+                }
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+              <Select
+                value={filters.module || "__all"}
+                onValueChange={(v) => applyFilter({ module: v === "__all" ? undefined : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("activity.modulePlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">{t("activity.moduleAll")}</SelectItem>
+                  {MODULE_OPTIONS.filter(Boolean).map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder={t("activity.clientIdPlaceholder")}
+                value={filters.clientId || ""}
+                onChange={(e) => applyFilter({ clientId: e.target.value || undefined })}
+                className="font-mono text-sm"
+              />
+              <Input
+                placeholder={t("activity.searchPlaceholder")}
+                value={filters.search || ""}
+                onChange={(e) => applyFilter({ search: e.target.value || undefined })}
+              />
+              {activeFilterCount > 0 && (
+                <Button variant="ghost" onClick={resetFilters} className="justify-start md:justify-center">
+                  <X className="h-4 w-4 mr-1" /> Clear filters
+                </Button>
+              )}
             </div>
             {activeFilterCount > 0 && (
-              <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Badge variant="secondary">{t("activity.filterActive", { count: activeFilterCount })}</Badge>
                 <span>{t("activity.showingResults", { count: rows.length })}</span>
               </div>
@@ -217,7 +284,14 @@ export default function AdminActivityPage() {
             </Card>
           )}
           {rows.map((entry) => (
-            <ActivityFeedRow key={entry.id} entry={entry} />
+            <ActivityFeedRow
+              key={entry.id}
+              entry={entry}
+              onOpenDetail={(id) => {
+                setDetailId(id);
+                setDetailOpen(true);
+              }}
+            />
           ))}
         </div>
 
@@ -230,6 +304,15 @@ export default function AdminActivityPage() {
           </div>
         )}
       </div>
+
+      <ActivityDetailSheet
+        activityId={detailId}
+        open={detailOpen}
+        onOpenChange={(o) => {
+          setDetailOpen(o);
+          if (!o) setDetailId(null);
+        }}
+      />
     </AppLayout>
   );
 }

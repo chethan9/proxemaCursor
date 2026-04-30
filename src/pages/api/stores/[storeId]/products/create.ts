@@ -333,7 +333,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             entityType: "product",
             entityId: parentId,
             after: (finalRow ?? parentInsertRow) as Record<string, unknown>,
-            metadata: { woo_id: wooId, store_id: storeId, type: "variable" },
+            metadata: { module: "sites", woo_id: wooId, store_id: storeId, type: "variable" },
             req,
           });
 
@@ -369,7 +369,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entityType: "product",
       entityId: inserted.id,
       after: inserted as Record<string, unknown>,
-      metadata: { woo_id: wooId, store_id: storeId },
+      metadata: { module: "sites", woo_id: wooId, store_id: storeId },
       req,
     });
 

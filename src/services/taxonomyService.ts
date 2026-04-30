@@ -38,6 +38,26 @@ export async function fetchAllCategories(storeId: string): Promise<CategoryRow[]
   return (data || []) as CategoryRow[];
 }
 
+export async function fetchAllTags(storeId: string): Promise<TagRow[]> {
+  const { data, error } = await supabase
+    .from("tags")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data || []) as TagRow[];
+}
+
+export async function fetchAllBrands(storeId: string): Promise<BrandRow[]> {
+  const { data, error } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data || []) as BrandRow[];
+}
+
 export async function fetchTags(
   storeId: string,
   search: string,

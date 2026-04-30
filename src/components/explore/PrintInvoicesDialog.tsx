@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listTemplates } from "@/services/templateService";
 import type { TemplateRow } from "@/lib/templates/document";
 import { createBulkJob } from "@/services/bulkJobService";
-import { logActivity } from "@/lib/activity-log";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const HARD_CAP = 500;
@@ -87,19 +87,33 @@ export function PrintInvoicesDialog({
       });
       const tplName = templates.find((t) => t.id === templateId)?.name || "Invoice";
       try {
-        await logActivity({
-          action: "orders.bulk_invoice_printed",
-          entityType: "bulk_job",
-          entityId: job.id,
-          metadata: {
-            store_id: storeId,
-            order_count: orderIds.length,
-            template_id: templateId,
-            template_name: tplName,
-            output_mode: outputMode,
-          },
-        });
-      } catch { /* non-fatal */ }
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (token) {
+          await fetch("/api/activity/client-event", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              action: "sites.invoice.print_queued",
+              entity_type: "bulk_job",
+              entity_id: job.id,
+              store_id: storeId,
+              module: "sites",
+              metadata: {
+                order_count: orderIds.length,
+                template_id: templateId,
+                template_name: tplName,
+                output_mode: outputMode,
+              },
+            }),
+          });
+        }
+      } catch {
+        /* non-fatal */
+      }
       toast({
         title: "Generating invoices…",
         description: `Processing ${orderIds.length} order${orderIds.length === 1 ? "" : "s"}. Download will appear when ready.`,

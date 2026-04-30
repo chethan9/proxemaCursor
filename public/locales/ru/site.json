@@ -91,6 +91,17 @@
       "grid": "Grid view",
       "compact": "Compact grid"
     },
+    "export": {
+      "excel": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF",
+      "signIn": "Войдите, чтобы экспортировать",
+      "ready": "Экспорт готов",
+      "readyDesc": "{{count}} строк",
+      "failed": "Ошибка экспорта",
+      "truncatedDesc": "Только первые {{count}} строк (лимит {{max}}). Сузьте фильтры.",
+      "pdfTooManyRows": "PDF — не более {{max}} строк. Используйте Excel или CSV или сузьте фильтры."
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",

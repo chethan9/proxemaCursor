@@ -91,6 +91,17 @@
       "grid": "Grid view",
       "compact": "Compact grid"
     },
+    "export": {
+      "excel": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF",
+      "signIn": "エクスポートにはログインしてください",
+      "ready": "エクスポート完了",
+      "readyDesc": "{{count}} 行",
+      "failed": "エクスポートに失敗しました",
+      "truncatedDesc": "最初の {{count}} 行のみ（上限 {{max}}）。フィルターを絞ってください。",
+      "pdfTooManyRows": "PDF は最大 {{max}} 行です。Excel または CSV を使うか、フィルターを絞ってください。"
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",

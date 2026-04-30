@@ -12,6 +12,8 @@ export type BulkJobType =
   | "update_product_stock"
   | "update_product_status"
   | "assign_product_categories"
+  | "assign_product_tags"
+  | "assign_product_brands"
   | "delete_products"
   | "print_invoices_bulk";
 
@@ -26,13 +28,22 @@ function jobTypeToAction(t: BulkJobType): string | null {
     case "update_product_price": return "price_update";
     case "update_product_stock": return "stock_update";
     case "assign_product_categories": return "category_update";
+    case "assign_product_tags": return "tag_update";
+    case "assign_product_brands": return "brand_update";
     case "print_invoices_bulk": return null;
   }
 }
 
 function entityFromJobType(t: BulkJobType): "products" | "orders" | null {
   if (t === "update_order_status" || t === "delete_orders") return "orders";
-  if (t.startsWith("update_product") || t === "delete_products" || t === "assign_product_categories") return "products";
+  if (
+    t.startsWith("update_product") ||
+    t === "delete_products" ||
+    t === "assign_product_categories" ||
+    t === "assign_product_tags" ||
+    t === "assign_product_brands"
+  )
+    return "products";
   return null;
 }
 
@@ -51,6 +62,8 @@ export type BulkJobPayload =
   | { type: "update_product_stock"; product_ids: number[]; operation: "set" | "adjust" | "set_status"; value?: number; stock_status?: "instock" | "outofstock" | "onbackorder" }
   | { type: "update_product_status"; product_ids: number[]; new_status: "publish" | "draft" | "pending" | "private" }
   | { type: "assign_product_categories"; product_ids: number[]; mode: "add" | "remove" | "replace"; category_ids: number[] }
+  | { type: "assign_product_tags"; product_ids: number[]; mode: "add" | "remove" | "replace"; tag_ids: number[] }
+  | { type: "assign_product_brands"; product_ids: number[]; mode: "add" | "remove" | "replace"; brand_ids: number[] }
   | { type: "delete_products"; product_ids: number[]; force?: boolean }
   | { type: "print_invoices_bulk"; order_ids: string[]; template_id: string; output_mode: "single-pdf" | "zip"; artifact_path?: string; compress?: boolean };
 
@@ -181,6 +194,8 @@ export const JOB_TYPE_LABEL: Record<BulkJobType, string> = {
   update_product_stock: "Update product stock",
   update_product_status: "Update product status",
   assign_product_categories: "Assign categories",
+  assign_product_tags: "Assign tags",
+  assign_product_brands: "Assign brands",
   delete_products: "Delete products",
   print_invoices_bulk: "Print invoices",
 };

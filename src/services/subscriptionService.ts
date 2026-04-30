@@ -76,7 +76,7 @@ async function logSubscriptionActivity(params: {
     entity_id: params.subscriptionId,
     client_id: params.clientId,
     diff: (params.diff ?? null) as never,
-    metadata: (params.metadata ?? null) as never,
+    metadata: { ...(params.metadata ?? {}), module: "billing" } as never,
   });
   await supabase.from("subscription_events").insert({
     subscription_id: params.subscriptionId,

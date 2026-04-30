@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
+import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 import { refreshOrderFromWoo } from "@/lib/order-refresh";
 
@@ -142,7 +143,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entityId: orderId,
       before: localOrder as Record<string, unknown>,
       after: saved as Record<string, unknown>,
-      metadata: { woo_id: localOrder.woo_id, store_id: storeId },
+      fieldDiffs: capFieldDiffs(
+        buildFieldDiffs(localOrder as Record<string, unknown>, saved as Record<string, unknown>)
+      ),
+      metadata: { module: "sites", woo_id: localOrder.woo_id, store_id: storeId },
       req,
     });
 

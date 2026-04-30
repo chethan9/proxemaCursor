@@ -87,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     entityId: data.id,
     clientId: finalClientId,
     after: data as Record<string, unknown>,
+    metadata: { module: "sites" },
     req,
   });
 

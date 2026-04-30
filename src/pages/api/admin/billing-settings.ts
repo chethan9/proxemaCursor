@@ -62,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       actorType: "admin",
       before: (before as Record<string, unknown> | null) ?? null,
       after: updates as Record<string, unknown>,
+      metadata: { module: "settings" },
       req,
     });
 

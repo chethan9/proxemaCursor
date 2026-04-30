@@ -1,5 +1,6 @@
 import type { NextApiRequest } from "next";
 import { supabase } from "@/integrations/supabase/client";
+import type { FieldDiffItem } from "@/lib/audit/diff-engine";
 
 export type ActorType = "user" | "admin" | "system" | "api";
 
@@ -10,6 +11,8 @@ export interface LogActivityInput {
   clientId?: string | null;
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
+  /** Precomputed field-level diffs (stored in activity_diff_items; requires server + service role) */
+  fieldDiffs?: FieldDiffItem[] | null;
   metadata?: Record<string, unknown>;
   actorType?: ActorType;
   req?: NextApiRequest;
@@ -78,11 +81,12 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
     }
 
     const diff = computeDiff(input.before, input.after);
-    if (input.before && input.after && !diff) return;
+    if (input.before && input.after && !diff && !(input.fieldDiffs?.length)) return;
 
     const metadata = {
       ...extractRequestMetadata(input.req),
       ...(input.metadata || {}),
+      ...(input.fieldDiffs?.length ? { field_diff_count: input.fieldDiffs.length } : {}),
     };
 
     let clientId: string | null = input.clientId || null;
@@ -110,10 +114,33 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
       metadata: Object.keys(metadata).length > 0 ? metadata : null,
     };
 
-    const client = isServer && admin ? admin : supabase;
-    const { error } = await client.from("activity_log" as never).insert(row as never);
+    const insertClient = isServer && admin ? admin : supabase;
+    const { data: inserted, error } = await insertClient
+      .from("activity_log" as never)
+      .insert(row as never)
+      .select("id")
+      .single();
+
     if (error && process.env.NODE_ENV !== "production") {
       console.warn("[activity-log] insert failed:", error.message);
+    }
+
+    const newId = (inserted as { id?: string } | null)?.id;
+    if (newId && input.fieldDiffs?.length && admin) {
+      const batchSize = 200;
+      for (let i = 0; i < input.fieldDiffs.length; i += batchSize) {
+        const slice = input.fieldDiffs.slice(i, i + batchSize);
+        const diffRows = slice.map((fd) => ({
+          activity_log_id: newId,
+          field_path: fd.path,
+          before_value: fd.before === undefined ? null : (fd.before as object | string | number | boolean | null),
+          after_value: fd.after === undefined ? null : (fd.after as object | string | number | boolean | null),
+        }));
+        const { error: dErr } = await admin.from("activity_diff_items" as never).insert(diffRows as never);
+        if (dErr && process.env.NODE_ENV !== "production") {
+          console.warn("[activity-log] activity_diff_items insert failed:", dErr.message);
+        }
+      }
     }
   } catch (err) {
     if (process.env.NODE_ENV !== "production") {

@@ -22,7 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     action,
     entityType: typeof entity_type === "string" ? entity_type : "auth",
     entityId: entity_id != null ? String(entity_id) : null,
-    metadata: metadata && typeof metadata === "object" ? metadata : undefined,
+    metadata: {
+      module: "auth",
+      ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? (metadata as Record<string, unknown>) : {}),
+    },
     req,
   });
 

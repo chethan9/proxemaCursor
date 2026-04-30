@@ -91,6 +91,17 @@
       "grid": "Grid view",
       "compact": "Compact grid"
     },
+    "export": {
+      "excel": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF",
+      "signIn": "Connectez-vous pour exporter",
+      "ready": "Export prêt",
+      "readyDesc": "{{count}} lignes",
+      "failed": "Échec de l’export",
+      "truncatedDesc": "Seules les {{count}} premières lignes (limite {{max}}). Affinez les filtres.",
+      "pdfTooManyRows": "Le PDF est limité à {{max}} lignes. Utilisez Excel ou CSV, ou affinez les filtres."
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",

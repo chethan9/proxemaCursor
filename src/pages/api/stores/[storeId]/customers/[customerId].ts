@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
+import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -76,7 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityId: customerId,
         before: cust as Record<string, unknown>,
         after: updated as Record<string, unknown>,
-        metadata: { woo_id: cust.woo_id, store_id: storeId },
+        fieldDiffs: capFieldDiffs(
+          buildFieldDiffs(cust as Record<string, unknown>, updated as Record<string, unknown>)
+        ),
+        metadata: { module: "sites", woo_id: cust.woo_id, store_id: storeId },
         req,
       });
       return res.status(200).json(updated);
@@ -94,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityType: "customer",
         entityId: customerId,
         before: cust as Record<string, unknown>,
-        metadata: { store_id: storeId },
+        metadata: { module: "sites", store_id: storeId },
         req,
       });
       return res.status(200).json({ ok: true });
@@ -107,7 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityType: "customer",
         entityId: customerId,
         before: cust as Record<string, unknown>,
-        metadata: { woo_id: cust.woo_id, store_id: storeId },
+        metadata: { module: "sites", woo_id: cust.woo_id, store_id: storeId },
         req,
       });
       return res.status(200).json({ ok: true });

@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { WooApiError } from "@/lib/sync-error";
 import { logActivity } from "@/lib/activity-log";
+import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
 import { refreshTaxonomyCounts, extractTaxonomyIds } from "@/lib/refresh-taxonomy-counts";
 
@@ -265,7 +266,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityType: "product",
         entityId: productId,
         before: localProduct as Record<string, unknown>,
-        metadata: { woo_id: localProduct.woo_id, store_id: storeId },
+        metadata: { module: "sites", woo_id: localProduct.woo_id, store_id: storeId },
         req,
       });
 
@@ -538,7 +539,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entityId: productId,
       before: localProduct as Record<string, unknown>,
       after: saved as Record<string, unknown>,
-      metadata: { woo_id: localProduct.woo_id, store_id: storeId },
+      fieldDiffs: capFieldDiffs(
+        buildFieldDiffs(localProduct as Record<string, unknown>, saved as Record<string, unknown>)
+      ),
+      metadata: { module: "sites", woo_id: localProduct.woo_id, store_id: storeId },
       req,
     });
 

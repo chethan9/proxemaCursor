@@ -207,7 +207,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               {duplicateCombos.length > 0 && (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                   <div className="text-destructive min-w-0">
-                    Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}. Remove extras before auto-filling SKUs or saving.
+                    Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}. Remove the extra rows before saving (auto-fill SKUs stays disabled until resolved).
                   </div>
                   <Button
                     type="button"

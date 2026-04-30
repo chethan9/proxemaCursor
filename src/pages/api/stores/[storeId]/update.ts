@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST" && req.method !== "PATCH") {
@@ -32,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: store } = await supabaseAdmin
     .from("stores")
-    .select("id, client_id")
+    .select("*")
     .eq("id", storeId)
     .single();
 
@@ -65,8 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     entityType: "store",
     entityId: storeId,
     clientId: updated?.client_id ?? null,
+    before: store as Record<string, unknown>,
     after: updated as Record<string, unknown>,
-    metadata: { patch },
+    fieldDiffs: capFieldDiffs(
+      buildFieldDiffs(store as Record<string, unknown>, updated as Record<string, unknown>)
+    ),
+    metadata: { module: "sites" },
     req,
   });
 

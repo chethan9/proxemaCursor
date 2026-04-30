@@ -91,6 +91,17 @@
       "grid": "Grid view",
       "compact": "Compact grid"
     },
+    "export": {
+      "excel": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF",
+      "signIn": "Sign in to export",
+      "ready": "Export ready",
+      "readyDesc": "{{count}} rows",
+      "failed": "Export failed",
+      "truncatedDesc": "First {{count}} rows only (limit {{max}}). Narrow filters for a smaller export.",
+      "pdfTooManyRows": "PDF is limited to {{max}} rows. Use Excel or CSV, or narrow your filters."
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",
@@ -160,10 +171,10 @@
       "selected": "selected",
       "maxLimit": "(max {{max}} per job)",
       "lockedDuringSync": "Bulk actions disabled during initial sync",
-      "price": "Price",
-      "stock": "Stock",
       "status": "Status",
       "categories": "Categories",
+      "tags": "Tags",
+      "brands": "Brands",
       "delete": "Delete",
       "clear": "Clear",
       "skipped": "{{count}} product(s) skipped",
@@ -175,6 +186,8 @@
         "updateStock": "Update stock",
         "updateStatus": "Update status",
         "updateCategories": "Update categories",
+        "updateTags": "Update tags",
+        "updateBrands": "Update brands",
         "deleteProducts": "Delete products",
         "deleteConfirm": "Permanently delete {{count}} product(s)? This cannot be undone.",
         "applyTo": "Apply this change to {{count}} selected product(s).",
@@ -186,6 +199,10 @@
         "mode": "Mode",
         "categoriesField": "Categories",
         "noCategoriesAvailable": "No categories available",
+        "tagsField": "Tags",
+        "brandsField": "Brands",
+        "noTagsAvailable": "No tags available",
+        "noBrandsAvailable": "No brands available",
         "categoryNote": "Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.",
         "ops": {
           "set": "Set regular price to",
@@ -199,7 +216,13 @@
           "setStockStatus": "Set stock status",
           "addCats": "Add categories",
           "removeCats": "Remove categories",
-          "replaceCats": "Replace with"
+          "replaceCats": "Replace with",
+          "addTags": "Add tags",
+          "removeTags": "Remove tags",
+          "replaceTags": "Replace tags with",
+          "addBrands": "Add brands",
+          "removeBrands": "Remove brands",
+          "replaceBrands": "Replace brands with"
         }
       }
     },
@@ -225,6 +248,8 @@
       "priceUpdate": "Scheduled for price update",
       "stockUpdate": "Scheduled for stock update",
       "categoryUpdate": "Scheduled for category update",
+      "tagUpdate": "Scheduled for tag update",
+      "brandUpdate": "Scheduled for brand update",
       "scheduledGeneric": "Scheduled: {{action}}"
     }
   },

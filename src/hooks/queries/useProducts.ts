@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchProducts, type FetchProductsOptions } from "@/services/productService";
-import { fetchAllCategories } from "@/services/taxonomyService";
+import { fetchAllBrands, fetchAllCategories, fetchAllTags } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
@@ -38,8 +38,42 @@ export function useProductCategoryOptions(storeId: string) {
     queryKey: queryKeys.productCategoryOptions(storeId),
     queryFn: async () => {
       const rows = await fetchAllCategories(storeId);
-      const names = rows.map((r) => r.name).filter((n): n is string => !!n?.trim());
-      return [...new Set(names)].sort((a, b) => a.localeCompare(b));
+      return rows
+        .filter((r) => r.name?.trim())
+        .map((r) => ({ woo_id: r.woo_id, name: r.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+    enabled: !!storeId,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+  });
+}
+
+export function useProductTagOptions(storeId: string) {
+  return useQuery({
+    queryKey: queryKeys.taxonomy(storeId, "tags"),
+    queryFn: async () => {
+      const rows = await fetchAllTags(storeId);
+      return rows
+        .filter((r) => r.name?.trim())
+        .map((r) => ({ woo_id: r.woo_id, name: r.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+    enabled: !!storeId,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+  });
+}
+
+export function useProductBrandOptions(storeId: string) {
+  return useQuery({
+    queryKey: queryKeys.taxonomy(storeId, "brands"),
+    queryFn: async () => {
+      const rows = await fetchAllBrands(storeId);
+      return rows
+        .filter((r) => r.name?.trim())
+        .map((r) => ({ woo_id: r.woo_id, name: r.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled: !!storeId,
     staleTime: 60_000,

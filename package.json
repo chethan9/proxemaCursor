@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "db:migrate": "node scripts/migrate.mjs",
     "deploy:prod": "vercel deploy --prod --yes",
     "i18n:translate": "node scripts/translate-i18n.mjs",
@@ -74,6 +75,7 @@
     "cmdk": "^1.0.4",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
+    "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
     "framer-motion": "^12.0.6",
     "grapesjs": "^0.22.16",
@@ -122,6 +124,7 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vercel": "^52.0.0"
+    "vercel": "^52.0.0",
+    "vitest": "^2.1.8"
   }
 }

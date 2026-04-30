@@ -1,29 +1,61 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GetServerSideProps } from "next";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Activity } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Activity, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { listMyActivity, type ActivityLogEntry } from "@/services/activityLogService";
+import {
+  listMyActivity,
+  type ActivityFilters,
+  type ActivityLogEntry,
+} from "@/services/activityLogService";
 import { ActivityFeedRow } from "@/components/ActivityFeedRow";
+import { ActivityDetailSheet } from "@/components/ActivityDetailSheet";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { formatNumber } from "@/lib/format-number";
+import { supabase } from "@/integrations/supabase/client";
+import { AUDIT_MODULES } from "@/lib/audit/log";
+import { buildActivityExportParams } from "@/lib/audit/export-query";
+import { useToast } from "@/hooks/use-toast";
+
+const MODULE_OPTIONS = ["", ...Object.values(AUDIT_MODULES)];
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export default function MyActivityPage() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation("settings");
+  const { toast } = useToast();
   const [rows, setRows] = useState<ActivityLogEntry[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<
+    Pick<ActivityFilters, "module" | "from" | "to" | "action" | "search">
+  >({});
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const effectiveFilters = useMemo(() => filters, [filters]);
 
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     setLoading(true);
-    listMyActivity(user.id, page, 50)
+    listMyActivity(user.id, page, 50, effectiveFilters)
       .then((res) => {
         if (cancelled) return;
         setRows((prev) => (page === 0 ? res.rows : [...prev, ...res.rows]));
@@ -36,21 +68,135 @@ export default function MyActivityPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, page]);
+  }, [user?.id, page, effectiveFilters]);
+
+  const applyFilter = (patch: Partial<typeof filters>) => {
+    setFilters((f) => ({ ...f, ...patch }));
+    setPage(0);
+  };
+
+  const resetFilters = () => {
+    setFilters({});
+    setPage(0);
+  };
+
+  const exportCsv = async () => {
+    if (!user?.id) return;
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const token = s.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const params = buildActivityExportParams({ ...filters }, { actorUserId: user.id });
+      const res = await fetch(`/api/activity/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || res.statusText);
+      }
+      const blob = await res.blob();
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      downloadBlob(blob, `my-activity-${stamp}.csv`);
+      toast({ title: t("myActivity.exportReady") });
+    } catch (e) {
+      toast({
+        title: t("myActivity.exportFailed"),
+        description: e instanceof Error ? e.message : "",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   return (
     <SettingsLayout title={t("myActivity.title")}>
       <div className="p-6 space-y-5 max-w-4xl">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            {t("myActivity.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("myActivity.subtitle")}
-            {count !== null && <span className="ml-2">{formatNumber(count, i18n.language)}</span>}
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              {t("myActivity.title")}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t("myActivity.subtitle")}
+              {count !== null && (
+                <span className="ml-2">{formatNumber(count, i18n.language)}</span>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 max-w-xl">{t("myActivity.immutableNotice")}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={exportCsv} className="gap-1.5 shrink-0">
+            <Download className="h-3.5 w-3.5" />
+            {t("myActivity.exportCsv")}
+          </Button>
         </div>
+
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <Select
+                value={filters.module || "__all"}
+                onValueChange={(v) => applyFilter({ module: v === "__all" ? undefined : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("myActivity.moduleLabel")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">{t("myActivity.moduleAll")}</SelectItem>
+                  {MODULE_OPTIONS.filter(Boolean).map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder={t("myActivity.actionPlaceholder")}
+                value={filters.action || ""}
+                onChange={(e) => applyFilter({ action: e.target.value || undefined })}
+              />
+              <Input
+                placeholder={t("myActivity.searchPlaceholder")}
+                value={filters.search || ""}
+                onChange={(e) => applyFilter({ search: e.target.value || undefined })}
+              />
+              <div className="flex gap-2 items-center">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{t("myActivity.fromDate")}</span>
+                <Input
+                  type="date"
+                  value={filters.from?.slice(0, 10) || ""}
+                  onChange={(e) =>
+                    applyFilter({
+                      from: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                    })
+                  }
+                  className="flex-1"
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{t("myActivity.toDate")}</span>
+                <Input
+                  type="date"
+                  value={filters.to?.slice(0, 10) || ""}
+                  onChange={(e) =>
+                    applyFilter({
+                      to: e.target.value
+                        ? new Date(`${e.target.value}T23:59:59.999Z`).toISOString()
+                        : undefined,
+                    })
+                  }
+                  className="flex-1"
+                />
+              </div>
+              {activeFilterCount > 0 && (
+                <Button variant="ghost" type="button" onClick={resetFilters}>
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="space-y-2">
           {loading && rows.length === 0 && (
@@ -66,7 +212,14 @@ export default function MyActivityPage() {
             </Card>
           )}
           {rows.map((entry) => (
-            <ActivityFeedRow key={entry.id} entry={entry} />
+            <ActivityFeedRow
+              key={entry.id}
+              entry={entry}
+              onOpenDetail={(id) => {
+                setDetailId(id);
+                setDetailOpen(true);
+              }}
+            />
           ))}
         </div>
 
@@ -79,6 +232,15 @@ export default function MyActivityPage() {
           </div>
         )}
       </div>
+
+      <ActivityDetailSheet
+        activityId={detailId}
+        open={detailOpen}
+        onOpenChange={(o) => {
+          setDetailOpen(o);
+          if (!o) setDetailId(null);
+        }}
+      />
     </SettingsLayout>
   );
 }

@@ -41,13 +41,47 @@ function formatValue(v: unknown): string {
   return s.length > 80 ? s.substring(0, 80) + "…" : s;
 }
 
-export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
+function getDiffRows(
+  diff: ActivityLogEntry["diff"]
+): { field: string; old: unknown; new: unknown }[] {
+  if (!diff) return [];
+  const d = diff as Record<string, unknown>;
+  if (
+    d.before &&
+    d.after &&
+    typeof d.before === "object" &&
+    typeof d.after === "object" &&
+    !Array.isArray(d.before) &&
+    !Array.isArray(d.after)
+  ) {
+    const b = d.before as Record<string, unknown>;
+    const a = d.after as Record<string, unknown>;
+    const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
+    return [...keys]
+      .sort()
+      .map((k) => ({ field: k, old: b[k], new: a[k] }))
+      .filter(({ old: o, new: n }) => JSON.stringify(o) !== JSON.stringify(n));
+  }
+  return Object.entries(diff).map(([field, change]) => ({
+    field,
+    old: (change as { old?: unknown })?.old,
+    new: (change as { new?: unknown })?.new,
+  }));
+}
+
+export function ActivityFeedRow({
+  entry,
+  onOpenDetail,
+}: {
+  entry: ActivityLogEntry;
+  onOpenDetail?: (id: string) => void;
+}) {
   const { i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const ActorIcon = actorIcon[entry.actor_type] || User;
   const initials = (entry.actor_email || "?").slice(0, 2).toUpperCase();
-  const diffEntries = entry.diff ? Object.entries(entry.diff) : [];
-  const canExpand = diffEntries.length > 0;
+  const diffRows = getDiffRows(entry.diff);
+  const canExpand = diffRows.length > 0;
 
   return (
     <div
@@ -90,7 +124,7 @@ export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
               </span>
             )}
           </div>
-          {diffEntries.length > 0 && !expanded && (
+          {diffRows.length > 0 && !expanded && (
             <p className="text-xs text-muted-foreground mt-1 truncate">
               {summarizeDiff(entry.diff)}
             </p>
@@ -99,6 +133,18 @@ export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
         <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
           {timeAgo(entry.created_at, i18n.language)}
         </span>
+        {onOpenDetail && (
+          <button
+            type="button"
+            className="text-xs text-primary underline flex-shrink-0 px-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetail(entry.id);
+            }}
+          >
+            Details
+          </button>
+        )}
         {canExpand && (
           <span className="flex-shrink-0 text-muted-foreground">
             {expanded ? (
@@ -110,9 +156,9 @@ export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
         )}
       </button>
 
-      {expanded && diffEntries.length > 0 && (
+      {expanded && diffRows.length > 0 && (
         <div className="border-t bg-muted/20 p-3 space-y-1">
-          {diffEntries.map(([field, change]) => (
+          {diffRows.map(({ field, old: o, new: n }) => (
             <div
               key={field}
               className="grid grid-cols-[140px_1fr_auto_1fr] gap-2 items-center text-xs py-1"
@@ -121,14 +167,28 @@ export function ActivityFeedRow({ entry }: { entry: ActivityLogEntry }) {
                 {field.replace(/_/g, " ")}
               </span>
               <span className="font-mono text-muted-foreground line-through truncate">
-                {formatValue(change?.old)}
+                {formatValue(o)}
               </span>
               <ArrowRight className="h-3 w-3 text-muted-foreground" />
               <span className="font-mono font-medium truncate">
-                {formatValue(change?.new)}
+                {formatValue(n)}
               </span>
             </div>
           ))}
+          {onOpenDetail && (
+            <div className="pt-2">
+              <button
+                type="button"
+                className="text-xs text-primary underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDetail(entry.id);
+                }}
+              >
+                View full field-level history
+              </button>
+            </div>
+          )}
           <div className="pt-2 mt-2 border-t border-border/50 text-[11px] text-muted-foreground">
             {formatDateTime(entry.created_at, i18n.language)}
           </div>

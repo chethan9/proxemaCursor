@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entityType: "customer",
       entityId: data.id,
       after: data as Record<string, unknown>,
-      metadata: { woo_id: wooData.id, store_id: storeId },
+      metadata: { module: "sites", woo_id: wooData.id, store_id: storeId },
       req,
     });
     return res.status(200).json(data);

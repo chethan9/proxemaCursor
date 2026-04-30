@@ -50,7 +50,17 @@
     "loading": "Loading…",
     "empty": "No activity yet.",
     "loadMore": "Load more",
-    "viewAll": "View full audit log"
+    "viewAll": "View full audit log",
+    "exportCsv": "Export CSV",
+    "exportReady": "Download started",
+    "exportFailed": "Export failed",
+    "moduleLabel": "Module",
+    "moduleAll": "All modules",
+    "actionPlaceholder": "Filter by action…",
+    "searchPlaceholder": "Search action, entity…",
+    "fromDate": "From",
+    "toDate": "To",
+    "immutableNotice": "Audit history cannot be deleted from the app; entries older than 90 days may be purged per retention policy."
   },
   "branding": {
     "title": "Branding",

@@ -64,6 +64,7 @@ import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
+import { logClientAuditEvent } from "@/lib/audit/client-log";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { ProgressSlot } from "@/contexts/LoadingProvider";
@@ -445,6 +446,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     const suffix = selected.length !== orders.length ? `-${selected.length}-selected` : `-page-${page + 1}`;
     const filename = `orders-${storeName?.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || storeId.slice(0, 8)}${suffix}`;
     exportCsv(selected, columns, filename);
+    void logClientAuditEvent({
+      action: "sites.order.export_csv",
+      entityType: "store",
+      entityId: storeId,
+      storeId,
+      metadata: { row_count: selected.length, filename },
+    });
     toast({ title: "Export ready", description: `Exported ${selected.length} orders to CSV` });
   }, [orders, selectedIds, visibleColList, pmRegistry, storeTz, storeName, storeId, page, toast]);
 

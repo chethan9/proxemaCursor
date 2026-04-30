@@ -74,7 +74,31 @@ export async function saveNewVersion(templateId: string, document: TemplateConfi
   } as never).select("*").single();
   if (error) throw error;
   await supabase.from("templates").update({ current_version_id: (ver as { id: string }).id, updated_at: new Date().toISOString() }).eq("id", templateId);
-  return (ver as { id: string }).id;
+  const versionId = (ver as { id: string }).id;
+  void (async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) return;
+      await fetch("/api/activity/client-event", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: "templates.version.saved",
+          entity_type: "template",
+          entity_id: templateId,
+          metadata: { version_id: versionId, version_number: nextVersion, change_note: changeNote ?? null },
+          module: "templates",
+        }),
+      });
+    } catch {
+      /* non-fatal */
+    }
+  })();
+  return versionId;
 }
 
 export async function deleteTemplate(id: string): Promise<void> {

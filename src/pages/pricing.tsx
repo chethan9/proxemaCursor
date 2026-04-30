@@ -167,6 +167,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
           entity_id: sub.id,
           client_id: profile.client_id,
           diff: { before, after },
+          metadata: { module: "billing" } as never,
         });
         toast({
           title: t("toast.downgradeScheduled"),

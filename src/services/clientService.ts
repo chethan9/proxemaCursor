@@ -131,7 +131,7 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
     entity_type: "client",
     entity_id: client.id,
     client_id: client.id,
-    metadata: { name: client.name } as never,
+    metadata: { name: client.name, module: "admin" } as never,
   });
 
   const { data: settings } = await supabase
@@ -162,7 +162,12 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
       entity_type: "subscription",
       entity_id: subscription.id,
       client_id: client.id,
-      metadata: { plan_slug: plan.slug, plan_id: plan.id, trial_days: plan.trial_days ?? 14 } as never,
+      metadata: {
+        plan_slug: plan.slug,
+        plan_id: plan.id,
+        trial_days: plan.trial_days ?? 14,
+        module: "billing",
+      } as never,
     });
     return { client, subscription, trialStarted: true, noPlanAvailable: false };
   } catch (subErr) {

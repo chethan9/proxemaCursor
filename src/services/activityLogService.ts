@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { summarizeDiff as summarizeNestedActivityDiff } from "@/lib/activity-log";
 
 export type ActorType = "user" | "admin" | "system" | "api";
 
@@ -12,7 +13,7 @@ export interface ActivityLogEntry {
   entity_type: string;
   entity_id: string | null;
   client_id: string | null;
-  diff: Record<string, { old: unknown; new: unknown }> | null;
+  diff: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
 }
 
@@ -23,6 +24,8 @@ export interface ActivityFilters {
   entityType?: string;
   entityId?: string;
   clientId?: string;
+  /** Filter `metadata.module` (e.g. sites, auth, templates) */
+  module?: string;
   from?: string;
   to?: string;
   search?: string;
@@ -49,6 +52,11 @@ export async function listActivity(
   if (filters.clientId) q = q.eq("client_id", filters.clientId);
   if (filters.from) q = q.gte("created_at", filters.from);
   if (filters.to) q = q.lte("created_at", filters.to);
+  if (filters.module) q = q.filter("metadata->>module", "eq", filters.module);
+  if (filters.search?.trim()) {
+    const s = filters.search.trim();
+    q = q.or(`action.ilike.%${s}%,entity_type.ilike.%${s}%,entity_id.ilike.%${s}%,actor_email.ilike.%${s}%`);
+  }
 
   const { data, error, count } = await q;
   if (error) throw error;
@@ -74,14 +82,25 @@ export async function listEntityActivity(
 export async function listMyActivity(
   userId: string,
   page = 0,
-  limit = PAGE_SIZE
+  limit = PAGE_SIZE,
+  extraFilters?: Pick<ActivityFilters, "module" | "from" | "to" | "action" | "entityType" | "search">
 ): Promise<{ rows: ActivityLogEntry[]; count: number | null }> {
-  const { data, error, count } = await supabase
+  let q = supabase
     .from("activity_log")
     .select("*", { count: "exact" })
     .eq("actor_user_id", userId)
     .order("created_at", { ascending: false })
     .range(page * limit, (page + 1) * limit - 1);
+  if (extraFilters?.module) q = q.filter("metadata->>module", "eq", extraFilters.module);
+  if (extraFilters?.from) q = q.gte("created_at", extraFilters.from);
+  if (extraFilters?.to) q = q.lte("created_at", extraFilters.to);
+  if (extraFilters?.action) q = q.eq("action", extraFilters.action);
+  if (extraFilters?.entityType) q = q.eq("entity_type", extraFilters.entityType);
+  if (extraFilters?.search?.trim()) {
+    const s = extraFilters.search.trim();
+    q = q.or(`action.ilike.%${s}%,entity_type.ilike.%${s}%,entity_id.ilike.%${s}%`);
+  }
+  const { data, error, count } = await q;
   if (error) throw error;
   return { rows: (data as ActivityLogEntry[]) || [], count: count ?? null };
 }
@@ -116,6 +135,20 @@ export function formatActionLabel(action: string): string {
 
 export function summarizeDiff(diff: ActivityLogEntry["diff"]): string {
   if (!diff) return "";
+  const d = diff as Record<string, unknown>;
+  if (
+    d.before &&
+    d.after &&
+    typeof d.before === "object" &&
+    typeof d.after === "object" &&
+    !Array.isArray(d.before) &&
+    !Array.isArray(d.after)
+  ) {
+    return summarizeNestedActivityDiff({
+      before: d.before as Record<string, unknown>,
+      after: d.after as Record<string, unknown>,
+    });
+  }
   const keys = Object.keys(diff);
   if (keys.length === 0) return "";
   if (keys.length <= 3) return keys.map((k) => k.replace(/_/g, " ")).join(", ");

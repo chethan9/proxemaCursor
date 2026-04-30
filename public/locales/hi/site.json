@@ -91,6 +91,17 @@
       "grid": "Grid view",
       "compact": "Compact grid"
     },
+    "export": {
+      "excel": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF",
+      "signIn": "निर्यात के लिए साइन इन करें",
+      "ready": "निर्यात तैयार",
+      "readyDesc": "{{count}} पंक्तियाँ",
+      "failed": "निर्यात विफल",
+      "truncatedDesc": "केवल पहली {{count}} पंक्तियाँ (सीमा {{max}})। फ़िल्टर कम करें।",
+      "pdfTooManyRows": "PDF {{max}} पंक्तियों तक सीमित है। Excel या CSV उपयोग करें या फ़िल्टर कम करें।"
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",

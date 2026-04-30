@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
+import {
+  applyProductCatalogFilters,
+  applyProductCatalogOrder,
+  getCategoryFilterMeta,
+} from "@/lib/products-list-query";
 
 export interface ProductRow {
   id: string;
@@ -49,28 +54,6 @@ export interface FetchProductsOptions {
   useLive?: boolean;
 }
 
-type CategoryFilterMeta = {
-  wooId?: number;
-  name: string;
-  slug?: string;
-};
-
-/** Woo REST `category` query param expects the category's numeric ID. */
-async function getCategoryFilterMeta(storeId: string, categoryName: string): Promise<CategoryFilterMeta> {
-  const { data } = await supabase
-    .from("categories")
-    .select("woo_id,name,slug")
-    .eq("store_id", storeId)
-    .ilike("name", categoryName)
-    .limit(1)
-    .maybeSingle();
-  return {
-    wooId: typeof data?.woo_id === "number" ? data.woo_id : undefined,
-    name: (data?.name as string) || categoryName,
-    slug: (data?.slug as string) || undefined,
-  };
-}
-
 function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRow {
   return {
     id: `live-${p.id}`,
@@ -105,7 +88,7 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
   const effectiveCategory = normalizeSelectFilter(categoryFilter);
 
   const categoryMeta = effectiveCategory
-    ? await getCategoryFilterMeta(storeId, effectiveCategory)
+    ? await getCategoryFilterMeta(supabase, storeId, effectiveCategory)
     : null;
 
   if (useLive) {
@@ -139,47 +122,22 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     .select("*", { count: "exact" })
     .eq("store_id", storeId);
 
-  // Catalog list: exclude Woo variation rows and hide rows queued for deletion.
-  // Chaining two `.or()` calls overwrites the first in the client; use one combined `.or()`.
-  const typePredicates = ["type.is.null", "type.neq.variation"];
-  const pendingPredicates = ["pending_action.is.null", "pending_action.neq.delete"];
-  if (search && search.trim()) {
-    const s = search.trim();
-    const searchFields = ["name", "sku"];
-    const clauses: string[] = [];
-    for (const t of typePredicates) {
-      for (const p of pendingPredicates) {
-        for (const f of searchFields) {
-          clauses.push(`and(${t},${p},${f}.ilike.%${s}%)`);
-        }
-      }
-    }
-    query = query.or(clauses.join(","));
-  } else {
-    const clauses: string[] = [];
-    for (const t of typePredicates) {
-      for (const p of pendingPredicates) clauses.push(`and(${t},${p})`);
-    }
-    query = query.or(clauses.join(","));
-  }
-  if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
-  if (stockStatusFilter && stockStatusFilter !== "all") query = query.eq("stock_status", stockStatusFilter);
-  if (excludeOutOfStock) query = query.neq("stock_status", "outofstock");
-  if (categoryMeta) {
-    // supabase-js treats array args to .contains() as Postgres array literals, breaking JSONB containment.
-    // Pass a JSON-stringified array so PostgREST receives `cs.[{"id":62}]` for proper @> containment.
-    const needle = categoryMeta.wooId !== undefined
-      ? [{ id: categoryMeta.wooId }]
-      : [{ name: categoryMeta.name }];
-    query = query.contains("categories", JSON.stringify(needle));
-  }
-  if (priceMin !== undefined && !isNaN(priceMin)) query = query.gte("price", String(priceMin));
-  if (priceMax !== undefined && !isNaN(priceMax)) query = query.lte("price", String(priceMax));
-  if (sortField === "woo_date_created") {
-    query = query.order("raw_data->>date_created", { ascending: sortDirection === "asc", nullsFirst: false });
-  } else {
-    query = query.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
-  }
+  const categoryContainsJson = categoryMeta
+    ? JSON.stringify(
+        categoryMeta.wooId !== undefined ? [{ id: categoryMeta.wooId }] : [{ name: categoryMeta.name }]
+      )
+    : null;
+
+  query = applyProductCatalogFilters(query, {
+    search,
+    statusFilter,
+    excludeOutOfStock,
+    stockStatusFilter,
+    priceMin,
+    priceMax,
+    categoryContainsJson,
+  });
+  query = applyProductCatalogOrder(query, sortField, sortDirection);
   query = query.range(page * pageSize, (page + 1) * pageSize - 1);
   const { data, error, count } = await query;
   if (error) throw error;

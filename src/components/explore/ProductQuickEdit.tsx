@@ -32,6 +32,8 @@ type Product = {
   store_id: string;
   woo_id: number | null;
   name: string | null;
+  /** WooCommerce product type, e.g. `simple` | `variable` */
+  type?: string | null;
   sku: string | null;
   regular_price: string | number | null;
   sale_price: string | number | null;
@@ -99,7 +101,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
 
   if (!product) return null;
 
-  const isVariable = (product as Product & { type?: string | null }).type === "variable";
+  const isVariable = product.type === "variable";
 
   const clampNonNeg = (v: string): string => {
     if (v === "" || v === "-") return "";
@@ -170,7 +172,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground" required={status === "publish"}>SKU</Label>
+              <Label className="text-[11px] text-muted-foreground" required={status === "publish" && !isVariable}>SKU</Label>
               <Input value={sku} onChange={(e) => setSku(e.target.value)} className="h-8 font-mono text-xs" />
             </div>
             <div className="space-y-1">

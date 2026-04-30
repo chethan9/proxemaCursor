@@ -548,7 +548,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       void (async () => {
         try {
           await supabase.from("profiles").update({ locale: code }).eq("id", user.id);
-          await logActivity({ action: "profile.locale_changed", entityType: "profile", entityId: user.id, metadata: { locale: code } });
+          await logActivity({
+            action: "profile.locale_changed",
+            entityType: "profile",
+            entityId: user.id,
+            metadata: { locale: code, module: "settings" },
+          });
         } catch { /* non-fatal */ }
       })();
     }

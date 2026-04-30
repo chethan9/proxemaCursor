@@ -65,6 +65,8 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
   const publishing = form.status === "publish";
   const priceInvalid = publishing && regularNum <= 0;
   const publishBlocked = priceInvalid;
+  /** Parent SKU is optional for variable products (SKUs live on variations). */
+  const parentSkuRequired = publishing && form.type !== "variable";
 
   // Clamp negative numeric string to 0 (defensive: spinner arrows can bypass min="0" in some browsers)
   const clampNonNegative = (v: string): string => {
@@ -382,9 +384,14 @@ export function BasicEditor({ storeId, form, setForm, saving, onCancel, onPublis
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground" required={publishing}>SKU</Label>
+                <Label className="text-[11px] text-muted-foreground" required={parentSkuRequired}>SKU</Label>
                 <div className="flex gap-1.5">
-                  <Input value={form.sku || ""} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Required" className={`flex-1 ${publishing && !form.sku.trim() ? "border-destructive" : ""}`} />
+                  <Input
+                    value={form.sku || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))}
+                    placeholder={parentSkuRequired ? "Required" : "Optional"}
+                    className={`flex-1 ${parentSkuRequired && !form.sku.trim() ? "border-destructive" : ""}`}
+                  />
                   <Button
                     type="button"
                     variant="outline"

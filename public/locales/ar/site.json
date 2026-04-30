@@ -91,6 +91,17 @@
       "grid": "عرض شبكي",
       "compact": "شبكة مضغوطة"
     },
+    "export": {
+      "excel": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF",
+      "signIn": "سجّل الدخول للتصدير",
+      "ready": "التصدير جاهز",
+      "readyDesc": "{{count}} صفًا",
+      "failed": "فشل التصدير",
+      "truncatedDesc": "أول {{count}} صفوف فقط (الحد {{max}}). ضيّق المرشحات.",
+      "pdfTooManyRows": "PDF محدود بـ {{max}} صف. استخدم Excel أو CSV أو ضيّق المرشحات."
+    },
     "toolbar": {
       "sort": "ترتيب",
       "sortBy": "ترتيب حسب",

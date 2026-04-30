@@ -18,6 +18,7 @@ import {
 import { useTaxonomyRows, useAllCategories } from "@/hooks/queries/useTaxonomy";
 import type { TaxonomySortField, TaxonomySortDirection } from "@/services/taxonomyService";
 import { exportCsv } from "@/lib/exportCsv";
+import { logClientAuditEvent } from "@/lib/audit/client-log";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
@@ -90,6 +91,13 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
       ],
       `${mode}-${storeName || storeId}`
     );
+    void logClientAuditEvent({
+      action: "sites.taxonomy.export_csv",
+      entityType: "store",
+      entityId: storeId,
+      storeId,
+      metadata: { taxonomy_mode: mode, row_count: items.length },
+    });
   }
 
   async function handleRefresh() {

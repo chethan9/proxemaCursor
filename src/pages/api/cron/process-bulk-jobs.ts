@@ -226,6 +226,66 @@ async function assignProductCategories(
     .eq("woo_id", productId);
 }
 
+async function assignProductTags(
+  store: WooStoreCreds,
+  productId: number,
+  mode: string,
+  tagIds: number[],
+) {
+  const current = await wooRequest<{ tags?: { id: number }[] }>(store, "GET", `products/${productId}`);
+  const currentIds = new Set((current.tags ?? []).map((c) => c.id));
+  let nextIds: number[];
+  if (mode === "add") {
+    tagIds.forEach((id) => currentIds.add(id));
+    nextIds = Array.from(currentIds);
+  } else if (mode === "remove") {
+    tagIds.forEach((id) => currentIds.delete(id));
+    nextIds = Array.from(currentIds);
+  } else {
+    nextIds = tagIds;
+  }
+  const body = { tags: nextIds.map((id) => ({ id })) };
+  const updated = await wooRequest<{ tags?: unknown[] }>(store, "PUT", `products/${productId}`, body);
+  await supabaseAdmin
+    .from("products")
+    .update({
+      tags: (updated.tags ?? []) as unknown as Json,
+      synced_at: new Date().toISOString(),
+    })
+    .eq("store_id", store.id)
+    .eq("woo_id", productId);
+}
+
+async function assignProductBrands(
+  store: WooStoreCreds,
+  productId: number,
+  mode: string,
+  brandIds: number[],
+) {
+  const current = await wooRequest<{ brands?: { id: number }[] }>(store, "GET", `products/${productId}`);
+  const currentIds = new Set((current.brands ?? []).map((c) => c.id));
+  let nextIds: number[];
+  if (mode === "add") {
+    brandIds.forEach((id) => currentIds.add(id));
+    nextIds = Array.from(currentIds);
+  } else if (mode === "remove") {
+    brandIds.forEach((id) => currentIds.delete(id));
+    nextIds = Array.from(currentIds);
+  } else {
+    nextIds = brandIds;
+  }
+  const body = { brands: nextIds.map((id) => ({ id })) };
+  const updated = await wooRequest<{ brands?: unknown[] }>(store, "PUT", `products/${productId}`, body);
+  await supabaseAdmin
+    .from("products")
+    .update({
+      brands: (updated.brands ?? []) as unknown as Json,
+      synced_at: new Date().toISOString(),
+    })
+    .eq("store_id", store.id)
+    .eq("woo_id", productId);
+}
+
 async function deleteProduct(store: WooStoreCreds, productId: number, force = false) {
   try {
     await wooRequest(store, "DELETE", `products/${productId}${force ? "?force=true" : ""}`);
@@ -281,6 +341,8 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
     job.job_type === "update_product_stock" ||
     job.job_type === "update_product_status" ||
     job.job_type === "assign_product_categories" ||
+    job.job_type === "assign_product_tags" ||
+    job.job_type === "assign_product_brands" ||
     job.job_type === "delete_products"
   ) {
     itemIds = (payload.product_ids as number[]) ?? [];
@@ -325,6 +387,10 @@ async function processJob(job: JobRow, deadline: number): Promise<"done" | "part
           await updateProductStatus(store, id, payload.new_status as string);
         } else if (job.job_type === "assign_product_categories") {
           await assignProductCategories(store, id, payload.mode as string, (payload.category_ids as number[]) ?? []);
+        } else if (job.job_type === "assign_product_tags") {
+          await assignProductTags(store, id, payload.mode as string, (payload.tag_ids as number[]) ?? []);
+        } else if (job.job_type === "assign_product_brands") {
+          await assignProductBrands(store, id, payload.mode as string, (payload.brand_ids as number[]) ?? []);
         } else if (job.job_type === "delete_products") {
           await deleteProduct(store, id, Boolean(payload.force));
         }

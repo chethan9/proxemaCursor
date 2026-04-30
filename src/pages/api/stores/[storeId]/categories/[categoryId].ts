@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooRequest, getStoreCreds } from "@/lib/woo-client";
 import type { Database } from "@/integrations/supabase/helpers";
+import { auditSitesMutation } from "@/lib/audit/log";
 
 type Json = Database["public"]["Tables"]["categories"]["Row"]["raw_data"];
 
@@ -64,6 +65,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         changed_fields: updates as unknown as Json,
       });
 
+      void auditSitesMutation({
+        req,
+        action: "category.update",
+        entityType: "category",
+        entityId: categoryId,
+        storeId,
+        before: category as Record<string, unknown>,
+        after: updated as Record<string, unknown>,
+        metadata: { woo_id: category.woo_id },
+      });
+
       return res.status(200).json(updated);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -98,6 +110,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         source: "dashboard",
         status: "success",
         snapshot_before: category as unknown as Json,
+      });
+      void auditSitesMutation({
+        req,
+        action: "category.delete",
+        entityType: "category",
+        entityId: categoryId,
+        storeId,
+        before: category as Record<string, unknown>,
+        after: null,
+        metadata: { woo_id: category.woo_id },
       });
       return res.status(200).json({ success: true });
     } catch (err) {

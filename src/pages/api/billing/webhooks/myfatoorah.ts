@@ -95,6 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entity_id: event.gatewayRef,
       client_id: clientId,
       metadata: {
+        module: "billing",
         gateway: "myfatoorah",
         event_id: event.id,
         payment_status: event.paymentStatus,
