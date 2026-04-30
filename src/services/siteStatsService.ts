@@ -38,12 +38,15 @@ export interface SiteStatsResponse {
 
 export async function fetchSiteHomeStats(
   storeId: string,
-  currency?: string | null
+  currency?: string | null,
+  storeTimezone?: string | null
 ): Promise<SiteStatsResponse> {
-  const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
+  const browserTz =
+    typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
+  const effectiveTz = (storeTimezone && storeTimezone.trim()) || browserTz || "UTC";
   const { data, error } = await supabase.rpc("get_site_home_stats", {
     p_store_id: storeId,
-    p_tz: tz || "UTC",
+    p_tz: effectiveTz,
     p_currency: currency || null,
   });
   if (error) throw error;

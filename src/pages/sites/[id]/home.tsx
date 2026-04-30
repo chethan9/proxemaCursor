@@ -19,6 +19,7 @@ import { CurrencySwitcher } from "@/components/site/home/CurrencySwitcher";
 import { SiteBlockedBanner } from "@/components/site/SiteBlockedBanner";
 import { EmptyState } from "@/components/EmptyState";
 import { NoDataIllustration } from "@/components/illustrations/EmptyIllustrations";
+import { SitePreferencesOnboardingDialog } from "@/components/site/store-preferences/SitePreferencesOnboardingDialog";
 
 function fmtMoney(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
@@ -31,7 +32,8 @@ function HomeInner() {
   const qc = useQueryClient();
   const storeId = store?.id;
   const urlCurrency = typeof router.query.currency === "string" ? router.query.currency : null;
-  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId, urlCurrency);
+  const storeTz = store?.timezone ?? null;
+  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId, urlCurrency, storeTz);
 
   const s = data?.stats;
   const currencies = data?.currencies || [];
@@ -59,6 +61,7 @@ function HomeInner() {
 
   return (
     <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
+      <SitePreferencesOnboardingDialog store={store} />
       {storeId && <SiteBlockedBanner storeId={storeId} />}
       <Button
         variant="outline"
@@ -174,6 +177,7 @@ function HomeInner() {
                 orders={data?.recent_orders || []}
                 storeId={storeId || ""}
                 currency={currency}
+                storeTimezone={storeTz}
                 loading={isLoading}
               />
             </div>

@@ -241,8 +241,8 @@ export function SiteSidebar({ siteId }: Props) {
         });
       } else if (section === "home") {
         queryClient.prefetchQuery({
-          queryKey: ["site-home-stats", sid, null],
-          queryFn: () => fetchSiteHomeStats(sid, undefined),
+          queryKey: ["site-home-stats", sid, null, null],
+          queryFn: () => fetchSiteHomeStats(sid, undefined, undefined),
         });
       } else if (section === "customers") {
         const opts = { storeId: sid, page: 0, pageSize: 50 };

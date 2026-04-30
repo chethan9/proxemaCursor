@@ -122,6 +122,15 @@ function GlobalScrollButton() {
   return <ScrollToEdgeButton />;
 }
 
+function ShellMain({ children }: { children: React.ReactNode }) {
+  const { i18n } = useTranslation();
+  return (
+    <main id="main-content" key={i18n.language} className="flex-1 overflow-auto">
+      {children}
+    </main>
+  );
+}
+
 function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -146,9 +155,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full overflow-hidden bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
-          <main id="main-content" className="flex-1 overflow-auto">
-            {children}
-          </main>
+          <ShellMain>{children}</ShellMain>
         </div>
       </div>
     </SidebarProvider>

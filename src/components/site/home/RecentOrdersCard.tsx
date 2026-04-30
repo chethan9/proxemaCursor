@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
-import { format, parseISO } from "date-fns";
+import { formatStoreDateTime } from "@/lib/format-store-date";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { useTranslation } from "next-i18next";
@@ -22,6 +22,7 @@ interface Props {
   orders: RecentOrder[];
   storeId: string;
   currency: string;
+  storeTimezone?: string | null;
   loading?: boolean;
 }
 
@@ -32,8 +33,8 @@ function customerName(billing: unknown): string {
   return n || b.email || "—";
 }
 
-export function RecentOrdersCard({ orders, storeId, currency, loading }: Props) {
-  const { t } = useTranslation("site");
+export function RecentOrdersCard({ orders, storeId, currency, storeTimezone, loading }: Props) {
+  const { t, i18n } = useTranslation("site");
   const router = useRouter();
 
   return (
@@ -93,7 +94,9 @@ export function RecentOrdersCard({ orders, storeId, currency, loading }: Props) 
                       {Number(o.total || 0).toFixed(2)} <span className="text-xs text-muted-foreground">{o.currency || currency}</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {o.date_created ? format(parseISO(o.date_created), "MMM d, HH:mm") : "—"}
+                      {o.date_created
+                        ? formatStoreDateTime(o.date_created, storeTimezone, i18n.language)
+                        : "—"}
                     </div>
                   </div>
                 </button>

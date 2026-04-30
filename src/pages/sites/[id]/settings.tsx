@@ -26,6 +26,7 @@ import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { HistoryWindowCard } from "@/components/site/HistoryWindowCard";
 import { DefaultTemplatesCard } from "@/components/site/DefaultTemplatesCard";
 import { StoreProfileCard } from "@/components/site/StoreProfileCard";
+import { StorePreferencesSettingsCard } from "@/components/site/store-preferences/StorePreferencesSettingsCard";
 
 function SettingsInner() {
   const { t, i18n } = useTranslation("site");
@@ -277,6 +278,8 @@ function SettingsInner() {
               <p className="text-[11px] text-muted-foreground">{t("settings.logo.hint")}</p>
             </CardContent>
           </Card>
+
+          <StorePreferencesSettingsCard store={store} onUpdated={(s) => setStore(s)} />
 
           {/* Connection */}
           <Card>

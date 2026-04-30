@@ -15,33 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LOCALES, getLocaleMeta, NAMESPACES, type LocaleCode } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
+import { LOCALES, getLocaleMeta, type LocaleCode } from "@/lib/i18n";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useBranding } from "@/contexts/BrandingProvider";
-import { logActivity } from "@/lib/activity-log";
+import { applyLocaleChange } from "@/lib/apply-locale-change";
 import { cn } from "@/lib/utils";
-
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-async function persistLocale(code: LocaleCode, userId: string | null) {
-  if (typeof document !== "undefined") {
-    document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
-  }
-  if (userId) {
-    try {
-      await supabase.from("profiles").update({ locale: code }).eq("id", userId);
-      await logActivity({
-        action: "profile.locale_changed",
-        entityType: "profile",
-        entityId: userId,
-        metadata: { locale: code },
-      });
-    } catch {
-      /* non-fatal */
-    }
-  }
-}
 
 interface Props {
   variant?: "menu" | "select" | "compact";
@@ -61,27 +39,9 @@ export function LocaleSwitcher({ variant = "menu", align = "end" }: Props) {
 
   async function handleSelect(code: LocaleCode) {
     if (code === current) return;
-    const startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now());
     setBusy(true);
     try {
-      if (typeof document !== "undefined") {
-        document.documentElement.dir = getLocaleMeta(code).dir;
-        document.documentElement.lang = code;
-      }
-      await Promise.all(
-        NAMESPACES.map(async (ns) => {
-          if (i18n.hasResourceBundle(code, ns)) return;
-          try {
-            const res = await fetch(`/locales/${code}/${ns}.json`);
-            if (res.ok) {
-              const data = await res.json();
-              i18n.addResourceBundle(code, ns, data, true, true);
-            }
-          } catch { /* ignore */ }
-        })
-      );
-      await i18n.changeLanguage(code);
-      await persistLocale(code, user?.id || null);
+      await applyLocaleChange(i18n, code, user?.id || null);
     } finally {
       setBusy(false);
     }

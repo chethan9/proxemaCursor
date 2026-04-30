@@ -2500,11 +2500,14 @@ export type Database = {
       }
       stores: {
         Row: {
+          acquisition_source: string | null
+          acquisition_source_detail: string | null
           address: Json
           celebration_shown_at: string | null
           client_id: string | null
           consumer_key: string | null
           consumer_secret: string | null
+          country_code: string | null
           created_at: string | null
           currency: string | null
           health_checked_at: string | null
@@ -2519,11 +2522,13 @@ export type Database = {
           next_sync_at: string | null
           onboarding_completed_at: string | null
           orders_history_from: string
+          site_preferences_completed_at: string | null
           phone: string | null
           screenshot_captured_at: string | null
           screenshot_url: string | null
           short_id: string | null
           status: string | null
+          store_type: string | null
           support_email: string | null
           sync_interval: number | null
           timezone: string | null
@@ -2535,11 +2540,14 @@ export type Database = {
           wp_username: string | null
         }
         Insert: {
+          acquisition_source?: string | null
+          acquisition_source_detail?: string | null
           address?: Json
           celebration_shown_at?: string | null
           client_id?: string | null
           consumer_key?: string | null
           consumer_secret?: string | null
+          country_code?: string | null
           created_at?: string | null
           currency?: string | null
           health_checked_at?: string | null
@@ -2558,7 +2566,9 @@ export type Database = {
           screenshot_captured_at?: string | null
           screenshot_url?: string | null
           short_id?: string | null
+          site_preferences_completed_at?: string | null
           status?: string | null
+          store_type?: string | null
           support_email?: string | null
           sync_interval?: number | null
           timezone?: string | null
@@ -2570,11 +2580,14 @@ export type Database = {
           wp_username?: string | null
         }
         Update: {
+          acquisition_source?: string | null
+          acquisition_source_detail?: string | null
           address?: Json
           celebration_shown_at?: string | null
           client_id?: string | null
           consumer_key?: string | null
           consumer_secret?: string | null
+          country_code?: string | null
           created_at?: string | null
           currency?: string | null
           health_checked_at?: string | null
@@ -2593,7 +2606,9 @@ export type Database = {
           screenshot_captured_at?: string | null
           screenshot_url?: string | null
           short_id?: string | null
+          site_preferences_completed_at?: string | null
           status?: string | null
+          store_type?: string | null
           support_email?: string | null
           sync_interval?: number | null
           timezone?: string | null
