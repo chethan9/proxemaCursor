@@ -107,6 +107,47 @@ function extractActiveSiteId(asPath: string): string | null {
   return m ? m[1] : null;
 }
 
+function collectMenuItemHrefs(nodes: ResolvedMenuNode[]): string[] {
+  const hrefs: string[] = [];
+  const walk = (ns: ResolvedMenuNode[]) => {
+    for (const n of ns) {
+      if (n.type === "item" && n.href) hrefs.push(n.href);
+      if (n.children?.length) walk(n.children);
+    }
+  };
+  walk(nodes);
+  return [...new Set(hrefs)];
+}
+
+/** Same rules as sidebar link highlighting — avoids collapsed submenus when concrete hrefs differ from `router.pathname` (e.g. `/sites/[id]/…`). */
+function menuHrefMatchesRoute(
+  href: string,
+  opts: {
+    pendingPath: string | null;
+    asPath: string;
+    pathname: string;
+    allMenuHrefs: readonly string[];
+  }
+): boolean {
+  const base = (opts.pendingPath ?? opts.asPath).split("?")[0].split("#")[0];
+  if (href === "/settings/profile") {
+    if (!base.startsWith("/settings")) return false;
+    if (base.startsWith("/settings/users") || base.startsWith("/settings/roles")) return false;
+    return true;
+  }
+  const pathMatches =
+    base === href || base.startsWith(href + "/") || opts.pathname === href;
+  if (!pathMatches) return false;
+  if (base === href || base.startsWith(href + "/")) {
+    for (const other of opts.allMenuHrefs) {
+      if (other === href) continue;
+      if (!other.startsWith(href + "/")) continue;
+      if (base === other || base.startsWith(other + "/")) return false;
+    }
+  }
+  return true;
+}
+
 export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
   const router = useRouter();
   const { brandName, logoUrl, enabledLocales } = useBranding();
@@ -143,6 +184,26 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     if (typeof window === "undefined") return null;
     return localStorage.getItem("sidebar-active-panel");
   });
+  /** Immediate route hint while Next.js resolves navigation — keeps inline submenus expanded during chunk load. */
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const clear = () => setPendingPath(null);
+    router.events.on("routeChangeComplete", clear);
+    router.events.on("routeChangeError", clear);
+    return () => {
+      router.events.off("routeChangeComplete", clear);
+      router.events.off("routeChangeError", clear);
+    };
+  }, [router.events]);
+
+  useEffect(() => {
+    if (!pendingPath) return;
+    const cur = router.asPath.split("?")[0].split("#")[0];
+    const pend = pendingPath.split("?")[0].split("#")[0];
+    if (cur === pend || cur.startsWith(pend + "/")) setPendingPath(null);
+  }, [router.asPath, pendingPath]);
+
   const currentRoleKey = roleKeyFor(profile?.role, isSuperAdmin);
   const [menuTree, setMenuTree] = useState<ResolvedMenuNode[]>([]);
   const [menuReady, setMenuReady] = useState<boolean>(false);
@@ -237,25 +298,42 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, [activePanelId]);
 
   useEffect(() => {
+    const hrefs = collectMenuItemHrefs(menuTree);
+    const routeOpts = {
+      pendingPath,
+      asPath: router.asPath,
+      pathname: router.pathname,
+      allMenuHrefs: hrefs,
+    };
     let matched: string | null = null;
     for (const n of menuTree) {
       if (n.type === "group" && n.displayMode === "panel") {
-        const hasActive = n.children?.some((c) => c.href === router.pathname);
-        if (hasActive) { matched = n.id; break; }
+        const hasActive = n.children?.some((c) => c.href && menuHrefMatchesRoute(c.href, routeOpts));
+        if (hasActive) {
+          matched = n.id;
+          break;
+        }
       }
     }
     if (matched !== activePanelId) setActivePanelId(matched);
-  }, [router.pathname, menuTree, activePanelId]);
+  }, [router.pathname, router.asPath, pendingPath, menuTree, activePanelId]);
 
   const activeSiteId = useMemo(() => extractActiveSiteId(router.asPath), [router.asPath]);
 
   // Initialize group-expanded state: auto-expand group containing active route, otherwise use localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const hrefs = collectMenuItemHrefs(menuTree);
+    const routeOpts = {
+      pendingPath,
+      asPath: router.asPath,
+      pathname: router.pathname,
+      allMenuHrefs: hrefs,
+    };
     const next: Record<string, boolean> = {};
     for (const node of menuTree) {
       if (node.type !== "group") continue;
-      const containsActive = node.children?.some((c) => c.href === router.pathname);
+      const containsActive = node.children?.some((c) => c.href && menuHrefMatchesRoute(c.href, routeOpts));
       if (containsActive) {
         next[node.id] = true;
         continue;
@@ -264,7 +342,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
       next[node.id] = stored === null ? true : stored === "1";
     }
     setGroupExpanded((prev) => ({ ...next, ...Object.fromEntries(Object.entries(prev).filter(([k]) => !(k in next))) }));
-  }, [menuTree, router.pathname]);
+  }, [menuTree, router.pathname, router.asPath, pendingPath]);
 
   const toggleGroup = (id: string) => {
     setGroupExpanded((prev) => {
@@ -296,26 +374,6 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   }, [sortedSites, activeSiteId]);
 
   const overflowCount = Math.max(0, sortedSites.length - visibleSites.length);
-
-  /** Immediate highlight while Next.js loads the route chunk (pathname/asPath update late). */
-  const [pendingPath, setPendingPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    const clear = () => setPendingPath(null);
-    router.events.on("routeChangeComplete", clear);
-    router.events.on("routeChangeError", clear);
-    return () => {
-      router.events.off("routeChangeComplete", clear);
-      router.events.off("routeChangeError", clear);
-    };
-  }, [router.events]);
-
-  useEffect(() => {
-    if (!pendingPath) return;
-    const cur = router.asPath.split("?")[0].split("#")[0];
-    const pend = pendingPath.split("?")[0].split("#")[0];
-    if (cur === pend || cur.startsWith(pend + "/")) setPendingPath(null);
-  }, [router.asPath, pendingPath]);
 
   /** Paint active state immediately (same idea as SiteSidebar); avoids waiting for router.asPath. */
   const beginSidebarNavigation = useCallback((href: string) => {
@@ -377,40 +435,15 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   };
 
   /** All sidebar item hrefs — used so parent items are not active when a longer sibling path matches. */
-  const menuItemHrefs = useMemo(() => {
-    const hrefs: string[] = [];
-    const walk = (nodes: ResolvedMenuNode[]) => {
-      for (const n of nodes) {
-        if (n.type === "item" && n.href) hrefs.push(n.href);
-        if (n.children?.length) walk(n.children);
-      }
-    };
-    walk(menuTree);
-    return [...new Set(hrefs)];
-  }, [menuTree]);
+  const menuItemHrefs = useMemo(() => collectMenuItemHrefs(menuTree), [menuTree]);
 
-  const isItemActive = (href: string) => {
-    const base = (pendingPath ?? router.asPath).split("?")[0].split("#")[0];
-    // Top-level "Settings" links to profile but must not stay active on Administration
-    // routes that live under /settings (users, roles).
-    if (href === "/settings/profile") {
-      if (!base.startsWith("/settings")) return false;
-      if (base.startsWith("/settings/users") || base.startsWith("/settings/roles")) return false;
-      return true;
-    }
-    const pathMatches =
-      base === href || base.startsWith(href + "/") || router.pathname === href;
-    if (!pathMatches) return false;
-    // Same pattern as /settings vs /settings/users: /webhooks vs /webhooks/activity, /billing vs /billing/payment-methods
-    if (base === href || base.startsWith(href + "/")) {
-      for (const other of menuItemHrefs) {
-        if (other === href) continue;
-        if (!other.startsWith(href + "/")) continue;
-        if (base === other || base.startsWith(other + "/")) return false;
-      }
-    }
-    return true;
-  };
+  const isItemActive = (href: string) =>
+    menuHrefMatchesRoute(href, {
+      pendingPath,
+      asPath: router.asPath,
+      pathname: router.pathname,
+      allMenuHrefs: menuItemHrefs,
+    });
 
   const APP_NAV_KEY_BY_ID: Record<string, string> = {
     "dashboard": "health",
@@ -563,7 +596,9 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const children = node.children || [];
     if (children.length === 0) return null;
     const GroupIcon = resolveIcon(node.icon);
-    const hasActiveChild = children.some((c) => c.href === router.pathname);
+    const hasActiveChild = children.some(
+      (c) => c.href && menuHrefMatchesRoute(c.href, { pendingPath, asPath: router.asPath, pathname: router.pathname, allMenuHrefs: menuItemHrefs })
+    );
     const isExpanded = !!groupExpanded[node.id];
     const isPanelMode = node.displayMode === "panel";
     const groupLabel = tGroupLabel(node);
