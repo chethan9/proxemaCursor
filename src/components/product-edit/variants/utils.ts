@@ -45,3 +45,8 @@ export function mergeVariations(fresh: Variation[], existing: Variation[]): Vari
 export function variationLabel(v: Variation): string {
   return v.attributes.map((a) => a.option).join(" / ");
 }
+
+/** Canonical key for duplicate detection — same as `productValidation` / Woo composite key (sorted attrs, lowercased). */
+export function variationAttributeComboKey(v: Variation): string {
+  return compositeVariationKey([...v.attributes].sort((a, b) => a.name.localeCompare(b.name))).toLowerCase();
+}

@@ -53,5 +53,12 @@
     "securedBy": "由 {{gateway}} 保护",
     "terms": "继续即表示您同意我们的<terms>条款</terms>和<privacy>隐私政策</privacy>。",
     "subscribingAs": "以 {{email}} 订阅。"
+  },
+  "usage": {
+    "title": "用量",
+    "rowSites": "站点",
+    "rowProducts": "商品",
+    "rowUsers": "用户",
+    "graceBanner": "您已超出套餐限制。在 {{date}} 之前仍可继续使用；之后请升级或减少用量。"
   }
 }

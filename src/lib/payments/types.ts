@@ -71,6 +71,32 @@ export interface RefundResult {
   rawPayload: unknown;
 }
 
+/**
+ * Request to charge a previously saved payment source/token (recurring/off-session).
+ * Used by the renewal cron when a customer has a payment_method_id on file
+ * (trial → active conversion, manual auto-renewals).
+ */
+export interface RecurringChargeRequest {
+  amountMinor: number;
+  currency: string;
+  description: string;
+  customerEmail: string;
+  clientReference: string;
+  /** Token previously stored as client_payment_methods.gateway_token. */
+  savedToken: string;
+}
+
+export interface RecurringChargeResult {
+  /** True when the gateway accepted the charge synchronously. */
+  ok: boolean;
+  /** Gateway transaction id on success or attempt id on failure. */
+  gatewayRef?: string;
+  /** Stable error code, e.g. recurring_not_implemented, gateway_declined, gateway_error. */
+  errorCode?: string;
+  errorMessage?: string;
+  rawPayload?: unknown;
+}
+
 export interface WebhookEvent {
   id: string;
   type: string;
@@ -95,4 +121,10 @@ export interface PaymentGateway {
   refund(req: RefundRequest): Promise<RefundResult>;
   parseWebhook(req: WebhookInput): Promise<WebhookEvent>;
   isConfigured(): boolean;
+  /**
+   * Optional. Charge a previously saved source/token off-session.
+   * Implement once the gateway adds first-class recurring support; until then,
+   * the renewal cron treats absence of this method as "not yet integrated".
+   */
+  chargeSavedSource?(req: RecurringChargeRequest): Promise<RecurringChargeResult>;
 }

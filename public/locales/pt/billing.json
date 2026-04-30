@@ -53,5 +53,12 @@
     "securedBy": "Protegido por {{gateway}}",
     "terms": "Ao continuar, você concorda com nossos <terms>Termos</terms> e <privacy>Política de Privacidade</privacy>.",
     "subscribingAs": "Assinando como {{email}}."
+  },
+  "usage": {
+    "title": "Uso",
+    "rowSites": "Sites",
+    "rowProducts": "Produtos",
+    "rowUsers": "Usuários",
+    "graceBanner": "Você excedeu os limites do plano. Pode continuar até {{date}} — depois faça upgrade ou reduza o uso."
   }
 }

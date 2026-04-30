@@ -1,4 +1,16 @@
 {
+  "tabs": {
+    "home": "Home",
+    "products": "Products",
+    "orders": "Orders",
+    "customers": "Customers",
+    "categories": "Categories",
+    "tags": "Tags",
+    "brands": "Brands",
+    "downloads": "Downloads",
+    "bulkJobs": "Bulk jobs",
+    "settings": "Settings"
+  },
   "home": {
     "refresh": "Обновить",
     "errorTitle": "Не удалось загрузить статистику панели",
@@ -19,11 +31,1079 @@
     },
     "spark": {
       "sales": "Продажи",
-      "revenue": "Выручка",
       "ordersInCurrency": "заказов в {{currency}} (30д)",
       "ordersLast30d": "заказов за 30д",
+      "revenue": "Выручка",
       "vsPrev30d": "против пред. 30д",
       "last30d": "последние 30д"
+    },
+    "cards": {
+      "salesTrend": {
+        "title": "Sales Trend (30d)",
+        "subtitle": "Daily revenue and order count",
+        "revenue": "Revenue",
+        "orders": "Orders"
+      },
+      "orderStatus": {
+        "title": "Order Status (30d)",
+        "subtitle": "Breakdown by order status",
+        "empty": "No orders in last 30 days",
+        "total": "Total"
+      },
+      "recentOrders": {
+        "title": "Recent Orders",
+        "subtitle": "Last 10 orders",
+        "empty": "No orders yet"
+      },
+      "topProducts": {
+        "title": "Top Products",
+        "subtitle": "Best sellers (30d)",
+        "empty": "No sales in last 30 days",
+        "unitsSold": "{{count}} units sold"
+      },
+      "currencyTooltip": "{{count}} order(s) in {{code}} (last 30d)"
     }
+  },
+  "products": {
+    "title": "Products",
+    "addProduct": "Add product",
+    "search": "Search products by name or SKU...",
+    "filters": {
+      "allCategories": "All categories",
+      "allStatuses": "All statuses",
+      "allStock": "All stock",
+      "inStock": "In stock",
+      "outOfStock": "Out of stock",
+      "onBackorder": "On backorder",
+      "clear": "Clear",
+      "category": "Category",
+      "status": "Status"
+    },
+    "statuses": {
+      "publish": "Published",
+      "draft": "Draft",
+      "pending": "Pending",
+      "private": "Private",
+      "active": "Active"
+    },
+    "view": {
+      "table": "Table view",
+      "grid": "Grid view",
+      "compact": "Compact grid"
+    },
+    "toolbar": {
+      "sort": "Sort",
+      "sortBy": "Sort by",
+      "columns": "Columns",
+      "customizeColumns": "Customize columns",
+      "export": "Export",
+      "exportCsv": "Export CSV",
+      "rows": "Rows",
+      "rowsPerPage": "Rows per page",
+      "lockedHint": "Available after initial sync completes"
+    },
+    "sortOptions": {
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first",
+      "nameAsc": "Name A-Z",
+      "nameDesc": "Name Z-A",
+      "priceHigh": "Price high to low",
+      "priceLow": "Price low to high",
+      "stockHigh": "Stock high to low",
+      "stockLow": "Stock low to high",
+      "recentlySynced": "Recently synced"
+    },
+    "columnGroups": {
+      "product": "Product",
+      "pricingInventory": "Pricing & Inventory",
+      "contentDates": "Content & Dates"
+    },
+    "columns": {
+      "image": "Image",
+      "id": "ID",
+      "wooId": "Woo ID",
+      "name": "Product name",
+      "slug": "Slug",
+      "sku": "SKU",
+      "type": "Type",
+      "status": "Status",
+      "permalink": "Permalink",
+      "parentId": "Parent ID",
+      "price": "Price",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "stock": "Stock qty",
+      "stockStatus": "Stock status",
+      "manageStock": "Manage stock",
+      "taxStatus": "Tax status",
+      "taxClass": "Tax class",
+      "shippingRequired": "Shipping required",
+      "categories": "Categories",
+      "brands": "Brands",
+      "attributes": "Attributes",
+      "imagesCount": "Images count",
+      "shortDesc": "Short description",
+      "description": "Description",
+      "dateCreated": "Date created (Woo)",
+      "dateModified": "Date modified (Woo)",
+      "lastSynced": "Last synced",
+      "createdAt": "Created at (DB)",
+      "updatedAt": "Updated at (DB)"
+    },
+    "empty": {
+      "title": "No products yet",
+      "description": "Once your store has products, they'll appear here. Run a sync to pull existing products from WooCommerce.",
+      "syncing": "Syncing your products…",
+      "syncProgress": "{{percent}}% complete — new products will appear automatically"
+    },
+    "bulk": {
+      "selected": "selected",
+      "maxLimit": "(max {{max}} per job)",
+      "lockedDuringSync": "Bulk actions disabled during initial sync",
+      "price": "Price",
+      "stock": "Stock",
+      "status": "Status",
+      "categories": "Categories",
+      "delete": "Delete",
+      "clear": "Clear",
+      "skipped": "{{count}} product(s) skipped",
+      "skippedDesc": "Already queued in another bulk job.",
+      "noEligible": "No eligible products",
+      "noEligibleDesc": "All selected products are already queued in another bulk job.",
+      "dialog": {
+        "updatePrice": "Update price",
+        "updateStock": "Update stock",
+        "updateStatus": "Update status",
+        "updateCategories": "Update categories",
+        "deleteProducts": "Delete products",
+        "deleteConfirm": "Permanently delete {{count}} product(s)? This cannot be undone.",
+        "applyTo": "Apply this change to {{count}} selected product(s).",
+        "operation": "Operation",
+        "value": "Value",
+        "quantity": "Quantity",
+        "newStatus": "New status",
+        "stockStatus": "Stock status",
+        "mode": "Mode",
+        "categoriesField": "Categories",
+        "noCategoriesAvailable": "No categories available",
+        "categoryNote": "Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.",
+        "ops": {
+          "set": "Set regular price to",
+          "setSale": "Set sale price to",
+          "increasePct": "Increase by %",
+          "decreasePct": "Decrease by %",
+          "increaseFixed": "Increase by fixed amount",
+          "decreaseFixed": "Decrease by fixed amount",
+          "setQty": "Set quantity to",
+          "adjustQty": "Adjust quantity by",
+          "setStockStatus": "Set stock status",
+          "addCats": "Add categories",
+          "removeCats": "Remove categories",
+          "replaceCats": "Replace with"
+        }
+      }
+    },
+    "row": {
+      "edit": "Edit",
+      "editProduct": "Edit product",
+      "outOfStock": "Out of stock",
+      "out": "Out",
+      "low": "Low",
+      "backorder": "Backorder",
+      "uncategorized": "Uncategorized",
+      "stockLabel": "Stock:",
+      "skuLabel": "SKU:",
+      "idLabel": "ID:",
+      "hasVariations": "Has variations",
+      "lockedTooltip": "Editing is disabled during initial sync",
+      "pendingLockTooltip": "This product is queued in a bulk job. Edits are disabled until it finishes.",
+      "pendingBadge": "Pending"
+    },
+    "pending": {
+      "delete": "Scheduled for deletion",
+      "statusChange": "Scheduled for status change",
+      "priceUpdate": "Scheduled for price update",
+      "stockUpdate": "Scheduled for stock update",
+      "categoryUpdate": "Scheduled for category update",
+      "scheduledGeneric": "Scheduled: {{action}}"
+    }
+  },
+  "productType": {
+    "title": "What type of product are you adding?",
+    "subtitle": "Choose the best option that fits your product",
+    "simple": {
+      "title": "Simple Product",
+      "description": "For products with a single price, one SKU, and no variations.",
+      "badge": "Easy"
+    },
+    "variable": {
+      "title": "Variable Product",
+      "description": "For products with options like size, color, style, or other variations.",
+      "badge": "Advanced"
+    }
+  },
+  "productEdit": {
+    "title": "Edit product",
+    "newTitle": "New product",
+    "tabs": {
+      "basicInfo": "Basic info",
+      "pricingTax": "Pricing & tax",
+      "inventoryShipping": "Inventory & shipping",
+      "variants": "Variants",
+      "advanced": "Advanced"
+    },
+    "fields": {
+      "name": "Name",
+      "slug": "Slug",
+      "shortDescription": "Short description",
+      "description": "Description",
+      "sku": "SKU",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "stockQuantity": "Stock quantity",
+      "manageStock": "Manage stock",
+      "stockStatus": "Stock status",
+      "weight": "Weight",
+      "dimensions": "Dimensions",
+      "length": "Length",
+      "width": "Width",
+      "height": "Height",
+      "categories": "Categories",
+      "tags": "Tags",
+      "brand": "Brand",
+      "featured": "Featured product",
+      "virtual": "Virtual",
+      "downloadable": "Downloadable"
+    },
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saveAndClose": "Save & close",
+    "cancel": "Cancel",
+    "discardWarning": "You have unsaved changes. Discard them?",
+    "savedToast": "Product saved",
+    "saveFailedToast": "Save failed",
+    "preview": {
+      "title": "Live preview",
+      "subtitle": "How this product looks in your storefront"
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "search": "Search orders by #, customer, or email...",
+    "filters": {
+      "all": "All",
+      "payment": "Payment",
+      "allPaymentMethods": "All payment methods",
+      "filterByPayment": "Filter by payment",
+      "filterByTotal": "Filter by total",
+      "total": "Total",
+      "min": "Min",
+      "max": "Max",
+      "clear": "Clear",
+      "clearAll": "Clear"
+    },
+    "statuses": {
+      "processing": "Processing",
+      "onHold": "On hold",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "toolbar": {
+      "sort": "Sort",
+      "sortBy": "Sort by",
+      "columns": "Columns",
+      "customizeColumns": "Customize columns",
+      "export": "Export",
+      "reset": "Reset",
+      "lockedHint": "Available after initial sync completes"
+    },
+    "sortOptions": {
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first",
+      "totalHigh": "Total high to low",
+      "totalLow": "Total low to high",
+      "orderNumAsc": "Order # ascending",
+      "orderNumDesc": "Order # descending",
+      "recentlySynced": "Recently synced"
+    },
+    "empty": {
+      "title": "No orders yet",
+      "description": "When customers place orders on your store, they'll appear here for you to manage.",
+      "noMatch": "No orders match your filters",
+      "noMatchDescription": "Try clearing your filters or adjusting them to see more results.",
+      "loading": "Loading orders…",
+      "syncing": "Syncing your orders…",
+      "syncProgress": "{{percent}}% complete — new orders will appear automatically"
+    },
+    "bulk": {
+      "selected": "selected",
+      "maxLimit": "(max {{max}} per job)",
+      "printInvoices": "Print invoices",
+      "markStatus": "Mark status",
+      "changeStatusTo": "Change status to…",
+      "delete": "Delete",
+      "clear": "Clear",
+      "skipped": "{{count}} order(s) skipped",
+      "skippedDesc": "Already queued in another bulk job.",
+      "noEligible": "No eligible orders",
+      "noEligibleDesc": "All selected orders are already queued in another bulk job.",
+      "queued": "Bulk job queued",
+      "queuedDesc": "Processing {{count}} orders in the background. Check progress in the bulk jobs panel.",
+      "dialog": {
+        "deleteTitle": "Delete {{count}} orders?",
+        "updateTitle": "Update {{count}} orders to \"{{status}}\"?",
+        "description": "This queues a background job that pushes changes to WooCommerce one order at a time. Processing {{count}} orders may take {{minMinutes}}–{{maxMinutes}} minutes. You can close this page; progress is saved.",
+        "queueJob": "Queue job",
+        "queueing": "Queueing…",
+        "cancel": "Cancel"
+      }
+    },
+    "row": {
+      "markComplete": "Mark complete",
+      "alreadyStatus": "Already {{status}}",
+      "printInvoice": "Print invoice",
+      "noInvoiceTemplate": "No invoice template",
+      "printPickslip": "Print pick slip",
+      "noPickslipTemplate": "No pick slip template"
+    },
+    "pending": {
+      "delete": "Scheduled for deletion",
+      "statusChange": "Scheduled for status change",
+      "scheduledGeneric": "Scheduled: {{action}}",
+      "lockedTooltip": "This order is queued in a bulk job. Edits are disabled until it finishes."
+    },
+    "toast": {
+      "markedComplete": "Order marked complete",
+      "updateFailed": "Failed to update",
+      "unknownError": "Unknown error"
+    }
+  },
+  "orderDetail": {
+    "breadcrumb": "Orders",
+    "title": "Order Details",
+    "orderNumber": "Order #{{number}}",
+    "statuses": {
+      "processing": "Processing",
+      "onHold": "On Hold",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "stepper": {
+      "title": "Update Order Status",
+      "orderPlaced": "Order Placed",
+      "processing": "Processing",
+      "completed": "Completed",
+      "notYet": "Not yet"
+    },
+    "customer": {
+      "title": "Customer Details",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "ip": "Customer IP"
+    },
+    "address": {
+      "title": "Address",
+      "shipping": "Shipping Address",
+      "billing": "Billing Address"
+    },
+    "details": {
+      "title": "Order Details",
+      "placedOn": "Placed on",
+      "payment": "Payment",
+      "txnId": "Txn ID",
+      "paidOn": "Paid on",
+      "updated": "Updated",
+      "customerNote": "Customer note"
+    },
+    "items": {
+      "title": "Items Ordered",
+      "item": "Item",
+      "sku": "SKU",
+      "variation": "Variation",
+      "qty": "Qty",
+      "price": "Price",
+      "total": "Total",
+      "noItems": "No items"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "coupon": "Coupon",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "total": "Total"
+    },
+    "actions": {
+      "title": "Actions",
+      "emailInvoice": "Email invoice to customer",
+      "viewCustomer": "View customer profile",
+      "viewCustomerShort": "View Customer",
+      "noMatchingCustomer": "No matching customer profile found",
+      "noCustomerInfo": "No customer info on this order",
+      "resendNotification": "Resend new order notification",
+      "openInWp": "Open in WP admin"
+    },
+    "changeStatus": "Change Status",
+    "notes": {
+      "title": "Order Notes",
+      "loading": "Loading notes…",
+      "empty": "No notes yet",
+      "sentToCustomer": "Sent to customer",
+      "placeholder": "Add a note...",
+      "sendToCustomer": "Send to customer (email)",
+      "addNote": "Add note",
+      "saving": "Saving…"
+    },
+    "toast": {
+      "statusUpdated": "Order → {{status}}",
+      "noteSent": "Note sent to customer",
+      "notePrivate": "Private note added"
+    }
+  },
+  "customers": {
+    "title": "Customers",
+    "newCustomer": "New customer",
+    "search": "Search customers…",
+    "toolbar": {
+      "sort": "Sort",
+      "sortBy": "Sort by",
+      "columns": "Columns",
+      "customizeColumns": "Customize columns",
+      "export": "Export",
+      "exportCsv": "Export CSV",
+      "reset": "Reset",
+      "clear": "Clear",
+      "rows": "Rows",
+      "lockedHint": "Available after initial sync completes",
+      "exported": "Exported",
+      "exportedCount": "{{count}} customers"
+    },
+    "sortOptions": {
+      "newestRegistered": "Newest registered",
+      "oldestRegistered": "Oldest registered",
+      "highestSpent": "Highest spent",
+      "lowestSpent": "Lowest spent",
+      "mostOrders": "Most orders",
+      "fewestOrders": "Fewest orders",
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A"
+    },
+    "columnGroups": {
+      "Customer": "Customer",
+      "Activity": "Activity",
+      "Location": "Location"
+    },
+    "columns": {
+      "name": "Name",
+      "username": "Username",
+      "email": "Email",
+      "phone": "Phone",
+      "orders": "Orders",
+      "spent": "Spent",
+      "aov": "AOV",
+      "city": "City",
+      "country": "Country",
+      "registered": "Registered",
+      "last_active": "Last active"
+    },
+    "empty": {
+      "title": "No customers yet",
+      "description": "When customers sign up or place orders on your store, they'll appear here."
+    },
+    "expanded": {
+      "lastOrders": "Last orders",
+      "noOrders": "No orders yet.",
+      "billingAddress": "Billing address",
+      "actions": "Actions",
+      "viewDetails": "View details",
+      "editCustomer": "Edit customer"
+    }
+  },
+  "customerDetail": {
+    "breadcrumb": "Customers / Customer Details",
+    "actions": {
+      "delete": "Delete",
+      "edit": "Edit Customer",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "summary": {
+      "name": "Name",
+      "contact": "Contact",
+      "orders": "Orders",
+      "ordersCount": "{{count}} Orders",
+      "lastOrderedOn": "Last ordered on {{date}}",
+      "spent": "Spent",
+      "aov": "Average order value {{value}}"
+    },
+    "tabs": {
+      "details": "Basic Details",
+      "orders": "Orders ({{count}})"
+    },
+    "form": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "username": "Username"
+    },
+    "fields": {
+      "accountStatus": "Account Status",
+      "active": "Active",
+      "customerType": "Customer Type",
+      "registeredUser": "Registered User",
+      "guest": "Guest",
+      "customerSince": "Customer Since",
+      "lastActive": "Last Active",
+      "lastOrderDate": "Last Order Date",
+      "preferredPayment": "Preferred Payment",
+      "preferredDelivery": "Preferred Delivery",
+      "standardDelivery": "Standard Delivery",
+      "deliveryIssues": "Delivery Issues",
+      "none": "None",
+      "totalOrders": "Total Orders",
+      "completedOrders": "Completed Orders",
+      "cancelledOrders": "Cancelled Orders",
+      "avgOrderValue": "Average Order Value",
+      "totalSpent": "Total Spent",
+      "highestOrder": "Highest Order",
+      "lowestOrder": "Lowest Order",
+      "payingCustomer": "Paying Customer",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "address": {
+      "billingTitle": "Billing Address",
+      "shippingTitle": "Shipping Address",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "address1": "Address 1",
+      "address2": "Address 2",
+      "city": "City",
+      "stateRegion": "State / Region",
+      "postcode": "Postcode",
+      "country": "Country",
+      "phone": "Phone",
+      "email": "Email",
+      "noBilling": "No billing address on file.",
+      "noShipping": "No shipping address on file."
+    },
+    "stats": {
+      "totalOrders": "Total orders",
+      "completed": "Completed",
+      "ofLoaded": "{{percent}}% of loaded",
+      "cancelled": "Cancelled",
+      "totalSpent": "Total spent",
+      "avgOrder": "Avg order"
+    },
+    "filter": {
+      "all": "All"
+    },
+    "ordersTab": {
+      "empty": "No orders yet",
+      "emptyDesc": "This customer hasn't placed any orders.",
+      "noFiltered": "No {{status}} orders.",
+      "items": "{{count}} item",
+      "items_other": "{{count}} items",
+      "shipTo": "Ship to:",
+      "coupon": "Coupon:",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "total": "Total",
+      "openOrder": "Open order details →",
+      "page": "Page {{current}} of {{total}}",
+      "showing": "Showing {{loaded}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "delete": {
+      "confirmTitle": "Delete {{name}}?",
+      "confirmDesc": "This removes the customer from WooCommerce and your panel. This action can't be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete customer"
+    },
+    "toasts": {
+      "copied": "Copied",
+      "updated": "Customer updated",
+      "deleted": "Customer deleted",
+      "notFound": "Customer not found",
+      "storeNotFound": "Store not found"
+    }
+  },
+  "taxonomy": {
+    "search": "Search {{mode}}…",
+    "sort": "Sort",
+    "sortBy": "Sort by",
+    "export": "Export",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "refreshTitle": "Refresh from WooCommerce",
+    "newCategory": "New category",
+    "newTag": "New tag",
+    "newBrand": "New brand",
+    "rows": "Rows:",
+    "sortOptions": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "countDesc": "Most products",
+      "countAsc": "Fewest products",
+      "recent": "Recently added"
+    },
+    "columns": {
+      "name": "Name",
+      "slug": "Slug",
+      "products": "Products",
+      "description": "Description",
+      "wooId": "Woo ID"
+    },
+    "empty": {
+      "noMatch": "No {{mode}} match \"{{search}}\"",
+      "noItems": "No {{mode}} yet",
+      "noItemsHint": "Create one or trigger a sync to pull them in."
+    },
+    "toasts": {
+      "synced": "Synced {{count}} {{mode}}",
+      "refreshFailed": "Refresh failed"
+    }
+  },
+  "downloads": {
+    "title": "Downloads",
+    "subtitle": "Generated documents and reports for {{name}} · auto-deleted after 7 days",
+    "bulkJobsLink": "Bulk Jobs",
+    "refresh": "Refresh",
+    "tiles": {
+      "all": "All Files",
+      "invoice": "Invoices",
+      "packingSlip": "Packing Slips",
+      "creditNote": "Credit Notes",
+      "report": "Reports"
+    },
+    "types": {
+      "invoice": "Invoice",
+      "packingSlip": "Packing Slip",
+      "creditNote": "Credit Note",
+      "report": "Report"
+    },
+    "search": "Search by file, order, or customer...",
+    "filters": {
+      "allTypes": "All Types",
+      "clear": "Clear"
+    },
+    "selected": "{{count}} selected",
+    "downloadSelected": "Download selected",
+    "expired": "Expired",
+    "daysLeft": "{{days}}d left",
+    "hoursLeft": "{{hours}}h left",
+    "columns": {
+      "fileName": "File Name",
+      "type": "Type",
+      "orderRef": "Order / Ref",
+      "customer": "Customer",
+      "generated": "Generated",
+      "expires": "Expires",
+      "size": "Size",
+      "actions": "Actions"
+    },
+    "selectAll": "Select all",
+    "selectFile": "Select {{name}}",
+    "loading": "Loading downloads…",
+    "empty": {
+      "noFiles": "No downloads yet",
+      "noFilesHint": "Generate invoices from Orders → Print invoices to see files here",
+      "noMatches": "No files match your filters",
+      "noMatchesHint": "Try clearing filters or searching for a different term"
+    },
+    "actions": {
+      "download": "Download",
+      "remove": "Remove from downloads"
+    },
+    "toasts": {
+      "unavailable": "Unavailable",
+      "notDownloadable": "This file is not downloadable",
+      "signInRequired": "Sign in required",
+      "archiveExpired": "Archive expired",
+      "autoDeleted": "Auto-deleted after 7 days",
+      "downloadFailed": "Download failed",
+      "removed": "Removed from Downloads",
+      "removeFailed": "Failed to remove"
+    }
+  },
+  "bulkJobs": {
+    "title": "Bulk Jobs",
+    "subtitle": "Background jobs for {{name}}",
+    "viewDownloads": "View downloads",
+    "refresh": "Refresh",
+    "stats": {
+      "total": "Total Jobs",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed",
+      "processed": "Records Processed"
+    },
+    "search": "Search jobs...",
+    "filters": {
+      "allStatus": "All Status",
+      "allTypes": "All Types",
+      "clear": "Clear"
+    },
+    "statuses": {
+      "pending": "pending",
+      "running": "running",
+      "completed": "completed",
+      "partial": "partial",
+      "failed": "failed",
+      "cancelled": "cancelled"
+    },
+    "history": "Job History",
+    "columns": {
+      "type": "Type",
+      "status": "Status",
+      "progress": "Progress",
+      "succeeded": "Success",
+      "failed": "Failed",
+      "duration": "Duration",
+      "started": "Started",
+      "actions": "Actions"
+    },
+    "loading": "Loading jobs…",
+    "empty": {
+      "none": "No bulk jobs yet",
+      "noMatches": "No jobs match your filters"
+    },
+    "row": {
+      "view": "View",
+      "cancel": "Cancel",
+      "error": "error"
+    },
+    "details": {
+      "jobId": "Job ID:",
+      "total": "Total",
+      "processed": "Processed",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "progress": "Progress",
+      "created": "Created",
+      "started": "Started",
+      "completed": "Completed",
+      "duration": "Duration",
+      "jobError": "Job Error",
+      "payload": "Payload",
+      "perItemErrors": "Per-item Errors ({{count}})",
+      "retryTrash": "Retry (trash)",
+      "retryForce": "Retry (force delete)",
+      "retryFailed": "Retry failed items"
+    },
+    "toasts": {
+      "cancelled": "Job cancelled",
+      "cancelFailed": "Failed to cancel",
+      "retryQueued": "Retry job queued",
+      "retryQueuedDesc_one": "Re-running {{count}} failed item",
+      "retryQueuedDesc_other": "Re-running {{count}} failed items",
+      "retryFailed": "Retry failed"
+    }
+  },
+  "settings": {
+    "title": "Configuration",
+    "backToSites": "Back to Sites",
+    "notFound": "Site not found.",
+    "logo": {
+      "title": "Site Logo",
+      "upload": "Upload",
+      "replace": "Replace",
+      "remove": "Remove",
+      "hint": "250×250 · PNG/JPG/WebP · ≤ 2MB",
+      "tooLarge": "File too large",
+      "tooLargeDesc": "Logo must be ≤ 2MB",
+      "unsupported": "Unsupported format",
+      "unsupportedDesc": "Use PNG, JPG, or WebP",
+      "updated": "Logo updated",
+      "removed": "Logo removed",
+      "uploadFailed": "Upload failed",
+      "removeFailed": "Remove failed"
+    },
+    "connection": {
+      "title": "Connection",
+      "storeUrl": "Store URL",
+      "apiStatus": "API Status",
+      "connected": "Connected",
+      "notConnected": "Not Connected",
+      "lastSync": "Last Sync",
+      "never": "Never",
+      "created": "Created"
+    },
+    "scheduledSync": {
+      "title": "Scheduled Sync",
+      "interval": "Sync Interval",
+      "intervalHint": "Data syncs automatically at this interval.",
+      "manualOnly": "Manual only",
+      "every15m": "Every 15 minutes",
+      "every30m": "Every 30 minutes",
+      "everyHour": "Every hour",
+      "every6h": "Every 6 hours",
+      "every12h": "Every 12 hours",
+      "every24h": "Every 24 hours",
+      "next": "Next:",
+      "overdue": "(overdue {{minutes}}m)",
+      "lastScheduler": "Last scheduler: {{time}} ({{status}})",
+      "runNow": "Run now",
+      "save": "Save Schedule",
+      "saved": "Schedule saved"
+    },
+    "danger": {
+      "title": "Danger Zone",
+      "typeToConfirm": "Type",
+      "toConfirm": "to confirm deletion",
+      "permanentWarning": "Permanently deletes the site and all synced data. Cannot be undone.",
+      "deleteSite": "Delete Site",
+      "confirmTitle": "Delete this site permanently?",
+      "syncingWarning": "This site is currently syncing.",
+      "syncingDesc": "Deleting will cancel the sync and permanently remove {{name}} along with all synced data. This action cannot be undone.",
+      "normalDesc": "This will permanently delete {{name}} and all associated data. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Yes, delete permanently",
+      "deleted": "Site deleted",
+      "deleteFailed": "Delete failed",
+      "removed": "{{name}} removed.",
+      "webhooksRemoved": "{{count}} webhook(s) cleaned up from WooCommerce.",
+      "webhooksFailed": "{{count}} webhook(s) could not be removed (site may be offline)."
+    }
+  },
+  "banners": {
+    "initialSync": {
+      "title": "Initial sync in progress",
+      "subtitle": "We're importing your store data. You can keep using the app — this banner will disappear when sync completes.",
+      "progress": "{{done}} of {{total}} items"
+    },
+    "syncLock": {
+      "title": "Sync is currently locked",
+      "subtitle": "Editing is disabled while a critical sync runs."
+    },
+    "blocked": {
+      "title": "Site connection blocked",
+      "subtitle": "We can't reach your WooCommerce store. Check credentials and firewall settings."
+    },
+    "incomplete": {
+      "title": "Site setup incomplete",
+      "subtitle": "Finish onboarding to start syncing data.",
+      "continue": "Continue setup"
+    }
+  },
+  "common": {
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "noResults": "No results match your filters.",
+    "tryClearing": "Try clearing filters or searching with different terms.",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "viewMore": "View more",
+    "viewLess": "View less",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}} of {{total}}",
+    "rowsPerPage": "Rows per page",
+    "showingResults": "Showing {{from}}–{{to}} of {{total}}"
+  },
+  "syncRuns": {
+    "title": "Sync Runs",
+    "subtitle": "Complete history of all sync operations across all sites",
+    "exportCsv": "Export CSV",
+    "clearFailed": "Clear Failed",
+    "clearAll": "Clear All",
+    "refresh": "Refresh",
+    "clearFailedTitle": "Clear failed sync runs?",
+    "clearFailedDesc": "This will permanently delete all {{count}} failed sync run records across all sites.",
+    "clearAllTitle": "Clear all sync runs?",
+    "clearAllDesc": "This will permanently delete all {{count}} sync run records across all sites. This cannot be undone.",
+    "cancel": "Cancel",
+    "confirmClearFailed": "Clear Failed Runs",
+    "confirmClearAll": "Delete All Runs",
+    "stats": {
+      "total": "Total Runs",
+      "completed": "Completed",
+      "failed": "Failed",
+      "running": "Running",
+      "records": "Records Processed"
+    },
+    "errorsHeading": "Recent Errors ({{count}} on this page)",
+    "unknownError": "Unknown error",
+    "filters": {
+      "search": "Search error messages...",
+      "allStores": "All Stores",
+      "allStatus": "All Status",
+      "allAspects": "All Aspects",
+      "from": "From",
+      "to": "To",
+      "clearFilters": "Clear filters"
+    },
+    "status": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "running": "Running",
+      "pending": "Pending"
+    },
+    "aspects": {
+      "products": "Products",
+      "orders": "Orders",
+      "customers": "Customers",
+      "categories": "Categories",
+      "tags": "Tags",
+      "coupons": "Coupons"
+    },
+    "table": {
+      "store": "Store",
+      "aspect": "Aspect",
+      "status": "Status",
+      "processed": "Processed",
+      "created": "Created",
+      "updated": "Updated",
+      "error": "Error",
+      "started": "Started",
+      "duration": "Duration",
+      "actions": "Actions"
+    },
+    "loadMore": "Load more",
+    "noRuns": "No sync runs yet.",
+    "details": {
+      "title": "Sync Run Details",
+      "description": "Complete information about this sync run.",
+      "diagnostic": "Run connection diagnostic"
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "subtitle": "Manage webhook subscriptions across your sites",
+    "register": "Register webhooks",
+    "registering": "Registering…",
+    "registered": "Webhooks registered",
+    "registerFailed": "Failed to register webhooks",
+    "diagnose": "Diagnose",
+    "deliveries": "Deliveries",
+    "site": "Site",
+    "topic": "Topic",
+    "status": "Status",
+    "lastDelivery": "Last delivery",
+    "actions": "Actions",
+    "active": "Active",
+    "paused": "Paused",
+    "disabled": "Disabled",
+    "noWebhooks": "No webhooks configured.",
+    "viewDeliveries": "View deliveries",
+    "removeFailed": "Failed to remove webhook",
+    "removed": "Webhook removed",
+    "remove": "Remove",
+    "selectStoreToRegister": "Select a store to register webhooks",
+    "registerForStore": "Register webhooks for {{name}}",
+    "selectTopics": "Select topics",
+    "noStoresYet": "Add a store first to register webhooks.",
+    "activity": {
+      "title": "Webhook Activity",
+      "subtitle": "Recent webhook deliveries from your sites",
+      "search": "Search deliveries…",
+      "allTopics": "All topics",
+      "allStatuses": "All statuses",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "pending": "Pending",
+      "noDeliveries": "No webhook deliveries yet.",
+      "viewPayload": "View payload",
+      "retry": "Retry"
+    }
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Manage client accounts and access",
+    "addClient": "Add client",
+    "search": "Search clients…",
+    "name": "Name",
+    "email": "Email",
+    "sites": "Sites",
+    "users": "Users",
+    "subscription": "Subscription",
+    "createdAt": "Created",
+    "actions": "Actions",
+    "noClients": "No clients yet.",
+    "noMatches": "No clients match your filters.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete client?",
+    "deleteConfirmDesc": "Permanently remove <strong>{{name}}</strong> and unassign all sites and users.",
+    "cancel": "Cancel",
+    "deleted": "Client deleted",
+    "deleteFailed": "Delete failed",
+    "saved": "Client saved",
+    "saveFailed": "Save failed",
+    "dialog": {
+      "addTitle": "Add client",
+      "editTitle": "Edit client",
+      "namePlaceholder": "Acme Inc.",
+      "emailPlaceholder": "billing@acme.com",
+      "save": "Save",
+      "create": "Create"
+    }
+  },
+  "templates": {
+    "title": "Templates",
+    "subtitle": "Manage your invoice, order, and label templates",
+    "newTemplate": "New template",
+    "search": "Search templates…",
+    "type": "Type",
+    "name": "Name",
+    "updatedAt": "Updated",
+    "actions": "Actions",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "preview": "Preview",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "duplicated": "Template duplicated",
+    "duplicateFailed": "Duplicate failed",
+    "deleted": "Template deleted",
+    "deleteFailed": "Delete failed",
+    "published": "Template published",
+    "unpublished": "Template unpublished",
+    "publishFailed": "Publish failed",
+    "deleteConfirmTitle": "Delete template?",
+    "deleteConfirmDesc": "This permanently deletes <strong>{{name}}</strong>.",
+    "cancel": "Cancel",
+    "noTemplates": "No templates yet.",
+    "createFirst": "Create your first template"
+  },
+  "apiManagement": {
+    "title": "API Management",
+    "subtitle": "Issue and revoke API tokens for programmatic access",
+    "newToken": "New token",
+    "name": "Name",
+    "scopes": "Scopes",
+    "lastUsed": "Last used",
+    "createdAt": "Created",
+    "expiresAt": "Expires",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "expired": "Expired",
+    "revoked": "Revoked",
+    "revoke": "Revoke",
+    "revokeConfirmTitle": "Revoke this token?",
+    "revokeConfirmDesc": "<strong>{{name}}</strong> will stop working immediately. This cannot be undone.",
+    "revoked_toast": "Token revoked",
+    "revokeFailed": "Revoke failed",
+    "created_toast": "Token created",
+    "createFailed": "Create token failed",
+    "copyToken": "Copy token",
+    "copied": "Copied to clipboard",
+    "noTokens": "No tokens yet.",
+    "tokenSavedOnce": "Save this token now — it will not be shown again.",
+    "cancel": "Cancel"
   }
 }

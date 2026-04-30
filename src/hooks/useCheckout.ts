@@ -21,7 +21,7 @@ export function useCheckout() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const startCheckout = async (subscriptionId: string, couponCode?: string) => {
+  const startCheckout = async (planId: string, couponCode?: string) => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -29,7 +29,7 @@ export function useCheckout() {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ subscriptionId, couponCode }),
+        body: JSON.stringify({ planId, couponCode }),
       });
       const data = (await res.json()) as CheckoutResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || "Checkout failed");

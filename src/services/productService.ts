@@ -139,14 +139,28 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     .select("*", { count: "exact" })
     .eq("store_id", storeId);
 
-  // Catalog list: exclude Woo variation rows. Chaining two `.or()` calls overwrites the first in the client; use one `.or()` when searching.
+  // Catalog list: exclude Woo variation rows and hide rows queued for deletion.
+  // Chaining two `.or()` calls overwrites the first in the client; use one combined `.or()`.
+  const typePredicates = ["type.is.null", "type.neq.variation"];
+  const pendingPredicates = ["pending_action.is.null", "pending_action.neq.delete"];
   if (search && search.trim()) {
     const s = search.trim();
-    query = query.or(
-      `and(type.is.null,name.ilike.%${s}%),and(type.neq.variation,name.ilike.%${s}%),and(type.is.null,sku.ilike.%${s}%),and(type.neq.variation,sku.ilike.%${s}%)`,
-    );
+    const searchFields = ["name", "sku"];
+    const clauses: string[] = [];
+    for (const t of typePredicates) {
+      for (const p of pendingPredicates) {
+        for (const f of searchFields) {
+          clauses.push(`and(${t},${p},${f}.ilike.%${s}%)`);
+        }
+      }
+    }
+    query = query.or(clauses.join(","));
   } else {
-    query = query.or("type.is.null,type.neq.variation");
+    const clauses: string[] = [];
+    for (const t of typePredicates) {
+      for (const p of pendingPredicates) clauses.push(`and(${t},${p})`);
+    }
+    query = query.or(clauses.join(","));
   }
   if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
   if (stockStatusFilter && stockStatusFilter !== "all") query = query.eq("stock_status", stockStatusFilter);

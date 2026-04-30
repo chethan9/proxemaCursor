@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -269,36 +268,42 @@ export type Database = {
       app_settings: {
         Row: {
           accent_color: string | null
+          billing_enforcement_enabled: boolean
           brand_name: string | null
           created_at: string | null
           enabled_locales: string[]
           id: string
           logo_url: string | null
           primary_color: string | null
+          quota_grace_days: number
           sidebar_color: string | null
           theme_preset: string | null
           updated_at: string | null
         }
         Insert: {
           accent_color?: string | null
+          billing_enforcement_enabled?: boolean
           brand_name?: string | null
           created_at?: string | null
           enabled_locales?: string[]
           id?: string
           logo_url?: string | null
           primary_color?: string | null
+          quota_grace_days?: number
           sidebar_color?: string | null
           theme_preset?: string | null
           updated_at?: string | null
         }
         Update: {
           accent_color?: string | null
+          billing_enforcement_enabled?: boolean
           brand_name?: string | null
           created_at?: string | null
           enabled_locales?: string[]
           id?: string
           logo_url?: string | null
           primary_color?: string | null
+          quota_grace_days?: number
           sidebar_color?: string | null
           theme_preset?: string | null
           updated_at?: string | null
@@ -1809,6 +1814,395 @@ export type Database = {
           },
         ]
       }
+      referral_attributions: {
+        Row: {
+          attributed_at: string
+          converted: boolean
+          first_paid_at: string | null
+          first_paid_subscription_id: string | null
+          id: string
+          metadata: Json
+          notes: string | null
+          referral_code: string
+          referred_client_id: string
+          referrer_client_id: string
+          signup_at: string | null
+        }
+        Insert: {
+          attributed_at?: string
+          converted?: boolean
+          first_paid_at?: string | null
+          first_paid_subscription_id?: string | null
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          referral_code: string
+          referred_client_id: string
+          referrer_client_id: string
+          signup_at?: string | null
+        }
+        Update: {
+          attributed_at?: string
+          converted?: boolean
+          first_paid_at?: string | null
+          first_paid_subscription_id?: string | null
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          referral_code?: string
+          referred_client_id?: string
+          referrer_client_id?: string
+          signup_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_attributions_first_paid_subscription_id_fkey"
+            columns: ["first_paid_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_attributions_referred_client_id_fkey"
+            columns: ["referred_client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_attributions_referrer_client_id_fkey"
+            columns: ["referrer_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_balances: {
+        Row: {
+          available_minor: number | null
+          currency: string
+          lifetime_earned_minor: number
+          pending_payout_minor: number
+          referrer_client_id: string
+          reversed_minor: number
+          updated_at: string
+          withdrawn_minor: number
+        }
+        Insert: {
+          available_minor?: number | null
+          currency?: string
+          lifetime_earned_minor?: number
+          pending_payout_minor?: number
+          referrer_client_id: string
+          reversed_minor?: number
+          updated_at?: string
+          withdrawn_minor?: number
+        }
+        Update: {
+          available_minor?: number | null
+          currency?: string
+          lifetime_earned_minor?: number
+          pending_payout_minor?: number
+          referrer_client_id?: string
+          reversed_minor?: number
+          updated_at?: string
+          withdrawn_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_balances_referrer_client_id_fkey"
+            columns: ["referrer_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_events: {
+        Row: {
+          actor_user_id: string | null
+          amount_minor: number
+          attribution_id: string | null
+          created_at: string
+          currency: string
+          event_type: string
+          id: string
+          metadata: Json
+          payout_request_id: string | null
+          reason: string | null
+          referred_client_id: string | null
+          referrer_client_id: string
+          reverses_event_id: string | null
+          source: string
+          source_ref: string | null
+          status: string
+          subscription_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          amount_minor?: number
+          attribution_id?: string | null
+          created_at?: string
+          currency?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          payout_request_id?: string | null
+          reason?: string | null
+          referred_client_id?: string | null
+          referrer_client_id: string
+          reverses_event_id?: string | null
+          source: string
+          source_ref?: string | null
+          status?: string
+          subscription_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          amount_minor?: number
+          attribution_id?: string | null
+          created_at?: string
+          currency?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          payout_request_id?: string | null
+          reason?: string | null
+          referred_client_id?: string | null
+          referrer_client_id?: string
+          reverses_event_id?: string | null
+          source?: string
+          source_ref?: string | null
+          status?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_events_attribution_id_fkey"
+            columns: ["attribution_id"]
+            isOneToOne: false
+            referencedRelation: "referral_attributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_events_payout_request_fk"
+            columns: ["payout_request_id"]
+            isOneToOne: false
+            referencedRelation: "referral_payout_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_events_referred_client_id_fkey"
+            columns: ["referred_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_events_referrer_client_id_fkey"
+            columns: ["referrer_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_events_reverses_event_id_fkey"
+            columns: ["reverses_event_id"]
+            isOneToOne: false
+            referencedRelation: "referral_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_payout_requests: {
+        Row: {
+          admin_notes: string | null
+          amount_minor: number
+          created_at: string
+          currency: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          paid_reference: string | null
+          payout_details: Json
+          payout_method: string | null
+          referrer_client_id: string
+          rejected_reason: string | null
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount_minor: number
+          created_at?: string
+          currency: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          paid_reference?: string | null
+          payout_details?: Json
+          payout_method?: string | null
+          referrer_client_id: string
+          rejected_reason?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount_minor?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          paid_reference?: string | null
+          payout_details?: Json
+          payout_method?: string | null
+          referrer_client_id?: string
+          rejected_reason?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_payout_requests_referrer_client_id_fkey"
+            columns: ["referrer_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_profiles: {
+        Row: {
+          client_id: string
+          created_at: string
+          first_paid_at: string | null
+          has_paid_purchase: boolean
+          id: string
+          notes: string | null
+          payout_details: Json
+          payout_method: string | null
+          referral_code: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          first_paid_at?: string | null
+          has_paid_purchase?: boolean
+          id?: string
+          notes?: string | null
+          payout_details?: Json
+          payout_method?: string | null
+          referral_code: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          first_paid_at?: string | null
+          has_paid_purchase?: boolean
+          id?: string
+          notes?: string | null
+          payout_details?: Json
+          payout_method?: string | null
+          referral_code?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_profiles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_settings: {
+        Row: {
+          eligibility_window_days: number
+          id: string
+          is_enabled: boolean
+          min_payout_minor: number
+          notes: string | null
+          paid_percentage_bps: number
+          paid_percentage_max_minor: number | null
+          payout_currency: string
+          payout_methods: Json
+          recurring_max_count: number
+          recurring_percentage_bps: number
+          require_referrer_paid: boolean
+          reversal_window_days: number
+          signup_bonus_minor: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          eligibility_window_days?: number
+          id?: string
+          is_enabled?: boolean
+          min_payout_minor?: number
+          notes?: string | null
+          paid_percentage_bps?: number
+          paid_percentage_max_minor?: number | null
+          payout_currency?: string
+          payout_methods?: Json
+          recurring_max_count?: number
+          recurring_percentage_bps?: number
+          require_referrer_paid?: boolean
+          reversal_window_days?: number
+          signup_bonus_minor?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          eligibility_window_days?: number
+          id?: string
+          is_enabled?: boolean
+          min_payout_minor?: number
+          notes?: string | null
+          paid_percentage_bps?: number
+          paid_percentage_max_minor?: number | null
+          payout_currency?: string
+          payout_methods?: Json
+          recurring_max_count?: number
+          recurring_percentage_bps?: number
+          require_referrer_paid?: boolean
+          reversal_window_days?: number
+          signup_bonus_minor?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           created_at: string | null
@@ -2052,6 +2446,7 @@ export type Database = {
           payment_method_id: string | null
           pending_coupon_id: string | null
           plan_id: string
+          quota_grace_until: string | null
           renewal_mode: Database["public"]["Enums"]["renewal_mode"]
           status: Database["public"]["Enums"]["subscription_status"]
           trial_end: string | null
@@ -2076,6 +2471,7 @@ export type Database = {
           payment_method_id?: string | null
           pending_coupon_id?: string | null
           plan_id: string
+          quota_grace_until?: string | null
           renewal_mode?: Database["public"]["Enums"]["renewal_mode"]
           status?: Database["public"]["Enums"]["subscription_status"]
           trial_end?: string | null
@@ -2100,6 +2496,7 @@ export type Database = {
           payment_method_id?: string | null
           pending_coupon_id?: string | null
           plan_id?: string
+          quota_grace_until?: string | null
           renewal_mode?: Database["public"]["Enums"]["renewal_mode"]
           status?: Database["public"]["Enums"]["subscription_status"]
           trial_end?: string | null
@@ -2785,12 +3182,11 @@ export type Database = {
         Args: { credential: string; key_env_var?: string }
         Returns: string
       }
-      get_site_home_stats:
-        | { Args: { p_store_id: string; p_tz?: string }; Returns: Json }
-        | {
-            Args: { p_currency?: string; p_store_id: string; p_tz?: string }
-            Returns: Json
-          }
+      generate_referral_code: { Args: { p_seed?: string }; Returns: string }
+      get_site_home_stats: {
+        Args: { p_currency?: string; p_store_id: string; p_tz?: string }
+        Returns: Json
+      }
       has_permission: { Args: { perm: string }; Returns: boolean }
       increment_api_call_count: {
         Args: { p_client_id: string }
@@ -2803,6 +3199,10 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       recalc_customer_aggregates: {
         Args: { p_customer_woo_id: number; p_store_id: string }
+        Returns: undefined
+      }
+      recompute_referral_balance: {
+        Args: { p_client_id: string; p_currency: string }
         Returns: undefined
       }
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }

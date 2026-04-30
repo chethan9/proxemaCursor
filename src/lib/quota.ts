@@ -24,6 +24,8 @@ export interface QuotaCheck {
   current: number;
   planName: string;
   planSlug: string;
+  /** ISO timestamp when the soft-grace window ends; present once the user is over limit but inside grace. */
+  graceUntil?: string | null;
 }
 
 export async function getClientPlan(clientId: string): Promise<Plan | null> {
@@ -99,14 +101,19 @@ export async function canAddProduct(clientId: string): Promise<QuotaCheck> {
 
 export function quotaErrorPayload(entity: string, quota: QuotaCheck) {
   const noun = entity === "site" ? (quota.limit === 1 ? "site" : "sites") : "products";
+  const graceExpired = !!quota.graceUntil && new Date(quota.graceUntil).getTime() < Date.now();
+  const message = graceExpired
+    ? `Your ${quota.planName} plan grace period has ended — upgrade to add more ${noun}.`
+    : `Your ${quota.planName} plan allows ${quota.limit} ${noun} — upgrade to add more.`;
   return {
-    error: `Your ${quota.planName} plan allows ${quota.limit} ${noun} — upgrade to add more.`,
+    error: message,
     quotaExceeded: true,
     entity,
     currentUsage: quota.current,
     limit: quota.limit,
     planName: quota.planName,
     planSlug: quota.planSlug,
+    graceUntil: quota.graceUntil ?? null,
     upgradeUrl: "/pricing",
   };
 }

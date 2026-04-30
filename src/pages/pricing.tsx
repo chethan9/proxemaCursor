@@ -10,6 +10,7 @@ import { resolveCountry, getDefaultCurrencyForCountry, getBrowserTimezoneCountry
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCheckout } from "@/hooks/useCheckout";
 import { useSubscription } from "@/hooks/queries/useSubscription";
+import { useAppSettings } from "@/hooks/queries/useAppSettings";
 import { getPlanPrice } from "@/services/planService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,7 @@ import { PricingFAQ } from "@/components/pricing/PricingFAQ";
 import { PlanChangeDialog } from "@/components/pricing/PlanChangeDialog";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { AppLayout } from "@/components/layout/AppLayout";
 import type { Tables } from "@/integrations/supabase/helpers";
 
 type Plan = Tables<"plans">;
@@ -49,6 +51,10 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
   const { t, i18n } = useTranslation("pricing");
   const { startCheckout, loading: checkoutLoading } = useCheckout();
   const { subscription, refetch } = useSubscription();
+  const { settings: appSettings } = useAppSettings();
+  const inApp = !!user && (router.query.app === "1" || !subscription);
+  const enforce = appSettings.billingEnforcementEnabled;
+  const showOnboarding = inApp && enforce && !subscription;
 
   const [country, setCountry] = useState(initialCountry);
   const [currency, setCurrency] = useState(initialCurrency);
@@ -115,8 +121,11 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
       return;
     }
     if (action === "subscribe") {
-      if (user) router.push(`/billing/checkout?plan=${plan.id}`);
-      else router.push(`/auth/signup?plan=${plan.id}&country=${country}`);
+      if (!user) {
+        router.push(`/auth/signup?plan=${plan.id}&country=${country}`);
+        return;
+      }
+      router.push(`/billing/checkout?plan=${plan.id}`);
       return;
     }
     if (action === "upgrade") {
@@ -180,6 +189,82 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
 
   const popularPlanId = plans.find((p) => p.name.toLowerCase().includes("growth"))?.id || mainPlans[1]?.id;
 
+  const planGrid = (
+    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+      {mainPlans.map((plan, idx) => (
+        <PlanCard
+          key={plan.id}
+          plan={plan}
+          currency={currency}
+          billingInterval={billingInterval}
+          isCurrent={currentPlan?.id === plan.id}
+          isPopular={plan.id === popularPlanId}
+          action={getAction(plan, idx)}
+          onAction={() => handlePlanAction(plan, idx)}
+          loading={checkoutLoading}
+        />
+      ))}
+      <EnterpriseCard />
+    </div>
+  );
+
+  const dialog = (
+    <PlanChangeDialog
+      open={dialogOpen}
+      onOpenChange={setDialogOpen}
+      mode={dialogMode}
+      currentPlan={currentPlan}
+      newPlan={pendingPlan}
+      currency={currency}
+      periodEnd={subscription?.current_period_end}
+      onConfirm={confirmPlanChange}
+      loading={changeLoading || checkoutLoading}
+    />
+  );
+
+  if (inApp) {
+    return (
+      <AppLayout
+        title={
+          showOnboarding
+            ? t("inApp.onboardingTitle", { defaultValue: "Choose a plan to get started" })
+            : t("inApp.title", { defaultValue: "Plans" })
+        }
+      >
+        <div className="px-6 py-8 space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {showOnboarding
+                  ? t("inApp.onboardingTitle", { defaultValue: "Choose a plan to get started" })
+                  : t("inApp.title", { defaultValue: "Plans" })}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {showOnboarding
+                  ? t("inApp.onboardingSubtitle", {
+                      defaultValue: "Pick the plan that fits your team. Checkout saves your payment method for when the trial ends.",
+                    })
+                  : t("inApp.subtitle", { defaultValue: "Compare available plans, change anytime." })}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <CurrencySwitcher country={country} onChange={handleCountryChange} />
+              <BillingIntervalToggle value={billingInterval} onChange={setBillingInterval} />
+            </div>
+          </div>
+
+          {planGrid}
+
+          {detectionSource !== "default" && (
+            <p className="text-xs text-muted-foreground">{t("localeNote", { currency })}</p>
+          )}
+
+          {dialog}
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-20">
@@ -188,14 +273,8 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
           <div className="flex gap-3 items-center">
             <LocaleSwitcher variant="compact" />
             <CurrencySwitcher country={country} onChange={handleCountryChange} />
-            {user ? (
-              <Link href="/billing" className="text-sm font-medium hover:underline">{t("header.billing")}</Link>
-            ) : (
-              <>
-                <Link href="/auth/login" className="text-sm font-medium hover:underline">{t("header.login")}</Link>
-                <Link href="/auth/signup" className="text-sm font-medium px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">{t("header.signup")}</Link>
-              </>
-            )}
+            <Link href="/auth/login" className="text-sm font-medium hover:underline">{t("header.login")}</Link>
+            <Link href="/auth/signup" className="text-sm font-medium px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">{t("header.signup")}</Link>
           </div>
         </div>
       </header>
@@ -209,22 +288,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-          {mainPlans.map((plan, idx) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              currency={currency}
-              billingInterval={billingInterval}
-              isCurrent={currentPlan?.id === plan.id}
-              isPopular={plan.id === popularPlanId}
-              action={getAction(plan, idx)}
-              onAction={() => handlePlanAction(plan, idx)}
-              loading={checkoutLoading}
-            />
-          ))}
-          <EnterpriseCard />
-        </div>
+        {planGrid}
 
         {detectionSource !== "default" && (
           <p className="text-center text-xs text-muted-foreground mt-8">
@@ -243,17 +307,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
         </section>
       </main>
 
-      <PlanChangeDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        mode={dialogMode}
-        currentPlan={currentPlan}
-        newPlan={pendingPlan}
-        currency={currency}
-        periodEnd={subscription?.current_period_end}
-        onConfirm={confirmPlanChange}
-        loading={changeLoading || checkoutLoading}
-      />
+      {dialog}
     </div>
   );
 }

@@ -33,9 +33,12 @@
     "roles": "Roles",
     "paymentMethods": "Payment Methods",
     "plansPricing": "Plans",
+    "adminBilling": "ضوابط الفوترة",
     "adminPaymentGateways": "Payment Gateways",
     "adminPaymentLogs": "Payment Logs",
-    "adminActivity": "Activity Log"
+    "adminActivity": "Activity Log",
+    "referrals": "Referrals",
+    "adminReferrals": "Referrals"
   },
   "siteNavGroups": {
     "Catalog": "الكتالوج",

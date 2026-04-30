@@ -18,6 +18,8 @@ type Props = {
   onUpdate: (idx: number, patch: Partial<Variation>) => void;
   onBulk: (patch: Partial<Variation>, onlySelected: boolean, selectedIds: Set<string>) => void;
   onBulkDelete?: (keys: Set<string>) => void;
+  /** When &gt; 0, auto-fill SKUs is disabled until duplicates are removed (see Variants tab warning). */
+  duplicateRowCount?: number;
 };
 
 function slugify(input: string): string {
@@ -30,7 +32,7 @@ function slugify(input: string): string {
     .slice(0, 24);
 }
 
-export function VariationsTable({ variations, parentSku, parentName, defaultAttrs, onSetDefault, onEdit, onUpdate, onBulk, onBulkDelete }: Props) {
+export function VariationsTable({ variations, parentSku, parentName, defaultAttrs, onSetDefault, onEdit, onUpdate, onBulk, onBulkDelete, duplicateRowCount = 0 }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkValue, setBulkValue] = useState("");
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
@@ -207,8 +209,14 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
             variant="outline"
             size="sm"
             onClick={autoFillSkus}
-            disabled={emptySkuCount === 0}
-            title={emptySkuCount === 0 ? "All variations already have SKUs" : `Auto-fill ${emptySkuCount} empty SKU${emptySkuCount === 1 ? "" : "s"}`}
+            disabled={emptySkuCount === 0 || duplicateRowCount > 0}
+            title={
+              duplicateRowCount > 0
+                ? "Remove duplicate rows using the button in the warning above, then auto-fill SKUs"
+                : emptySkuCount === 0
+                  ? "All variations already have SKUs"
+                  : `Auto-fill ${emptySkuCount} empty SKU${emptySkuCount === 1 ? "" : "s"}`
+            }
             className="rounded-full gap-1.5"
           >
             <Wand2 className="h-3.5 w-3.5" />

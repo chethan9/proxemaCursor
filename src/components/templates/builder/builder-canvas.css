@@ -1,0 +1,7 @@
+/* Hide default Grapes chrome when using custom shell */
+.gjs-template-builder .gjs-pn-panel,
+.gjs-template-builder .gjs-pn-views-container,
+.gjs-template-builder .gjs-pn-views,
+.gjs-template-builder .gjs-cv-canvas .gjs-tools {
+  display: none !important;
+}

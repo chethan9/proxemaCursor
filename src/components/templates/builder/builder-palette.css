@@ -1,0 +1,142 @@
+/* GrapesJS BlockManager → reference-style icon card grid.
+   Hierarchy:
+   .gjs-blocks-canvas
+     ├ .gjs-blocks-c                (top-level wrapper)
+     │   └ .gjs-block-category      (one per category)
+     │       ├ .gjs-title           (header label)
+     │       └ .gjs-blocks-c        (children grid)
+     │           └ .gjs-block       (icon card)
+     │               ├ .gjs-block__media
+     │               └ .gjs-block-label / .gjs-block__title
+*/
+
+.gjs-blocks-canvas {
+  --tmpl-card-bg: #ffffff;
+  --tmpl-card-border: #e2e8f0;
+  --tmpl-card-border-hover: #c7d2fe;
+  --tmpl-card-text: #0f172a;
+  --tmpl-card-muted: #475569;
+}
+
+.gjs-blocks-canvas > .gjs-blocks-c,
+.gjs-blocks-canvas .gjs-blocks-c {
+  padding: 0;
+  display: block;
+}
+
+/* Category */
+.gjs-blocks-canvas .gjs-block-category {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 14px 0 6px !important;
+}
+.gjs-blocks-canvas .gjs-block-category:first-child {
+  margin-top: 4px !important;
+}
+.gjs-blocks-canvas .gjs-block-category > .gjs-title {
+  background: transparent !important;
+  border: 0 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #64748b !important;
+  padding: 4px 4px 6px !important;
+  cursor: default;
+}
+.gjs-blocks-canvas .gjs-block-category > .gjs-title .gjs-caret-icon {
+  display: none !important;
+}
+
+/* Children grid */
+.gjs-blocks-canvas .gjs-block-category > .gjs-blocks-c {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  padding: 0 !important;
+}
+
+/* Card */
+.gjs-blocks-canvas .gjs-block {
+  width: auto !important;
+  min-height: 78px !important;
+  height: 78px !important;
+  margin: 0 !important;
+  padding: 8px 6px 6px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--tmpl-card-border) !important;
+  background: var(--tmpl-card-bg) !important;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  text-align: center !important;
+  cursor: grab !important;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s, background 0.15s !important;
+}
+.gjs-blocks-canvas .gjs-block:hover {
+  border-color: var(--tmpl-card-border-hover) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+  background: #fafbff !important;
+  transform: translateY(-1px) !important;
+}
+.gjs-blocks-canvas .gjs-block:active {
+  cursor: grabbing !important;
+}
+
+/* Icon */
+.gjs-blocks-canvas .gjs-block__media {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #475569 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+.gjs-blocks-canvas .gjs-block__media .tmpl-block-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #475569;
+}
+.gjs-blocks-canvas .gjs-block:hover .gjs-block__media,
+.gjs-blocks-canvas .gjs-block:hover .gjs-block__media .tmpl-block-icon {
+  color: #4f46e5 !important;
+}
+.gjs-blocks-canvas .gjs-block__media svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Label */
+.gjs-blocks-canvas .gjs-block-label,
+.gjs-blocks-canvas .gjs-block__title {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  font-weight: 500 !important;
+  color: var(--tmpl-card-text) !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 2px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Hidden by search/filter */
+.gjs-blocks-canvas .gjs-block[data-gjs-block-hidden="true"],
+.gjs-blocks-canvas .gjs-block[hidden] {
+  display: none !important;
+}
+.gjs-blocks-canvas .gjs-block-category:has(> .gjs-blocks-c:empty),
+.gjs-blocks-canvas .gjs-block-category.tmpl-empty {
+  display: none !important;
+}

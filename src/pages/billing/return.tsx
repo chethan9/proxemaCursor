@@ -21,7 +21,7 @@ export default function BillingReturn() {
         body: JSON.stringify({ subscriptionId: subId, tapChargeId: typeof tapChargeId === "string" ? tapChargeId : undefined }),
       });
       const d = await r.json();
-      if (d.status === "active" || d.status === "already_active") return setS({ state: "active" });
+      if (d.status === "active" || d.status === "trialing" || d.status === "already_active") return setS({ state: "active" });
       if (d.status === "failed") return setS({ state: "failed", msg: d.reason });
       if (++tries >= 10) return setS({ state: "pending" });
       setTimeout(poll, 2000);

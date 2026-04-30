@@ -86,6 +86,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole(null);
     }
     setProfileLoaded(true);
+
+    if (typeof window !== "undefined" && prof?.client_id) {
+      const pendingRef = window.localStorage.getItem("pending_referral_code");
+      if (pendingRef) {
+        try {
+          const { data: sess } = await supabase.auth.getSession();
+          const tok = sess.session?.access_token;
+          if (tok) {
+            const r = await fetch("/api/referrals/attribute", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+              body: JSON.stringify({ code: pendingRef }),
+            });
+            if (r.ok || r.status === 404) {
+              window.localStorage.removeItem("pending_referral_code");
+            }
+          }
+        } catch {}
+      }
+    }
   };
 
   const refresh = async () => {

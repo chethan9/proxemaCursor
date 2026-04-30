@@ -26,6 +26,7 @@ import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 
 type Props = {
   storeId: string;
@@ -104,6 +105,9 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
       toast({ title: t("taxonomy.toasts.synced", { count: data.synced ?? 0, mode }) });
       await qc.invalidateQueries({ queryKey: ["taxonomy", storeId, mode] });
       await qc.invalidateQueries({ queryKey: ["taxonomy-all-categories", storeId] });
+      if (mode === "categories") {
+        await qc.invalidateQueries({ queryKey: queryKeys.productCategoryOptions(storeId) });
+      }
     } catch (e) {
       toast({ title: t("taxonomy.toasts.refreshFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {

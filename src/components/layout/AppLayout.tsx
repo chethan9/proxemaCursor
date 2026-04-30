@@ -1,6 +1,7 @@
 import Head from "next/head";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
+import { BillingGate } from "@/components/billing/BillingGate";
 import { SubscriptionStatusBanner } from "@/components/billing/SubscriptionStatusBanner";
 import type { Permission } from "@/lib/permissions";
 
@@ -9,18 +10,24 @@ interface AppLayoutProps {
   title?: string;
   requirePermission?: Permission;
   requireSuperAdmin?: boolean;
+  bypassBillingGate?: boolean;
 }
 
-export function AppLayout({ children, title, requirePermission, requireSuperAdmin }: AppLayoutProps) {
+export function AppLayout({ children, title, requirePermission, requireSuperAdmin, bypassBillingGate }: AppLayoutProps) {
   const { brandName } = useBranding();
   const fullTitle = title ? `${title} · ${brandName}` : brandName;
-  return (
-    <AuthGuard requirePermission={requirePermission} requireSuperAdmin={requireSuperAdmin}>
+  const content = (
+    <>
       <Head>
         <title>{fullTitle}</title>
       </Head>
       <SubscriptionStatusBanner />
       <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+    </>
+  );
+  return (
+    <AuthGuard requirePermission={requirePermission} requireSuperAdmin={requireSuperAdmin}>
+      {bypassBillingGate ? content : <BillingGate>{content}</BillingGate>}
     </AuthGuard>
   );
 }

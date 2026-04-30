@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { tapGateway } from "@/lib/payments/tap";
 import { logActivity } from "@/lib/activity-log";
+import { recordPaidConversion, recordReversal } from "@/services/referralService.server";
+import { finalizeCheckoutPayment } from "@/lib/billing/finalize-checkout-payment.server";
 
 export const config = { api: { bodyParser: false } };
 
@@ -28,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     let clientId: string | null = null;
+    let subscriptionId: string | null = null;
     if (event.gatewayRef) {
       const { data: sub } = await supabaseAdmin
         .from("subscriptions")
@@ -36,16 +39,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .maybeSingle();
       if (sub) {
         clientId = sub.client_id;
-        const updates: { status?: string; last_payment_at?: string } = {};
+        subscriptionId = sub.id;
         if (event.paymentStatus === "paid") {
-          updates.status = "active";
-          updates.last_payment_at = new Date().toISOString();
+          try {
+            await finalizeCheckoutPayment({
+              subscriptionId: sub.id,
+              amountMinor: event.amountMinor || 0,
+              currency: event.currency || "USD",
+              paymentMethodId: null,
+            });
+          } catch (finErr) {
+            console.warn("[tap webhook] finalize failed", finErr);
+          }
         } else if (event.paymentStatus === "failed" || event.paymentStatus === "canceled") {
-          updates.status = "past_due";
+          await supabaseAdmin
+            .from("subscriptions")
+            .update({
+              status: "past_due",
+              last_charge_failed_at: new Date().toISOString(),
+            } as never)
+            .eq("id", sub.id);
         }
-        if (Object.keys(updates).length > 0) {
-          await supabaseAdmin.from("subscriptions").update(updates as never).eq("id", sub.id);
-        }
+      }
+    }
+
+    if (event.paymentStatus === "paid" && clientId && subscriptionId) {
+      try {
+        await recordPaidConversion({
+          subscriptionId,
+          clientId,
+          amountMinor: event.amountMinor,
+          currency: event.currency,
+          source: "webhook:tap",
+          sourceRef: event.id,
+          metadata: { gateway_ref: event.gatewayRef, gateway: "tap" },
+        });
+      } catch (refErr) {
+        console.warn("[tap webhook] referral conversion failed", refErr);
+      }
+    } else if (event.paymentStatus === "refunded") {
+      try {
+        await recordReversal({
+          source: "webhook:tap",
+          sourceRefPrefix: event.id,
+          reason: "refund_via_tap_webhook",
+        });
+      } catch (refErr) {
+        console.warn("[tap webhook] referral reversal failed", refErr);
       }
     }
 

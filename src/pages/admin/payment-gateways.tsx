@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "next-i18next";
 import { formatDateTime } from "@/lib/format-number";
+import { getSupportedCountries } from "@/lib/payments/routing";
 
 type GatewayConfig = {
   id: string;
@@ -47,17 +48,6 @@ const GATEWAYS = [
   { id: "tap", name: "Tap Payments", region: "MENA" },
 ];
 
-const MENA_COUNTRIES = [
-  { code: "KW", name: "Kuwait" },
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "AE", name: "UAE" },
-  { code: "BH", name: "Bahrain" },
-  { code: "OM", name: "Oman" },
-  { code: "QA", name: "Qatar" },
-  { code: "JO", name: "Jordan" },
-  { code: "EG", name: "Egypt" },
-];
-
 export default function PaymentGatewaysPage() {
   const router = useRouter();
   const { i18n } = useTranslation();
@@ -66,6 +56,8 @@ export default function PaymentGatewaysPage() {
   const queryClient = useQueryClient();
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Record<string, { api_key?: string; api_secret?: string; webhook_secret?: string; enabled?: boolean }>>({});
+  const [routeCountry, setRouteCountry] = useState("US");
+  const [routeGateway, setRouteGateway] = useState("razorpay");
 
   const { data: configs = [], isLoading } = useQuery({
     queryKey: ["payment-gateways"],
@@ -133,6 +125,30 @@ export default function PaymentGatewaysPage() {
       } else {
         toast({ title: "Connection test failed", description: data.error, variant: "destructive" });
       }
+    },
+  });
+
+  const routingUpsertMutation = useMutation({
+    mutationFn: async (vars?: { country_code?: string; gateway?: string; enabled?: boolean; priority?: number }) => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const response = await fetch("/api/admin/payment-gateways", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          action: "update_routing",
+          country_code: vars?.country_code ?? routeCountry,
+          gateway: vars?.gateway ?? routeGateway,
+          enabled: vars?.enabled ?? true,
+          priority: vars?.priority ?? 1,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to save routing");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-routing"] });
+      toast({ title: "Routing saved" });
     },
   });
 
@@ -387,29 +403,106 @@ export default function PaymentGatewaysPage() {
           <TabsContent value="routing" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Region Routing Matrix</CardTitle>
-                <CardDescription>Default gateway per country (MyFatoorah for MENA, Razorpay elsewhere)</CardDescription>
+                <CardTitle>Region routing</CardTitle>
+                <CardDescription>
+                  Exact ISO country code matches before the <code className="text-xs">*</code> fallback. Lower priority runs first. Checkout resolves the gateway from these rows (cached ~1 minute).
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {MENA_COUNTRIES.map((country) => {
-                    const r = routing.filter((rt) => rt.country_code === country.code);
-                    const myfatoorah = r.find((rt) => rt.gateway === "myfatoorah");
-                    const razorpay = r.find((rt) => rt.gateway === "razorpay");
-                    return (
-                      <div key={country.code} className="flex items-center justify-between p-2 rounded-lg border">
-                        <div className="font-medium text-sm">{country.name} ({country.code})</div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant={myfatoorah?.enabled ? "default" : "outline"}>MyFatoorah</Badge>
-                          <Badge variant={razorpay?.enabled ? "default" : "outline"}>Razorpay</Badge>
-                        </div>
+              <CardContent className="space-y-6">
+                <div className="rounded-md border divide-y max-h-[320px] overflow-y-auto">
+                  {[...routing]
+                    .sort((a, b) => {
+                      if (a.country_code === "*") return 1;
+                      if (b.country_code === "*") return -1;
+                      return a.country_code.localeCompare(b.country_code);
+                    })
+                    .map((row) => (
+                      <div key={row.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 p-3 text-sm">
+                        <span className="font-mono font-medium min-w-[3ch]">
+                          {row.country_code === "*" ? "* (fallback)" : row.country_code}
+                        </span>
+                        <select
+                          className="flex h-8 rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm w-full max-w-[180px]"
+                          value={row.gateway}
+                          onChange={(e) =>
+                            routingUpsertMutation.mutate({
+                              country_code: row.country_code,
+                              gateway: e.target.value,
+                              enabled: row.enabled,
+                              priority: row.priority,
+                            })
+                          }
+                          disabled={routingUpsertMutation.isPending}
+                        >
+                          {GATEWAYS.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
+                        <Switch
+                          checked={row.enabled}
+                          onCheckedChange={(v) =>
+                            routingUpsertMutation.mutate({
+                              country_code: row.country_code,
+                              gateway: row.gateway,
+                              enabled: v,
+                              priority: row.priority,
+                            })
+                          }
+                          disabled={routingUpsertMutation.isPending}
+                          aria-label={`Toggle ${row.country_code} routing`}
+                        />
+                        <Badge variant={row.enabled ? "default" : "secondary"} className="min-w-[68px] justify-center">
+                          {row.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
                       </div>
-                    );
-                  })}
-                  <div className="flex items-center justify-between p-2 rounded-lg border bg-muted/30">
-                    <div className="font-medium text-sm">All other countries</div>
-                    <Badge>Razorpay</Badge>
+                    ))}
+                  {routing.length === 0 && (
+                    <div className="p-6 text-sm text-muted-foreground text-center">
+                      No routing rules yet. Add one below or seed the wildcard <code>*</code> fallback.
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end">
+                  <div className="space-y-1.5">
+                    <Label>Country code</Label>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={routeCountry}
+                      onChange={(e) => setRouteCountry(e.target.value)}
+                    >
+                      <option value="*">* (default fallback)</option>
+                      {getSupportedCountries().map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name} ({c.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Gateway</Label>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={routeGateway}
+                      onChange={(e) => setRouteGateway(e.target.value)}
+                    >
+                      {GATEWAYS.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => routingUpsertMutation.mutate({})}
+                    disabled={routingUpsertMutation.isPending}
+                  >
+                    {routingUpsertMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />}
+                    Save route
+                  </Button>
                 </div>
               </CardContent>
             </Card>

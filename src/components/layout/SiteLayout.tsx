@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/hooks/queries/useStores";
@@ -17,6 +17,7 @@ export function SiteLayout({ children }: Props) {
   const { data: store, isLoading, isFetched, isFetching } = useStore(siteId);
   const { toast } = useToast();
   const redirectedRef = useRef(false);
+  const [routeTransitioning, setRouteTransitioning] = useState(false);
   useSyncCompletionInvalidation(siteId);
 
   useEffect(() => {
@@ -29,6 +30,28 @@ export function SiteLayout({ children }: Props) {
       router.replace("/projects");
     }
   }, [siteId, isFetched, isLoading, store, router, toast]);
+
+  useEffect(() => {
+    const normalize = (url: string) => url.split("?")[0].split("#")[0];
+    const onStart = (nextUrl: string) => {
+      if (!siteId) return;
+      const current = normalize(router.asPath);
+      const next = normalize(nextUrl);
+      if (current === next) return;
+      if (next.startsWith(`/sites/${siteId}/`) || next === `/sites/${siteId}`) {
+        setRouteTransitioning(true);
+      }
+    };
+    const onDone = () => setRouteTransitioning(false);
+    router.events.on("routeChangeStart", onStart);
+    router.events.on("routeChangeComplete", onDone);
+    router.events.on("routeChangeError", onDone);
+    return () => {
+      router.events.off("routeChangeStart", onStart);
+      router.events.off("routeChangeComplete", onDone);
+      router.events.off("routeChangeError", onDone);
+    };
+  }, [router, siteId]);
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -43,7 +66,21 @@ export function SiteLayout({ children }: Props) {
       )}
       <div className="flex-1 overflow-y-auto">
         <InitialSyncBanner />
-        {children}
+        {routeTransitioning ? (
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-10 w-full max-w-xl" />
+            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

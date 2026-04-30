@@ -32,4 +32,10 @@ export const queryKeys = {
   client: (id: string) => ["clients", id] as const,
   taxonomy: (storeId: string, type: "categories" | "tags" | "brands") => ["stores", storeId, "taxonomy", type] as const,
   viewPrefs: (key: string) => ["view-prefs", key] as const,
+  referralProfile: ["referrals", "profile"] as const,
+  referralEvents: ["referrals", "events"] as const,
+  referralPayouts: ["referrals", "payouts"] as const,
+  adminReferralPayouts: (status: string) => ["admin", "referrals", "payouts", status] as const,
+  adminReferralPayout: (id: string) => ["admin", "referrals", "payout", id] as const,
+  adminReferralSettings: ["admin", "referrals", "settings"] as const,
 };

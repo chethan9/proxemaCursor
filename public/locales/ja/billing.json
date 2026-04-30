@@ -53,5 +53,27 @@
     "securedBy": "{{gateway}} により保護",
     "terms": "続行することで、<terms>利用規約</terms>と<privacy>プライバシーポリシー</privacy>に同意したものとみなされます。",
     "subscribingAs": "{{email}} としてサブスクライブ中。"
+  },
+  "usage": {
+    "title": "利用状況",
+    "rowSites": "サイト",
+    "rowProducts": "商品",
+    "rowUsers": "ユーザー",
+    "graceBanner": "プランの上限を超えています。{{date}} まで利用できます。その後はアップグレードするか利用量を減らしてください。"
+  },
+  "planChange": {
+    "upgradeTitle": "Upgrade to {{name}}?",
+    "downgradeTitle": "Downgrade to {{name}}?",
+    "upgradeDesc": "You'll be charged {{price}} per month. We'll prorate the difference based on days remaining in your current billing period.",
+    "upgradeDescNoPrice": "You'll be charged the new amount per month. We'll prorate the difference based on days remaining in your current billing period.",
+    "upgradeNote": "New features and quota limits apply immediately after payment.",
+    "downgradeDesc": "Your plan will change to {{name}} on {{date}}.",
+    "downgradeDescNoDate": "Your plan will change to {{name}} at the end of your current billing period.",
+    "downgradeNote": "You'll keep all your current features until then. No refunds for the current period.",
+    "quotaWarning": "Note: if you're over {{name}}'s quotas (sites, products, users), you'll need to reduce usage before the change takes effect.",
+    "cancel": "Cancel",
+    "processing": "Processing...",
+    "confirmUpgrade": "Confirm upgrade",
+    "scheduleDowngrade": "Schedule downgrade"
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 import { supabase } from "@/integrations/supabase/client";
 
 const ASPECTS = ["products", "orders", "customers", "categories", "tags", "coupons"];
@@ -136,6 +137,7 @@ export function useActiveSync(storeId: string | null) {
       qc.invalidateQueries({ queryKey: ["webhooks"] });
       qc.invalidateQueries({ queryKey: ["sync-runs"] });
       qc.invalidateQueries({ queryKey: ["active-syncs-all"] });
+      qc.invalidateQueries({ queryKey: queryKeys.productCategoryOptions(storeId) });
     }
     prevRunningRef.current = query.data.running;
   }, [query.data, storeId, qc]);

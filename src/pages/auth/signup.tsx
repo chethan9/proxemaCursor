@@ -5,6 +5,7 @@ import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
+import { resolvePostAuthLanding } from "@/lib/post-auth-landing";
 import { getBrowserTimezoneCountry } from "@/lib/payments/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Loader2, Mail } from "lucide-react";
 
 export default function SignupPage() {
@@ -27,8 +29,19 @@ export default function SignupPage() {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) router.replace("/");
+    if (!authLoading && user) {
+      resolvePostAuthLanding(user.id).then((dest) => router.replace(dest));
+    }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ref = router.query.ref;
+    const code = Array.isArray(ref) ? ref[0] : ref;
+    if (typeof code === "string" && code.trim()) {
+      window.localStorage.setItem("pending_referral_code", code.trim());
+    }
+  }, [router.query.ref]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +109,16 @@ export default function SignupPage() {
           <CardTitle className="text-2xl">{t("signUp.title")}</CardTitle>
           <CardDescription>{t("signUp.description", { brand: brandName })}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <GoogleSignInButton mode="signup" />
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">{t("oauth.or")}</span>
+            </div>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">

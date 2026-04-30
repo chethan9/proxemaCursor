@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { GetStaticProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -15,6 +16,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatDate, formatCurrency } from "@/lib/format-number";
 import { useBillingUsage } from "@/hooks/queries/useBillingUsage";
+import { useSubscription } from "@/hooks/queries/useSubscription";
+import { getClientQuota } from "@/lib/quota";
 import { supabase } from "@/integrations/supabase/client";
 import { Receipt, Download, RefreshCw, ExternalLink, Loader2, CreditCard, FileText } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/helpers";
@@ -23,8 +26,15 @@ type Invoice = Tables<"invoices">;
 
 function BillingInner() {
   const { profile } = useAuth();
+  const { subscription } = useSubscription();
   const { t, i18n } = useTranslation("billing");
   const usage = useBillingUsage(profile?.client_id || "");
+  const { data: quota } = useQuery({
+    queryKey: ["billing-quota", profile?.client_id],
+    queryFn: () => (profile?.client_id ? getClientQuota(profile.client_id) : null),
+    enabled: !!profile?.client_id,
+    staleTime: 60_000,
+  });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,8 +62,11 @@ function BillingInner() {
     return <Badge variant="outline">{s || "—"}</Badge>;
   };
 
-  const usageQuotas = { maxSites: 50, maxProducts: 50000, maxUsers: 25 };
+  const usageQuotas = quota
+    ? { maxSites: quota.max_sites, maxProducts: quota.max_products_per_site, maxUsers: quota.max_users }
+    : { maxSites: 50, maxProducts: 50000, maxUsers: 25 };
   const usageData = { sites: usage?.data?.sites || 0, products: usage?.data?.products || 0, users: usage?.data?.users || 0 };
+  const graceUntil = subscription?.quota_grace_until ?? null;
 
   return (
     <AppLayout>
@@ -72,7 +85,7 @@ function BillingInner() {
 
         <div className="grid lg:grid-cols-2 gap-4">
           <CurrentPlanCard />
-          <UsageMeterCard usage={usageData} quotas={usageQuotas} />
+          <UsageMeterCard usage={usageData} quotas={usageQuotas} graceUntil={graceUntil} />
         </div>
 
         <Card>

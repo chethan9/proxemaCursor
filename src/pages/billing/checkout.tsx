@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import type { GetStaticProps } from "next";
@@ -77,7 +77,25 @@ function CheckoutInner() {
     }
   }, [profile?.client_id]);
 
-  const gateway = useMemo(() => getGatewayForCountry(country), [country]);
+  const [resolvedGateway, setResolvedGateway] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const r = await fetch(`/api/billing/resolve-gateway?country=${encodeURIComponent(country)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const j = (await r.json()) as { gateway?: string };
+      if (!cancelled && j.gateway) setResolvedGateway(j.gateway);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [country]);
+
+  const gateway = resolvedGateway ?? getGatewayForCountry(country);
   const baseAmount = plan ? getPlanPrice(plan, currency) : null;
   const discountMinor = appliedCoupon?.discountMinor || 0;
   const finalAmount = baseAmount != null ? Math.max(0, baseAmount * 100 - discountMinor) / 100 : null;

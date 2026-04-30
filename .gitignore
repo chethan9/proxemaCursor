@@ -40,3 +40,6 @@ next-env.d.ts
 
 # firebase
 firebase-service-account.json
+
+# cursor agent local state (debug logs, plans)
+.cursor/

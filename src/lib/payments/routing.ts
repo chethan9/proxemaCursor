@@ -1,6 +1,40 @@
 import type { GatewayName } from "./types";
 
+export type PaymentRegionRoutingRow = {
+  country_code: string;
+  gateway: string;
+  enabled?: boolean | null;
+  priority?: number | null;
+};
+
 export const MYFATOORAH_COUNTRIES = ["KW", "SA", "AE", "BH", "OM", "QA", "JO"] as const;
+
+function normalizeGatewayId(g: string): GatewayName {
+  const x = g.toLowerCase();
+  if (x === "myfatoorah" || x === "razorpay" || x === "tap") return x;
+  return "razorpay";
+}
+
+/**
+ * Pick gateway from admin-configured rows: exact ISO country match (by lowest priority),
+ * else wildcard row with country_code '*', else legacy hardcoded map.
+ */
+export function resolveGatewayFromRouting(
+  country: string | null | undefined,
+  rows: PaymentRegionRoutingRow[],
+): GatewayName {
+  const upper = (country || "US").toUpperCase();
+  const active = rows.filter((r) => r.enabled !== false);
+  const sorted = [...active].sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1));
+
+  const exact = sorted.filter((r) => r.country_code.toUpperCase() === upper);
+  if (exact.length) return normalizeGatewayId(exact[0].gateway);
+
+  const wildcard = sorted.filter((r) => r.country_code === "*");
+  if (wildcard.length) return normalizeGatewayId(wildcard[0].gateway);
+
+  return getGatewayForCountry(country);
+}
 
 const COUNTRY_CURRENCY: Record<string, string> = {
   KW: "KWD", SA: "SAR", AE: "AED", BH: "BHD", OM: "OMR", QA: "QAR", JO: "JOD",

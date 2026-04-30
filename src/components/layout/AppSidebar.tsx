@@ -16,6 +16,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getStore, type StoreWithClient } from "@/services/storeService";
 import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, buildInitialTree, type ResolvedMenuNode } from "@/lib/menu-merge";
+import { useSubscription } from "@/hooks/queries/useSubscription";
+import { useAppSettings } from "@/hooks/queries/useAppSettings";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -114,10 +116,15 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     qc.prefetchQuery({ queryKey: queryKeys.store(id), queryFn: () => getStore(id), staleTime: 60_000 });
   };
   const { profile, role, can, isSuperAdmin, signOut, permissions, loading: authLoading, user } = useAuth();
+  const { settings: appSettings } = useAppSettings();
+  const { hasAccess: subscriptionHasAccess } = useSubscription();
+  const billingLocked = appSettings.billingEnforcementEnabled && !subscriptionHasAccess && !isSuperAdmin;
   const canRef = useRef(can);
   const isSuperAdminRef = useRef(isSuperAdmin);
+  const billingLockedRef = useRef(billingLocked);
   canRef.current = can;
   isSuperAdminRef.current = isSuperAdmin;
+  billingLockedRef.current = billingLocked;
   const [collapsedPref, setCollapsedPref] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("sidebar-collapsed") === "1";
@@ -201,23 +208,23 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     }
     getMenuConfig(roleKey).then((cfg) => {
       const { tree } = mergeMenu(cfg);
-      const resolved = resolveForSidebar(tree, can, isSuperAdmin);
+      const resolved = resolveForSidebar(tree, can, isSuperAdmin, { billingLocked });
       cachedMenuByRole.set(roleKey, resolved);
       try { localStorage.setItem(menuStorageKey(roleKey), JSON.stringify(resolved)); } catch { /* ignore */ }
       setMenuTree((prev) => (serialize(prev) === serialize(resolved) ? prev : resolved));
       setMenuReady(true);
     }).catch(() => {
-      setMenuTree(buildInitialTree(canRef.current, isSuperAdminRef.current));
+      setMenuTree(buildInitialTree(canRef.current, isSuperAdminRef.current, { billingLocked: billingLockedRef.current }));
       setMenuReady(true);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin, user?.id]);
+  }, [authLoading, currentRoleKey, permissions.join(","), isSuperAdmin, user?.id, billingLocked]);
 
   // Safety net: never let the skeleton stay visible for more than 2s (slow/failed fetch still gets a tree)
   useEffect(() => {
     const t = setTimeout(() => {
       setMenuReady(true);
-      setMenuTree((prev) => (prev.length > 0 ? prev : buildInitialTree(canRef.current, isSuperAdminRef.current)));
+      setMenuTree((prev) => (prev.length > 0 ? prev : buildInitialTree(canRef.current, isSuperAdminRef.current, { billingLocked: billingLockedRef.current })));
     }, 2000);
     return () => clearTimeout(t);
   }, []);
@@ -418,9 +425,12 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     "pricing": "plansPricing",
     "users": "users",
     "roles": "roles",
+    "admin-billing": "adminBilling",
     "admin-payment-gateways": "adminPaymentGateways",
     "admin-payment-logs": "adminPaymentLogs",
     "admin-activity": "adminActivity",
+    "admin-referrals": "adminReferrals",
+    "referrals": "referrals",
     "settings": "settings",
   };
 

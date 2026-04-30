@@ -119,11 +119,30 @@ export function mergeSiteMenu(config: MenuNode[]): { tree: MenuNode[]; unassigne
   return { tree: pruned, unassignedIds: unassigned };
 }
 
+// Menu items that remain accessible while a client is locked out (no active plan).
+// Everything outside this allow-list is hidden from the sidebar until billing access is restored.
+const BILLING_LOCKED_ALLOWED_IDS = new Set<string>([
+  "billing",
+  "payment-methods",
+  "pricing",
+  "settings",
+  "users",
+  "roles",
+  "admin-billing",
+  "admin-payment-gateways",
+  "admin-payment-logs",
+  "admin-referrals",
+  "admin-activity",
+  "clients",
+]);
+
 export function resolveForSidebar(
   tree: MenuNode[],
   can: (p: Permission) => boolean,
-  isSuperAdmin: boolean
+  isSuperAdmin: boolean,
+  options: { billingLocked?: boolean } = {}
 ): ResolvedMenuNode[] {
+  const billingLocked = !!options.billingLocked && !isSuperAdmin;
   const reg = registryMap();
   const resolve = (nodes: MenuNode[], depth: number): ResolvedMenuNode[] => {
     const out: ResolvedMenuNode[] = [];
@@ -133,6 +152,7 @@ export function resolveForSidebar(
         const r = reg.get(n.id); if (!r) continue;
         if (r.superAdminOnly && !isSuperAdmin) continue;
         if (r.permission && !can(r.permission)) continue;
+        if (billingLocked && !BILLING_LOCKED_ALLOWED_IDS.has(n.id)) continue;
         out.push({ id: n.id, type: "item", label: n.label, icon: n.icon, iconColor: n.iconColor, href: r.href, permission: r.permission, superAdminOnly: r.superAdminOnly });
       } else {
         const children = depth < 1 ? resolve(n.children || [], depth + 1) : [];
@@ -172,10 +192,11 @@ export function resolveForSiteSidebar(
 
 export function buildInitialTree(
   can: (p: Permission) => boolean,
-  isSuperAdmin: boolean
+  isSuperAdmin: boolean,
+  options: { billingLocked?: boolean } = {}
 ): ResolvedMenuNode[] {
   const { tree } = mergeMenu([]);
-  return resolveForSidebar(tree, can, isSuperAdmin);
+  return resolveForSidebar(tree, can, isSuperAdmin, options);
 }
 
 export function buildInitialSiteTree(

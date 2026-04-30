@@ -1,4 +1,16 @@
 {
+  "tabs": {
+    "home": "Home",
+    "products": "Products",
+    "orders": "Orders",
+    "customers": "Customers",
+    "categories": "Categories",
+    "tags": "Tags",
+    "brands": "Brands",
+    "downloads": "Downloads",
+    "bulkJobs": "Bulk jobs",
+    "settings": "Settings"
+  },
   "home": {
     "refresh": "रिफ्रेश करें",
     "errorTitle": "डैशबोर्ड आँकड़े लोड नहीं हो सके",
@@ -19,9 +31,9 @@
     },
     "spark": {
       "sales": "बिक्री",
-      "revenue": "राजस्व",
       "ordersInCurrency": "{{currency}} में ऑर्डर (30द)",
       "ordersLast30d": "पिछले 30द में ऑर्डर",
+      "revenue": "राजस्व",
       "vsPrev30d": "पिछले 30द की तुलना",
       "last30d": "पिछले 30द"
     },
@@ -51,18 +63,6 @@
       },
       "currencyTooltip": "{{count}} order(s) in {{code}} (last 30d)"
     }
-  },
-  "tabs": {
-    "home": "Home",
-    "products": "Products",
-    "orders": "Orders",
-    "customers": "Customers",
-    "categories": "Categories",
-    "tags": "Tags",
-    "brands": "Brands",
-    "downloads": "Downloads",
-    "bulkJobs": "Bulk jobs",
-    "settings": "Settings"
   },
   "products": {
     "title": "Products",

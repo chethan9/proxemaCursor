@@ -41,7 +41,11 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
       if (mode === "tags") return updateTag(storeId, item.id, vars) as Promise<Taxonomy>;
       return updateBrand(storeId, item.id, vars) as Promise<Taxonomy>;
     },
-    invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode)],
+    invalidateKeys: [
+      ["taxonomy", mode, storeId],
+      queryKeys.taxonomy(storeId, mode),
+      ...(mode === "categories" ? [queryKeys.productCategoryOptions(storeId)] : []),
+    ],
     successToast: "Synced to WooCommerce",
     onSuccessExtra: () => {
       void qc.refetchQueries({ queryKey: ["taxonomy", mode, storeId], type: "active" });
@@ -54,7 +58,11 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
       else if (mode === "tags") await deleteTag(storeId, item.id);
       else await deleteBrand(storeId, item.id);
     },
-    invalidateKeys: [["taxonomy", mode, storeId], queryKeys.taxonomy(storeId, mode)],
+    invalidateKeys: [
+      ["taxonomy", mode, storeId],
+      queryKeys.taxonomy(storeId, mode),
+      ...(mode === "categories" ? [queryKeys.productCategoryOptions(storeId)] : []),
+    ],
     successToast: "Deleted from WooCommerce",
     onSuccessExtra: () => {
       void qc.refetchQueries({ queryKey: ["taxonomy", mode, storeId], type: "active" });

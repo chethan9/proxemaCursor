@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { getGateway } from "@/lib/payments";
+import type { GatewayName } from "@/lib/payments/types";
 
 const RETRY_DAYS = [0, 3, 5, 7];
 const DAY_MS = 86400_000;
@@ -10,6 +12,7 @@ type Sub = Record<string, unknown> & {
   client_id: string;
   status: string;
   renewal_mode?: string | null;
+  current_period_start?: string | null;
   current_period_end?: string | null;
   trial_end?: string | null;
   payment_method_id?: string | null;
@@ -20,8 +23,76 @@ type Sub = Record<string, unknown> & {
   plans?: Record<string, unknown> | null;
 };
 
-async function chargeSavedToken(_sub: Sub): Promise<{ ok: boolean; error?: string; gatewayRef?: string }> {
-  return { ok: false, error: "recurring_gateway_not_integrated" };
+type SavedPaymentMethod = {
+  id: string;
+  client_id: string;
+  gateway: GatewayName;
+  gateway_token: string;
+  recurring_eligible: boolean;
+};
+
+/**
+ * Off-session charge for a subscription with a saved payment method.
+ *
+ * Resolution order:
+ *   1. Load `client_payment_methods` row referenced by `sub.payment_method_id`.
+ *   2. Resolve the gateway adapter (sub.gateway falls back to PM.gateway).
+ *   3. If the adapter exposes `chargeSavedSource`, attempt the charge.
+ *   4. Otherwise return a roadmap-aligned stub (`recurring_not_implemented`)
+ *      so the cron treats the row consistently and the integration point is
+ *      explicit per gateway.
+ */
+async function chargeSavedToken(sub: Sub): Promise<{ ok: boolean; error?: string; gatewayRef?: string }> {
+  if (!sub.payment_method_id) {
+    return { ok: false, error: "no_payment_method" };
+  }
+
+  const { data: pmRow } = await (supabaseAdmin as any)
+    .from("client_payment_methods")
+    .select("id, client_id, gateway, gateway_token, recurring_eligible")
+    .eq("id", sub.payment_method_id)
+    .maybeSingle();
+  const pm = pmRow as SavedPaymentMethod | null;
+
+  if (!pm) return { ok: false, error: "payment_method_missing" };
+  if (pm.client_id !== sub.client_id) return { ok: false, error: "payment_method_client_mismatch" };
+  if (!pm.recurring_eligible) return { ok: false, error: "payment_method_not_recurring_eligible" };
+
+  const gatewayName = ((sub.gateway as GatewayName) || pm.gateway) as GatewayName;
+  let adapter;
+  try {
+    adapter = getGateway(gatewayName);
+  } catch {
+    return { ok: false, error: `unknown_gateway:${gatewayName}` };
+  }
+
+  if (!adapter.isConfigured()) {
+    return { ok: false, error: `gateway_not_configured:${gatewayName}` };
+  }
+
+  if (typeof adapter.chargeSavedSource !== "function") {
+    return { ok: false, error: `recurring_not_implemented:${gatewayName}` };
+  }
+
+  const plan = (sub.plans || {}) as { name?: string; prices?: Record<string, number> };
+  const currency = sub.currency || "USD";
+  const amount = plan.prices?.[currency] ?? 0;
+  if (!amount) return { ok: false, error: "no_price_for_currency" };
+
+  try {
+    const result = await adapter.chargeSavedSource({
+      amountMinor: Math.round(amount * 100),
+      currency,
+      description: `${plan.name || "Plan"} renewal`,
+      customerEmail: "",
+      clientReference: `sub_${sub.id}_${Date.now()}`,
+      savedToken: pm.gateway_token,
+    });
+    if (result.ok) return { ok: true, gatewayRef: result.gatewayRef };
+    return { ok: false, error: result.errorCode || "gateway_declined", gatewayRef: result.gatewayRef };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? `gateway_error:${e.message}` : "gateway_error" };
+  }
 }
 
 async function logEvent(subId: string, eventType: string, fromStatus: string | null, toStatus: string | null, metadata?: Record<string, unknown>) {
@@ -95,6 +166,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const summary = {
     trials_ended: 0,
+    trials_converted: 0,
+    trials_charge_failed: 0,
     auto_renewed: 0,
     auto_failed: 0,
     manual_invoiced: 0,
@@ -106,15 +179,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     canceled_abandoned: 0,
   };
 
-  // 1. Trials ending with no payment method
+  // 1. Trials ending — no PM → past_due; with PM → attempt charge (gateway-aware) → active or past_due
   const { data: trials } = await (supabaseAdmin as any).from("subscriptions")
-    .select("id, client_id, trial_end, payment_method_id, status").eq("status", "trialing").lte("trial_end", iso);
+    .select("id, client_id, trial_end, payment_method_id, status, gateway, currency, plans(*)")
+    .eq("status", "trialing").lte("trial_end", iso);
   for (const s of (trials || []) as Sub[]) {
     if (!s.payment_method_id) {
       await setStatus(s.id, "past_due", { last_charge_failed_at: iso });
       await logEvent(s.id, "trial_ended_no_pm", "trialing", "past_due");
       await sysLog(s, "subscription.trial_ended");
       summary.trials_ended++;
+      continue;
+    }
+    const charge = await chargeSavedToken(s);
+    if (charge.ok) {
+      const period = extendPeriod(s);
+      await setStatus(s.id, "active", { ...period, trial_end: null, last_charge_attempt_at: iso, last_charge_failed_at: null });
+      await createInvoice(s, "paid", charge.gatewayRef);
+      await logEvent(s.id, "trial_converted", "trialing", "active", { gatewayRef: charge.gatewayRef });
+      await sysLog(s, "subscription.trial_converted");
+      summary.trials_converted++;
+    } else {
+      await setStatus(s.id, "past_due", { last_charge_attempt_at: iso, last_charge_failed_at: iso });
+      await logEvent(s.id, "trial_charge_failed", "trialing", "past_due", { error: charge.error });
+      await sysLog(s, "subscription.trial_charge_failed", { error: charge.error });
+      summary.trials_charge_failed++;
     }
   }
 
@@ -234,7 +323,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await (supabaseAdmin as any).from("cron_logs").insert({
     job_type: "billing_renewals",
     status: "completed",
-    message: `trials:${summary.trials_ended} auto:${summary.auto_renewed}/${summary.auto_failed} manual:${summary.manual_invoiced}/${summary.manual_overdue} retry:${summary.retried} rec:${summary.recovered} locked:${summary.locked} cxl:${summary.canceled_scheduled}/${summary.canceled_abandoned}`,
+    message: `trials:${summary.trials_ended}+${summary.trials_converted}/${summary.trials_charge_failed} auto:${summary.auto_renewed}/${summary.auto_failed} manual:${summary.manual_invoiced}/${summary.manual_overdue} retry:${summary.retried} rec:${summary.recovered} locked:${summary.locked} cxl:${summary.canceled_scheduled}/${summary.canceled_abandoned}`,
     completed_at: iso,
     metadata: summary,
   });

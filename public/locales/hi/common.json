@@ -32,10 +32,13 @@
     "roles": "Roles",
     "paymentMethods": "Payment Methods",
     "plansPricing": "Plans",
+    "adminBilling": "बिलिंग नियंत्रण",
     "adminPaymentGateways": "Payment Gateways",
     "adminPaymentLogs": "Payment Logs",
     "adminActivity": "Activity Log",
-    "moreSites": "+{{count}} more sites"
+    "moreSites": "+{{count}} more sites",
+    "referrals": "Referrals",
+    "adminReferrals": "Referrals"
   },
   "siteNavGroups": {
     "Main": "Main",

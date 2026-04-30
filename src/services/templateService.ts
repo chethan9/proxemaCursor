@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
-import { blankInvoiceHtml, blankPickslipHtml, type TemplateConfig, type TemplateRow, type TemplateVersionRow, type TemplateType } from "@/lib/templates/document";
+import {
+  blankInvoiceHtml,
+  blankPickslipHtml,
+  blankReportHtml,
+  type TemplateConfig,
+  type TemplateRow,
+  type TemplateVersionRow,
+  type TemplateType,
+} from "@/lib/templates/document";
 
 export async function listTemplates(type?: TemplateType): Promise<TemplateRow[]> {
   let q = supabase.from("templates").select("*").order("is_sample", { ascending: false }).order("created_at", { ascending: false });
@@ -32,7 +40,9 @@ export async function createTemplate(input: { name: string; type: TemplateType; 
   }).select("*").single();
   if (e1) throw e1;
   const tplId = (tpl as { id: string }).id;
-  const html = input.html ?? (input.type === "pickslip" ? blankPickslipHtml() : blankInvoiceHtml());
+  const html =
+    input.html ??
+    (input.type === "pickslip" ? blankPickslipHtml() : input.type === "report" ? blankReportHtml() : blankInvoiceHtml());
   const config: TemplateConfig = { html };
   const { data: ver, error: e2 } = await supabase.from("template_versions").insert({
     template_id: tplId,
@@ -51,10 +61,10 @@ export async function forkSampleTemplate(sampleId: string, clientId: string, new
   return createTemplate({ name: newName ?? `Copy of ${template.name}`, type: template.type, description: template.description ?? undefined, clientId, html });
 }
 
-export async function saveNewVersion(templateId: string, html: string, changeNote?: string): Promise<string> {
+export async function saveNewVersion(templateId: string, document: TemplateConfig | string, changeNote?: string): Promise<string> {
   const { data: latest } = await supabase.from("template_versions").select("version_number").eq("template_id", templateId).order("version_number", { ascending: false }).limit(1).maybeSingle();
   const nextVersion = ((latest as { version_number?: number } | null)?.version_number ?? 0) + 1;
-  const config: TemplateConfig = { html };
+  const config: TemplateConfig = typeof document === "string" ? { html: document } : document;
   const { data: ver, error } = await supabase.from("template_versions").insert({
     template_id: templateId,
     version_number: nextVersion,
@@ -78,7 +88,7 @@ export async function renameTemplate(id: string, name: string): Promise<void> {
 }
 
 export async function setDefaultForType(clientId: string, type: TemplateType, templateId: string): Promise<void> {
-  await supabase.from("templates").update({ is_default_for_type: false }).eq("client_id", clientId).eq("type", type);
+  await supabase.from("templates").update({ is_default_for_type: false }).eq("client_id", clientId).eq("type", type as string);
   const { error } = await supabase.from("templates").update({ is_default_for_type: true }).eq("id", templateId);
   if (error) throw error;
 }

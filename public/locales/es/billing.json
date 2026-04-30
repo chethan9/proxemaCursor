@@ -53,5 +53,27 @@
     "securedBy": "Protegido por {{gateway}}",
     "terms": "Al continuar aceptas nuestros <terms>Términos</terms> y la <privacy>Política de privacidad</privacy>.",
     "subscribingAs": "Suscribiéndose como {{email}}."
+  },
+  "usage": {
+    "title": "Uso",
+    "rowSites": "Sitios",
+    "rowProducts": "Productos",
+    "rowUsers": "Usuarios",
+    "graceBanner": "Superas los límites del plan. Puedes seguir trabajando hasta el {{date}}; después actualiza o reduce el uso."
+  },
+  "planChange": {
+    "upgradeTitle": "Upgrade to {{name}}?",
+    "downgradeTitle": "Downgrade to {{name}}?",
+    "upgradeDesc": "You'll be charged {{price}} per month. We'll prorate the difference based on days remaining in your current billing period.",
+    "upgradeDescNoPrice": "You'll be charged the new amount per month. We'll prorate the difference based on days remaining in your current billing period.",
+    "upgradeNote": "New features and quota limits apply immediately after payment.",
+    "downgradeDesc": "Your plan will change to {{name}} on {{date}}.",
+    "downgradeDescNoDate": "Your plan will change to {{name}} at the end of your current billing period.",
+    "downgradeNote": "You'll keep all your current features until then. No refunds for the current period.",
+    "quotaWarning": "Note: if you're over {{name}}'s quotas (sites, products, users), you'll need to reduce usage before the change takes effect.",
+    "cancel": "Cancel",
+    "processing": "Processing...",
+    "confirmUpgrade": "Confirm upgrade",
+    "scheduleDowngrade": "Schedule downgrade"
   }
 }

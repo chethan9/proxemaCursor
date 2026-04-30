@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 /**
@@ -25,6 +26,7 @@ export function useSyncCompletionInvalidation(storeId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["taxonomy", "categories", storeId] });
       queryClient.invalidateQueries({ queryKey: ["taxonomy", "tags", storeId] });
       queryClient.invalidateQueries({ queryKey: ["stores", storeId, "taxonomy"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productCategoryOptions(storeId) });
     }
   }, [storeId, data, queryClient]);
 }

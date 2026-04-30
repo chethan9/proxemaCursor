@@ -8,6 +8,7 @@ import {
   listRegionRouting,
   updateRegionRouting,
 } from "@/services/paymentGatewayService.server";
+import { invalidatePaymentRoutingCache } from "@/lib/payments/gateway-routing.server";
 import { logActivity } from "@/lib/activity-log";
 
 async function checkAdminAuth(req: NextApiRequest) {
@@ -76,6 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (action === "update_routing") {
         const result = await updateRegionRouting(country_code, gateway, enabled, priority);
+        invalidatePaymentRoutingCache();
         await logActivity({
           action: "payment_gateway.update_routing",
           entityType: "payment_region_routing",

@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await supabaseAdmin
       .from("subscriptions")
       .update({
-        gateway: "tap",
+        gateway: "tap" as unknown as "myfatoorah" | "razorpay",
         gateway_subscription_ref: init.gatewayRef,
         last_charge_attempt_at: new Date().toISOString(),
       })

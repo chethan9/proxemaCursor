@@ -1,0 +1,181 @@
+{
+  "title": "Referrals",
+  "subtitle": "Invite friends, earn rewards on every successful paid plan.",
+  "disabledTitle": "Referral program is currently unavailable",
+  "disabledBody": "The referral program is not enabled at this time. Check back later.",
+  "enroll": {
+    "title": "Join the referral program",
+    "description": "Generate your unique referral link and start earning when others sign up and upgrade to a paid plan.",
+    "cta": "Join now",
+    "joining": "Joining…",
+    "joined": "You're enrolled.",
+    "failed": "Could not join the program."
+  },
+  "stats": {
+    "referrals": "Referrals",
+    "converted": "Paid conversions",
+    "lifetimeEarned": "Lifetime earned",
+    "available": "Available to withdraw",
+    "pendingPayout": "Pending payout"
+  },
+  "shareCard": {
+    "title": "Your referral link",
+    "codeLabel": "Code",
+    "linkLabel": "Link",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "rewards": {
+    "title": "How rewards work",
+    "signupBonus": "Signup bonus on first paid plan: {{amount}}",
+    "paidPercentage": "Plus {{percent}}% of every paid charge from referred customers",
+    "minPayout": "Minimum payout amount: {{amount}}",
+    "eligibilityNote": "You can earn rewards immediately, but you must purchase a paid plan yourself before requesting a withdrawal."
+  },
+  "balance": {
+    "title": "Balance",
+    "lifetimeEarned": "Lifetime earned",
+    "reversed": "Reversed",
+    "withdrawn": "Withdrawn",
+    "pendingPayout": "Pending payout",
+    "available": "Available"
+  },
+  "events": {
+    "title": "Recent activity",
+    "empty": "No referral activity yet.",
+    "type": {
+      "signup_bonus": "Signup bonus",
+      "paid_conversion": "Paid conversion bonus",
+      "recurring_bonus": "Recurring bonus",
+      "reversal": "Reversal",
+      "manual_adjustment": "Manual adjustment",
+      "payout_debit": "Payout",
+      "payout_reversal": "Payout reversal",
+      "invite_accepted": "Invite accepted"
+    },
+    "status": {
+      "posted": "Posted",
+      "reversed": "Reversed"
+    }
+  },
+  "withdraw": {
+    "title": "Request withdrawal",
+    "description": "Submit a payout request for your available balance. Approved payouts are processed manually by our team.",
+    "amount": "Amount",
+    "currency": "Currency",
+    "method": "Payout method",
+    "details": "Payout details",
+    "detailsPlaceholder": "Bank account / UPI / PayPal email…",
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "Anything we should know?",
+    "submit": "Request payout",
+    "submitting": "Submitting…",
+    "success": "Payout request submitted.",
+    "errors": {
+      "amount_below_minimum": "Amount is below the minimum payout of {{min}} {{currency}}.",
+      "insufficient_balance": "You only have {{available}} {{currency}} available.",
+      "withdrawal_requires_paid_purchase": "You need at least one successful paid plan purchase to request a withdrawal.",
+      "generic": "Could not submit payout request."
+    }
+  },
+  "payouts": {
+    "title": "Payout history",
+    "empty": "No payout requests yet.",
+    "amount": "Amount",
+    "status": "Status",
+    "requested": "Requested",
+    "reviewed": "Reviewed",
+    "paid": "Paid",
+    "method": "Method",
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "canceling": "Canceling…",
+    "rejectReason": "Reason",
+    "paidReference": "Reference",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "paid": "Paid",
+      "canceled": "Canceled"
+    }
+  },
+  "admin": {
+    "title": "Referral payouts",
+    "subtitle": "Review, approve and pay out referral earnings.",
+    "tabs": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "paid": "Paid",
+      "rejected": "Rejected",
+      "canceled": "Canceled",
+      "all": "All",
+      "settings": "Settings"
+    },
+    "table": {
+      "client": "Client",
+      "amount": "Amount",
+      "currency": "Currency",
+      "method": "Method",
+      "requested": "Requested",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "View",
+      "approve": "Approve",
+      "reject": "Reject",
+      "markPaid": "Mark paid",
+      "approving": "Approving…",
+      "rejecting": "Rejecting…",
+      "marking": "Marking paid…"
+    },
+    "drawer": {
+      "title": "Payout request",
+      "client": "Client",
+      "balance": "Current balance",
+      "available": "Available",
+      "lifetime": "Lifetime",
+      "withdrawn": "Withdrawn",
+      "pending": "Pending payout",
+      "history": "Recent activity",
+      "rejectReason": "Reject reason",
+      "rejectPlaceholder": "Why is this being rejected?",
+      "paidReference": "Payment reference",
+      "paidReferencePlaceholder": "Bank txn id, UTR, etc.",
+      "adminNotes": "Admin notes",
+      "adminNotesPlaceholder": "Internal notes (visible to admins only)",
+      "confirmReject": "Reject",
+      "confirmMarkPaid": "Mark as paid"
+    },
+    "settings": {
+      "title": "Referral program settings",
+      "enabled": "Program enabled",
+      "enabledHelp": "When disabled, no new attributions or rewards are created.",
+      "signupBonus": "Signup bonus (minor units)",
+      "paidPercentage": "First paid percentage (basis points)",
+      "paidPercentageHelp": "1000 = 10% of the paid charge",
+      "paidMax": "Per-event cap (minor units, optional)",
+      "recurringPercentage": "Recurring percentage (basis points)",
+      "recurringMaxCount": "Recurring rewards per referral (0 = unlimited)",
+      "minPayout": "Minimum payout (minor units)",
+      "payoutCurrency": "Payout currency",
+      "eligibilityWindow": "Eligibility window (days)",
+      "reversalWindow": "Reversal window (days)",
+      "requirePaid": "Require referrer to have paid before withdrawal",
+      "save": "Save settings",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "saveFailed": "Could not save settings."
+    },
+    "reconcile": {
+      "title": "Reconcile balances",
+      "description": "Recompute balance rows from the event ledger and report any drift.",
+      "dryRun": "Preview drift",
+      "run": "Recompute now",
+      "running": "Running…",
+      "result": "Checked {{count}} balance rows; {{drift}} with drift.",
+      "noDrift": "All balances match the ledger."
+    }
+  }
+}

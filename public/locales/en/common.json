@@ -32,9 +32,12 @@
     "roles": "Roles",
     "paymentMethods": "Payment Methods",
     "plansPricing": "Plans",
+    "adminBilling": "Billing Controls",
     "adminPaymentGateways": "Payment Gateways",
     "adminPaymentLogs": "Payment Logs",
     "adminActivity": "Activity Log",
+    "referrals": "Referrals",
+    "adminReferrals": "Referrals",
     "moreSites": "+{{count}} more sites"
   },
   "siteNavGroups": {

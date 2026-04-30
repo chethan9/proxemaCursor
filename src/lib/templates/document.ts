@@ -1,7 +1,40 @@
-export type TemplateType = "invoice" | "pickslip";
+export type TemplateType = "invoice" | "pickslip" | "report";
 
+/** Persisted template document: full `html` is what Puppeteer renders after Handlebars. */
 export interface TemplateConfig {
   html: string;
+  /** GrapesJS exported CSS (also merged into `html` on save). */
+  css?: string;
+  /** Round-trip GrapesJS project — optional for legacy HTML-only templates. */
+  grapesProject?: Record<string, unknown>;
+  /** Optional pattern for PDF download name, e.g. `invoice-{{order.number}}`. */
+  filenamePattern?: string;
+}
+
+const PRINT_BASE_CSS = `@page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; font-size: 12px; line-height: 1.5; margin: 0; background: #fff; }`;
+
+/** Merge Grapes body HTML + CSS into a single printable document (server + preview). */
+export function mergePrintDocument(opts: { bodyHtml: string; css?: string; title?: string }): string {
+  const title = (opts.title || "Document").replace(/</g, "");
+  const css = [PRINT_BASE_CSS, opts.css?.trim() || ""].filter(Boolean).join("\n");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>${css}</style>
+</head>
+<body>${opts.bodyHtml}</body>
+</html>`;
+}
+
+/** True if document looks like a full HTML document (legacy Monaco templates). */
+export function isFullHtmlDocument(html: string): boolean {
+  const t = html.trim().toLowerCase();
+  return t.startsWith("<!doctype") || t.startsWith("<html");
 }
 
 export interface TemplateRow {
@@ -272,6 +305,57 @@ export function blankPickslipHtml(): string {
   </div>
 
   <div class="signature">Picked by ____________________</div>
+</body>
+</html>`;
+}
+
+export function blankReportHtml(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{report.title}}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; font-size: 12px; margin: 0; }
+  h1 { font-size: 22px; margin: 0 0 8px 0; }
+  .meta { color: #64748b; font-size: 11px; margin-bottom: 20px; }
+  table.report { width: 100%; border-collapse: collapse; }
+  table.report th { text-align: left; padding: 10px 12px; background: #0f172a; color: #fff; font-size: 10px; text-transform: uppercase; }
+  table.report td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+  table.report td.right { text-align: right; }
+  .summary { margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; max-width: 360px; margin-left: auto; }
+</style>
+</head>
+<body>
+  <h1>{{report.title}}</h1>
+  <div class="meta">{{store.name}} · {{report.generated_at}}{{#if report.period_label}} · {{report.period_label}}{{/if}}</div>
+  <table class="report">
+    <thead>
+      <tr>
+        <th>Order</th>
+        <th>Date</th>
+        <th>Customer</th>
+        <th class="right">Total</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each rows}}
+      <tr>
+        <td>{{order_number}}</td>
+        <td>{{date}}</td>
+        <td>{{customer}}</td>
+        <td class="right">{{currency total ../report.currency}}</td>
+        <td>{{status}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  <div class="summary">
+    <strong>Orders:</strong> {{summary.order_count}}<br/>
+    <strong>Revenue:</strong> {{currency summary.revenue report.currency}}
+  </div>
 </body>
 </html>`;
 }

@@ -25,7 +25,7 @@ export const ALL_LOCALE_CODES: LocaleCode[] = LOCALES.map((l) => l.code);
 export const DEFAULT_LOCALE: LocaleCode = "en";
 
 // Must match the actual JSON files in public/locales/{code}/*.json
-export const NAMESPACES = ["common", "auth", "site", "pricing", "billing", "admin", "settings"] as const;
+export const NAMESPACES = ["common", "auth", "site", "pricing", "billing", "admin", "settings", "referrals"] as const;
 export type Namespace = typeof NAMESPACES[number];
 
 export function getLocaleMeta(code: string | undefined): LocaleMeta {

@@ -54,6 +54,13 @@
     "terms": "بمتابعتك فإنك توافق على <terms>الشروط</terms> و<privacy>سياسة الخصوصية</privacy>.",
     "subscribingAs": "الاشتراك باسم {{email}}."
   },
+  "usage": {
+    "title": "الاستخدام",
+    "rowSites": "المواقع",
+    "rowProducts": "المنتجات",
+    "rowUsers": "المستخدمون",
+    "graceBanner": "تجاوزت حدود خطتك. يمكنك الاستمرار حتى {{date}} — ثم قم بالترقية أو خفّض الاستخدام."
+  },
   "planChange": {
     "upgradeTitle": "الترقية إلى {{name}}؟",
     "downgradeTitle": "التخفيض إلى {{name}}؟",

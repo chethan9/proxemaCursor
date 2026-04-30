@@ -88,12 +88,29 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
     return { data: (json.data as Record<string, unknown>[]).map((o) => wooOrderToRow(o, storeId)), count: json.count, live: true };
   }
 
-  let query = supabase.from("orders").select("id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, shipping, line_items, shipping_lines, fee_lines, coupon_lines, date_created, date_modified, synced_at, created_at", { count: "exact" }).eq("store_id", storeId);
+  let query = supabase.from("orders").select("id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, shipping, line_items, shipping_lines, fee_lines, coupon_lines, date_created, date_modified, synced_at, created_at, pending_action, pending_job_id, pending_at", { count: "exact" }).eq("store_id", storeId);
+  const pendingPredicates = ["pending_action.is.null", "pending_action.neq.delete"];
   if (effectiveSearch) {
     const s = effectiveSearch;
-    query = query.or(
-      `order_number.ilike.%${s}%,billing->>email.ilike.%${s}%,billing->>first_name.ilike.%${s}%,billing->>last_name.ilike.%${s}%,billing->>phone.ilike.%${s}%,billing->>address_1.ilike.%${s}%,billing->>address_2.ilike.%${s}%,billing->>city.ilike.%${s}%,billing->>state.ilike.%${s}%,billing->>postcode.ilike.%${s}%`
-    );
+    const fields = [
+      "order_number",
+      "billing->>email",
+      "billing->>first_name",
+      "billing->>last_name",
+      "billing->>phone",
+      "billing->>address_1",
+      "billing->>address_2",
+      "billing->>city",
+      "billing->>state",
+      "billing->>postcode",
+    ];
+    const clauses: string[] = [];
+    for (const p of pendingPredicates) {
+      for (const f of fields) clauses.push(`and(${p},${f}.ilike.%${s}%)`);
+    }
+    query = query.or(clauses.join(","));
+  } else {
+    query = query.or("pending_action.is.null,pending_action.neq.delete");
   }
   if (effectiveStatus) query = query.eq("status", effectiveStatus);
   if (effectivePayment) query = query.eq("payment_method", effectivePayment);

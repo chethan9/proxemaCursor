@@ -42,4 +42,6 @@ export type {
   RazorpayInitPayload,
   TapInitPayload,
   TapChargeRedirectPayload,
+  RecurringChargeRequest,
+  RecurringChargeResult,
 } from "./types";

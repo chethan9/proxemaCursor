@@ -11,7 +11,7 @@ import {
 import { AttributeEditor } from "@/components/product-edit/variants/AttributeEditor";
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
-import { generateMatrix, mergeVariations } from "@/components/product-edit/variants/utils";
+import { generateMatrix, mergeVariations, variationAttributeComboKey } from "@/components/product-edit/variants/utils";
 import { Loader2, RefreshCw, Info } from "lucide-react";
 
 type Props = {
@@ -133,12 +133,41 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     const dupes: number[] = [];
     form.variations.forEach((v, idx) => {
       if (v.enabled === false) return;
-      const key = [...v.attributes].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${a.name.toLowerCase()}:${a.option.toLowerCase()}`).join("|");
+      const key = variationAttributeComboKey(v);
       if (seen.has(key)) dupes.push(idx);
       else seen.set(key, idx);
     });
     return dupes;
   })();
+
+  const removeDuplicateVariations = () => {
+    const n = duplicateCombos.length;
+    if (n === 0) return;
+    if (
+      !window.confirm(
+        `Remove ${n} duplicate row${n === 1 ? "" : "s"}, keeping the first occurrence of each option combination? Variations removed here will be deleted in WooCommerce when you save.`,
+      )
+    ) {
+      return;
+    }
+    setForm((p) => {
+      const seen = new Map<string, number>();
+      const removeIdx = new Set<number>();
+      p.variations.forEach((v, idx) => {
+        if (v.enabled === false) return;
+        const key = variationAttributeComboKey(v);
+        if (seen.has(key)) removeIdx.add(idx);
+        else seen.set(key, idx);
+      });
+      if (removeIdx.size === 0) return p;
+      const removedIds = p.variations.filter((v, i) => removeIdx.has(i) && v.id).map((v) => v.id!) as number[];
+      return {
+        ...p,
+        variations: p.variations.filter((_, i) => !removeIdx.has(i)),
+        deletedVariationIds: [...(p.deletedVariationIds || []), ...removedIds],
+      };
+    });
+  };
 
   const missingPriceCount = productMode === "variable"
     ? form.variations.filter((v) => v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0)).length
@@ -176,7 +205,20 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
                 <div className="text-destructive">{missingPriceCount} variation{missingPriceCount === 1 ? "" : "s"} missing price — must be greater than 0 to publish.</div>
               )}
               {duplicateCombos.length > 0 && (
-                <div className="text-destructive">Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}.</div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <div className="text-destructive min-w-0">
+                    Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}. Remove extras before auto-filling SKUs or saving.
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    onClick={removeDuplicateVariations}
+                  >
+                    Remove duplicate rows ({duplicateCombos.length})
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -207,6 +249,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               onUpdate={updateVariation}
               onBulk={applyBulk}
               onBulkDelete={bulkDelete}
+              duplicateRowCount={duplicateCombos.length}
             />
           )}
         </div>

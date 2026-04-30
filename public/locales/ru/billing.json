@@ -53,5 +53,27 @@
     "securedBy": "Защищено {{gateway}}",
     "terms": "Продолжая, вы соглашаетесь с нашими <terms>Условиями</terms> и <privacy>Политикой конфиденциальности</privacy>.",
     "subscribingAs": "Оформление подписки как {{email}}."
+  },
+  "usage": {
+    "title": "Использование",
+    "rowSites": "Сайты",
+    "rowProducts": "Товары",
+    "rowUsers": "Пользователи",
+    "graceBanner": "Превышены лимиты тарифа. Работа возможна до {{date}} — затем обновите план или снизьте нагрузку."
+  },
+  "planChange": {
+    "upgradeTitle": "Upgrade to {{name}}?",
+    "downgradeTitle": "Downgrade to {{name}}?",
+    "upgradeDesc": "You'll be charged {{price}} per month. We'll prorate the difference based on days remaining in your current billing period.",
+    "upgradeDescNoPrice": "You'll be charged the new amount per month. We'll prorate the difference based on days remaining in your current billing period.",
+    "upgradeNote": "New features and quota limits apply immediately after payment.",
+    "downgradeDesc": "Your plan will change to {{name}} on {{date}}.",
+    "downgradeDescNoDate": "Your plan will change to {{name}} at the end of your current billing period.",
+    "downgradeNote": "You'll keep all your current features until then. No refunds for the current period.",
+    "quotaWarning": "Note: if you're over {{name}}'s quotas (sites, products, users), you'll need to reduce usage before the change takes effect.",
+    "cancel": "Cancel",
+    "processing": "Processing...",
+    "confirmUpgrade": "Confirm upgrade",
+    "scheduleDowngrade": "Schedule downgrade"
   }
 }

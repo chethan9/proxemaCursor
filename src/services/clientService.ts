@@ -134,6 +134,19 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
     metadata: { name: client.name } as never,
   });
 
+  const { data: settings } = await supabase
+    .from("app_settings")
+    .select("billing_enforcement_enabled")
+    .eq("id", "global")
+    .maybeSingle();
+  const enforcementEnabled = settings?.billing_enforcement_enabled ?? true;
+
+  if (enforcementEnabled) {
+    // Mandatory plan selection: client starts with no subscription; user picks plan from /pricing.
+    return { client, subscription: null, trialStarted: false, noPlanAvailable: false };
+  }
+
+  // Enforcement disabled: auto-start a trial so admins/operators can use the app freely.
   const plan = await findDefaultTrialPlan();
   if (!plan) {
     return { client, subscription: null, trialStarted: false, noPlanAvailable: true };

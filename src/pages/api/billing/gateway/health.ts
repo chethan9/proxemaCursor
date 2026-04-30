@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getAllGateways, getGatewayForCountry, getDefaultCurrencyForCountry } from "@/lib/payments";
+import { getAllGateways, getDefaultCurrencyForCountry } from "@/lib/payments";
+import { getResolvedGatewayForCountry } from "@/lib/payments/gateway-routing.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { country } = req.query;
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const resolved = countryCode
     ? {
         country: countryCode,
-        gateway: getGatewayForCountry(countryCode),
+        gateway: await getResolvedGatewayForCountry(countryCode),
         currency: getDefaultCurrencyForCountry(countryCode),
       }
     : null;

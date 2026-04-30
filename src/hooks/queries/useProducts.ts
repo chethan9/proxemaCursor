@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { fetchProducts, type FetchProductsOptions } from "@/services/productService";
+import { fetchAllCategories } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
@@ -37,19 +37,12 @@ export function useProductCategoryOptions(storeId: string) {
   return useQuery({
     queryKey: queryKeys.productCategoryOptions(storeId),
     queryFn: async () => {
-      const { data } = await supabase.from("products").select("categories").eq("store_id", storeId).limit(500);
-      const set = new Set<string>();
-      (data || []).forEach((r: { categories: unknown }) => {
-        if (Array.isArray(r.categories)) {
-          r.categories.forEach((c: unknown) => {
-            const obj = c as { name?: string };
-            if (obj?.name) set.add(obj.name);
-          });
-        }
-      });
-      return Array.from(set).sort();
+      const rows = await fetchAllCategories(storeId);
+      const names = rows.map((r) => r.name).filter((n): n is string => !!n?.trim());
+      return [...new Set(names)].sort((a, b) => a.localeCompare(b));
     },
     enabled: !!storeId,
-    staleTime: 5 * 60_000,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
   });
 }

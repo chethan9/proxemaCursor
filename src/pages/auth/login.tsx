@@ -5,6 +5,7 @@ import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useAuth } from "@/contexts/AuthProvider";
+import { resolvePostAuthLanding } from "@/lib/post-auth-landing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -12,27 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Loader2 } from "lucide-react";
-
-async function resolveLandingPath(userId: string): Promise<string> {
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("default_landing_path")
-    .eq("id", userId)
-    .maybeSingle();
-  const pref = prof?.default_landing_path?.trim();
-  if (!pref) return "/projects";
-  const siteMatch = pref.match(/^\/sites\/([^/?#]+)/);
-  if (siteMatch) {
-    const siteId = siteMatch[1];
-    const { data: site } = await supabase.from("stores").select("id").eq("id", siteId).maybeSingle();
-    if (!site) {
-      try { await supabase.from("profiles").update({ default_landing_path: null }).eq("id", userId); } catch {}
-      return "/projects";
-    }
-  }
-  return pref;
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,11 +30,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!authLoading && user) {
       const redirect = typeof router.query.redirect === "string" ? router.query.redirect : null;
-      if (redirect) {
-        router.replace(redirect);
-      } else {
-        resolveLandingPath(user.id).then((dest) => router.replace(dest));
-      }
+      resolvePostAuthLanding(user.id, { redirect }).then((dest) => router.replace(dest));
     }
   }, [user, authLoading, router]);
 
@@ -80,9 +58,9 @@ export default function LoginPage() {
       return;
     }
     const redirect = typeof router.query.redirect === "string" ? router.query.redirect : null;
-    let dest = redirect;
-    if (!dest && data.user) {
-      dest = await resolveLandingPath(data.user.id);
+    let dest: string | null = null;
+    if (data.user) {
+      dest = await resolvePostAuthLanding(data.user.id, { redirect });
     }
     router.replace(dest || "/projects");
   };
@@ -99,7 +77,16 @@ export default function LoginPage() {
           <CardTitle className="text-2xl">{t("signIn.title")}</CardTitle>
           <CardDescription>{t("signIn.description", { brand: brandName })}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <GoogleSignInButton mode="signin" />
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">{t("oauth.or")}</span>
+            </div>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">

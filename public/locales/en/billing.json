@@ -54,6 +54,13 @@
     "terms": "By continuing you agree to our <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
     "subscribingAs": "Subscribing as {{email}}."
   },
+  "usage": {
+    "title": "Usage",
+    "rowSites": "Sites",
+    "rowProducts": "Products",
+    "rowUsers": "Users",
+    "graceBanner": "You are over your plan limits. You can keep working until {{date}} — then upgrade or reduce usage."
+  },
   "planChange": {
     "upgradeTitle": "Upgrade to {{name}}?",
     "downgradeTitle": "Downgrade to {{name}}?",

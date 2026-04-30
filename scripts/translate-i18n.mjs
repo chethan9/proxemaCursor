@@ -40,7 +40,7 @@ const ROOT = path.resolve(__dirname, "..");
 const EN_DIR = path.join(ROOT, "public", "locales", "en");
 
 const DEFAULT_LOCALES = ["es", "fr", "de", "pt", "hi", "zh", "ja", "ru"];
-const DEFAULT_NAMESPACES = ["common", "auth", "site", "pricing", "billing", "admin", "settings"];
+const DEFAULT_NAMESPACES = ["common", "auth", "site", "pricing", "billing", "admin", "settings", "referrals"];
 
 const LOCALE_INSTRUCTIONS = {
   es: "Spanish (es) — neutral, formal-but-friendly tone.",

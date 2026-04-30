@@ -332,7 +332,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         await createBulkJob({ store_id: storeId, job_type: "assign_product_categories", total: wooIds.length, payload: { type: "assign_product_categories", product_ids: wooIds, mode: categoryMode, category_ids: Array.from(bulkCategoryIds) } });
       } else if (bulkDialog === "delete") {
         await createBulkJob({ store_id: storeId, job_type: "delete_products", total: wooIds.length, payload: { type: "delete_products", product_ids: wooIds, force: false } });
+        const deleteSet = new Set(wooIds);
+        queryClient.setQueriesData({ queryKey: queryKeys.products(storeId) }, (prev: unknown) => {
+          const cur = prev as { data?: ProductRow[]; count?: number } | undefined;
+          if (!cur || !Array.isArray(cur.data)) return prev;
+          const filtered = cur.data.filter((p) => !deleteSet.has(p.woo_id ?? -1));
+          const removed = cur.data.length - filtered.length;
+          return {
+            ...cur,
+            data: filtered,
+            count: Math.max(0, (cur.count ?? 0) - removed),
+          };
+        });
       }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.products(storeId) });
       setSelectedIds(new Set());
       setBulkDialog(null);
       setPriceValue(""); setStockValue(""); setBulkCategoryIds(new Set());
@@ -341,7 +354,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     } finally {
       setBulkSubmitting(false);
     }
-  }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatusVal, newProductStatus, categoryMode, bulkCategoryIds]);
+  }, [bulkDialog, selectedIds, overLimit, products, storeId, priceOp, priceValue, stockOp, stockValue, stockStatusVal, newProductStatus, categoryMode, bulkCategoryIds, queryClient]);
 
   useEffect(() => { setSelectedIds(new Set()); }, [storeId, page, pageSize]);
 

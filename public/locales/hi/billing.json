@@ -54,6 +54,13 @@
     "terms": "जारी रखकर आप हमारी <terms>शर्तों</terms> और <privacy>गोपनीयता नीति</privacy> से सहमत हैं।",
     "subscribingAs": "{{email}} के रूप में सब्सक्राइब कर रहे हैं।"
   },
+  "usage": {
+    "title": "उपयोग",
+    "rowSites": "साइटें",
+    "rowProducts": "उत्पाद",
+    "rowUsers": "उपयोगकर्ता",
+    "graceBanner": "आप योजना की सीमा से अधिक हैं। {{date}} तक काम जारी रख सकते हैं — फिर अपग्रेड करें या उपयोग कम करें।"
+  },
   "planChange": {
     "upgradeTitle": "Upgrade to {{name}}?",
     "downgradeTitle": "Downgrade to {{name}}?",

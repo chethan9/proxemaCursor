@@ -369,6 +369,21 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
         total: orderIds.length,
         payload,
       });
+      if (bulkAction.type === "delete") {
+        const deleteSet = new Set(orderIds);
+        queryClient.setQueriesData({ queryKey: queryKeys.orders(storeId) }, (prev: unknown) => {
+          const cur = prev as { data?: OrderRow[]; count?: number } | undefined;
+          if (!cur || !Array.isArray(cur.data)) return prev;
+          const filtered = cur.data.filter((o) => !deleteSet.has(o.woo_id ?? -1));
+          const removed = cur.data.length - filtered.length;
+          return {
+            ...cur,
+            data: filtered,
+            count: Math.max(0, (cur.count ?? 0) - removed),
+          };
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orders(storeId) });
       toast({
         title: t("orders.bulk.queued"),
         description: t("orders.bulk.queuedDesc", { count: orderIds.length }),
@@ -384,7 +399,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, on
     } finally {
       setBulkSubmitting(false);
     }
-  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast, isPending, showLockedToast, t]);
+  }, [bulkAction, selectedIds, orders, overLimit, storeId, toast, isPending, showLockedToast, t, queryClient]);
 
   const hasActiveFilters = statusFilter !== "all" || paymentFilter !== "all" || search || totalMin || totalMax || dateRange !== "all";
 
