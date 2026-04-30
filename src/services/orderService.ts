@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/helpers";
 import { normalizeSelectFilter, normalizeSearch } from "@/lib/normalize-explorer-filters";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 export type OrderRow = Database["public"]["Tables"]["orders"]["Row"] & {
   refunds?: unknown;
@@ -52,14 +53,14 @@ function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
     refunds: o.refunds,
     meta_data: o.meta_data,
     customer_note: (o.customer_note as string) ?? null,
-    date_created: (o.date_created as string) ?? null,
-    date_modified: (o.date_modified as string) ?? null,
-    date_paid: (o.date_paid as string) ?? null,
-    date_completed: (o.date_completed as string) ?? null,
+    date_created: normalizeWooDate(o.date_created, o.date_created_gmt),
+    date_modified: normalizeWooDate(o.date_modified, o.date_modified_gmt),
+    date_paid: normalizeWooDate(o.date_paid, o.date_paid_gmt),
+    date_completed: normalizeWooDate(o.date_completed, o.date_completed_gmt),
     raw_data: o,
     synced_at: null,
-    created_at: (o.date_created as string) ?? null,
-    updated_at: (o.date_modified as string) ?? null,
+    created_at: normalizeWooDate(o.date_created, o.date_created_gmt),
+    updated_at: normalizeWooDate(o.date_modified, o.date_modified_gmt),
   } as unknown as OrderRow;
 }
 

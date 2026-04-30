@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 function getEntityType(topic: string): string | null {
   const prefix = topic.split(".")[0];
@@ -120,8 +121,8 @@ function buildOrderRow(storeId: string, o: Record<string, unknown>) {
     fee_lines: toJson(o.fee_lines || []),
     coupon_lines: toJson(o.coupon_lines || []),
     raw_data: toJson(o),
-    date_created: (o.date_created as string) || null,
-    date_modified: (o.date_modified as string) || null,
+    date_created: normalizeWooDate(o.date_created, o.date_created_gmt),
+    date_modified: normalizeWooDate(o.date_modified, o.date_modified_gmt),
     synced_at: now,
   };
 }

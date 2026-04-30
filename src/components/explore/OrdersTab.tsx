@@ -139,12 +139,12 @@ const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIco
   failed: { wrap: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900", dot: "bg-red-500", Icon: AlertCircle },
 };
 
-export function OrdersTab({ storeId, storeUrl, storeName, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
+export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; storeTimezone?: string | null; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const { t, i18n } = useTranslation("site");
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
   const router = useRouter();
-  const storeTz: string | null = null;
+  const storeTz: string | null = storeTimezone;
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getWooUserAgent } from "@/lib/brand-name-server";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -79,8 +80,8 @@ async function upsertOrders(storeId: string, items: Record<string, unknown>[]) {
     fee_lines: toJson(o.fee_lines || []),
     coupon_lines: toJson(o.coupon_lines || []),
     raw_data: toJson(o),
-    date_created: o.date_created as string,
-    date_modified: o.date_modified as string,
+    date_created: normalizeWooDate(o.date_created, o.date_created_gmt),
+    date_modified: normalizeWooDate(o.date_modified, o.date_modified_gmt),
     synced_at: now,
   }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

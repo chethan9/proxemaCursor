@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooLiveFetch } from "@/lib/woo-live-fetch";
 import type { TablesInsert } from "@/integrations/supabase/helpers";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 async function warmWriteOrders(storeId: string, items: Record<string, unknown>[]) {
   if (!items.length) return;
@@ -27,10 +28,10 @@ async function warmWriteOrders(storeId: string, items: Record<string, unknown>[]
       fee_lines: (o.fee_lines ?? null) as TablesInsert<"orders">["fee_lines"],
       coupon_lines: (o.coupon_lines ?? null) as TablesInsert<"orders">["coupon_lines"],
       customer_note: (o.customer_note as string) ?? null,
-      date_created: (o.date_created as string) ?? null,
-      date_modified: (o.date_modified as string) ?? null,
-      date_paid: (o.date_paid as string) ?? null,
-      date_completed: (o.date_completed as string) ?? null,
+      date_created: normalizeWooDate(o.date_created, o.date_created_gmt),
+      date_modified: normalizeWooDate(o.date_modified, o.date_modified_gmt),
+      date_paid: normalizeWooDate(o.date_paid, o.date_paid_gmt),
+      date_completed: normalizeWooDate(o.date_completed, o.date_completed_gmt),
       raw_data: o as TablesInsert<"orders">["raw_data"],
       synced_at: new Date().toISOString(),
     }));

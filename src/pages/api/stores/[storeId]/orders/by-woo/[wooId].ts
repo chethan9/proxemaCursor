@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds } from "@/lib/woo-client";
 import { getWooUserAgent } from "@/lib/brand-name-server";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
@@ -54,10 +55,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       coupon_lines: o.coupon_lines,
       refunds: o.refunds,
       meta_data: o.meta_data,
-      date_created: o.date_created as string,
-      date_modified: o.date_modified as string,
-      date_completed: o.date_completed as string | null,
-      date_paid: o.date_paid as string | null,
+      date_created: normalizeWooDate(o.date_created, o.date_created_gmt),
+      date_modified: normalizeWooDate(o.date_modified, o.date_modified_gmt),
+      date_completed: normalizeWooDate(o.date_completed, o.date_completed_gmt),
+      date_paid: normalizeWooDate(o.date_paid, o.date_paid_gmt),
       raw_data: o,
       synced_at: new Date().toISOString(),
     };

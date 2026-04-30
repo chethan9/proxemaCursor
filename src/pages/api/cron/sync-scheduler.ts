@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getBrandNameCached, getWooUserAgent } from "@/lib/brand-name-server";
 import { isRetryableError, nextRetryDelaySeconds, MAX_SYNC_ATTEMPTS } from "@/lib/sync-error";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 interface StoreToSync {
   id: string;
@@ -157,7 +158,8 @@ async function syncOrders(store: StoreToSync): Promise<SyncResult> {
       shipping: toJson(order.shipping || {}), line_items: toJson(order.line_items || []),
       shipping_lines: toJson(order.shipping_lines || []), fee_lines: toJson(order.fee_lines || []),
       coupon_lines: toJson(order.coupon_lines || []), raw_data: toJson(order),
-      date_created: (order.date_created as string), date_modified: (order.date_modified as string),
+      date_created: normalizeWooDate(order.date_created, order.date_created_gmt),
+      date_modified: normalizeWooDate(order.date_modified, order.date_modified_gmt),
       synced_at: new Date().toISOString(),
     };
     const { data: existing } = await supabase.from("orders").select("id").eq("store_id", store.id).eq("woo_id", order.id).maybeSingle();

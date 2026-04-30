@@ -13,6 +13,7 @@ import {
 import { getAppUrl } from "@/lib/app-url";
 import { waitUntil } from "@vercel/functions";
 import { getEffectiveHistoryFrom } from "@/lib/history-window";
+import { normalizeWooDate } from "@/lib/woo-date";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -118,7 +119,9 @@ const ASPECTS: Record<string, AspectConfig> = {
       fee_lines: toJson(o.fee_lines || []),
       coupon_lines: toJson(o.coupon_lines || []),
       raw_data: toJson(o),
-      date_created: o.date_created, date_modified: o.date_modified, synced_at: now,
+      date_created: normalizeWooDate(o.date_created, o.date_created_gmt),
+      date_modified: normalizeWooDate(o.date_modified, o.date_modified_gmt),
+      synced_at: now,
     }),
   },
   customers: {

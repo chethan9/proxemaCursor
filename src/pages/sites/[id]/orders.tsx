@@ -27,6 +27,7 @@ function OrdersInner() {
         storeId={id}
         storeUrl={store.url}
         storeName={store.name}
+        storeTimezone={store.timezone}
         search={search}
         onSearchChange={setSearch}
         embedHeader
