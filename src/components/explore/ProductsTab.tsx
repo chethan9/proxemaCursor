@@ -100,6 +100,18 @@ interface ProductsTabProps {
   embedHeader?: boolean;
 }
 
+function countSelectedProductTypes(products: ProductRow[], selectedIds: Set<string>) {
+  if (selectedIds.size === 0) return { simple: 0, variable: 0 };
+  let simple = 0;
+  let variable = 0;
+  for (const p of products) {
+    if (!selectedIds.has(p.id)) continue;
+    if (p.type === "variable") variable += 1;
+    else simple += 1;
+  }
+  return { simple, variable };
+}
+
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
   const { t, i18n } = useTranslation("site");
   const queryClient = useQueryClient();
@@ -275,6 +287,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   });
   const products = productsResult?.data ?? [];
   const productCount = productsResult?.count ?? 0;
+  const selectionTypeCounts = countSelectedProductTypes(products, selectedIds);
   const showInitialLoading = !isHydrated || loading;
   const showRefetchOverlay = isFetching && !loading && products.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -940,6 +953,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 <span className="text-xs font-medium">{t("products.bulk.selected")}</span>
                 {overLimit && <span className="text-[11px] text-destructive ml-1">{t("products.bulk.maxLimit", { max: MAX_BULK })}</span>}
                 {locked && <span className="text-[11px] text-warning ml-1">{t("products.bulk.lockedDuringSync")}</span>}
+                <div className="flex items-center gap-3 border-l border-border pl-3 ml-1 text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 text-[11px]" title={t("products.filters.typeSimple")}>
+                    <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="font-mono tabular-nums text-foreground">{selectionTypeCounts.simple}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px]" title={t("products.filters.typeVariable")}>
+                    <Layers className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="font-mono tabular-nums text-foreground">{selectionTypeCounts.variable}</span>
+                  </span>
+                </div>
               </div>
               <div className="flex-1" />
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={overLimit || locked} onClick={() => setBulkDialog("status")}><CheckCircle2 className="h-3.5 w-3.5" />{t("products.bulk.status")}</Button>
@@ -1042,7 +1065,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             )}
                             <div
                               onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
-                              className={`absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                              className={`absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center ${selectedIds.has(p.id) ? "ring-2 ring-primary/40" : ""}`}
                             >
                               <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
                             </div>
@@ -1096,7 +1119,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           )}
                           <div
                             onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
-                            className={`absolute top-2.5 left-2.5 z-10 h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity ${selectedIds.has(p.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                            className={`absolute top-2.5 left-2.5 z-10 h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center ${selectedIds.has(p.id) ? "ring-2 ring-primary/40" : ""}`}
                           >
                             <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
                           </div>
