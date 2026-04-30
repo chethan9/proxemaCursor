@@ -129,30 +129,37 @@ export async function listDistinctEntityTypes(): Promise<string[]> {
   return Array.from(set).sort();
 }
 
-export function formatActionLabel(action: string): string {
-  return action.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+export function formatActionLabel(action: string | null | undefined): string {
+  if (action == null || typeof action !== "string") return "—";
+  const s = action.trim();
+  if (!s) return "—";
+  return s.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function summarizeDiff(diff: ActivityLogEntry["diff"]): string {
-  if (!diff) return "";
-  const d = diff as Record<string, unknown>;
-  if (
-    d.before &&
-    d.after &&
-    typeof d.before === "object" &&
-    typeof d.after === "object" &&
-    !Array.isArray(d.before) &&
-    !Array.isArray(d.after)
-  ) {
-    return summarizeNestedActivityDiff({
-      before: d.before as Record<string, unknown>,
-      after: d.after as Record<string, unknown>,
-    });
+  try {
+    if (!diff) return "";
+    const d = diff as Record<string, unknown>;
+    if (
+      d.before &&
+      d.after &&
+      typeof d.before === "object" &&
+      typeof d.after === "object" &&
+      !Array.isArray(d.before) &&
+      !Array.isArray(d.after)
+    ) {
+      return summarizeNestedActivityDiff({
+        before: d.before as Record<string, unknown>,
+        after: d.after as Record<string, unknown>,
+      });
+    }
+    const keys = Object.keys(diff);
+    if (keys.length === 0) return "";
+    if (keys.length <= 3) return keys.map((k) => k.replace(/_/g, " ")).join(", ");
+    return `${keys.slice(0, 3).map((k) => k.replace(/_/g, " ")).join(", ")} +${keys.length - 3} more`;
+  } catch {
+    return "";
   }
-  const keys = Object.keys(diff);
-  if (keys.length === 0) return "";
-  if (keys.length <= 3) return keys.map((k) => k.replace(/_/g, " ")).join(", ");
-  return `${keys.slice(0, 3).map((k) => k.replace(/_/g, " ")).join(", ")} +${keys.length - 3} more`;
 }
 
 export function activityToCsv(rows: ActivityLogEntry[]): string {

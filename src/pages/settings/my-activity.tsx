@@ -19,6 +19,8 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { formatNumber } from "@/lib/format-number";
 import { supabase } from "@/integrations/supabase/client";
 import { AUDIT_MODULES } from "@/lib/audit/log";
+
+const MODULE_FILTER_VALUES = new Set<string>(["__all", ...Object.values(AUDIT_MODULES)]);
 import { buildActivityExportParams } from "@/lib/audit/export-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -109,6 +111,10 @@ export default function MyActivityPage() {
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  /** Radix Select throws if `value` is not present in a SelectItem — coerce invalid/stale values. */
+  const moduleSelectValue =
+    filters.module && MODULE_FILTER_VALUES.has(filters.module) ? filters.module : "__all";
+
   return (
     <SettingsLayout title={t("myActivity.title")}>
       <div className="p-6 space-y-5 max-w-4xl">
@@ -136,7 +142,7 @@ export default function MyActivityPage() {
           <CardContent className="p-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <Select
-                value={filters.module || "__all"}
+                value={moduleSelectValue}
                 onValueChange={(v) => applyFilter({ module: v === "__all" ? undefined : v })}
               >
                 <SelectTrigger>

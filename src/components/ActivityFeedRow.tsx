@@ -34,8 +34,12 @@ function formatValue(v: unknown): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "Yes" : "No";
   if (typeof v === "object") {
-    const s = JSON.stringify(v);
-    return s.length > 80 ? s.substring(0, 80) + "…" : s;
+    try {
+      const s = JSON.stringify(v);
+      return s.length > 80 ? s.substring(0, 80) + "…" : s;
+    } catch {
+      return "[object]";
+    }
   }
   const s = String(v);
   return s.length > 80 ? s.substring(0, 80) + "…" : s;
@@ -78,7 +82,11 @@ export function ActivityFeedRow({
 }) {
   const { i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const ActorIcon = actorIcon[entry.actor_type] || User;
+  const actorKey =
+    entry.actor_type && entry.actor_type in actorIcon
+      ? (entry.actor_type as keyof typeof actorIcon)
+      : "user";
+  const ActorIcon = actorIcon[actorKey] ?? User;
   const initials = (entry.actor_email || "?").slice(0, 2).toUpperCase();
   const diffRows = getDiffRows(entry.diff);
   const canExpand = diffRows.length > 0;
@@ -113,10 +121,10 @@ export function ActivityFeedRow({
               {entry.actor_type}
             </Badge>
             <span className="text-muted-foreground">
-              {formatActionLabel(entry.action).toLowerCase()}
+              {formatActionLabel(entry.action ?? "").toLowerCase()}
             </span>
             <Badge variant="secondary" className="h-5 text-[10px]">
-              {entry.entity_type}
+              {entry.entity_type || "—"}
             </Badge>
             {entry.entity_id && (
               <span className="font-mono text-[11px] text-muted-foreground truncate max-w-[240px]">
