@@ -52,6 +52,40 @@ The IDE browser does **not** stream logs to disk by itself. The assistant pulls 
 
 ---
 
-## Round 2 — *(paste after next capture)*
+## Round 2 — 2026-05-01 (after navigation — user message: “capture”)
 
-*(Waiting for your navigation + “capture” message.)*
+### Local tab (`ba37fa`)
+
+- **URL at snapshot:** `http://localhost:3000/sites/bf3d7839-03d9-4cc7-9983-d892a4525a56/customers`
+- **Page title:** *(empty in accessibility snapshot — worth fixing `document.title` on site routes.)*
+- **UI:** Site shell with **Customers** current; search “Search customers…”, Sort, Columns (9), Export, page size **200**, **New customer**. Nav shows Home, Orders, Products, Customers, Categories, Tags, Brands, Downloads, Bulk jobs, Configuration.
+
+### Console (localhost tab, cumulative session)
+
+| Level | Approx. count |
+|-------|----------------|
+| `error` | **32** (bulk are **Recharts** “width/height -1” from **`.../home`**) |
+| `warning` | **67** (Fast Refresh, Vercel Analytics debug, HMR, etc.) |
+
+**Routes touched** (from analytics / error URLs): `/`, `/projects`, `/sites/.../home`, `/sites/.../orders`, `/sites/.../products`, **`/sites/.../customers`** (current).
+
+### Network (latest MCP slice for this tab — mostly Customers + polling)
+
+Notable Supabase calls:
+
+- **`customers?...&limit=200`** — full customer list for store `bf3d7839-...`.
+- **`stores`** — full list + single-store rows repeated (**possible dedupe / staleTime** opportunity).
+- **`stores?select=onboarding_completed_at,initial_sync_completed_at&id=eq....`** — **polled ~every 5s** while on the page (timestamps ~500ms apart in capture).
+- **`auth/v1/user`** — multiple GETs in short window.
+- **`bulk_jobs`**, **`user_view_preferences`** (`view_key=customers`), **`menu_configs`** (duplicate GET same query).
+- **`sync_runs?...running`** — sync status check.
+
+All sampled **statusCode 200**.
+
+### Production tab (`bc4687`)
+
+Not re-captured this round (unchanged unless you focused it).
+
+---
+
+## Round 3 — *(next “capture”)*
