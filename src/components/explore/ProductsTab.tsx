@@ -27,6 +27,7 @@ import {
 } from "@/services/productService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
+import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts, useProductBrandOptions, useProductCategoryOptions, useProductTagOptions } from "@/hooks/queries/useProducts";
@@ -40,6 +41,7 @@ import { Tags, Building2, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
+import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
@@ -122,6 +124,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  useScrollExpandedIntoView(expandedRowId);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
   const [exporting, setExporting] = useState(false);
   const exportingRef = useRef(false);
@@ -373,7 +377,33 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     toast,
   ]);
 
-  useEffect(() => { setSelectedIds(new Set()); }, [storeId, pageSize]);
+  useEffect(() => { setSelectedIds(new Set()); setExpandedRowId(null); }, [storeId, pageSize]);
+
+  const mergeProductIntoQueries = useCallback(
+    (updated: ProductRow) => {
+      queryClient.setQueriesData({ queryKey: queryKeys.products(storeId) }, (prev: unknown) => {
+        if (!prev || typeof prev !== "object") return prev;
+        const inf = prev as { pages?: { data: ProductRow[]; count: number }[]; data?: ProductRow[] };
+        if (Array.isArray(inf.pages)) {
+          return {
+            ...inf,
+            pages: inf.pages.map((pg) => ({
+              ...pg,
+              data: pg.data.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)),
+            })),
+          };
+        }
+        if (Array.isArray(inf.data)) {
+          return {
+            ...inf,
+            data: inf.data.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)),
+          };
+        }
+        return prev;
+      });
+    },
+    [queryClient, storeId],
+  );
 
   const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
     // Inline mutations should invalidate query; placeholder no-op.
@@ -1309,9 +1339,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const maxPRow = (p as ProductRow & { max_price?: number | null }).max_price;
                       const hasRangeRow = p.type === "variable" && minPRow != null && maxPRow != null && minPRow !== maxPRow;
                       const rangeTextRow = hasRangeRow ? `${currency ? currency + " " : ""}${Number(minPRow).toFixed(2)}–${Number(maxPRow).toFixed(2)}` : null;
+                      const isExpanded = expandedRowId === p.id;
                       return (
                         <React.Fragment key={p.id}>
-                          <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(p); return; } if (selectedIds.size > 0 && !locked) toggleSelect(p.id); else if (!locked) setQuickEditProduct(p); }}>
+                          <TableRow
+                            className={`hover:bg-muted/30 cursor-pointer transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`}
+                            onClick={() => {
+                              if (pending) { showLockedToast(p); return; }
+                              if (selectedIds.size > 0 && !locked) { toggleSelect(p.id); return; }
+                              if (!locked) setExpandedRowId((cur) => (cur === p.id ? null : p.id));
+                            }}
+                          >
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (!locked && !pending) toggleSelect(p.id); }} />
                             </TableCell>
@@ -1524,6 +1562,24 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               return null;
                             })}
                           </TableRow>
+                          {isExpanded && (
+                            <TableRow className="bg-muted/30 hover:bg-muted/30" data-expanded-row={p.id}>
+                              <TableCell colSpan={visibleColList.length + 1} className="p-0">
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <ProductRowExpanded
+                                    product={p}
+                                    storeUrl={storeUrl}
+                                    onSaved={mergeProductIntoQueries}
+                                    onClose={() => setExpandedRowId(null)}
+                                    onQuickEdit={() => {
+                                      setQuickEditProduct(p);
+                                      setExpandedRowId(null);
+                                    }}
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </React.Fragment>
                       );
                     })

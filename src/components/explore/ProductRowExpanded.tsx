@@ -13,9 +13,11 @@ interface Props {
   storeUrl?: string | null;
   onSaved: (p: ProductRow) => void;
   onClose: () => void;
+  /** Opens the full Quick edit dialog (e.g. from list expand panel). */
+  onQuickEdit?: () => void;
 }
 
-export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Props) {
+export function ProductRowExpanded({ product, storeUrl, onSaved, onClose, onQuickEdit }: Props) {
   const { toast } = useToast();
   const router = useRouter();
   const [regularPrice, setRegularPrice] = useState<string>(product.regular_price?.toString() || "");
@@ -167,8 +169,13 @@ export function ProductRowExpanded({ product, storeUrl, onSaved, onClose }: Prop
 
       {/* Save bar */}
       <div className="flex items-center justify-center mt-5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           <Button variant="ghost" size="sm" onClick={onClose} className="h-9">Cancel</Button>
+          {onQuickEdit && (
+            <Button variant="outline" size="sm" onClick={onQuickEdit} className="h-9">
+              Quick edit
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="h-9 gap-2 min-w-[140px]">
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Save Changes
