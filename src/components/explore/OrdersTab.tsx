@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, ChevronLeft, ChevronRight, GripVertical, ArrowLeft, Trash2, CheckCircle2, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, GripVertical, Trash2, CheckCircle2, ChevronRight, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, type LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTemplates } from "@/services/templateService";
@@ -52,10 +52,9 @@ import { fetchPreferences, savePreferences } from "@/services/viewPreferencesSer
 import { useOrders, useOrderPaymentOptions } from "@/hooks/queries/useOrders";
 import { usePaymentMethods } from "@/hooks/queries/usePaymentMethods";
 import { OrderRowExpanded } from "./OrderRowExpanded";
-import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
+import { InfiniteScrollSentinel } from "./InfiniteScrollSentinel";
 import { queryKeys } from "@/lib/query-client";
 import { normalizeNumberInput, normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
-import { fetchOrders } from "@/services/orderService";
 import { createBulkJob, ORDER_STATUS_OPTIONS } from "@/services/bulkJobService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
 import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
@@ -145,7 +144,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   useScrollExpandedIntoView(expandedRowId);
   const router = useRouter();
   const storeTz: string | null = storeTimezone;
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
     const v = parseInt(localStorage.getItem("orders-page-size") || "50", 10);
@@ -285,7 +283,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   // Clear selection when data/filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [storeId, debouncedSearch, statusFilter, paymentFilter, totalMin, totalMax, page, pageSize]);
+  }, [storeId, debouncedSearch, statusFilter, paymentFilter, totalMin, totalMax, pageSize]);
 
   const visibleColList = useMemo(
     () => columnOrder
@@ -317,9 +315,16 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   const normalizedTotalMin = normalizeNumberInput(totalMin);
   const normalizedTotalMax = normalizeNumberInput(totalMax);
 
-  const { data: ordersResult, isLoading: loading, isFetching, isPlaceholderData } = useOrders({
+  const {
+    data: orders,
+    count: orderCount,
+    isLoading: loading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useOrders({
     storeId,
-    page,
     pageSize,
     search: debouncedSearch,
     sortField: sort.field,
@@ -332,17 +337,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     dateTo: dateBounds.to,
     enabled: isHydrated,
   });
-  const orders = ordersResult?.data ?? [];
-  const orderCount = ordersResult?.count ?? 0;
   const showInitialLoading = !isHydrated || loading;
-  void isPlaceholderData;
-  const showRefetchOverlay = isFetching && !loading && orders.length > 0;
+  const showRefetchOverlay = isFetching && !loading && !isFetchingNextPage && orders.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
-  useExplorerKeyboard({
-    searchRef: searchInputRef,
-    onPrev: () => { if (page > 0) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < orderCount) setPage((p) => p + 1); },
-  });
+  useExplorerKeyboard({ searchRef: searchInputRef });
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const submitBulk = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0 || overLimit) return;
@@ -373,15 +374,29 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       if (bulkAction.type === "delete") {
         const deleteSet = new Set(orderIds);
         queryClient.setQueriesData({ queryKey: queryKeys.orders(storeId) }, (prev: unknown) => {
-          const cur = prev as { data?: OrderRow[]; count?: number } | undefined;
-          if (!cur || !Array.isArray(cur.data)) return prev;
-          const filtered = cur.data.filter((o) => !deleteSet.has(o.woo_id ?? -1));
-          const removed = cur.data.length - filtered.length;
-          return {
-            ...cur,
-            data: filtered,
-            count: Math.max(0, (cur.count ?? 0) - removed),
-          };
+          if (!prev || typeof prev !== "object") return prev;
+          const inf = prev as { pages?: { data: OrderRow[]; count: number }[]; pageParams?: unknown[] };
+          if (Array.isArray(inf.pages)) {
+            let removedTotal = 0;
+            const newPages = inf.pages.map((pg) => {
+              const filtered = pg.data.filter((o) => !deleteSet.has(o.woo_id ?? -1));
+              removedTotal += pg.data.length - filtered.length;
+              return { ...pg, data: filtered };
+            });
+            const firstCount = newPages[0]?.count ?? 0;
+            const newCount = Math.max(0, firstCount - removedTotal);
+            return {
+              ...inf,
+              pages: newPages.map((pg) => ({ ...pg, count: newCount })),
+            };
+          }
+          const cur = prev as { data?: OrderRow[]; count?: number };
+          if (Array.isArray(cur.data)) {
+            const filtered = cur.data.filter((o) => !deleteSet.has(o.woo_id ?? -1));
+            const removed = cur.data.length - filtered.length;
+            return { ...cur, data: filtered, count: Math.max(0, (cur.count ?? 0) - removed) };
+          }
+          return prev;
         });
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.orders(storeId) });
@@ -443,7 +458,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       label: c.label,
       accessor: colMap[c.key],
     }));
-    const suffix = selected.length !== orders.length ? `-${selected.length}-selected` : `-page-${page + 1}`;
+    const suffix = selected.length !== orders.length ? `-${selected.length}-selected` : `-${selected.length}-rows`;
     const filename = `orders-${storeName?.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || storeId.slice(0, 8)}${suffix}`;
     exportCsv(selected, columns, filename);
     void logClientAuditEvent({
@@ -454,7 +469,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       metadata: { row_count: selected.length, filename },
     });
     toast({ title: "Export ready", description: `Exported ${selected.length} orders to CSV` });
-  }, [orders, selectedIds, visibleColList, pmRegistry, storeTz, storeName, storeId, page, toast]);
+  }, [orders, selectedIds, visibleColList, pmRegistry, storeTz, storeName, storeId, toast]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
@@ -464,19 +479,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort]);
-
-  const prefetchOpts = useMemo(() => ({
-    storeId,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-    statusFilter: normalizedStatusFilter,
-    paymentMethodFilter: normalizedPaymentFilter,
-    totalMin: normalizedTotalMin,
-    totalMax: normalizedTotalMax,
-    dateFrom: dateBounds.from,
-    dateTo: dateBounds.to,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, normalizedStatusFilter, normalizedPaymentFilter, normalizedTotalMin, normalizedTotalMax, dateBounds.from, dateBounds.to]);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("orders-col-order", JSON.stringify(columnOrder));
@@ -526,38 +528,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     });
   }, [router.isReady, router.query]);
 
-  const pauseBackgroundPrefetch = showRefetchOverlay;
-
-  useBackgroundPagination({
-    enabled: !!storeId && orderCount > 0 && isHydrated && !pauseBackgroundPrefetch,
-    totalCount: orderCount,
-    pageSize,
-    currentPage: page,
-    queryKeyFn: (p) => queryKeys.orders(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
-    queryFn: (p) => fetchOrders({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 4000,
-    maxPages: 50,
-    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
-  });
-
-  // Keep adjacent pages warm so next/prev navigation feels immediate.
-  useEffect(() => {
-    if (!storeId || !isHydrated || orderCount <= 0 || pauseBackgroundPrefetch) return;
-    const totalPages = Math.ceil(orderCount / pageSize);
-    const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
-    for (const p of candidates) {
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.orders(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
-        queryFn: () => fetchOrders({ ...prefetchOpts, page: p, pageSize }),
-        staleTime: 60_000,
-      });
-    }
-  }, [queryClient, storeId, isHydrated, orderCount, page, pageSize, prefetchOpts, pauseBackgroundPrefetch]);
-
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(0);
     }, 200);
     return () => clearTimeout(t);
   }, [search]);
@@ -963,10 +936,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                 <>
                   <div className="h-4 w-px bg-border" />
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>Rows:</span>
+                    <span>Batch:</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1">{pageSize}</Button>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1" title="Rows fetched per scroll">{pageSize}</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {PAGE_SIZE_OPTIONS.map((n) => (
@@ -975,12 +948,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, orderCount)} of {formatNumber(orderCount, i18n.language)}
+                      {formatNumber(orders.length, i18n.language)} of {formatNumber(orderCount, i18n.language)}
                     </span>
-                    <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= orderCount}><ChevronRight className="h-3.5 w-3.5" /></Button>
-                    </div>
                   </div>
                 </>
               )}
@@ -1330,6 +1299,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                   })}
                 </TableBody>
               </Table>
+              <InfiniteScrollSentinel
+                hasMore={hasNextPage}
+                isLoading={isFetchingNextPage}
+                onLoadMore={handleLoadMore}
+                loaded={orders.length}
+                total={orderCount}
+              />
             </div>
           )}
         </CardContent>

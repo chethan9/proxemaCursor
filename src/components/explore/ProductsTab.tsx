@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, Layers, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
+import { Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, Layers, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -32,10 +32,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts, useProductBrandOptions, useProductCategoryOptions, useProductTagOptions } from "@/hooks/queries/useProducts";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
-import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
+import { InfiniteScrollSentinel } from "@/components/explore/InfiniteScrollSentinel";
 import { queryKeys } from "@/lib/query-client";
 import { normalizeNumberInput, normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
-import { fetchProducts } from "@/services/productService";
 import { useQueryClient } from "@tanstack/react-query";
 import { createBulkJob } from "@/services/bulkJobService";
 import { Tags, Building2, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock } from "lucide-react";
@@ -47,7 +46,6 @@ import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
-import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
@@ -117,7 +115,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const queryClient = useQueryClient();
   const { locked } = useSyncLocked(storeId);
   const router = useRouter();
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 50;
     const v = parseInt(localStorage.getItem("explore-page-size") || "50", 10);
@@ -227,10 +224,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, filterSimple, filterVariable]);
-
   const productTypeFilter = useMemo((): "simple" | "variable" | undefined => {
     if (filterSimple && filterVariable) return undefined;
     if (filterSimple && !filterVariable) return "simple";
@@ -269,9 +262,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const normalizedPriceMin = normalizeNumberInput(priceMin);
   const normalizedPriceMax = normalizeNumberInput(priceMax);
 
-  const { data: productsResult, isLoading: loading, isFetching } = useProducts({
+  const {
+    data: products,
+    count: productCount,
+    isLoading: loading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useProducts({
     storeId,
-    page,
     pageSize,
     search: debouncedSearch,
     sortField: sort.field,
@@ -285,17 +285,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     productTypeFilter,
     enabled: isHydrated,
   });
-  const products = productsResult?.data ?? [];
-  const productCount = productsResult?.count ?? 0;
   const selectionTypeCounts = countSelectedProductTypes(products, selectedIds);
   const showInitialLoading = !isHydrated || loading;
-  const showRefetchOverlay = isFetching && !loading && products.length > 0;
+  const showRefetchOverlay = isFetching && !loading && !isFetchingNextPage && products.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
-  useExplorerKeyboard({
-    searchRef: searchInputRef,
-    onPrev: () => { if (page > 0) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < productCount) setPage((p) => p + 1); },
-  });
+  useExplorerKeyboard({ searchRef: searchInputRef });
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const submitBulk = useCallback(async () => {
     if (!bulkDialog || selectedIds.size === 0 || overLimit) return;
@@ -326,15 +323,29 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         await createBulkJob({ store_id: storeId, job_type: "delete_products", total: wooIds.length, payload: { type: "delete_products", product_ids: wooIds, force: false } });
         const deleteSet = new Set(wooIds);
         queryClient.setQueriesData({ queryKey: queryKeys.products(storeId) }, (prev: unknown) => {
-          const cur = prev as { data?: ProductRow[]; count?: number } | undefined;
-          if (!cur || !Array.isArray(cur.data)) return prev;
-          const filtered = cur.data.filter((p) => !deleteSet.has(p.woo_id ?? -1));
-          const removed = cur.data.length - filtered.length;
-          return {
-            ...cur,
-            data: filtered,
-            count: Math.max(0, (cur.count ?? 0) - removed),
-          };
+          if (!prev || typeof prev !== "object") return prev;
+          const inf = prev as { pages?: { data: ProductRow[]; count: number }[]; pageParams?: unknown[] };
+          if (Array.isArray(inf.pages)) {
+            let removedTotal = 0;
+            const newPages = inf.pages.map((pg) => {
+              const filtered = pg.data.filter((p) => !deleteSet.has(p.woo_id ?? -1));
+              removedTotal += pg.data.length - filtered.length;
+              return { ...pg, data: filtered };
+            });
+            const firstCount = newPages[0]?.count ?? 0;
+            const newCount = Math.max(0, firstCount - removedTotal);
+            return {
+              ...inf,
+              pages: newPages.map((pg) => ({ ...pg, count: newCount })),
+            };
+          }
+          const cur = prev as { data?: ProductRow[]; count?: number };
+          if (Array.isArray(cur.data)) {
+            const filtered = cur.data.filter((p) => !deleteSet.has(p.woo_id ?? -1));
+            const removed = cur.data.length - filtered.length;
+            return { ...cur, data: filtered, count: Math.max(0, (cur.count ?? 0) - removed) };
+          }
+          return prev;
         });
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.products(storeId) });
@@ -366,46 +377,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     toast,
   ]);
 
-  useEffect(() => { setSelectedIds(new Set()); }, [storeId, page, pageSize]);
-
-  const prefetchOpts = useMemo(() => ({
-    storeId,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-    statusFilter: normalizedStatusFilter,
-    excludeOutOfStock,
-    categoryFilter: normalizedCategoryFilter,
-    stockStatusFilter: normalizedStockFilter,
-    priceMin: normalizedPriceMin,
-    priceMax: normalizedPriceMax,
-    productTypeFilter,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, normalizedStatusFilter, excludeOutOfStock, normalizedCategoryFilter, normalizedStockFilter, normalizedPriceMin, normalizedPriceMax, productTypeFilter]);
-
-  useBackgroundPagination({
-    enabled: !!storeId && productCount > 0,
-    totalCount: productCount,
-    pageSize,
-    currentPage: page,
-    queryKeyFn: (p) => queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
-    queryFn: (p) => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 20000,
-    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
-  });
-
-  // Keep adjacent pages warm so next/prev is instant across table/grid/compact views.
-  useEffect(() => {
-    if (!storeId || !isHydrated || productCount <= 0) return;
-    const totalPages = Math.ceil(productCount / pageSize);
-    const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
-    for (const p of candidates) {
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.products(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
-        queryFn: () => fetchProducts({ ...prefetchOpts, page: p, pageSize }),
-        staleTime: 60_000,
-      });
-    }
-  }, [queryClient, storeId, isHydrated, productCount, page, pageSize, prefetchOpts]);
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, pageSize]);
 
   const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
     // Inline mutations should invalidate query; placeholder no-op.
@@ -917,10 +889,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 </div>
                 {(productCount > 0 || loading) && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border">
-                    <span>Rows:</span>
+                    <span>Batch:</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1">{pageSize}<ChevronDown className="h-3 w-3" /></Button>
+                        <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1" title="Rows fetched per scroll">{pageSize}<ChevronDown className="h-3 w-3" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {PAGE_SIZE_OPTIONS.map((n) => (
@@ -929,12 +901,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {loading && productCount === 0 ? "Loading…" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, productCount)} of ${formatNumber(productCount, i18n.language)}`}
+                      {loading && productCount === 0 ? "Loading…" : `${formatNumber(products.length, i18n.language)} of ${formatNumber(productCount, i18n.language)}`}
                     </span>
-                    <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= productCount}><ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -1547,6 +1515,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 </TableBody>
               </Table>
             </div>
+          )}
+          {!showInitialLoading && products.length > 0 && (
+            <InfiniteScrollSentinel
+              hasMore={hasNextPage}
+              isLoading={isFetchingNextPage}
+              onLoadMore={handleLoadMore}
+              loaded={products.length}
+              total={productCount}
+            />
           )}
         </CardContent>
       </Card>

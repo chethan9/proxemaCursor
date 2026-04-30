@@ -1,26 +1,53 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { fetchProducts, type FetchProductsOptions } from "@/services/productService";
+import { useMemo } from "react";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { fetchProducts, type FetchProductsOptions, type ProductRow } from "@/services/productService";
 import { fetchAllBrands, fetchAllCategories, fetchAllTags } from "@/services/taxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
-export function useProducts(opts: FetchProductsOptions & { enabled?: boolean }) {
-  const { enabled: enabledOverride, ...fetchOpts } = opts;
+export type UseProductsOptions = Omit<FetchProductsOptions, "page"> & {
+  enabled?: boolean;
+  /** Batch size per fetched chunk. Default 50. */
+  pageSize?: number;
+};
+
+/**
+ * Infinite-scroll hook for the products list.
+ *
+ * Same shape as `useOrders` — returns a flat `data` array, `count` (total),
+ * `fetchNextPage`, `hasNextPage`, etc. Filters live in `queryKey`, so any
+ * change resets the list to the first chunk automatically.
+ */
+export function useProducts(opts: UseProductsOptions) {
+  const { enabled: enabledOverride, pageSize = 50, ...fetchOpts } = opts;
   const { data: syncStatus } = useStoreSyncStatus(fetchOpts.storeId);
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   const anySyncRunning = syncStatus?.running || initialSyncRunning;
-  return useQuery({
-    queryKey: [...queryKeys.products(fetchOpts.storeId, fetchOpts as unknown as Record<string, unknown>), initialSyncRunning ? "live" : "db"] as const,
-    queryFn: async () => {
+
+  const query = useInfiniteQuery({
+    queryKey: [
+      ...queryKeys.products(fetchOpts.storeId, { ...fetchOpts, pageSize } as unknown as Record<string, unknown>),
+      initialSyncRunning ? "live" : "db",
+      "infinite",
+    ] as const,
+    queryFn: async ({ pageParam = 0 }: { pageParam?: number }) => {
       if (initialSyncRunning) {
         try {
-          return await fetchProducts({ ...fetchOpts, useLive: true });
+          return await fetchProducts({ ...fetchOpts, pageSize, page: pageParam, useLive: true });
         } catch (e) {
           console.warn("[useProducts] live fetch failed, falling back to DB:", e);
-          return fetchProducts({ ...fetchOpts, useLive: false });
+          return fetchProducts({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
         }
       }
-      return fetchProducts({ ...fetchOpts, useLive: false });
+      return fetchProducts({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + p.data.length, 0);
+      const total = lastPage.count ?? 0;
+      if (lastPage.data.length === 0) return undefined;
+      if (loaded >= total) return undefined;
+      return allPages.length;
     },
     placeholderData: keepPreviousData,
     enabled: !!fetchOpts.storeId && syncStatus !== undefined && (enabledOverride ?? true),
@@ -28,9 +55,33 @@ export function useProducts(opts: FetchProductsOptions & { enabled?: boolean }) 
     gcTime: 10 * 60_000,
     refetchOnMount: false,
     refetchOnWindowFocus: anySyncRunning,
-    refetchInterval: anySyncRunning ? 8000 : false,
+    refetchInterval: anySyncRunning ? 8_000 : false,
     retry: 1,
   });
+
+  const data = useMemo<ProductRow[]>(() => {
+    if (!query.data) return [];
+    const out: ProductRow[] = [];
+    for (const p of query.data.pages) {
+      for (const r of p.data) out.push(r);
+    }
+    return out;
+  }, [query.data]);
+
+  const count = query.data?.pages[0]?.count ?? 0;
+
+  return {
+    data,
+    count,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    isPlaceholderData: query.isPlaceholderData,
+    refetch: query.refetch,
+    error: query.error,
+  };
 }
 
 export function useProductCategoryOptions(storeId: string) {
