@@ -49,30 +49,51 @@ function stripEmptyPlaceholders(editor: Editor) {
 }
 
 export function loadEditorFromDocument(editor: Editor, doc: TemplateConfig) {
+  // 1. Always inject the workspace CSS first so the canvas isn't dark while
+  //    the rest of the load runs (and survives any partial failure below).
+  injectCanvasFrameCss(editor);
+
+  // 2. Prefer the saved Grapes project payload — full fidelity.
   if (doc.grapesProject && typeof doc.grapesProject === "object" && Object.keys(doc.grapesProject).length > 0) {
     try {
       editor.loadProjectData(doc.grapesProject as Parameters<Editor["loadProjectData"]>[0]);
       injectCanvasFrameCss(editor);
       return;
-    } catch {
-      /* fall through */
+    } catch (e) {
+      console.warn("[builder] loadProjectData failed; falling back to HTML", e);
     }
   }
+
+  // 3. Otherwise rebuild from HTML / CSS.
   const html = doc.html || "";
-  if (!html.trim()) {
-    editor.setComponents(EMPTY_DOC_HTML);
+  try {
+    if (!html.trim()) {
+      editor.setComponents(EMPTY_DOC_HTML);
+    } else if (isFullHtmlDocument(html)) {
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      const styles = [...parsed.querySelectorAll("style")].map((s) => s.textContent || "").join("\n");
+      const body = parsed?.body?.innerHTML ?? "";
+      editor.setComponents(body || EMPTY_DOC_HTML);
+      if (styles.trim()) {
+        try {
+          editor.setStyle(styles);
+        } catch (e) {
+          console.warn("[builder] setStyle failed", e);
+        }
+      }
+    } else {
+      editor.setComponents(html);
+    }
+  } catch (e) {
+    console.error("[builder] failed to load document, resetting to empty", e);
+    try {
+      editor.setComponents(EMPTY_DOC_HTML);
+    } catch {
+      /* noop — canvas remains usable; CSS already injected */
+    }
+  } finally {
     injectCanvasFrameCss(editor);
-    return;
   }
-  if (isFullHtmlDocument(html)) {
-    const parsed = new DOMParser().parseFromString(html, "text/html");
-    const styles = [...parsed.querySelectorAll("style")].map((s) => s.textContent || "").join("\n");
-    editor.setComponents(parsed.body.innerHTML);
-    if (styles.trim()) editor.setStyle(styles);
-  } else {
-    editor.setComponents(html);
-  }
-  injectCanvasFrameCss(editor);
 }
 
 export function packDocument(editor: Editor, filenamePattern?: string): TemplateConfig {
@@ -137,10 +158,10 @@ export function BuilderCanvas({
       noticeOnUnload: false,
       panels: { defaults: [] },
       blockManager: { appendTo: appendSel },
-      styleManager: { appendTo: "" },
-      layerManager: { appendTo: "" },
-      traitManager: { appendTo: "" },
-      selectorManager: { appendTo: "" },
+      // Other managers stay logical-only — without `appendTo` and with no
+      // default panels, GrapesJS won't render their UI. Avoid `appendTo: ""`
+      // because Grapes runs document.querySelector(appendTo) and an empty
+      // string throws SyntaxError.
       deviceManager: {
         devices: [
           { name: "A4", width: "794px", widthMedia: "992px" },

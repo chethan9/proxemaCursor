@@ -60,10 +60,10 @@
 /* Card */
 .gjs-blocks-canvas .gjs-block {
   width: auto !important;
-  min-height: 78px !important;
-  height: 78px !important;
+  min-height: 88px !important;
+  height: 88px !important;
   margin: 0 !important;
-  padding: 8px 6px 6px !important;
+  padding: 10px 6px !important;
   border-radius: 10px !important;
   border: 1px solid var(--tmpl-card-border) !important;
   background: var(--tmpl-card-bg) !important;
@@ -72,7 +72,7 @@
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 4px !important;
+  gap: 8px !important;
   text-align: center !important;
   cursor: grab !important;
   transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s, background 0.15s !important;
@@ -119,15 +119,17 @@
 .gjs-blocks-canvas .gjs-block-label,
 .gjs-blocks-canvas .gjs-block__title {
   font-size: 11px !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
   font-weight: 500 !important;
   color: var(--tmpl-card-text) !important;
   text-align: center !important;
   margin: 0 !important;
   padding: 0 2px !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  word-break: break-word;
   max-width: 100%;
 }
 
