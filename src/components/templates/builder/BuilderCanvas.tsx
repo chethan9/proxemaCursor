@@ -48,48 +48,66 @@ function stripEmptyPlaceholders(editor: Editor) {
     .forEach((c) => c.remove());
 }
 
+/** Extract <body> innerHTML and concatenated <style> text from a full HTML doc. */
+function splitFullHtml(html: string): { body: string; css: string } {
+  try {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const css = [...parsed.querySelectorAll("style")].map((s) => s.textContent || "").join("\n");
+    return { body: parsed?.body?.innerHTML ?? "", css };
+  } catch {
+    return { body: html, css: "" };
+  }
+}
+
+/**
+ * Load a TemplateConfig into the editor.
+ *
+ * In Grapes 0.22+ the safe path is `loadProjectData` — `setComponents` +
+ * `setStyle` can hit timing bugs when invoked right after the editor's
+ * 'load' event (an internal CssComposer collection is briefly undefined,
+ * surfacing as the misleading "Cannot read properties of undefined
+ * (reading 'add')" trace).  We always go through `loadProjectData`.
+ */
 export function loadEditorFromDocument(editor: Editor, doc: TemplateConfig) {
-  // 1. Always inject the workspace CSS first so the canvas isn't dark while
-  //    the rest of the load runs (and survives any partial failure below).
   injectCanvasFrameCss(editor);
 
-  // 2. Prefer the saved Grapes project payload — full fidelity.
-  if (doc.grapesProject && typeof doc.grapesProject === "object" && Object.keys(doc.grapesProject).length > 0) {
-    try {
-      editor.loadProjectData(doc.grapesProject as Parameters<Editor["loadProjectData"]>[0]);
-      injectCanvasFrameCss(editor);
-      return;
-    } catch (e) {
-      console.warn("[builder] loadProjectData failed; falling back to HTML", e);
+  const projectData = (() => {
+    if (doc.grapesProject && typeof doc.grapesProject === "object" && Object.keys(doc.grapesProject).length > 0) {
+      return doc.grapesProject as Record<string, unknown>;
     }
-  }
-
-  // 3. Otherwise rebuild from HTML / CSS.
-  const html = doc.html || "";
-  try {
-    if (!html.trim()) {
-      editor.setComponents(EMPTY_DOC_HTML);
-    } else if (isFullHtmlDocument(html)) {
-      const parsed = new DOMParser().parseFromString(html, "text/html");
-      const styles = [...parsed.querySelectorAll("style")].map((s) => s.textContent || "").join("\n");
-      const body = parsed?.body?.innerHTML ?? "";
-      editor.setComponents(body || EMPTY_DOC_HTML);
-      if (styles.trim()) {
-        try {
-          editor.setStyle(styles);
-        } catch (e) {
-          console.warn("[builder] setStyle failed", e);
-        }
+    const html = (doc.html || "").trim();
+    let component = EMPTY_DOC_HTML;
+    let styles = "";
+    if (html) {
+      if (isFullHtmlDocument(html)) {
+        const split = splitFullHtml(html);
+        component = split.body || EMPTY_DOC_HTML;
+        styles = split.css;
+      } else {
+        component = html;
       }
-    } else {
-      editor.setComponents(html);
     }
+    return {
+      pages: [
+        {
+          component,
+          // Grapes accepts CSS as a string here.
+          styles: styles || undefined,
+        },
+      ],
+    };
+  })();
+
+  try {
+    editor.loadProjectData(projectData as Parameters<Editor["loadProjectData"]>[0]);
   } catch (e) {
-    console.error("[builder] failed to load document, resetting to empty", e);
+    console.error("[builder] loadProjectData failed; resetting to empty", e);
     try {
-      editor.setComponents(EMPTY_DOC_HTML);
+      editor.loadProjectData({
+        pages: [{ component: EMPTY_DOC_HTML }],
+      } as Parameters<Editor["loadProjectData"]>[0]);
     } catch {
-      /* noop — canvas remains usable; CSS already injected */
+      /* swallow — the canvas frame CSS keeps the workspace styled */
     }
   } finally {
     injectCanvasFrameCss(editor);
@@ -214,13 +232,22 @@ export function BuilderCanvas({
     const onLoad = () => {
       skipEmitRef.current = true;
       skipPaletteMutationsRef.current = true;
-      loadEditorFromDocument(editor, initialRef.current);
-      skipEmitRef.current = false;
-      requestAnimationFrame(() => {
-        skipPaletteMutationsRef.current = false;
-        refreshEmpty();
-      });
-      onEditorReadyRef.current?.(editor);
+      // Defer one tick so every Grapes manager has finished init before
+      // we feed components/styles in (avoids race with CssComposer).
+      setTimeout(() => {
+        try {
+          loadEditorFromDocument(editor, initialRef.current);
+        } catch (err) {
+          console.error("[builder] load failed", err);
+        } finally {
+          skipEmitRef.current = false;
+          requestAnimationFrame(() => {
+            skipPaletteMutationsRef.current = false;
+            refreshEmpty();
+          });
+          onEditorReadyRef.current?.(editor);
+        }
+      }, 0);
     };
 
     editor.on("load", onLoad);

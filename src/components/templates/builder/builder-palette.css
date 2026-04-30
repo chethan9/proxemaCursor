@@ -16,6 +16,19 @@
   --tmpl-card-border-hover: #c7d2fe;
   --tmpl-card-text: #0f172a;
   --tmpl-card-muted: #475569;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Override Grapes' default dark BlockManager skin — every nested wrapper. */
+.gjs-blocks-canvas,
+.gjs-blocks-canvas .gjs-blocks-c,
+.gjs-blocks-canvas .gjs-block-categories,
+.gjs-blocks-canvas .gjs-block-category,
+.gjs-blocks-canvas .gjs-blocks-no-cat {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 0 !important;
 }
 
 .gjs-blocks-canvas > .gjs-blocks-c,
