@@ -77,7 +77,7 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
   const {
     storeId,
     page,
-    pageSize = 50,
+    pageSize = 100,
     search,
     sortField = "date_created",
     sortDirection = "desc",

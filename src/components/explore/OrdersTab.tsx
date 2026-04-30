@@ -145,9 +145,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   const router = useRouter();
   const storeTz: string | null = storeTimezone;
   const [pageSize, setPageSize] = useState<number>(() => {
-    if (typeof window === "undefined") return 50;
-    const v = parseInt(localStorage.getItem("orders-page-size") || "50", 10);
-    return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
+    if (typeof window === "undefined") return 100;
+    const v = parseInt(localStorage.getItem("orders-page-size") || "100", 10);
+    return PAGE_SIZE_OPTIONS.includes(v) ? v : 100;
   });
 
   const search = searchProp ?? "";

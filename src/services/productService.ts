@@ -85,7 +85,7 @@ function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRo
 }
 
 export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number; live?: boolean }> {
-  const { storeId, page, pageSize = 50, search, sortField = "woo_date_created", sortDirection = "desc", statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, productTypeFilter, useLive } = opts;
+  const { storeId, page, pageSize = 100, search, sortField = "woo_date_created", sortDirection = "desc", statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, productTypeFilter, useLive } = opts;
 
   const effectiveCategory = normalizeSelectFilter(categoryFilter);
 

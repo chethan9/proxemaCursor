@@ -47,7 +47,7 @@ function wooCustomerToRow(c: Record<string, unknown>, storeId: string): Customer
 }
 
 export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ data: CustomerRow[]; count: number; live?: boolean }> {
-  const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter, useLive } = opts;
+  const { storeId, page, pageSize = 100, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter, useLive } = opts;
 
   if (useLive) {
     const qs = new URLSearchParams();

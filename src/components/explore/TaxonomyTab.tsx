@@ -1,4 +1,4 @@
-import { useState, Fragment, useRef } from "react";
+import { useState, Fragment, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "next-i18next";
 import { formatNumber } from "@/lib/format-number";
 import { ChevronRight, ChevronDown, Search, Download, ArrowUpDown, Plus, FolderTree, Tag as TagIcon, Award, Loader2, RefreshCw } from "lucide-react";
@@ -21,6 +21,7 @@ import { exportCsv } from "@/lib/exportCsv";
 import { logClientAuditEvent } from "@/lib/audit/client-log";
 import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
+import { InfiniteScrollSentinel } from "./InfiniteScrollSentinel";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
@@ -54,29 +55,40 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
   const { t, i18n } = useTranslation("site");
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState<number>(() => {
+    if (typeof window === "undefined") return 100;
+    const v = parseInt(localStorage.getItem("taxonomy-page-size") || "100", 10);
+    return PAGE_SIZES.includes(v) ? v : 100;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("taxonomy-page-size", String(pageSize));
+  }, [pageSize]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: pageRes, isLoading, isFetching } = useTaxonomyRows(storeId, mode, search, page, pageSize, sort.field, sort.direction);
+  const {
+    data: rows,
+    count: total,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useTaxonomyRows(storeId, mode, search, pageSize, sort.field, sort.direction);
   const { data: allCats } = useAllCategories(storeId, mode === "categories");
 
-  const items = (pageRes?.data || []).map((t) => ({
+  const items = rows.map((t) => ({
     ...t,
     parent_woo_id: (t as { parent_id?: number }).parent_id ?? null,
   }));
-  const total = pageRes?.count || 0;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const showRefetchOverlay = isFetching && !isLoading && items.length > 0;
+  const showRefetchOverlay = isFetching && !isLoading && !isFetchingNextPage && items.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
-  useExplorerKeyboard({
-    searchRef: searchInputRef,
-    onPrev: () => { if (page > 0 && !isFetching) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if (page < totalPages - 1 && !isFetching) setPage((p) => p + 1); },
-  });
+  useExplorerKeyboard({ searchRef: searchInputRef });
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   function handleExport() {
     exportCsv(
@@ -111,7 +123,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Refresh failed (${res.status})`);
       toast({ title: t("taxonomy.toasts.synced", { count: data.synced ?? 0, mode }) });
-      await qc.invalidateQueries({ queryKey: ["taxonomy", storeId, mode] });
+      await qc.invalidateQueries({ queryKey: ["taxonomy", mode, storeId] });
       await qc.invalidateQueries({ queryKey: ["taxonomy-all-categories", storeId] });
       if (mode === "categories") {
         await qc.invalidateQueries({ queryKey: queryKeys.productCategoryOptions(storeId) });
@@ -144,7 +156,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                 {SORT_OPTIONS.map((opt, i) => (
                   <DropdownMenuItem
                     key={i}
-                    onClick={() => { setSort(opt); setPage(0); }}
+                    onClick={() => setSort(opt)}
                     className={sort.field === opt.field && sort.direction === opt.direction ? "bg-accent" : ""}
                   >
                     {t(`taxonomy.sortOptions.${opt.key}`)}
@@ -161,7 +173,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                 <Input
                   ref={searchInputRef}
                   value={search}
-                  onChange={(e) => { onSearchChange(e.target.value); setPage(0); }}
+                  onChange={(e) => onSearchChange(e.target.value)}
                   placeholder={t("taxonomy.search", { mode })}
                   className="pl-9 pr-12 h-9"
                 />
@@ -193,24 +205,20 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                 <>
                   <div className="h-4 w-px bg-border" />
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>{t("taxonomy.rows")}</span>
+                    <span>Batch:</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1">{pageSize}</Button>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1" title="Rows fetched per scroll">{pageSize}</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {PAGE_SIZES.map((n) => (
-                          <DropdownMenuItem key={n} onClick={() => { setPageSize(n); setPage(0); }} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
+                          <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {formatNumber(total, i18n.language)}
+                      {formatNumber(items.length, i18n.language)} of {formatNumber(total, i18n.language)}
                     </span>
-                    <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || isFetching}><ChevronRight className="h-3.5 w-3.5 rotate-180" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isFetching}><ChevronRight className="h-3.5 w-3.5" /></Button>
-                    </div>
                   </div>
                 </>
               )}
@@ -295,6 +303,15 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                 )}
               </TableBody>
             </Table>
+            {!isLoading && items.length > 0 && (
+              <InfiniteScrollSentinel
+                hasMore={hasNextPage}
+                isLoading={isFetchingNextPage}
+                onLoadMore={handleLoadMore}
+                loaded={items.length}
+                total={total}
+              />
+            )}
           </div>
         </CardContent>
         <TableLoadingOverlay show={showRefetchOverlay} />

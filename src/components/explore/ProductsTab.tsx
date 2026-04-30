@@ -116,9 +116,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const { locked } = useSyncLocked(storeId);
   const router = useRouter();
   const [pageSize, setPageSize] = useState<number>(() => {
-    if (typeof window === "undefined") return 50;
-    const v = parseInt(localStorage.getItem("explore-page-size") || "50", 10);
-    return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
+    if (typeof window === "undefined") return 100;
+    const v = parseInt(localStorage.getItem("explore-page-size") || "100", 10);
+    return PAGE_SIZE_OPTIONS.includes(v) ? v : 100;
   });
   const [viewMode, setViewMode] = useState<"table" | "grid" | "compact">(() => {
     if (typeof window === "undefined") return "table";

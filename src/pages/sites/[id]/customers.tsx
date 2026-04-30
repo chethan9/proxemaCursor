@@ -27,8 +27,6 @@ import {
   ArrowUpDown,
   Download,
   Users,
-  ChevronLeft,
-  ChevronRight,
   GripVertical,
   FilterX,
   UserPlus,
@@ -40,7 +38,6 @@ import {
   useCustomers,
   useCustomerLastOrders,
 } from "@/hooks/queries/useCustomers";
-import { fetchCustomers } from "@/services/customerService";
 import {
   getCustomerName,
   getCustomerInitials,
@@ -51,7 +48,7 @@ import {
   type SortDirection,
 } from "@/services/customerService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
-import { useBackgroundPagination } from "@/hooks/useBackgroundPagination";
+import { InfiniteScrollSentinel } from "@/components/explore/InfiniteScrollSentinel";
 import { useToast } from "@/hooks/use-toast";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
@@ -62,7 +59,6 @@ import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
-import { useQueryClient } from "@tanstack/react-query";
 
 type ColumnKey =
   | "name"
@@ -188,18 +184,16 @@ function CustomerRowExpanded({ customer, storeId }: { customer: CustomerRow; sto
 function CustomersInner() {
   const { t, i18n } = useTranslation("site");
   const router = useRouter();
-  const queryClient = useQueryClient();
   const storeId = typeof router.query.id === "string" ? router.query.id : "";
   const { toast } = useToast();
   const { locked } = useSyncLocked(storeId);
 
   const [search, setSearch] = useState(() => getQueryString(router.query, "q") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => getQueryString(router.query, "q") ?? "");
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(() => {
-    if (typeof window === "undefined") return 50;
-    const v = parseInt(localStorage.getItem("customers-page-size") || "50", 10);
-    return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
+    if (typeof window === "undefined") return 100;
+    const v = parseInt(localStorage.getItem("customers-page-size") || "100", 10);
+    return PAGE_SIZE_OPTIONS.includes(v) ? v : 100;
   });
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -209,7 +203,7 @@ function CustomersInner() {
   useSyncUrl({ q: debouncedSearch }, { q: "" });
 
   useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 200);
+    const t = setTimeout(() => { setDebouncedSearch(search); }, 200);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -284,55 +278,27 @@ function CustomersInner() {
     [visibleCols, columnOrder]
   );
 
-  const { data: result, isLoading, isFetching } = useCustomers({
+  const {
+    data: customers,
+    count,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useCustomers({
     storeId,
-    page,
     pageSize,
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
   });
-  const customers = result?.data ?? [];
-  const count = result?.count ?? 0;
-  const showRefetchOverlay = isFetching && !isLoading && customers.length > 0;
+  const showRefetchOverlay = isFetching && !isLoading && !isFetchingNextPage && customers.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
-  useExplorerKeyboard({
-    searchRef: searchInputRef,
-    onPrev: () => { if (page > 0) setPage((p) => Math.max(0, p - 1)); },
-    onNext: () => { if ((page + 1) * pageSize < count) setPage((p) => p + 1); },
-  });
-
-  const prefetchOpts = useMemo(() => ({
-    storeId,
-    search: debouncedSearch,
-    sortField: sort.field,
-    sortDirection: sort.direction,
-  }), [storeId, debouncedSearch, sort.field, sort.direction]);
-
-  useBackgroundPagination({
-    enabled: !!storeId && count > 0,
-    totalCount: count,
-    pageSize,
-    currentPage: page,
-    queryKeyFn: (p) => ["customers", storeId, { ...prefetchOpts, page: p, pageSize }, "db"] as const,
-    queryFn: (p) => fetchCustomers({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 20000,
-    resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
-  });
-
-  // Keep adjacent pages warm for instant next/prev navigation.
-  useEffect(() => {
-    if (!storeId || count <= 0) return;
-    const totalPages = Math.ceil(count / pageSize);
-    const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
-    for (const p of candidates) {
-      void queryClient.prefetchQuery({
-        queryKey: ["customers", storeId, { ...prefetchOpts, page: p, pageSize }, "db"] as const,
-        queryFn: () => fetchCustomers({ ...prefetchOpts, page: p, pageSize }),
-        staleTime: 60_000,
-      });
-    }
-  }, [queryClient, storeId, count, page, pageSize, prefetchOpts]);
+  useExplorerKeyboard({ searchRef: searchInputRef });
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const hasActiveFilters = !!search;
 
@@ -466,24 +432,20 @@ function CustomersInner() {
                 <>
                   <div className="h-4 w-px bg-border" />
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>{t("customers.toolbar.rows")}:</span>
+                    <span>Batch:</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1">{pageSize}</Button>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1" title="Rows fetched per scroll">{pageSize}</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {PAGE_SIZE_OPTIONS.map((n) => (
-                          <DropdownMenuItem key={n} onClick={() => { setPageSize(n); setPage(0); }} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
+                          <DropdownMenuItem key={n} onClick={() => setPageSize(n)} className={pageSize === n ? "bg-accent" : ""}>{n}</DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="whitespace-nowrap">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, count)} of {formatNumber(count, i18n.language)}
+                      {formatNumber(customers.length, i18n.language)} of {formatNumber(count, i18n.language)}
                     </span>
-                    <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * pageSize >= count}><ChevronRight className="h-3.5 w-3.5" /></Button>
-                    </div>
                   </div>
                 </>
               )}
@@ -619,6 +581,15 @@ function CustomersInner() {
                 )}
               </TableBody>
             </Table>
+            {!isLoading && customers.length > 0 && (
+              <InfiniteScrollSentinel
+                hasMore={hasNextPage}
+                isLoading={isFetchingNextPage}
+                onLoadMore={handleLoadMore}
+                loaded={customers.length}
+                total={count}
+              />
+            )}
           </div>
         </CardContent>
         <TableLoadingOverlay show={showRefetchOverlay} />

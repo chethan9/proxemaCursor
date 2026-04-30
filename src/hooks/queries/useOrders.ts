@@ -7,7 +7,7 @@ import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
 export type UseOrdersOptions = Omit<FetchOrdersOptions, "page"> & {
   enabled?: boolean;
-  /** Batch size per fetched chunk. Default 50. */
+  /** Batch size per fetched chunk. Default 100. */
   pageSize?: number;
 };
 
@@ -19,7 +19,7 @@ export type UseOrdersOptions = Omit<FetchOrdersOptions, "page"> & {
  * resets the list automatically (first chunk re-fetched).
  */
 export function useOrders(opts: UseOrdersOptions) {
-  const { enabled: enabledOverride, pageSize = 50, ...fetchOpts } = opts;
+  const { enabled: enabledOverride, pageSize = 100, ...fetchOpts } = opts;
   const { data: syncStatus } = useStoreSyncStatus(fetchOpts.storeId);
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   const anySyncRunning = syncStatus?.running || initialSyncRunning;
