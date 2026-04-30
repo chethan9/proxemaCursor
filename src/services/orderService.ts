@@ -11,6 +11,13 @@ export type OrderRow = Database["public"]["Tables"]["orders"]["Row"] & {
 export type OrderSortField = "date_created" | "total" | "order_number" | "synced_at" | "created_at";
 export type SortDirection = "asc" | "desc";
 
+/** Columns for list/grid queries — omits heavy JSON blobs; expanded rows use `fetchOrderById`. */
+export const ORDER_LIST_SELECT =
+  "id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, line_items, date_created, date_modified, synced_at, created_at, pending_action, pending_job_id, pending_at";
+
+export const ORDER_FULL_SELECT =
+  "id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, shipping, line_items, shipping_lines, fee_lines, coupon_lines, date_created, date_modified, synced_at, created_at, pending_action, pending_job_id, pending_at";
+
 export interface FetchOrdersOptions {
   storeId: string;
   page: number;
@@ -25,6 +32,8 @@ export interface FetchOrdersOptions {
   dateFrom?: string;
   dateTo?: string;
   useLive?: boolean;
+  /** Supabase only: list omits shipping / shipping_lines / fee_lines / coupon_lines to shrink payloads. */
+  listProjection?: "list" | "full";
 }
 
 function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
@@ -65,7 +74,22 @@ function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
 }
 
 export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: OrderRow[]; count: number; live?: boolean }> {
-  const { storeId, page, pageSize = 50, search, sortField = "date_created", sortDirection = "desc", statusFilter, paymentMethodFilter, totalMin, totalMax, dateFrom, dateTo, useLive } = opts;
+  const {
+    storeId,
+    page,
+    pageSize = 50,
+    search,
+    sortField = "date_created",
+    sortDirection = "desc",
+    statusFilter,
+    paymentMethodFilter,
+    totalMin,
+    totalMax,
+    dateFrom,
+    dateTo,
+    useLive,
+    listProjection = "list",
+  } = opts;
   const effectiveSearch = normalizeSearch(search);
   const effectiveStatus = normalizeSelectFilter(statusFilter);
   const effectivePayment = normalizeSelectFilter(paymentMethodFilter);
@@ -89,7 +113,8 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
     return { data: (json.data as Record<string, unknown>[]).map((o) => wooOrderToRow(o, storeId)), count: json.count, live: true };
   }
 
-  let query = supabase.from("orders").select("id, store_id, woo_id, order_number, status, currency, total, subtotal, total_tax, shipping_total, discount_total, payment_method, payment_method_title, customer_id, billing, shipping, line_items, shipping_lines, fee_lines, coupon_lines, date_created, date_modified, synced_at, created_at, pending_action, pending_job_id, pending_at", { count: "exact" }).eq("store_id", storeId);
+  const projection = listProjection === "full" ? ORDER_FULL_SELECT : ORDER_LIST_SELECT;
+  let query = supabase.from("orders").select(projection, { count: "exact" }).eq("store_id", storeId);
   const pendingPredicates = ["pending_action.is.null", "pending_action.neq.delete"];
   if (effectiveSearch) {
     const s = effectiveSearch;
@@ -123,7 +148,7 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
   query = query.range(page * pageSize, (page + 1) * pageSize - 1);
   const { data, count, error } = await query;
   if (error) throw error;
-  return { data: (data || []) as OrderRow[], count: count || 0 };
+  return { data: (data ?? []) as unknown as OrderRow[], count: count ?? 0 };
 }
 
 export function getCustomerName(billing: unknown): string {
@@ -199,6 +224,12 @@ export async function updateOrderStatus(id: string, status: string): Promise<Ord
     throw new Error(err.message || err.error || `Update failed (${res.status})`);
   }
   return (await res.json()) as OrderRow;
+}
+
+export async function fetchOrderById(storeId: string, orderId: string): Promise<OrderRow | null> {
+  const { data, error } = await supabase.from("orders").select("*").eq("store_id", storeId).eq("id", orderId).maybeSingle();
+  if (error) throw error;
+  return data as OrderRow | null;
 }
 
 export async function getOrFetchOrderByWooId(storeId: string, wooId: number): Promise<OrderRow | null> {

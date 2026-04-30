@@ -24,6 +24,7 @@ export const queryKeys = {
   productCategoryOptions: (storeId: string) => ["stores", storeId, "products", "category-options"] as const,
   orders: (storeId: string, filters?: Record<string, unknown>) =>
     filters === undefined ? (["stores", storeId, "orders"] as const) : (["stores", storeId, "orders", filters] as const),
+  orderDetail: (storeId: string, orderId: string) => ["stores", storeId, "orders", "detail", orderId] as const,
   orderPaymentOptions: (storeId: string) => ["stores", storeId, "orders", "payment-options"] as const,
   paymentMethods: ["payment-methods"] as const,
   syncRuns: (storeId: string) => ["stores", storeId, "sync-runs"] as const,

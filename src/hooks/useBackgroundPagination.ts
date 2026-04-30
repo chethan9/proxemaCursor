@@ -109,5 +109,5 @@ export function useBackgroundPagination<T>({
       if (!started) clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, totalCount, pageSize, resetKey]);
+  }, [enabled, totalCount, pageSize, currentPage, resetKey]);
 }

@@ -27,8 +27,8 @@ export function useOrders(opts: FetchOrdersOptions & { enabled?: boolean }) {
     staleTime: anySyncRunning ? 10_000 : 60_000,
     gcTime: 10 * 60_000,
     refetchOnMount: false,
-    refetchOnWindowFocus: true,
-    refetchInterval: anySyncRunning ? 8000 : false,
+    refetchOnWindowFocus: false,
+    refetchInterval: anySyncRunning ? 25_000 : false,
     retry: 1,
   });
 }

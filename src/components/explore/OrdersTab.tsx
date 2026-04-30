@@ -526,20 +526,23 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     });
   }, [router.isReady, router.query]);
 
+  const pauseBackgroundPrefetch = showRefetchOverlay;
+
   useBackgroundPagination({
-    enabled: !!storeId && orderCount > 0,
+    enabled: !!storeId && orderCount > 0 && isHydrated && !pauseBackgroundPrefetch,
     totalCount: orderCount,
     pageSize,
     currentPage: page,
     queryKeyFn: (p) => queryKeys.orders(storeId, { ...prefetchOpts, page: p, pageSize } as unknown as Record<string, unknown>),
     queryFn: (p) => fetchOrders({ ...prefetchOpts, page: p, pageSize }),
-    maxRecords: 20000,
+    maxRecords: 4000,
+    maxPages: 50,
     resetKey: `${JSON.stringify(prefetchOpts)}|${pageSize}`,
   });
 
   // Keep adjacent pages warm so next/prev navigation feels immediate.
   useEffect(() => {
-    if (!storeId || !isHydrated || orderCount <= 0) return;
+    if (!storeId || !isHydrated || orderCount <= 0 || pauseBackgroundPrefetch) return;
     const totalPages = Math.ceil(orderCount / pageSize);
     const candidates = [page + 1, page - 1].filter((p) => p >= 0 && p < totalPages);
     for (const p of candidates) {
@@ -549,7 +552,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
         staleTime: 60_000,
       });
     }
-  }, [queryClient, storeId, isHydrated, orderCount, page, pageSize, prefetchOpts]);
+  }, [queryClient, storeId, isHydrated, orderCount, page, pageSize, prefetchOpts, pauseBackgroundPrefetch]);
 
   useEffect(() => {
     const t = setTimeout(() => {

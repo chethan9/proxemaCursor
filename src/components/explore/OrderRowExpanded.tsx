@@ -1,10 +1,11 @@
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText, Hourglass, PauseCircle, AlertCircle, CircleDashed, CheckCircle2, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
-import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
+import { updateOrderStatus, getCustomerName, getCustomerEmail, fetchOrderById, type OrderRow } from "@/services/orderService";
+import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
 import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
@@ -33,36 +34,46 @@ const STATUS_CHANGE_OPTIONS = ["processing", "on-hold", "completed", "cancelled"
 export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) {
   const { i18n } = useTranslation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { track, markSaved, markFailed } = useRecentMutations();
   const [saving, setSaving] = useState<string | null>(null);
 
-  const billing = (order.billing || {}) as {
+  const isLiveRow = typeof order.id === "string" && order.id.startsWith("live-");
+  const { data: detailOrder } = useQuery({
+    queryKey: queryKeys.orderDetail(order.store_id, order.id),
+    queryFn: () => fetchOrderById(order.store_id, order.id),
+    enabled: !!order.store_id && !!order.id && !isLiveRow,
+    staleTime: 60_000,
+  });
+  const orderFull = detailOrder ? ({ ...order, ...detailOrder } as OrderRow) : order;
+
+  const billing = (orderFull.billing || {}) as {
     first_name?: string; last_name?: string; email?: string; phone?: string;
     address_1?: string; address_2?: string; city?: string; state?: string; postcode?: string; country?: string;
   };
-  const shipping = (order.shipping || {}) as typeof billing;
-  const lineItems = Array.isArray(order.line_items) ? (order.line_items as Array<{
+  const shipping = (orderFull.shipping || {}) as typeof billing;
+  const lineItems = Array.isArray(orderFull.line_items) ? (orderFull.line_items as Array<{
     name?: string; sku?: string; quantity?: number; price?: number | string; subtotal?: string; total?: string; image?: { src?: string };
   }>) : [];
-  const coupons = Array.isArray(order.coupon_lines) ? (order.coupon_lines as Array<{ code?: string; discount?: string }>) : [];
-  const shippingLines = Array.isArray(order.shipping_lines) ? (order.shipping_lines as Array<{ method_title?: string; total?: string }>) : [];
+  const coupons = Array.isArray(orderFull.coupon_lines) ? (orderFull.coupon_lines as Array<{ code?: string; discount?: string }>) : [];
+  const shippingLines = Array.isArray(orderFull.shipping_lines) ? (orderFull.shipping_lines as Array<{ method_title?: string; total?: string }>) : [];
 
-  const custName = getCustomerName(order.billing);
-  const custEmail = getCustomerEmail(order.billing);
-  const currency = order.currency || "KWD";
+  const custName = getCustomerName(orderFull.billing);
+  const custEmail = getCustomerEmail(orderFull.billing);
+  const currency = orderFull.currency || "KWD";
   const computedSubtotal = lineItems.reduce((s, li) => {
     const sub = Number(li.subtotal || 0);
     return s + (sub > 0 ? sub : Number(li.total || 0));
   }, 0);
 
   const { data: linkedCustomer } = useQuery({
-    queryKey: ["order-customer-link", order.store_id, order.customer_id, custEmail],
+    queryKey: ["order-customer-link", orderFull.store_id, orderFull.customer_id, custEmail],
     queryFn: async () => {
-      const hasWooId = order.customer_id && order.customer_id > 0;
+      const hasWooId = orderFull.customer_id && orderFull.customer_id > 0;
       if (!hasWooId && !custEmail) return null;
-      let query = supabase.from("customers").select("id").eq("store_id", order.store_id).limit(1);
+      let query = supabase.from("customers").select("id").eq("store_id", orderFull.store_id).limit(1);
       if (hasWooId) {
-        query = query.eq("woo_id", order.customer_id as number);
+        query = query.eq("woo_id", orderFull.customer_id as number);
       } else if (custEmail) {
         query = query.ilike("email", custEmail);
       }
@@ -70,24 +81,25 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
       if (error) return null;
       return data;
     },
-    enabled: !!(order.store_id && (order.customer_id || custEmail)),
+    enabled: !!(orderFull.store_id && (orderFull.customer_id || custEmail)),
     staleTime: 60_000,
   });
 
   const handleStatusChange = async (newStatus: string) => {
-    if (newStatus === order.status) return;
+    if (newStatus === orderFull.status) return;
     setSaving(newStatus);
-    const previousStatus = order.status;
-    onSaved({ ...order, status: newStatus });
-    track("order", order.id, order.store_id);
+    const previousStatus = orderFull.status;
+    onSaved({ ...orderFull, status: newStatus });
+    track("order", orderFull.id, orderFull.store_id);
     try {
-      const updated = await updateOrderStatus(order.id, newStatus);
+      const updated = await updateOrderStatus(orderFull.id, newStatus);
+      queryClient.setQueryData(queryKeys.orderDetail(orderFull.store_id, orderFull.id), updated);
       onSaved(updated);
-      markSaved("order", order.id);
-      toast({ title: "Status updated", description: `Order #${order.order_number || order.woo_id} → ${newStatus}` });
+      markSaved("order", orderFull.id);
+      toast({ title: "Status updated", description: `Order #${orderFull.order_number || orderFull.woo_id} → ${newStatus}` });
     } catch (e) {
-      onSaved({ ...order, status: previousStatus });
-      markFailed("order", order.id);
+      onSaved({ ...orderFull, status: previousStatus });
+      markFailed("order", orderFull.id);
       toast({ title: "Update failed — reverted", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setSaving(null);
@@ -172,27 +184,27 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
             <span>Subtotal</span>
             <span className="font-mono">{computedSubtotal.toFixed(2)} {currency}</span>
           </div>
-          {order.total_tax != null && Number(order.total_tax) > 0 && (
+          {orderFull.total_tax != null && Number(orderFull.total_tax) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Tax</span>
-              <span className="font-mono">{order.total_tax} {currency}</span>
+              <span className="font-mono">{orderFull.total_tax} {currency}</span>
             </div>
           )}
-          {order.shipping_total != null && Number(order.shipping_total) > 0 && (
+          {orderFull.shipping_total != null && Number(orderFull.shipping_total) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Shipping</span>
-              <span className="font-mono">{order.shipping_total} {currency}</span>
+              <span className="font-mono">{orderFull.shipping_total} {currency}</span>
             </div>
           )}
-          {Number(order.discount_total) > 0 && (
+          {Number(orderFull.discount_total) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Discount</span>
-              <span className="font-mono">-{order.discount_total} {currency}</span>
+              <span className="font-mono">-{orderFull.discount_total} {currency}</span>
             </div>
           )}
           <div className="flex justify-between pt-1 border-t border-border font-semibold">
             <span>Total</span>
-            <span className="font-mono">{order.total ?? "—"} {currency}</span>
+            <span className="font-mono">{orderFull.total ?? "—"} {currency}</span>
           </div>
         </div>
       </div>
@@ -216,7 +228,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
               </a>
             )}
             <div className="text-xs text-muted-foreground pt-1">
-              Payment: <span className="text-foreground">{order.payment_method_title || order.payment_method || "—"}</span>
+              Payment: <span className="text-foreground">{orderFull.payment_method_title || orderFull.payment_method || "—"}</span>
             </div>
           </div>
         </div>
@@ -247,7 +259,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Change status</div>
           <div className="space-y-1">
-            {STATUS_CHANGE_OPTIONS.filter((s) => s !== order.status).map((s) => {
+            {STATUS_CHANGE_OPTIONS.filter((s) => s !== orderFull.status).map((s) => {
               const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
               const isSaving = saving === s;
               const Icon = style.Icon;
@@ -274,14 +286,14 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Actions</div>
           <div className="space-y-1">
             <Link
-              href={{ pathname: `/sites/${order.store_id}/orders/${order.id}`, query: { returnTo: returnTo || `/sites/${order.store_id}/orders` } }}
+              href={{ pathname: `/sites/${orderFull.store_id}/orders/${orderFull.id}`, query: { returnTo: returnTo || `/sites/${orderFull.store_id}/orders` } }}
               className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <FileText className="h-2.5 w-2.5" />
               <span className="font-medium">Open order details</span>
               <span className="ml-auto">→</span>
             </Link>
-            <TemplatePrintMenu orderId={order.id} storeId={order.store_id} type="invoice" />
+            <TemplatePrintMenu orderId={orderFull.id} storeId={orderFull.store_id} type="invoice" />
             {custEmail && (
               <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <Mail className="h-2.5 w-2.5" />
@@ -290,7 +302,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
               </a>
             )}
             {storeUrl && (
-              <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${order.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
+              <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${orderFull.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <ExternalLink className="h-2.5 w-2.5" />
                 <span>WP admin</span>
                 <span className="ml-auto text-muted-foreground">→</span>
@@ -298,7 +310,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
             )}
             {linkedCustomer?.id ? (
               <Link
-                href={`/sites/${order.store_id}/customers/${linkedCustomer.id}`}
+                href={`/sites/${orderFull.store_id}/customers/${linkedCustomer.id}`}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
               >
                 <User className="h-2.5 w-2.5" />
@@ -320,8 +332,8 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
         </div>
 
         <div className="text-[10px] text-muted-foreground pt-2 border-t border-border space-y-0.5">
-          <div>Woo ID: <span className="font-mono text-foreground">{order.woo_id}</span></div>
-          {order.date_created && <div>{formatDate(order.date_created, i18n.language)}</div>}
+          <div>Woo ID: <span className="font-mono text-foreground">{orderFull.woo_id}</span></div>
+          {orderFull.date_created && <div>{formatDate(orderFull.date_created, i18n.language)}</div>}
         </div>
       </div>
     </div>

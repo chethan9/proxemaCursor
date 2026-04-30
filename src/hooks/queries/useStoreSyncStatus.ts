@@ -16,11 +16,15 @@ export function useStoreSyncStatus(storeId: string | undefined) {
       };
     },
     enabled: !!storeId,
-    staleTime: 3_000,
+    staleTime: (query) => {
+      const data = query.state.data as { initialSyncDone: boolean; running: boolean } | undefined;
+      if (!data) return 3_000;
+      return !data.initialSyncDone || data.running ? 4_000 : 60_000;
+    },
     refetchInterval: (query) => {
       const data = query.state.data as { initialSyncDone: boolean; running: boolean } | undefined;
       if (!data) return false;
-      return (!data.initialSyncDone || data.running) ? 4000 : false;
+      return (!data.initialSyncDone || data.running) ? 8000 : false;
     },
   });
 }
