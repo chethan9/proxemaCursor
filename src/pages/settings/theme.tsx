@@ -5,9 +5,8 @@ import { useTranslation } from "next-i18next";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Palette, Save, RotateCcw, Check, Lock } from "lucide-react";
+import { Palette, Save, RotateCcw, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +14,6 @@ type Preset = "classic" | "modern";
 const PRESET_IDS: Preset[] = ["classic", "modern"];
 
 export default function ThemePage() {
-  const { isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation("settings");
   const [preset, setPreset] = useState<Preset>("classic");
@@ -36,9 +34,8 @@ export default function ThemePage() {
   const dirty = preset !== initial;
 
   async function save() {
-    if (!isSuperAdmin) return;
     setSaving(true);
-    const { error } = await supabase.from("app_settings").update({ theme_preset: preset }).eq("id", "global");
+    const { error } = await supabase.rpc("set_global_theme_preset", { p_theme: preset });
     setSaving(false);
     if (error) {
       toast({ title: t("theme.saveFailed"), description: error.message, variant: "destructive" });
@@ -56,13 +53,6 @@ export default function ThemePage() {
           <Palette className="h-5 w-5 text-primary" />
           <h1 className="text-2xl font-semibold tracking-tight">{t("theme.title")}</h1>
         </div>
-
-        {!isSuperAdmin && (
-          <div className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-            <Lock className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>{t("theme.lockMessage")}</span>
-          </div>
-        )}
 
         <Card>
           <CardContent className="pt-6">
@@ -83,12 +73,10 @@ export default function ThemePage() {
                     <button
                       key={id}
                       type="button"
-                      disabled={!isSuperAdmin}
                       onClick={() => setPreset(id)}
                       className={cn(
                         "relative rounded-xl border-2 p-5 text-left transition-all",
                         selected ? "border-foreground ring-2 ring-foreground/10" : "border-border hover:border-foreground/40",
-                        !isSuperAdmin && "cursor-not-allowed opacity-80"
                       )}
                     >
                       {selected && (
@@ -116,18 +104,16 @@ export default function ThemePage() {
           </CardContent>
         </Card>
 
-        {isSuperAdmin && (
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => setPreset(initial)} disabled={!dirty || saving}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              {t("theme.reset")}
-            </Button>
-            <Button onClick={save} disabled={!dirty || saving}>
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? t("theme.saving") : t("theme.save")}
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => setPreset(initial)} disabled={!dirty || saving}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            {t("theme.reset")}
+          </Button>
+          <Button onClick={save} disabled={!dirty || saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? t("theme.saving") : t("theme.save")}
+          </Button>
+        </div>
       </div>
     </SettingsLayout>
   );

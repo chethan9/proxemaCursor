@@ -3460,6 +3460,7 @@ export type Database = {
         Args: { p_client_id: string; p_currency: string }
         Returns: undefined
       }
+      set_global_theme_preset: { Args: { p_theme: string }; Returns: undefined }
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {
