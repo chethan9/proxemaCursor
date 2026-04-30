@@ -4,10 +4,11 @@ import { useCallback, useId, useMemo, useState } from "react";
 import type { Editor } from "grapesjs";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
-import type { TemplateConfig } from "@/lib/templates/document";
+import type { PageSettings, TemplateConfig } from "@/lib/templates/document";
 import type { VariableGroup } from "@/lib/templates/templateVariableGroups";
 import { BuilderTopBar } from "./BuilderTopBar";
 import { BuilderLeftPanel } from "./BuilderLeftPanel";
+import { BuilderRightPanel } from "./BuilderRightPanel";
 import { BuilderPreviewDialog } from "./BuilderPreviewPanel";
 import { BuilderVariablesDialog } from "./BuilderVariablesPanel";
 
@@ -89,6 +90,9 @@ export function TemplateBuilderShell({
 }: TemplateBuilderShellProps) {
   const reactId = useId().replace(/:/g, "");
   const blockHostId = useMemo(() => `gjs-bm-${reactId}`, [reactId]);
+  const styleHostId = useMemo(() => `gjs-sm-${reactId}`, [reactId]);
+  const traitHostId = useMemo(() => `gjs-tm-${reactId}`, [reactId]);
+  const selectorHostId = useMemo(() => `gjs-sel-${reactId}`, [reactId]);
 
   const [editor, setEditor] = useState<Editor | null>(null);
   const [canUndo, setCanUndo] = useState(false);
@@ -96,6 +100,7 @@ export function TemplateBuilderShell({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [variablesOpen, setVariablesOpen] = useState(false);
   const [blockSearch, setBlockSearch] = useState("");
+  const [rightOpen, setRightOpen] = useState(true);
 
   const syncUndo = useCallback((ed: Editor | null) => {
     if (!ed) {
@@ -164,6 +169,8 @@ export function TemplateBuilderShell({
         pdfDisabled={pdfDisabled}
         onSetDefault={onSetDefault}
         setDefaultPending={setDefaultPending}
+        rightOpen={rightOpen}
+        onToggleRight={() => setRightOpen((v) => !v)}
       />
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -181,6 +188,9 @@ export function TemplateBuilderShell({
           <BuilderCanvas
             key={canvasKey}
             blockHostId={blockHostId}
+            styleHostId={styleHostId}
+            traitHostId={traitHostId}
+            selectorHostId={selectorHostId}
             initialDocument={document}
             onSnapshot={onDocumentSnapshot}
             onEditorReady={onEditorReady}
@@ -188,6 +198,19 @@ export function TemplateBuilderShell({
             className="flex-1 min-h-0"
           />
         </main>
+
+        <BuilderRightPanel
+          editor={editor}
+          styleHostId={styleHostId}
+          traitHostId={traitHostId}
+          selectorHostId={selectorHostId}
+          page={document.page}
+          onPageChange={(next: PageSettings) =>
+            onDocumentSnapshot({ ...document, page: next })
+          }
+          pageDisabled={readOnly}
+          open={rightOpen}
+        />
       </div>
 
       <BuilderPreviewDialog

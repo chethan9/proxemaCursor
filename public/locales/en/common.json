@@ -158,6 +158,7 @@
       "users": "Users",
       "roles": "Roles",
       "plans": "Plans",
+      "billingControls": "Billing & enforcement",
       "subscriptions": "Subscriptions",
       "menuEditor": "Menu Editor",
       "paymentMethods": "Payment Methods",

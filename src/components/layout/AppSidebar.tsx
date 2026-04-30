@@ -18,6 +18,7 @@ import { getMenuConfig, type RoleKey } from "@/services/menuConfigService";
 import { mergeMenu, resolveForSidebar, buildInitialTree, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { useSubscription } from "@/hooks/queries/useSubscription";
 import { useAppSettings } from "@/hooks/queries/useAppSettings";
+import { isBillingEffectivelyEnforced } from "@/lib/billing-mode";
 import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -118,7 +119,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
   const { profile, role, can, isSuperAdmin, signOut, permissions, loading: authLoading, user } = useAuth();
   const { settings: appSettings } = useAppSettings();
   const { hasAccess: subscriptionHasAccess } = useSubscription();
-  const billingLocked = appSettings.billingEnforcementEnabled && !subscriptionHasAccess && !isSuperAdmin;
+  const billingLocked = isBillingEffectivelyEnforced(appSettings) && !subscriptionHasAccess && !isSuperAdmin;
   const canRef = useRef(can);
   const isSuperAdminRef = useRef(isSuperAdmin);
   const billingLockedRef = useRef(billingLocked);

@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShieldAlert, Clock } from "lucide-react";
+import { Loader2, ShieldAlert, Clock, FlaskConical } from "lucide-react";
 
 type Settings = {
   billingEnforcementEnabled: boolean;
   quotaGraceDays: number;
+  billingDevMode: boolean;
 };
 
 async function authHeaders() {
@@ -35,7 +36,7 @@ function AdminBillingInner() {
     },
   });
 
-  const settings: Settings = data ?? { billingEnforcementEnabled: true, quotaGraceDays: 7 };
+  const settings: Settings = data ?? { billingEnforcementEnabled: true, quotaGraceDays: 7, billingDevMode: false };
   const graceValue = graceDraft ?? settings.quotaGraceDays;
 
   const saveMutation = useMutation({
@@ -74,11 +75,40 @@ function AdminBillingInner() {
 
       <Card>
         <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" /> Developer mode</CardTitle>
+              <CardDescription className="mt-1">
+                When on, subscription gates, the pricing redirect, sidebar locks, and API quota checks behave as if plan enforcement is off — without changing the enforcement toggle below. Use for QA and bugfixes only.
+              </CardDescription>
+            </div>
+            <Switch
+              checked={settings.billingDevMode}
+              disabled={saveMutation.isPending}
+              onCheckedChange={(v) => saveMutation.mutate({ billingDevMode: v })}
+              aria-label="Toggle billing developer mode"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {settings.billingDevMode && (
+            <Alert className="border-amber-200 bg-amber-50 text-amber-950 [&>svg]:text-amber-800">
+              <AlertDescription>
+                <strong>Dev mode is on.</strong> Everyone sees a yellow banner at the top of the app. Turn off when finished testing.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5" /> Plan enforcement</CardTitle>
               <CardDescription className="mt-1">
                 When enabled, users without an active plan are sent to the in-app pricing page and product surfaces are hidden until they pick a plan.
+                Overridden while Developer mode is on.
               </CardDescription>
             </div>
             <Switch
@@ -90,7 +120,7 @@ function AdminBillingInner() {
           </div>
         </CardHeader>
         <CardContent>
-          {!settings.billingEnforcementEnabled && (
+          {!settings.billingEnforcementEnabled && !settings.billingDevMode && (
             <Alert>
               <AlertDescription>
                 Enforcement is currently <strong>off</strong>. All users have full access regardless of subscription state, and quota limits are not blocking.

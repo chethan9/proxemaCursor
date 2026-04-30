@@ -5,9 +5,14 @@ import grapesjs from "grapesjs";
 import type { Component, Editor } from "grapesjs";
 import { supabase } from "@/integrations/supabase/client";
 import type { TemplateConfig } from "@/lib/templates/document";
-import { isFullHtmlDocument, mergePrintDocument } from "@/lib/templates/document";
+import { isFullHtmlDocument, mergePrintDocument, type PageSettings } from "@/lib/templates/document";
+import {
+  expandHandlebarsForExport,
+  migrateHtmlStringForEditor,
+  wireHandlebarsCanvasEditing,
+} from "@/lib/templates/templateHandlebarsPreview";
 import { registerTemplateBlocks } from "@/lib/templates/grapes-blocks";
-import { CANVAS_FRAME_CSS } from "@/components/templates/builder/templateBuilderStyles";
+import { buildCanvasFrameCss } from "@/components/templates/builder/templateBuilderStyles";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -17,7 +22,7 @@ export const EMPTY_DOC_HTML = `<div id="wrapper"><div class="tmpl-page"><div cla
   Drag element or block here
 </div></div></div>`;
 
-function injectCanvasFrameCss(editor: Editor) {
+function injectCanvasFrameCss(editor: Editor, page?: PageSettings) {
   const doc = editor.Canvas.getDocument();
   if (!doc?.head) return;
   let el = doc.getElementById("tmpl-canvas-frame-style");
@@ -26,11 +31,13 @@ function injectCanvasFrameCss(editor: Editor) {
     el.id = "tmpl-canvas-frame-style";
     doc.head.appendChild(el);
   }
-  el.textContent = CANVAS_FRAME_CSS;
+  el.textContent = buildCanvasFrameCss(page);
 }
 
 function isEmptyCanvasState(editor: Editor): boolean {
-  const page = editor.DomComponents.getWrapper().find(".tmpl-page")[0];
+  const wrapper = editor?.DomComponents?.getWrapper?.();
+  if (!wrapper) return false;
+  const page = wrapper.find(".tmpl-page")?.[0];
   if (!page) return false;
   const kids = page.components();
   if (kids.length === 0) return true;
@@ -43,9 +50,9 @@ function isEmptyCanvasState(editor: Editor): boolean {
 }
 
 function stripEmptyPlaceholders(editor: Editor) {
-  editor.DomComponents.getWrapper()
-    .find(".tmpl-placeholder, .tmpl-empty-dropzone")
-    .forEach((c) => c.remove());
+  const wrapper = editor?.DomComponents?.getWrapper?.();
+  if (!wrapper) return;
+  wrapper.find(".tmpl-placeholder, .tmpl-empty-dropzone").forEach((c) => c.remove());
 }
 
 /** Extract <body> innerHTML and concatenated <style> text from a full HTML doc. */
@@ -69,7 +76,7 @@ function splitFullHtml(html: string): { body: string; css: string } {
  * (reading 'add')" trace).  We always go through `loadProjectData`.
  */
 export function loadEditorFromDocument(editor: Editor, doc: TemplateConfig) {
-  injectCanvasFrameCss(editor);
+  injectCanvasFrameCss(editor, doc.page);
 
   const projectData = (() => {
     if (doc.grapesProject && typeof doc.grapesProject === "object" && Object.keys(doc.grapesProject).length > 0) {
@@ -110,20 +117,28 @@ export function loadEditorFromDocument(editor: Editor, doc: TemplateConfig) {
       /* swallow — the canvas frame CSS keeps the workspace styled */
     }
   } finally {
-    injectCanvasFrameCss(editor);
+    injectCanvasFrameCss(editor, doc.page);
   }
 }
 
-export function packDocument(editor: Editor, filenamePattern?: string): TemplateConfig {
+export function packDocument(
+  editor: Editor,
+  filenamePattern?: string,
+  page?: PageSettings,
+): TemplateConfig {
   const css = editor.getCss();
-  const body = editor.getHtml();
+  const rawBody = editor.getHtml();
+  const body = expandHandlebarsForExport(rawBody);
   const grapesProject = editor.getProjectData() as Record<string, unknown>;
-  const merged = mergePrintDocument({ bodyHtml: body, css, title: "Document" });
-  return { html: merged, css, grapesProject, filenamePattern };
+  const merged = mergePrintDocument({ bodyHtml: body, css, title: "Document", page });
+  return { html: merged, css, grapesProject, filenamePattern, page };
 }
 
 export type BuilderCanvasProps = {
   blockHostId: string;
+  styleHostId: string;
+  traitHostId: string;
+  selectorHostId: string;
   initialDocument: TemplateConfig;
   onSnapshot: (doc: TemplateConfig) => void;
   onEditorReady?: (editor: Editor) => void;
@@ -133,6 +148,9 @@ export type BuilderCanvasProps = {
 
 export function BuilderCanvas({
   blockHostId,
+  styleHostId,
+  traitHostId,
+  selectorHostId,
   initialDocument,
   onSnapshot,
   onEditorReady,
@@ -148,6 +166,14 @@ export function BuilderCanvas({
   const skipPaletteMutationsRef = useRef(true);
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
+  // Stash `onSnapshot` in a ref so `emit` keeps a stable identity even when
+  // the parent passes a fresh arrow on every render. Without this the editor
+  // useEffect re-runs on every parent render, destroys+re-inits GrapesJS, and
+  // the canvas flickers (also produces "Cannot read properties of undefined
+  // (reading 'getDocument')" when a deferred onLoad runs against a destroyed
+  // editor).
+  const onSnapshotRef = useRef(onSnapshot);
+  onSnapshotRef.current = onSnapshot;
   const [showEmptyOverlay, setShowEmptyOverlay] = useState(false);
 
   const emit = useCallback(() => {
@@ -158,14 +184,19 @@ export function BuilderCanvas({
       debounceRef.current = null;
       const ed2 = editorRef.current;
       if (!ed2) return;
-      onSnapshot(packDocument(ed2, initialRef.current.filenamePattern));
+      onSnapshotRef.current(
+        packDocument(ed2, initialRef.current.filenamePattern, initialRef.current.page),
+      );
     }, 450);
-  }, [onSnapshot]);
+  }, []);
 
   useEffect(() => {
     if (!rootRef.current) return;
     const el = rootRef.current;
-    const appendSel = `#${CSS.escape(blockHostId)}`;
+    const blockSel = `#${CSS.escape(blockHostId)}`;
+    const styleSel = `#${CSS.escape(styleHostId)}`;
+    const traitSel = `#${CSS.escape(traitHostId)}`;
+    const selectorSel = `#${CSS.escape(selectorHostId)}`;
     const editorBox = { current: null as Editor | null };
     const editor = grapesjs.init({
       container: el,
@@ -175,11 +206,54 @@ export function BuilderCanvas({
       storageManager: false,
       noticeOnUnload: false,
       panels: { defaults: [] },
-      blockManager: { appendTo: appendSel },
-      // Other managers stay logical-only — without `appendTo` and with no
-      // default panels, GrapesJS won't render their UI. Avoid `appendTo: ""`
-      // because Grapes runs document.querySelector(appendTo) and an empty
-      // string throws SyntaxError.
+      blockManager: { appendTo: blockSel },
+      // Mount the right-side managers into our React-managed host divs so
+      // selecting an element on the canvas drives the Styles / Properties
+      // panel.
+      styleManager: {
+        appendTo: styleSel,
+        sectors: [
+          {
+            name: "Layout",
+            open: true,
+            properties: ["display", "position", "top", "right", "bottom", "left", "float", "z-index"],
+          },
+          {
+            name: "Size",
+            open: false,
+            properties: ["width", "min-width", "max-width", "height", "min-height", "max-height"],
+          },
+          { name: "Space", open: false, properties: ["padding", "margin"] },
+          {
+            name: "Typography",
+            open: false,
+            properties: [
+              "font-family",
+              "font-size",
+              "font-weight",
+              "letter-spacing",
+              "color",
+              "line-height",
+              "text-align",
+              "text-decoration",
+              "text-transform",
+              "text-shadow",
+            ],
+          },
+          {
+            name: "Background",
+            open: false,
+            properties: ["background-color", "background"],
+          },
+          {
+            name: "Borders",
+            open: false,
+            properties: ["border-radius", "border", "box-shadow"],
+          },
+        ],
+      },
+      traitManager: { appendTo: traitSel },
+      selectorManager: { appendTo: selectorSel, componentFirst: true },
       deviceManager: {
         devices: [
           { name: "A4", width: "794px", widthMedia: "992px" },
@@ -217,7 +291,10 @@ export function BuilderCanvas({
 
     const refreshEmpty = () => {
       const ed = editorRef.current;
-      if (ed) setShowEmptyOverlay(isEmptyCanvasState(ed));
+      // Skip while we're loading — Grapes fires `update` events during init
+      // and project-data load when no wrapper exists yet.
+      if (!ed || skipPaletteMutationsRef.current) return;
+      setShowEmptyOverlay(isEmptyCanvasState(ed));
     };
 
     const onStructureMut = (model: Component) => {
@@ -235,8 +312,20 @@ export function BuilderCanvas({
       // Defer one tick so every Grapes manager has finished init before
       // we feed components/styles in (avoids race with CssComposer).
       setTimeout(() => {
+        // If the editor was destroyed between `load` firing and this tick
+        // (e.g. cleanup ran), bail out — calling Canvas/DomComponents on a
+        // destroyed editor throws.
+        if (editor !== editorRef.current) return;
         try {
           loadEditorFromDocument(editor, initialRef.current);
+          const html = editor.getHtml();
+          const migrated = migrateHtmlStringForEditor(html);
+          if (migrated !== html) {
+            skipEmitRef.current = true;
+            editor.setComponents(migrated);
+            skipEmitRef.current = false;
+          }
+          wireHandlebarsCanvasEditing(editor, { readOnly: !!readOnly });
         } catch (err) {
           console.error("[builder] load failed", err);
         } finally {
@@ -275,7 +364,26 @@ export function BuilderCanvas({
       editorRef.current = null;
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
+    // Intentionally only depend on `blockHostId` (stable from useId) and
+    // `emit` (now has stable identity via onSnapshotRef). The other host
+    // ids are also stable from useId in the shell, so re-running this
+    // effect on their change is unnecessary (and would destroy/re-init
+    // GrapesJS, causing the canvas to flicker).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emit, blockHostId]);
+
+  // Re-inject canvas frame CSS when page settings change (size,
+  // orientation, margin, padding, background) and emit a snapshot so the
+  // saved HTML's @page rule and body padding stay in sync.
+  const pageKey = initialDocument.page ? JSON.stringify(initialDocument.page) : "";
+  useEffect(() => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    injectCanvasFrameCss(ed, initialDocument.page);
+    emit();
+    // pageKey is the deep-comparison key for the page settings object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageKey]);
 
   const insertStarterText = () => {
     const ed = editorRef.current;

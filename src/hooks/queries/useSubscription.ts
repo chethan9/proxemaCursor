@@ -3,6 +3,7 @@ import { getSubscriptionByClient } from "@/services/subscriptionService";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useAppSettings } from "@/hooks/queries/useAppSettings";
 import { hasAccess, effectiveStatus, daysUntilLock } from "@/lib/subscription-state";
+import { isBillingEffectivelyEnforced } from "@/lib/billing-mode";
 
 export function useSubscription() {
   const { user, profile } = useAuth();
@@ -18,7 +19,7 @@ export function useSubscription() {
 
   const sub = q.data ?? null;
   const baseAccess = hasAccess(sub);
-  const access = settings.billingEnforcementEnabled ? baseAccess : true;
+  const access = isBillingEffectivelyEnforced(settings) ? baseAccess : true;
   return {
     subscription: sub,
     isLoading: q.isLoading,

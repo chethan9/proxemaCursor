@@ -1,0 +1,406 @@
+/* ============================================================================
+   Right Panel — light SaaS re-skin for GrapesJS Style / Trait managers.
+   Grapes ships a dark skin, so we override aggressively and treat each
+   sector as a clean accordion card with proper typography.
+   ============================================================================ */
+
+.gjs-right-panel,
+.gjs-right-panel * {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+/* The selector / class-manager host div is hidden in markup (className="hidden"),
+   but we also force-hide its rendered children in case Grapes lifts them.
+   PDF templates don't need class chips; this removes a lot of noise. */
+.gjs-right-panel .gjs-clm-tags,
+.gjs-right-panel .gjs-clm-tags-states,
+.gjs-right-panel .gjs-clm-sels,
+.gjs-right-panel .gjs-clm-sels-info,
+.gjs-right-panel .gjs-clm-label,
+.gjs-right-panel .gjs-clm-tags-btn {
+  display: none !important;
+}
+
+/* ---------- Manager containers ---------- */
+.gjs-right-panel .gjs-style-host,
+.gjs-right-panel .gjs-trait-host {
+  background: transparent !important;
+  color: #0f172a !important;
+}
+
+.gjs-right-panel .gjs-sm-sectors,
+.gjs-right-panel .gjs-sm-properties,
+.gjs-right-panel .gjs-trt-traits {
+  background: transparent !important;
+  color: #0f172a !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+/* ---------- Style Manager: sector card ---------- */
+.gjs-right-panel .gjs-sm-sector {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  margin: 8px 4px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+}
+
+/* Sector title row: label LEFT, caret RIGHT */
+.gjs-right-panel .gjs-sm-sector .gjs-sm-sector-title {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  padding: 11px 12px !important;
+  border: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row-reverse !important;
+  justify-content: space-between !important;
+  cursor: pointer;
+  letter-spacing: 0;
+  text-transform: none !important;
+  user-select: none;
+}
+.gjs-right-panel .gjs-sm-sector .gjs-sm-sector-title:hover {
+  background: #f8fafc !important;
+}
+.gjs-right-panel .gjs-sm-sector .gjs-sm-sector-label {
+  flex: 1;
+  color: #0f172a !important;
+}
+.gjs-right-panel .gjs-sm-sector .gjs-sm-sector-caret {
+  color: #94a3b8 !important;
+  transition: transform 0.15s;
+  margin-left: 8px;
+}
+.gjs-right-panel .gjs-sm-sector.gjs-sm-open .gjs-sm-sector-caret {
+  transform: rotate(180deg);
+}
+
+/* Body of an open sector */
+.gjs-right-panel .gjs-sm-sector .gjs-sm-properties {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  padding: 6px 12px 14px !important;
+  border-top: 1px solid #f1f5f9 !important;
+}
+.gjs-right-panel .gjs-sm-sector:not(.gjs-sm-open) .gjs-sm-properties {
+  display: none !important;
+}
+
+/* ---------- Property cells ---------- */
+.gjs-right-panel .gjs-sm-property {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  background: transparent !important;
+}
+.gjs-right-panel .gjs-sm-property.gjs-sm-property--full,
+.gjs-right-panel .gjs-sm-property.gjs-sm-composite,
+.gjs-right-panel .gjs-sm-property.gjs-sm-stack,
+.gjs-right-panel .gjs-sm-property[data-property-id="margin"],
+.gjs-right-panel .gjs-sm-property[data-property-id="padding"],
+.gjs-right-panel .gjs-sm-property[data-property-id="border"],
+.gjs-right-panel .gjs-sm-property[data-property-id="border-radius"],
+.gjs-right-panel .gjs-sm-property[data-property-id="box-shadow"],
+.gjs-right-panel .gjs-sm-property[data-property-id="text-shadow"],
+.gjs-right-panel .gjs-sm-property[data-property-id="background"],
+.gjs-right-panel .gjs-sm-property[data-property-id="background-color"],
+.gjs-right-panel .gjs-sm-property[data-property-id="background-image"],
+.gjs-right-panel .gjs-sm-property[data-property-id="position"],
+.gjs-right-panel .gjs-sm-property[data-property-id="display"],
+.gjs-right-panel .gjs-sm-property[data-property-id="text-align"] {
+  grid-column: 1 / -1 !important;
+}
+
+.gjs-right-panel .gjs-sm-property .gjs-sm-label,
+.gjs-right-panel .gjs-sm-property .gjs-sm-property__label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  text-transform: capitalize !important;
+  margin: 0 0 5px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  letter-spacing: 0 !important;
+}
+
+/* ---------- Inputs / fields ---------- */
+.gjs-right-panel .gjs-sm-property .gjs-fields,
+.gjs-right-panel .gjs-sm-property .gjs-field {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 7px !important;
+  color: #0f172a !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.gjs-right-panel .gjs-sm-property .gjs-field:hover {
+  border-color: #cbd5e1 !important;
+}
+.gjs-right-panel .gjs-sm-property .gjs-field:focus-within {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+.gjs-right-panel .gjs-sm-property input,
+.gjs-right-panel .gjs-sm-property select,
+.gjs-right-panel .gjs-sm-property .gjs-input-unit {
+  background: transparent !important;
+  border: 0 !important;
+  color: #0f172a !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  padding: 7px 10px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  outline: none !important;
+}
+.gjs-right-panel .gjs-sm-property input::placeholder {
+  color: #94a3b8 !important;
+}
+.gjs-right-panel .gjs-sm-property select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 26px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+}
+.gjs-right-panel .gjs-sm-property .gjs-input-unit {
+  flex: 0 0 auto !important;
+  padding: 7px 8px !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border-left: 1px solid #e2e8f0 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+}
+.gjs-right-panel .gjs-sm-property .gjs-input-arrow-up,
+.gjs-right-panel .gjs-sm-property .gjs-input-arrow-down,
+.gjs-right-panel .gjs-sm-property .gjs-d-s-arrow {
+  display: none !important;
+}
+
+/* Color picker swatch */
+.gjs-right-panel .gjs-field-color,
+.gjs-right-panel .gjs-field-colorp {
+  align-items: center !important;
+}
+.gjs-right-panel .gjs-field-color-picker,
+.gjs-right-panel .gjs-field-colorp-c {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 5px !important;
+  margin: 5px !important;
+  width: 24px !important;
+  height: 24px !important;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px #fff;
+}
+
+/* Composite groups (margin/padding/border) */
+.gjs-right-panel .gjs-sm-composite,
+.gjs-right-panel .gjs-sm-stack {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  margin: 0 !important;
+  display: block !important;
+}
+.gjs-right-panel .gjs-sm-composite > .gjs-sm-properties,
+.gjs-right-panel .gjs-sm-stack > .gjs-sm-properties {
+  padding: 0 !important;
+  border-top: 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+.gjs-right-panel .gjs-sm-composite .gjs-field,
+.gjs-right-panel .gjs-sm-stack .gjs-field {
+  background: #ffffff !important;
+}
+
+/* Radio / icon button group (text-align, position) */
+.gjs-right-panel .gjs-radio-items {
+  display: flex !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 7px !important;
+  padding: 2px !important;
+  overflow: hidden;
+  gap: 0;
+}
+.gjs-right-panel .gjs-radio-item {
+  flex: 1 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  color: #475569 !important;
+  cursor: pointer;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  text-align: center;
+  position: relative;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.gjs-right-panel .gjs-radio-item:hover {
+  color: #0f172a !important;
+}
+.gjs-right-panel .gjs-radio-item-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.gjs-right-panel .gjs-radio-item-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 6px !important;
+  width: 100%;
+  height: 100%;
+  text-transform: capitalize;
+  color: inherit !important;
+}
+.gjs-right-panel .gjs-radio-item-input:checked + .gjs-radio-item-label,
+.gjs-right-panel .gjs-radio-item.gjs-four-color {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  border-radius: 5px;
+}
+/* Hide empty/unset radio items (some Grapes properties expose blank slots) */
+.gjs-right-panel .gjs-radio-item:not(:has(.gjs-radio-item-label)),
+.gjs-right-panel .gjs-radio-item .gjs-radio-item-label:empty {
+  display: none !important;
+}
+
+/* ---------- Trait Manager: Properties tab ---------- */
+.gjs-right-panel .gjs-trt-header {
+  display: none !important;
+}
+.gjs-right-panel .gjs-trt-traits {
+  padding: 6px 4px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gjs-right-panel .gjs-trt-trait {
+  display: grid !important;
+  grid-template-columns: minmax(80px, 1fr) 1.4fr !important;
+  align-items: center !important;
+  padding: 9px 8px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 0 !important;
+  gap: 10px;
+  transition: background 0.15s;
+}
+.gjs-right-panel .gjs-trt-trait:hover {
+  background: #f8fafc !important;
+}
+.gjs-right-panel .gjs-trt-trait + .gjs-trt-trait {
+  border-top: 1px solid #f1f5f9 !important;
+  border-radius: 0 !important;
+}
+.gjs-right-panel .gjs-trt-trait .gjs-label-wrp,
+.gjs-right-panel .gjs-trt-trait .gjs-label {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  text-transform: capitalize !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+}
+.gjs-right-panel .gjs-trt-trait .gjs-field-wrp {
+  padding: 0 !important;
+  background: transparent !important;
+}
+.gjs-right-panel .gjs-trt-trait .gjs-field {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 7px !important;
+  color: #0f172a !important;
+  min-height: 32px !important;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+.gjs-right-panel .gjs-trt-trait .gjs-field input,
+.gjs-right-panel .gjs-trt-trait .gjs-field select,
+.gjs-right-panel .gjs-trt-trait .gjs-field textarea {
+  background: transparent !important;
+  border: 0 !important;
+  color: #0f172a !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  padding: 6px 10px !important;
+  width: 100%;
+  outline: none !important;
+}
+.gjs-right-panel .gjs-trt-trait .gjs-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 26px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  cursor: pointer;
+}
+.gjs-right-panel .gjs-trt-trait .gjs-field:focus-within {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+.gjs-right-panel .gjs-trt-trait input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #6366f1;
+}
+
+/* When the trait manager finds nothing, hint via :empty */
+.gjs-right-panel .gjs-trait-host:has(.gjs-trt-traits:empty) ~ .trait-empty-hint {
+  display: block !important;
+}
+
+/* Hide grapes' own empty/no-element placeholders */
+.gjs-right-panel .gjs-sm-no-element,
+.gjs-right-panel .gjs-trt-traits-empty,
+.gjs-right-panel .gjs-no-element {
+  display: none !important;
+}
+
+/* ---------- Color picker popover (Spectrum) ---------- */
+.gjs-right-panel .sp-replacer,
+.gjs-right-panel .sp-preview {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+}
+
+/* ---------- Scroll polish ---------- */
+.gjs-right-panel [data-radix-scroll-area-viewport] {
+  scroll-behavior: smooth;
+}

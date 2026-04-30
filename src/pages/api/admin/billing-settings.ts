@@ -14,19 +14,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "GET") {
     const { data } = await supabaseAdmin
       .from("app_settings")
-      .select("billing_enforcement_enabled, quota_grace_days")
+      .select("billing_enforcement_enabled, quota_grace_days, billing_dev_mode")
       .eq("id", "global")
       .maybeSingle();
     return res.status(200).json({
       billingEnforcementEnabled: data?.billing_enforcement_enabled ?? true,
       quotaGraceDays: data?.quota_grace_days ?? 7,
+      billingDevMode: data?.billing_dev_mode ?? false,
     });
   }
 
   if (req.method === "POST") {
-    const { billingEnforcementEnabled, quotaGraceDays } = req.body as {
+    const { billingEnforcementEnabled, quotaGraceDays, billingDevMode } = req.body as {
       billingEnforcementEnabled?: boolean;
       quotaGraceDays?: number;
+      billingDevMode?: boolean;
     };
 
     const updates: TablesInsert<"app_settings"> = { id: "global", updated_at: new Date().toISOString() };
@@ -36,10 +38,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (typeof quotaGraceDays === "number" && Number.isFinite(quotaGraceDays) && quotaGraceDays >= 0 && quotaGraceDays <= 60) {
       updates.quota_grace_days = Math.round(quotaGraceDays);
     }
+    if (typeof billingDevMode === "boolean") {
+      updates.billing_dev_mode = billingDevMode;
+    }
 
     const { data: before } = await supabaseAdmin
       .from("app_settings")
-      .select("billing_enforcement_enabled, quota_grace_days")
+      .select("billing_enforcement_enabled, quota_grace_days, billing_dev_mode")
       .eq("id", "global")
       .maybeSingle();
 

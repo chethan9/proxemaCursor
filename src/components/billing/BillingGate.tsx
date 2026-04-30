@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useSubscription } from "@/hooks/queries/useSubscription";
 import { useAppSettings } from "@/hooks/queries/useAppSettings";
+import { isBillingEffectivelyEnforced } from "@/lib/billing-mode";
 import { Loader2 } from "lucide-react";
 
 const ALWAYS_ALLOWED_PREFIXES = [
@@ -31,7 +32,7 @@ export function BillingGate({ children }: Props) {
   const { subscription, isLoading: subLoading, hasAccess } = useSubscription();
   const redirectedRef = useRef(false);
 
-  const enforce = settings.billingEnforcementEnabled;
+  const enforce = isBillingEffectivelyEnforced(settings);
   const checking = authLoading || (user && (!profileLoaded || subLoading || settingsLoading));
   const locked = !!user && !isSuperAdmin && enforce && profileLoaded && !subLoading && !settingsLoading && !hasAccess;
   const allowedHere = isAllowedWhenLocked(router.asPath);

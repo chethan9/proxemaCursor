@@ -15,13 +15,16 @@ function isAllowedWhenLocked(path: string | null | undefined): boolean {
   return ALWAYS_ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p + "?"));
 }
 
-async function fetchEnforcement(): Promise<boolean> {
+/** True when plan gates apply (enforcement on and dev mode off). */
+async function fetchBillingEnforcementApplies(): Promise<boolean> {
   const { data } = await supabase
     .from("app_settings")
-    .select("billing_enforcement_enabled")
+    .select("billing_enforcement_enabled, billing_dev_mode")
     .eq("id", "global")
     .maybeSingle();
-  return data?.billing_enforcement_enabled ?? true;
+  const enforce = data?.billing_enforcement_enabled ?? true;
+  const dev = data?.billing_dev_mode ?? false;
+  return enforce && !dev;
 }
 
 async function fetchClientId(userId: string): Promise<string | null> {
@@ -69,8 +72,8 @@ export async function resolvePostAuthLanding(
 ): Promise<string> {
   const requested = options.redirect?.trim() || null;
 
-  const enforcementEnabled = await fetchEnforcement();
-  if (!enforcementEnabled) {
+  const enforcementApplies = await fetchBillingEnforcementApplies();
+  if (!enforcementApplies) {
     if (requested) return requested;
     return resolvePreferredPath(userId);
   }

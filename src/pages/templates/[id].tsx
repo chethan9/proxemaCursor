@@ -74,6 +74,7 @@ function BuilderInner() {
         css: cfg.css,
         grapesProject: cfg.grapesProject,
         filenamePattern: cfg.filenamePattern,
+        page: cfg.page,
       });
       initialized.current = true;
     }

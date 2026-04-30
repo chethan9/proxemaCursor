@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import "grapesjs/dist/css/grapes.min.css";
 import "@/components/templates/builder/builder-canvas.css";
 import "@/components/templates/builder/builder-palette.css";
+import "@/components/templates/builder/builder-right-panel.css";
 import type { AppProps } from "next/app";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";

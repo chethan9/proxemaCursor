@@ -1,5 +1,27 @@
 export type TemplateType = "invoice" | "pickslip" | "report";
 
+export type PageSize = "A4" | "Letter" | "Legal" | "A3" | "A5";
+export type PageOrientation = "portrait" | "landscape";
+
+export interface PageBox {
+  /** millimetres */
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export interface PageSettings {
+  size?: PageSize;
+  orientation?: PageOrientation;
+  /** Outer print margin (paper edge → content area). */
+  margin?: PageBox;
+  /** Inner padding applied to <body> (extra content inset, in mm). */
+  padding?: PageBox;
+  /** Page background colour (CSS color). */
+  background?: string;
+}
+
 /** Persisted template document: full `html` is what Puppeteer renders after Handlebars. */
 export interface TemplateConfig {
   html: string;
@@ -9,16 +31,69 @@ export interface TemplateConfig {
   grapesProject?: Record<string, unknown>;
   /** Optional pattern for PDF download name, e.g. `invoice-{{order.number}}`. */
   filenamePattern?: string;
+  /** Page-level layout settings (size, margins, background, padding). */
+  page?: PageSettings;
 }
 
-const PRINT_BASE_CSS = `@page { size: A4; margin: 14mm; }
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; font-size: 12px; line-height: 1.5; margin: 0; background: #fff; }`;
+export const DEFAULT_PAGE_SETTINGS: Required<PageSettings> = {
+  size: "A4",
+  orientation: "portrait",
+  margin: { top: 14, right: 14, bottom: 14, left: 14 },
+  padding: { top: 0, right: 0, bottom: 0, left: 0 },
+  background: "#ffffff",
+};
+
+/** Page dimensions in millimetres (portrait long edge). */
+export const PAGE_DIMENSIONS_MM: Record<PageSize, { width: number; height: number }> = {
+  A4: { width: 210, height: 297 },
+  Letter: { width: 215.9, height: 279.4 },
+  Legal: { width: 215.9, height: 355.6 },
+  A3: { width: 297, height: 420 },
+  A5: { width: 148, height: 210 },
+};
+
+export function resolvePageSettings(p?: PageSettings): Required<PageSettings> {
+  return {
+    size: p?.size ?? DEFAULT_PAGE_SETTINGS.size,
+    orientation: p?.orientation ?? DEFAULT_PAGE_SETTINGS.orientation,
+    margin: { ...DEFAULT_PAGE_SETTINGS.margin, ...(p?.margin ?? {}) },
+    padding: { ...DEFAULT_PAGE_SETTINGS.padding, ...(p?.padding ?? {}) },
+    background: p?.background ?? DEFAULT_PAGE_SETTINGS.background,
+  };
+}
+
+/** Visual page dimensions accounting for orientation. */
+export function pageDimensionsMm(p?: PageSettings): { width: number; height: number } {
+  const { size, orientation } = resolvePageSettings(p);
+  const dims = PAGE_DIMENSIONS_MM[size];
+  return orientation === "landscape"
+    ? { width: dims.height, height: dims.width }
+    : { width: dims.width, height: dims.height };
+}
+
+/** CSS that controls actual print output (used by Puppeteer). */
+export function pagePrintCss(p?: PageSettings): string {
+  const r = resolvePageSettings(p);
+  const m = r.margin;
+  const pad = r.padding;
+  return `@page { size: ${r.size} ${r.orientation}; margin: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm; }
+  body { background: ${r.background}; padding: ${pad.top}mm ${pad.right}mm ${pad.bottom}mm ${pad.left}mm; }`;
+}
+
+const PRINT_BASE_CSS = `* { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; font-size: 12px; line-height: 1.5; margin: 0; }`;
 
 /** Merge Grapes body HTML + CSS into a single printable document (server + preview). */
-export function mergePrintDocument(opts: { bodyHtml: string; css?: string; title?: string }): string {
+export function mergePrintDocument(opts: {
+  bodyHtml: string;
+  css?: string;
+  title?: string;
+  page?: PageSettings;
+}): string {
   const title = (opts.title || "Document").replace(/</g, "");
-  const css = [PRINT_BASE_CSS, opts.css?.trim() || ""].filter(Boolean).join("\n");
+  const css = [pagePrintCss(opts.page), PRINT_BASE_CSS, opts.css?.trim() || ""]
+    .filter(Boolean)
+    .join("\n");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

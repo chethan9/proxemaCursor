@@ -33,7 +33,10 @@ export function BuilderVariablesDialog({ open, onOpenChange, groups, onCopyToken
       <DialogContent className="max-w-xl w-[min(640px,96vw)] h-[80vh] p-0 gap-0 overflow-hidden border border-slate-200 sm:rounded-xl bg-white grid-rows-[auto_auto_1fr]">
         <div className="px-4 pt-4 pb-1">
           <DialogTitle className="text-base font-semibold text-slate-900">Variables &amp; helpers</DialogTitle>
-          <p className="text-xs text-slate-500 mt-0.5">Tap a token to copy. Paste into a text block.</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Blocks ship with sample data so the canvas looks real. To make a value dynamic,
+            tap a token below to copy it, then paste over the dummy text in your block.
+          </p>
         </div>
         <div className="px-4 pb-3">
           <div className="relative">

@@ -37,29 +37,56 @@ export function BuilderLeftPanel({
 
   useEffect(() => {
     if (!editor) return;
+    const container = document.getElementById(blockHostId);
+    if (!container) return;
     const q = blockSearch.trim().toLowerCase();
-    editor.BlockManager.getAll().forEach((block) => {
-      const label = String(block.get("label") ?? "").toLowerCase();
-      const cat = String(block.get("category") ?? "");
-      const tabOk = blockMatchesPaletteTab(cat, paletteTab);
-      const searchOk = !q || label.includes(q) || cat.toLowerCase().includes(q);
-      const visible = tabOk && searchOk;
-      try {
-        block.set("hidden", !visible);
-      } catch {
-        try {
-          block.set("visible", visible);
-        } catch {
-          /* ignore */
+
+    // We let Grapes render every block normally (its default render after
+    // `editor.on('load')`), then hide categories / blocks that don't match
+    // the active tab and search. `BlockManager.render(filtered)` in 0.22
+    // is unreliable when called against a custom appendTo container — it
+    // replaces the BlocksView in a way that can leave the panel empty.
+    const apply = () => {
+      const cats = container.querySelectorAll<HTMLElement>(".gjs-block-category");
+      cats.forEach((catEl) => {
+        const title =
+          catEl.querySelector<HTMLElement>(".gjs-title, .gjs-block-category__title")?.textContent?.trim() ?? "";
+        if (!blockMatchesPaletteTab(title, paletteTab)) {
+          catEl.style.display = "none";
+          return;
         }
-      }
-    });
-    try {
-      editor.BlockManager.render?.();
-    } catch {
-      /* noop */
-    }
-  }, [editor, blockSearch, paletteTab]);
+        let matched = 0;
+        catEl.querySelectorAll<HTMLElement>(".gjs-block").forEach((blk) => {
+          const label = (
+            blk.getAttribute("title") ||
+            blk.querySelector(".gjs-block-label, .gjs-block__title")?.textContent ||
+            ""
+          ).toLowerCase();
+          const ok = !q || label.includes(q) || title.toLowerCase().includes(q);
+          blk.style.display = ok ? "" : "none";
+          if (ok) matched++;
+        });
+        catEl.style.display = matched === 0 ? "none" : "";
+      });
+    };
+
+    apply();
+    // Grapes' initial palette render happens during the iframe `load` tick,
+    // which can land just after our useEffect runs. Re-apply on the next
+    // animation frame and once shortly after so the filter sticks.
+    const raf = requestAnimationFrame(apply);
+    const t = setTimeout(apply, 120);
+    // Re-apply if Grapes re-renders the palette (e.g. when blocks are added
+    // dynamically). Watch only the structural mutations to avoid loops; we
+    // only mutate `style.display` which doesn't change childList.
+    const obs = new MutationObserver(apply);
+    obs.observe(container, { childList: true, subtree: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+      obs.disconnect();
+    };
+  }, [editor, blockSearch, paletteTab, blockHostId]);
 
   return (
     <aside className="flex flex-col min-h-0 h-full w-[300px] shrink-0 border-r border-slate-200 bg-white">

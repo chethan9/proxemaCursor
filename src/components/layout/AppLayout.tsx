@@ -3,6 +3,7 @@ import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
 import { BillingGate } from "@/components/billing/BillingGate";
 import { SubscriptionStatusBanner } from "@/components/billing/SubscriptionStatusBanner";
+import { BillingDevModeBanner } from "@/components/billing/BillingDevModeBanner";
 import type { Permission } from "@/lib/permissions";
 
 interface AppLayoutProps {
@@ -21,6 +22,7 @@ export function AppLayout({ children, title, requirePermission, requireSuperAdmi
       <Head>
         <title>{fullTitle}</title>
       </Head>
+      <BillingDevModeBanner />
       <SubscriptionStatusBanner />
       <div className="mx-auto w-full max-w-[1600px]">{children}</div>
     </>

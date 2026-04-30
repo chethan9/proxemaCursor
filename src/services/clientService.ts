@@ -136,12 +136,14 @@ export async function createClient(input: ClientInsert): Promise<CreateClientRes
 
   const { data: settings } = await supabase
     .from("app_settings")
-    .select("billing_enforcement_enabled")
+    .select("billing_enforcement_enabled, billing_dev_mode")
     .eq("id", "global")
     .maybeSingle();
   const enforcementEnabled = settings?.billing_enforcement_enabled ?? true;
+  const devMode = settings?.billing_dev_mode ?? false;
+  const enforcementApplies = enforcementEnabled && !devMode;
 
-  if (enforcementEnabled) {
+  if (enforcementApplies) {
     // Mandatory plan selection: client starts with no subscription; user picks plan from /pricing.
     return { client, subscription: null, trialStarted: false, noPlanAvailable: false };
   }

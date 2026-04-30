@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Plan } from "@/services/planService";
 import type { QuotaCheck } from "@/lib/quota";
 import { getAppSettings } from "@/lib/app-settings.server";
+import { isBillingEffectivelyEnforced } from "@/lib/billing-mode";
 
 const DAY_MS = 86400_000;
 
@@ -55,7 +56,7 @@ async function applyGracePolicy(
   planSlug: string
 ): Promise<QuotaCheck> {
   const settings = await getAppSettings();
-  if (!settings.billingEnforcementEnabled) {
+  if (!isBillingEffectivelyEnforced(settings)) {
     return { ok: true, limit, current, planName, planSlug };
   }
 

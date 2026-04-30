@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useCheckout } from "@/hooks/useCheckout";
 import { useSubscription } from "@/hooks/queries/useSubscription";
 import { useAppSettings } from "@/hooks/queries/useAppSettings";
+import { isBillingEffectivelyEnforced } from "@/lib/billing-mode";
 import { getPlanPrice } from "@/services/planService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +54,7 @@ export default function PricingPage({ plans, initialCountry, initialCurrency, de
   const { subscription, refetch } = useSubscription();
   const { settings: appSettings } = useAppSettings();
   const inApp = !!user && (router.query.app === "1" || !subscription);
-  const enforce = appSettings.billingEnforcementEnabled;
+  const enforce = isBillingEffectivelyEnforced(appSettings);
   const showOnboarding = inApp && enforce && !subscription;
 
   const [country, setCountry] = useState(initialCountry);

@@ -268,6 +268,7 @@ export type Database = {
       app_settings: {
         Row: {
           accent_color: string | null
+          billing_dev_mode: boolean
           billing_enforcement_enabled: boolean
           brand_name: string | null
           created_at: string | null
@@ -282,6 +283,7 @@ export type Database = {
         }
         Insert: {
           accent_color?: string | null
+          billing_dev_mode?: boolean
           billing_enforcement_enabled?: boolean
           brand_name?: string | null
           created_at?: string | null
@@ -296,6 +298,7 @@ export type Database = {
         }
         Update: {
           accent_color?: string | null
+          billing_dev_mode?: boolean
           billing_enforcement_enabled?: boolean
           brand_name?: string | null
           created_at?: string | null

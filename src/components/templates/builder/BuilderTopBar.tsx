@@ -11,12 +11,14 @@ import {
   Eye,
   FileDown,
   Loader2,
+  PanelRight,
   Pencil,
   Redo2,
   Save,
   Star,
   Undo2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type BuilderTopBarProps = {
   name: string;
@@ -43,6 +45,8 @@ export type BuilderTopBarProps = {
   pdfDisabled: boolean;
   onSetDefault: () => void;
   setDefaultPending: boolean;
+  rightOpen: boolean;
+  onToggleRight: () => void;
 };
 
 const TYPE_TITLE: Record<string, string> = {
@@ -76,6 +80,8 @@ export function BuilderTopBar({
   pdfDisabled,
   onSetDefault,
   setDefaultPending,
+  rightOpen,
+  onToggleRight,
 }: BuilderTopBarProps) {
   const title = TYPE_TITLE[templateType] ?? "Template Builder";
 
@@ -140,6 +146,21 @@ export function BuilderTopBar({
         <Button type="button" variant="outline" size="sm" className="h-9 border-slate-200 text-xs gap-1.5 hidden md:inline-flex" onClick={onOpenVariables}>
           <Braces className="h-3.5 w-3.5" />
           Variables
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-9 w-9 shrink-0",
+            rightOpen ? "text-primary" : "text-slate-500 hover:text-slate-900",
+          )}
+          onClick={onToggleRight}
+          aria-label={rightOpen ? "Hide style panel" : "Show style panel"}
+          aria-pressed={rightOpen}
+        >
+          <PanelRight className="h-4 w-4" />
         </Button>
 
         <Button

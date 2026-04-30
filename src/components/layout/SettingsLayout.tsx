@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, ListTree, Layers, Sparkles, Activity, Receipt, Languages } from "lucide-react";
+import { User, Palette, CreditCard, ListTree, Layers, Sparkles, Activity, Receipt, Languages, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export function SettingsLayout({ children, title, requirePermission, requireSupe
       label: t("settings.groups.admin"),
       items: [
         { href: "/settings/plans", icon: Layers, label: t("settings.items.plans"), show: isSuperAdmin },
+        { href: "/admin/billing", icon: ShieldAlert, label: t("settings.items.billingControls"), show: isSuperAdmin },
         { href: "/settings/subscriptions", icon: Receipt, label: t("settings.items.subscriptions"), show: isSuperAdmin },
         { href: "/settings/menu-editor", icon: ListTree, label: t("settings.items.menuEditor"), show: isSuperAdmin },
         { href: "/settings/payment-methods", icon: CreditCard, label: t("settings.items.paymentMethods"), show: isSuperAdmin },
