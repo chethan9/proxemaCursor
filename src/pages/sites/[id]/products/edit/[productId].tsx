@@ -274,6 +274,8 @@ function Inner() {
           onPublish={onPublish}
           saving={save.isPending}
           isEdit={true}
+          storeId={storeId}
+          productId={productId}
           tabContent={{
             basic: <BasicInfoTab storeId={storeId} productId={productId as string} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
             pricing: <PricingTaxTab form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,

@@ -32,9 +32,11 @@ type Props = {
   onPublish: () => void;
   saving: boolean;
   isEdit: boolean;
+  storeId: string;
+  productId?: string | null;
 };
 
-export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit }: Props) {
+export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit, storeId, productId }: Props) {
   const [errors, setErrors] = useState<string | null>(null);
 
   const steps = ALL_STEPS;
@@ -146,7 +148,7 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
             </CardContent>
           </Card>
         )}
-        <LivePreviewCard form={form} />
+        <LivePreviewCard form={form} storeId={storeId} productId={productId} setForm={setForm} />
       </div>
     </div>
   );

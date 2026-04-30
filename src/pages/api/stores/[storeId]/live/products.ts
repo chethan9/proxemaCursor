@@ -60,6 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       stock_status: req.query.stock_status as string | undefined,
       min_price: req.query.min_price as string | undefined,
       max_price: req.query.max_price as string | undefined,
+      type: typeof req.query.type === "string" ? req.query.type : undefined,
     });
     warmWriteProducts(storeId, result.data).catch(() => { /* already logged */ });
     return res.status(200).json({ data: result.data, count: result.total });

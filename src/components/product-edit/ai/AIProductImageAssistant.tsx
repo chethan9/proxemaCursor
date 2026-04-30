@@ -251,6 +251,11 @@ export function AIProductImageAssistant({
                   </SelectContent>
                 </Select>
               )}
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                {sourceMode === "main"
+                  ? t("products.ai.hintApplyMain")
+                  : t("products.ai.hintApplyGallery", { n: gallerySlot + 1 })}
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -304,6 +309,7 @@ export function AIProductImageAssistant({
                     </div>
                   ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground">{t("products.ai.hintRegenerateActions")}</p>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"

@@ -3,10 +3,18 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProductFormState, ProductAttribute } from "@/services/productEditService";
+import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
 
 const MAX_PREVIEW_ATTRS = 4;
 
-export function LivePreviewCard({ form }: { form: ProductFormState }) {
+export type LivePreviewCardProps = {
+  form: ProductFormState;
+  storeId?: string;
+  productId?: string | null;
+  setForm?: (updater: (prev: ProductFormState) => ProductFormState) => void;
+};
+
+export function LivePreviewCard({ form, storeId, productId, setForm }: LivePreviewCardProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const thumbStripRef = useRef<HTMLDivElement>(null);
@@ -46,10 +54,18 @@ export function LivePreviewCard({ form }: { form: ProductFormState }) {
     if (e.key === "ArrowRight") { e.preventDefault(); next(); }
   };
 
+  const showAi = !!storeId && !!setForm;
+
   return (
     <>
       <Card>
         <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 pb-1 border-b border-border">
+            <div className="text-xs font-medium text-muted-foreground">Live preview</div>
+            {showAi && (
+              <AIProductImageAssistant storeId={storeId} productId={productId ?? undefined} form={form} setForm={setForm} />
+            )}
+          </div>
           <div
             className="aspect-square rounded-lg bg-muted/50 overflow-hidden flex items-center justify-center relative group outline-none"
             tabIndex={0}

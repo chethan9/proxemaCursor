@@ -13,7 +13,7 @@ import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 import { cn } from "@/lib/utils";
-import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
+import { LivePreviewCard } from "@/components/product-edit/LivePreviewCard";
 
 interface Props {
   storeId: string;
@@ -184,10 +184,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs">Product image</Label>
-                    <AIProductImageAssistant storeId={storeId} productId={productId} form={form} setForm={setForm} />
-                  </div>
+                  <Label className="text-xs">Product image</Label>
                   <button type="button" onClick={() => setImageOpen("main")} className="h-[140px] w-[140px] rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden relative">
                     {mainImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -297,29 +294,6 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-4 space-y-2">
-              <Label className="text-xs text-muted-foreground">Status</Label>
-              <div className="grid grid-cols-4 gap-1">
-                {statusOptions.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setForm((p) => ({ ...p, status: s.value }))}
-                    className={cn(
-                      "px-2 py-1.5 text-xs rounded-md border transition-colors",
-                      form.status === s.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted"
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardContent className="p-4 space-y-3">
@@ -422,6 +396,31 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="space-y-4 lg:sticky lg:top-4 lg:h-fit">
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <div className="grid grid-cols-4 gap-1">
+                {statusOptions.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, status: s.value }))}
+                    className={cn(
+                      "px-2 py-1.5 text-xs rounded-md border transition-colors",
+                      form.status === s.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <LivePreviewCard storeId={storeId} productId={productId} form={form} setForm={setForm} />
 
           {publishBlocked && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">

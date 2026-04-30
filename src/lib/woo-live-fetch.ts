@@ -14,6 +14,8 @@ export interface LiveFetchParams {
   before?: string;
   min_price?: string;
   max_price?: string;
+  /** WooCommerce product type: simple, grouped, external, variable */
+  type?: string;
 }
 
 export async function wooLiveFetch<T>(
@@ -45,6 +47,7 @@ export async function wooLiveFetchWithCreds<T>(
   if (params.before) qs.set("before", params.before);
   if (params.min_price) qs.set("min_price", params.min_price);
   if (params.max_price) qs.set("max_price", params.max_price);
+  if (params.type) qs.set("type", params.type);
 
   const auth = Buffer.from(`${creds.consumer_key}:${creds.consumer_secret}`).toString("base64");
   const url = `${creds.url.replace(/\/$/, "")}/wp-json/wc/v3/${resource}?${qs.toString()}`;

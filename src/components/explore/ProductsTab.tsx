@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowLeft, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
+import { ArrowLeft, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, Layers, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -193,6 +193,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [stockStatusFilter, setStockStatusFilter] = useState<string>(() => getQueryString(router.query, "stock") ?? "all");
   const [priceMin, setPriceMin] = useState(() => getQueryString(router.query, "pmin") ?? "");
   const [priceMax, setPriceMax] = useState(() => getQueryString(router.query, "pmax") ?? "");
+  const [filterSimple, setFilterSimple] = useState(true);
+  const [filterVariable, setFilterVariable] = useState(true);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -215,7 +217,21 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax]);
+  }, [debouncedSearch, statusFilter, sort, storeId, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, filterSimple, filterVariable]);
+
+  const productTypeFilter = useMemo((): "simple" | "variable" | undefined => {
+    if (filterSimple && filterVariable) return undefined;
+    if (filterSimple && !filterVariable) return "simple";
+    if (!filterSimple && filterVariable) return "variable";
+    return undefined;
+  }, [filterSimple, filterVariable]);
+
+  useEffect(() => {
+    if (!filterSimple && !filterVariable) {
+      setFilterSimple(true);
+      setFilterVariable(true);
+    }
+  }, [filterSimple, filterVariable]);
 
   useSyncUrl(
     {
@@ -225,8 +241,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       pmin: priceMin,
       pmax: priceMax,
       q: debouncedSearch,
+      ptype: productTypeFilter ?? "",
     },
-    { status: "all", cat: "all", stock: "all", pmin: "", pmax: "", q: "" },
+    { status: "all", cat: "all", stock: "all", pmin: "", pmax: "", q: "", ptype: "" },
   );
 
   const buildReturnTo = useCallback(() => {
@@ -253,6 +270,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     stockStatusFilter: normalizedStockFilter,
     priceMin: normalizedPriceMin,
     priceMax: normalizedPriceMax,
+    productTypeFilter,
     enabled: isHydrated,
   });
   const products = productsResult?.data ?? [];
@@ -348,7 +366,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     stockStatusFilter: normalizedStockFilter,
     priceMin: normalizedPriceMin,
     priceMax: normalizedPriceMax,
-  }), [storeId, debouncedSearch, sort.field, sort.direction, normalizedStatusFilter, excludeOutOfStock, normalizedCategoryFilter, normalizedStockFilter, normalizedPriceMin, normalizedPriceMax]);
+    productTypeFilter,
+  }), [storeId, debouncedSearch, sort.field, sort.direction, normalizedStatusFilter, excludeOutOfStock, normalizedCategoryFilter, normalizedStockFilter, normalizedPriceMin, normalizedPriceMax, productTypeFilter]);
 
   useBackgroundPagination({
     enabled: !!storeId && productCount > 0,
@@ -409,6 +428,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       if (normalizedStockFilter !== "all") qs.set("stock", normalizedStockFilter);
       if (normalizedPriceMin != null) qs.set("pmin", String(normalizedPriceMin));
       if (normalizedPriceMax != null) qs.set("pmax", String(normalizedPriceMax));
+      if (productTypeFilter === "simple" || productTypeFilter === "variable") qs.set("ptype", productTypeFilter);
       qs.set("sort_field", sort.field);
       qs.set("sort_direction", sort.direction);
 
@@ -481,6 +501,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     storeId,
     toast,
     t,
+    productTypeFilter,
   ]);
 
   const { data: categoryOptions = [] } = useProductCategoryOptions(storeId);
@@ -501,6 +522,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     const urlStock = getQueryString(router.query, "stock");
     const urlPmin = getQueryString(router.query, "pmin");
     const urlPmax = getQueryString(router.query, "pmax");
+    const urlPtype = getQueryString(router.query, "ptype");
     // Filters precedence URL > DB > defaults. URL is applied unconditionally first
     // because the initial useState ran before router.isReady (router.query was empty).
     if (urlStatus !== undefined) setStatusFilter(urlStatus);
@@ -508,6 +530,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (urlStock !== undefined) setStockStatusFilter(urlStock);
     if (urlPmin !== undefined) setPriceMin(urlPmin);
     if (urlPmax !== undefined) setPriceMax(urlPmax);
+    if (urlPtype === "simple") {
+      setFilterSimple(true);
+      setFilterVariable(false);
+    } else if (urlPtype === "variable") {
+      setFilterSimple(false);
+      setFilterVariable(true);
+    }
     fetchPreferences("products").then((remote) => {
       if (remote) {
         // Table preferences (columns/order/page-size/view mode) — DB always wins.
@@ -520,6 +549,18 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
         if (urlCat === undefined && typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
         if (urlStock === undefined && typeof remote.stockStatusFilter === "string") setStockStatusFilter(remote.stockStatusFilter);
+        if (urlPtype === undefined) {
+          const rp = remote.ptype;
+          if (rp === "simple" || rp === "variable") {
+            if (rp === "simple") {
+              setFilterSimple(true);
+              setFilterVariable(false);
+            } else {
+              setFilterSimple(false);
+              setFilterVariable(true);
+            }
+          }
+        }
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
       prefsLoaded.current = true;
@@ -534,10 +575,21 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (!prefsLoaded.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      savePreferences("products", { columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort }).catch(() => {});
+      savePreferences("products", {
+        columnOrder,
+        visibleCols,
+        pageSize,
+        viewMode,
+        statusFilter,
+        excludeOutOfStock,
+        categoryFilter,
+        stockStatusFilter,
+        sort,
+        ptype: productTypeFilter ?? "",
+      }).catch(() => {});
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort]);
+  }, [columnOrder, visibleCols, pageSize, viewMode, statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, sort, productTypeFilter]);
 
   return (
     <div className="space-y-2">
@@ -699,6 +751,38 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   <SelectItem value="private">Private</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9" role="group" aria-label={t("products.filters.productType")}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-8 p-0",
+                    filterSimple && "bg-foreground/10 text-foreground",
+                    !filterSimple && "text-muted-foreground opacity-60",
+                  )}
+                  title={t("products.filters.typeSimple")}
+                  disabled={locked}
+                  onClick={() => setFilterSimple((s) => !s)}
+                >
+                  <Package className="h-4 w-4" aria-hidden />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-8 p-0",
+                    filterVariable && "bg-foreground/10 text-foreground",
+                    !filterVariable && "text-muted-foreground opacity-60",
+                  )}
+                  title={t("products.filters.typeVariable")}
+                  disabled={locked}
+                  onClick={() => setFilterVariable((v) => !v)}
+                >
+                  <Layers className="h-4 w-4" aria-hidden />
+                </Button>
+              </div>
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
                   <SelectTrigger className="h-9 w-[180px] text-xs">
@@ -712,10 +796,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   </SelectContent>
                 </Select>
               )}
-              {(excludeOutOfStock || statusFilter !== "all" || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax) && (
+              {(excludeOutOfStock || statusFilter !== "all" || categoryFilter !== "all" || stockStatusFilter !== "all" || priceMin || priceMax || !(filterSimple && filterVariable)) && (
                 <Button variant="ghost" size="sm" className="h-9 text-xs gap-1.5" onClick={() => {
                   setStatusFilter("all"); setExcludeOutOfStock(false); setCategoryFilter("all");
                   setStockStatusFilter("all"); setPriceMin(""); setPriceMax("");
+                  setFilterSimple(true); setFilterVariable(true);
                 }}>
                   <FilterX className="h-3.5 w-3.5" />
                   Clear

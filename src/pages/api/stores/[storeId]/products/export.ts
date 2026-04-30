@@ -84,6 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const categoryFilter = normalizeSelectFilter(typeof req.query.cat === "string" ? req.query.cat : undefined);
   const priceMin = req.query.pmin != null && req.query.pmin !== "" ? Number(req.query.pmin) : undefined;
   const priceMax = req.query.pmax != null && req.query.pmax !== "" ? Number(req.query.pmax) : undefined;
+  const ptypeRaw = typeof req.query.ptype === "string" ? req.query.ptype : "";
+  const productTypeFilter = ptypeRaw === "simple" || ptypeRaw === "variable" ? ptypeRaw : undefined;
   const sortField = (typeof req.query.sort_field === "string" ? req.query.sort_field : "woo_date_created") as ProductSortField;
   const sortDirection = (typeof req.query.sort_direction === "string" ? req.query.sort_direction : "desc") as SortDirection;
   const columnKeys = parseColumnKeys(typeof req.query.cols === "string" ? req.query.cols : undefined);
@@ -114,6 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       priceMin,
       priceMax,
       categoryContainsJson,
+      productTypeFilter,
     });
     q = applyProductCatalogOrder(q, sortField, sortDirection);
     q = q.range(pageIdx * BATCH, (pageIdx + 1) * BATCH - 1);

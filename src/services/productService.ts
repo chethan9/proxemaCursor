@@ -51,6 +51,8 @@ export interface FetchProductsOptions {
   stockStatusFilter?: string;
   priceMin?: number;
   priceMax?: number;
+  /** Parent product type (Woo); omit when listing all catalog types */
+  productTypeFilter?: "simple" | "variable";
   useLive?: boolean;
 }
 
@@ -83,7 +85,7 @@ function wooProductToRow(p: Record<string, unknown>, storeId: string): ProductRo
 }
 
 export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data: ProductRow[]; count: number; live?: boolean }> {
-  const { storeId, page, pageSize = 50, search, sortField = "woo_date_created", sortDirection = "desc", statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, useLive } = opts;
+  const { storeId, page, pageSize = 50, search, sortField = "woo_date_created", sortDirection = "desc", statusFilter, excludeOutOfStock, categoryFilter, stockStatusFilter, priceMin, priceMax, productTypeFilter, useLive } = opts;
 
   const effectiveCategory = normalizeSelectFilter(categoryFilter);
 
@@ -103,6 +105,8 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     if (categoryMeta?.wooId !== undefined) {
       qs.set("category", String(categoryMeta.wooId));
     }
+    if (productTypeFilter === "simple") qs.set("type", "simple");
+    if (productTypeFilter === "variable") qs.set("type", "variable");
     const orderMap: Record<string, string> = { name: "title", price: "price", woo_date_created: "date", created_at: "date", updated_at: "modified" };
     qs.set("orderby", orderMap[sortField] || "date");
     qs.set("order", sortDirection);
@@ -136,6 +140,7 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     priceMin,
     priceMax,
     categoryContainsJson,
+    productTypeFilter,
   });
   query = applyProductCatalogOrder(query, sortField, sortDirection);
   query = query.range(page * pageSize, (page + 1) * pageSize - 1);

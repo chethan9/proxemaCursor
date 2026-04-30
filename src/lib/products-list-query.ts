@@ -36,6 +36,8 @@ export type ProductCatalogListFilters = {
   priceMax?: number;
   /** JSON string for `categories` @> containment, or null to skip */
   categoryContainsJson?: string | null;
+  /** Narrow Woo parent product type; omit when showing both simple + variable */
+  productTypeFilter?: "simple" | "variable";
 };
 
 /**
@@ -73,6 +75,11 @@ export function applyProductCatalogFilters(query: any, f: ProductCatalogListFilt
   }
   if (f.priceMin !== undefined && !Number.isNaN(f.priceMin)) query = query.gte("price", String(f.priceMin));
   if (f.priceMax !== undefined && !Number.isNaN(f.priceMax)) query = query.lte("price", String(f.priceMax));
+  if (f.productTypeFilter === "simple") {
+    query = query.or("type.eq.simple,type.is.null");
+  } else if (f.productTypeFilter === "variable") {
+    query = query.eq("type", "variable");
+  }
   return query;
 }
 

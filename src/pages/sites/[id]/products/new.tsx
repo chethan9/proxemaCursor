@@ -168,6 +168,8 @@ function Inner() {
           onPublish={submit}
           saving={create.isPending}
           isEdit={false}
+          storeId={id}
+          productId={null}
           tabContent={{
             basic: <BasicInfoTab storeId={id} productId={null} form={form} setForm={setForm} />,
             pricing: <PricingTaxTab form={form} setForm={setForm} />,

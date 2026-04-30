@@ -77,7 +77,10 @@
       "onBackorder": "On backorder",
       "clear": "Clear",
       "category": "Category",
-      "status": "Status"
+      "status": "Status",
+      "typeSimple": "Simple products",
+      "typeVariable": "Variable products",
+      "productType": "Product type filters"
     },
     "statuses": {
       "publish": "Published",
@@ -123,7 +126,10 @@
       "close": "Close",
       "applied": "Images applied",
       "reverted": "Reverted local changes",
-      "revert": "Revert unsaved image changes"
+      "revert": "Revert unsaved image changes",
+      "hintApplyMain": "Apply best replaces the main image after you approve (uploads to your store).",
+      "hintApplyGallery": "Apply best replaces gallery slot {{n}} after approval. Regenerate runs again from that same slot.",
+      "hintRegenerateActions": "Regenerate creates new staging images; Discard removes staging without changing your product."
     },
     "toolbar": {
       "sort": "Sort",
