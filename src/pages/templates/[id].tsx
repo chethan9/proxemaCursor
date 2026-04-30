@@ -30,7 +30,7 @@ function BuilderInner() {
     (async () => {
       try {
         const defaultName =
-          newType === "pickslip" ? "Untitled pick slip" : newType === "report" ? "Untitled report" : "Untitled invoice";
+          newType === "pickslip" ? "Untitled pick slip" : newType === "report" ? "Untitled report" : "Main Invoice";
         const defaultHtml =
           newType === "pickslip" ? blankPickslipHtml() : newType === "report" ? blankReportHtml() : blankInvoiceHtml();
         const newId = await createTemplate({
