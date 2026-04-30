@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
@@ -13,21 +14,22 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useTranslation } from "next-i18next";
 import { formatDate, formatNumber, formatTime } from "@/lib/format-number";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  LineChart,
-  Line,
-} from "recharts";
+
+const DashboardChartsSection = dynamic(
+  () => import("@/components/dashboard/DashboardChartsSection").then((m) => m.DashboardChartsSection),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card><CardContent className="h-[320px]" /></Card>
+          <Card className="lg:col-span-2"><CardContent className="h-[320px]" /></Card>
+        </div>
+        <Card><CardContent className="h-[280px]" /></Card>
+      </div>
+    ),
+  }
+);
 
 export default function Dashboard() {
   const router = useRouter();
@@ -227,136 +229,12 @@ export default function Dashboard() {
         {/* FULL STATE: charts + tables */}
         {hasSyncs && (
           <>
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Donut */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Sync Status</CardTitle>
-                  <CardDescription>Breakdown of sync outcomes</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {syncStatusData.length === 0 ? (
-                    <div className="h-[220px] flex items-center justify-center text-muted-foreground">
-                      <p className="text-sm">No sync data yet</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="h-[220px] relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={syncStatusData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={90}
-                              paddingAngle={2}
-                              dataKey="value"
-                            >
-                              {syncStatusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-3xl font-bold tabular-nums">{successRate}%</span>
-                          <span className="text-xs text-muted-foreground">success rate</span>
-                        </div>
-                      </div>
-                      <div className="mt-4 space-y-1.5">
-                        {syncStatusData.map((d) => (
-                          <div key={d.name} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                              <span className="text-muted-foreground">{d.name}</span>
-                            </div>
-                            <span className="font-medium tabular-nums">{d.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Bar Chart */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Syncs by Data Type</CardTitle>
-                  <CardDescription>Successful vs failed syncs per aspect</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {aspectChartData.length === 0 ? (
-                    <div className="h-[260px] flex items-center justify-center text-muted-foreground">
-                      <p className="text-sm">No sync data yet</p>
-                    </div>
-                  ) : (
-                    <div className="h-[260px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={aspectChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barCategoryGap="20%">
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                          <XAxis
-                            dataKey="aspect"
-                            tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                            axisLine={{ stroke: "hsl(var(--border))" }}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                            axisLine={false}
-                            tickLine={false}
-                            allowDecimals={false}
-                          />
-                          <Tooltip
-                            cursor={{ fill: "hsl(var(--muted))" }}
-                            contentStyle={{
-                              backgroundColor: "hsl(var(--background))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                            }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
-                          <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                          <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Sync Activity Timeline</CardTitle>
-                <CardDescription>Daily sync outcomes over the past week</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {timelineData.length === 0 ? (
-                  <div className="h-[220px] flex items-center justify-center text-muted-foreground">
-                    <p className="text-sm">No sync activity yet</p>
-                  </div>
-                ) : (
-                  <div className="h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={timelineData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} tickLine={false} />
-                        <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
-                        <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
-                        <Line type="monotone" dataKey="successful" name="Successful" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
-                        <Line type="monotone" dataKey="failed" name="Failed" stroke="#ef4444" strokeWidth={2} dot={{ fill: "#ef4444", r: 3 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <DashboardChartsSection
+              syncStatusData={syncStatusData}
+              successRate={successRate}
+              aspectChartData={aspectChartData}
+              timelineData={timelineData}
+            />
 
             {/* Recent */}
             <div className="grid gap-6 lg:grid-cols-2">

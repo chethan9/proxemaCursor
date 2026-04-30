@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 import { createRequire } from "module";
+import bundleAnalyzer from "@next/bundle-analyzer";
 import nextI18NextConfig from "./next-i18next.config.js";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false,
+});
 
 // Check if element-tagger is available
 function isElementTaggerAvailable() {
@@ -53,4 +59,4 @@ const nextConfig = {
   allowedDevOrigins: ["*.daytona.work", "*.softgen.dev"],
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

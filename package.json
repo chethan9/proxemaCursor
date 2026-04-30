@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "analyze": "ANALYZE=true npm run build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
@@ -114,6 +115,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.4",
     "@softgenai/element-tagger": "^0.0.2",
     "@types/node": "^22",
     "@types/qrcode": "^1.5.6",

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -10,9 +11,6 @@ import { RefreshCw, AlertTriangle } from "lucide-react";
 import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { useSiteHomeStats } from "@/hooks/queries/useSiteStats";
 import { StatStrip } from "@/components/site/home/StatStrip";
-import { SalesTrendCard } from "@/components/site/home/SalesTrendCard";
-import { OrderStatusDonut } from "@/components/site/home/OrderStatusDonut";
-import { SparklineTile } from "@/components/site/home/SparklineTile";
 import { RecentOrdersCard } from "@/components/site/home/RecentOrdersCard";
 import { TopProductsCard } from "@/components/site/home/TopProductsCard";
 import { CurrencySwitcher } from "@/components/site/home/CurrencySwitcher";
@@ -20,6 +18,42 @@ import { SiteBlockedBanner } from "@/components/site/SiteBlockedBanner";
 import { EmptyState } from "@/components/EmptyState";
 import { NoDataIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SitePreferencesOnboardingDialog } from "@/components/site/store-preferences/SitePreferencesOnboardingDialog";
+
+const SalesTrendCard = dynamic(
+  () => import("@/components/site/home/SalesTrendCard").then((m) => m.SalesTrendCard),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardContent className="h-[320px]" />
+      </Card>
+    ),
+  }
+);
+
+const OrderStatusDonut = dynamic(
+  () => import("@/components/site/home/OrderStatusDonut").then((m) => m.OrderStatusDonut),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardContent className="h-[320px]" />
+      </Card>
+    ),
+  }
+);
+
+const SparklineTile = dynamic(
+  () => import("@/components/site/home/SparklineTile").then((m) => m.SparklineTile),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardContent className="h-[148px]" />
+      </Card>
+    ),
+  }
+);
 
 function fmtMoney(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
