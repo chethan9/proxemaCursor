@@ -88,4 +88,37 @@ Not re-captured this round (unchanged unless you focused it).
 
 ---
 
-## Round 3 — *(next “capture”)*
+## Round 3 — 2026-05-01 (capture — Products / Beam site)
+
+### Local tab (`ba37fa`)
+
+- **URL:** `http://localhost:3000/sites/29a1d69b-9929-4181-b53a-d99cde66f785/products` — site **B** (Beam); **Products** explorer.
+- **Page title:** *(still empty in snapshot.)*
+- **DOM:** Large page (**~461** accessibility nodes) — consistent with a dense product grid/table + chrome.
+
+### Console (localhost tab, cumulative session)
+
+| Level | Approx. count |
+|-------|----------------|
+| `error` | **48** |
+| `warning` | **95** |
+
+*(Counts include full session history in the tab, not only this route.)*
+
+### Network (MCP slice — Products load + scroll/pagination)
+
+**Heavy client work**
+
+- Many **Optimole** image URLs (`mllvsvx8kkai.i.optimole.com/...`) — product thumbnails at various widths (**parallel burst** on first paint of visible rows).
+
+**Supabase**
+
+- **`products?select=*...&offset=400&limit=200`** then **`offset=600`**, **`800`**, **`1000`** — paginated/windowed loads (**background pagination**); responses **`206`** (partial/content-range style — PostgREST partial result semantics).
+- **`categories`**, **`tags`**, **`brands`** for store filters.
+- **`stores`** full list + **`stores?id=eq....`** + **`onboarding_completed_at...`** polling (still ~**5s** cadence in timestamps).
+- **`sync_runs`** — multiple queries **~3s apart** (`aspect=all` and `aspect≠all`) — active sync polling.
+- **`bulk_jobs`**, **`user_view_preferences`** (`view_key=products`), **`menu_configs`**, **`auth/v1/user`** (repeated).
+
+---
+
+## Round 4 — *(next “capture”)*
