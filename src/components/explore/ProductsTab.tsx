@@ -26,7 +26,6 @@ import {
   type SortDirection,
 } from "@/services/productService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
-import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,7 +40,6 @@ import { Tags, Building2, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
-import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
@@ -124,8 +122,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
-  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  useScrollExpandedIntoView(expandedRowId);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
   const [exporting, setExporting] = useState(false);
   const exportingRef = useRef(false);
@@ -1014,6 +1010,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const dot = dotColor[p.status || ""] || "bg-muted-foreground/50";
                       const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
                       const pending = isPending(p);
+                      const showCardChrome = selectedIds.has(p.id) || selectedIds.size > 0;
                       if (isCompact) {
                         return (
                           <div
@@ -1033,7 +1030,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             )}
                             <div
                               onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
-                              className={`absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center ${selectedIds.has(p.id) ? "ring-2 ring-primary/40" : ""}`}
+                              className={cn(
+                                "absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity",
+                                showCardChrome ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                                selectedIds.has(p.id) && "ring-2 ring-primary/40",
+                              )}
                             >
                               <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
                             </div>
@@ -1085,13 +1086,27 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               <Lock className="h-3 w-3" />{pendingLabel(p.pending_action)}
                             </div>
                           )}
-                          <div
-                            onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
-                            className={`absolute top-2.5 left-2.5 z-10 h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center ${selectedIds.has(p.id) ? "ring-2 ring-primary/40" : ""}`}
-                          >
-                            <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
-                          </div>
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                            <div
+                              className={cn(
+                                "absolute top-2.5 left-2.5 z-10 flex items-center gap-1 transition-opacity pointer-events-none",
+                                showCardChrome ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                              )}
+                            >
+                              <div
+                                onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
+                                className={cn(
+                                  "pointer-events-auto h-6 w-6 rounded-md bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center",
+                                  selectedIds.has(p.id) && "ring-2 ring-primary/40",
+                                )}
+                              >
+                                <Checkbox checked={selectedIds.has(p.id)} disabled={pending} className="pointer-events-none" />
+                              </div>
+                              <div className="inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm border border-border/60">
+                                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                                <span className="capitalize">{statusLabel}</span>
+                              </div>
+                            </div>
                             {thumb ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" loading="lazy" />
@@ -1104,10 +1119,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 <img src="/variation.png" alt="Variable" className="h-5 w-5 object-contain" />
                               </div>
                             )}
-                            <div className="absolute top-2.5 left-11 inline-flex items-center gap-1.5 rounded-full bg-background/95 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background">
-                              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-                              <span className="capitalize">{statusLabel}</span>
-                            </div>
                             {stockOut && (
                               <div className="absolute top-2.5 right-2.5 inline-flex items-center rounded-full bg-destructive/95 backdrop-blur px-2.5 py-1 text-[10px] font-semibold text-destructive-foreground shadow-sm uppercase tracking-wide">
                                 Out
@@ -1119,10 +1130,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             <button
+                              type="button"
                               onClick={(e) => { e.stopPropagation(); if (!locked && !pending) router.push({ pathname: `/sites/${storeId}/products/edit/${p.id}`, query: { returnTo: buildReturnTo() } }); }}
                               disabled={locked || pending}
                               title={locked ? "Available after initial sync completes" : pending ? "This product is queued in a bulk job. Edits are disabled until it finishes." : "Edit product"}
-                              className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur px-2.5 py-1.5 text-[11px] font-medium shadow-sm border border-border/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:cursor-not-allowed disabled:opacity-0"
+                              className={cn(
+                                "absolute bottom-2.5 right-2.5 z-10 inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-semibold shadow-md transition-opacity",
+                                showCardChrome ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                                "bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20",
+                                "disabled:cursor-not-allowed disabled:opacity-40",
+                              )}
                             >
                               <Pencil className="h-3 w-3" />
                               Edit
@@ -1281,7 +1298,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   ) : (
                     products.map((p) => {
                       const thumb = getProductThumbnail(p.images);
-                      const isExpanded = expandedRowId === p.id;
                       const isSelected = selectedIds.has(p.id);
                       const priceHtml = (p.raw_data?.price_html as string) || "";
                       const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
@@ -1295,7 +1311,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const rangeTextRow = hasRangeRow ? `${currency ? currency + " " : ""}${Number(minPRow).toFixed(2)}–${Number(maxPRow).toFixed(2)}` : null;
                       return (
                         <React.Fragment key={p.id}>
-                          <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(p); return; } setExpandedRowId((cur) => (cur === p.id ? null : p.id)); }}>
+                          <TableRow className={`hover:bg-muted/30 cursor-pointer transition-colors ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(p); return; } if (selectedIds.size > 0 && !locked) toggleSelect(p.id); else if (!locked) setQuickEditProduct(p); }}>
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (!locked && !pending) toggleSelect(p.id); }} />
                             </TableCell>
@@ -1541,6 +1557,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         product={quickEditProduct}
         open={!!quickEditProduct}
         onOpenChange={(o) => { if (!o) setQuickEditProduct(null); }}
+        siteName={storeName}
       />
 
       <Dialog open={!!bulkDialog} onOpenChange={(o) => { if (!o) setBulkDialog(null); }}>

@@ -53,9 +53,13 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
       const snapshots: Array<[QueryKey, unknown]> = [];
       for (const patch of optimisticUpdates) {
         await qc.cancelQueries({ queryKey: patch.queryKey });
-        const prev = qc.getQueryData(patch.queryKey);
-        snapshots.push([patch.queryKey, prev]);
-        qc.setQueryData(patch.queryKey, (old: unknown) => patch.updater(old, vars));
+        const queries = qc.getQueryCache().findAll({ queryKey: patch.queryKey });
+        for (const query of queries) {
+          const key = query.queryKey;
+          const prev = qc.getQueryData(key);
+          snapshots.push([key, prev]);
+          qc.setQueryData(key, (old: unknown) => patch.updater(old, vars));
+        }
       }
       return { snapshots };
     },

@@ -86,10 +86,17 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           {
             queryKey: queryKeys.products(product.store_id),
             updater: (old, patch) => {
-              if (!Array.isArray(old)) return old;
-              return (old as Product[]).map((p) =>
-                p.id === product.id ? { ...p, ...(patch as Partial<Product>) } : p
-              );
+              const apply = (rows: Product[]) =>
+                rows.map((p) => (p.id === product.id ? { ...p, ...(patch as Partial<Product>) } : p));
+              if (Array.isArray(old)) return apply(old as Product[]);
+              if (old && typeof old === "object" && "pages" in old) {
+                const o = old as { pages: Array<{ data: Product[] }>; pageParams?: unknown[] };
+                return {
+                  ...o,
+                  pages: o.pages.map((page) => ({ ...page, data: apply(page.data) })),
+                };
+              }
+              return old;
             },
           },
         ]
