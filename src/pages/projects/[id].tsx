@@ -48,6 +48,7 @@ import { SYNC_INTERVALS } from "@/components/project/constants";
 import { useSiteLiveCounts } from "@/hooks/queries/useSiteLiveCounts";
 import { useTranslation } from "next-i18next";
 import { formatNumber } from "@/lib/format-number";
+import { useToast } from "@/hooks/use-toast";
 
 interface SyncProgress { current: number; total: number; aspect: string; }
 
@@ -56,6 +57,7 @@ const CACHE_TTL = 30000;
 
 export default function SiteWorkspacePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { i18n } = useTranslation();
   const { id } = router.query;
   const [store, setStore] = useState<Store | null>(null);
@@ -246,8 +248,30 @@ export default function SiteWorkspacePage() {
 
   const handleRegisterWebhooks = async () => {
     if (!store) return;
-    try { await fetch(`/api/stores/${store.id}/register-webhooks`, { method: "POST" }); await loadData(); }
-    catch (error) { console.error("Error registering webhooks:", error); }
+    try {
+      const res = await fetch(`/api/stores/${store.id}/register-webhooks`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string; success?: boolean };
+      if (!res.ok) {
+        toast({
+          title: "Webhook registration failed",
+          description: typeof data.error === "string" ? data.error : `HTTP ${res.status}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Webhooks registered",
+        description: typeof data.message === "string" ? data.message : "WooCommerce delivery checks completed.",
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Error registering webhooks:", error);
+      toast({
+        title: "Webhook registration failed",
+        description: error instanceof Error ? error.message : "Request failed",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveSettings = async () => {

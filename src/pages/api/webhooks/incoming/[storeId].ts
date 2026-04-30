@@ -1,7 +1,106 @@
+import type { IncomingHttpHeaders } from "http";
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { Json } from "@/integrations/supabase/database.types";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 import { normalizeWooDate } from "@/lib/woo-date";
+
+/** WooCommerce sends custom headers; Node lowercases keys. Values may be string[]. */
+function firstHeader(headers: IncomingHttpHeaders, key: string): string {
+  const v = headers[key.toLowerCase()];
+  if (Array.isArray(v)) return (v[0] ?? "").trim();
+  return typeof v === "string" ? v.trim() : "";
+}
+
+/** Normalize JSON body, URL-encoded ping (`webhook_id=123`), or raw string. */
+function normalizePayload(body: unknown): Record<string, unknown> {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    return body as Record<string, unknown>;
+  }
+  if (typeof body === "string") {
+    const s = body.trim();
+    if (!s) return {};
+    try {
+      const j = JSON.parse(s) as unknown;
+      if (j && typeof j === "object" && !Array.isArray(j)) return j as Record<string, unknown>;
+    } catch {
+      /* fall through */
+    }
+    if (/webhook_id=/i.test(s)) {
+      const q = new URLSearchParams(s);
+      const id = q.get("webhook_id");
+      if (id != null && id !== "") return { webhook_id: id };
+    }
+    return {};
+  }
+  return {};
+}
+
+const WOO_TOPIC_PATTERN = /^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/i;
+
+function inferTopicFromPayloadShape(payload: Record<string, unknown>): string {
+  const keys = Object.keys(payload);
+  let resource = "";
+  if ("line_items" in payload || "billing" in payload) resource = "order";
+  else if ("sku" in payload || "regular_price" in payload) resource = "product";
+  else if ("email" in payload && ("first_name" in payload || "username" in payload)) resource = "customer";
+  else if ("code" in payload && "discount_type" in payload) resource = "coupon";
+
+  if (resource) {
+    const action =
+      payload.date_modified && payload.date_created && payload.date_modified !== payload.date_created
+        ? "updated"
+        : "created";
+    return `${resource}.${action}`;
+  }
+  if (keys.length === 0) return "ping";
+  return "";
+}
+
+function isPingOnlyPayload(payload: Record<string, unknown>): boolean {
+  const keys = Object.keys(payload);
+  return keys.length === 1 && keys[0] === "webhook_id";
+}
+
+async function resolveTopicForStore(storeId: string, headers: IncomingHttpHeaders, rawBody: unknown): Promise<string> {
+  const payload = normalizePayload(rawBody);
+
+  const headerTopic = firstHeader(headers, "x-wc-webhook-topic");
+  if (headerTopic) return headerTopic;
+
+  const resH = firstHeader(headers, "x-wc-webhook-resource");
+  const evtH = firstHeader(headers, "x-wc-webhook-event");
+  if (resH && evtH) return `${resH}.${evtH}`;
+
+  const pt = payload.topic;
+  if (typeof pt === "string" && WOO_TOPIC_PATTERN.test(pt)) return pt;
+
+  const resP = payload.resource;
+  const evtP = payload.event;
+  if (typeof resP === "string" && typeof evtP === "string") return `${resP}.${evtP}`;
+
+  const inferred = inferTopicFromPayloadShape(payload);
+  if (inferred && inferred !== "") return inferred;
+
+  /** WooCommerce `deliver_ping()` POSTs `webhook_id=N` with no topic headers (verification ping). */
+  const widRaw = payload.webhook_id;
+  if (widRaw !== undefined && widRaw !== null) {
+    const wid = typeof widRaw === "number" ? widRaw : parseInt(String(widRaw), 10);
+    if (Number.isFinite(wid) && wid > 0) {
+      const { data: row } = await supabase
+        .from("webhooks")
+        .select("topic")
+        .eq("store_id", storeId)
+        .eq("woo_webhook_id", wid)
+        .maybeSingle();
+      if (row?.topic) return row.topic;
+    }
+  }
+
+  if (isPingOnlyPayload(payload)) return "ping";
+  if (Object.keys(payload).length === 0) return "ping";
+  return "unknown";
+}
 
 function getEntityType(topic: string): string | null {
   const prefix = topic.split(".")[0];
@@ -243,30 +342,7 @@ export default async function handler(
   }
 
   try {
-    const headers = req.headers;
-    let topic = (headers["x-wc-webhook-topic"] as string) || "";
-
-    if (!topic) {
-      const resource = (headers["x-wc-webhook-resource"] as string) || "";
-      const event = (headers["x-wc-webhook-event"] as string) || "";
-      if (resource && event) topic = `${resource}.${event}`;
-    }
-
-    if (!topic) {
-      const payload = (req.body || {}) as Record<string, unknown>;
-      const keys = Object.keys(payload);
-      let resource = "";
-      if ("line_items" in payload || "billing" in payload) resource = "order";
-      else if ("sku" in payload || "regular_price" in payload) resource = "product";
-      else if ("email" in payload && ("first_name" in payload || "username" in payload)) resource = "customer";
-      else if ("code" in payload && "discount_type" in payload) resource = "coupon";
-
-      if (resource) {
-        const action = (payload.date_modified && payload.date_created && payload.date_modified !== payload.date_created) ? "updated" : "created";
-        topic = `${resource}.${action}`;
-      }
-      if (!topic) topic = keys.length === 0 ? "ping" : "unknown";
-    }
+    const topic = await resolveTopicForStore(storeId, req.headers, req.body);
 
     const { data: store } = await supabase
       .from("stores")
@@ -278,12 +354,14 @@ export default async function handler(
       return res.status(404).json({ error: "Store not found" });
     }
 
+    const payloadForStore = normalizePayload(req.body);
+
     const { data: event, error: eventError } = await supabase
       .from("webhook_events")
       .insert({
         store_id: storeId,
         topic,
-        payload: req.body || {},
+        payload: toJson(payloadForStore) as Json,
         processing_status: "pending",
       })
       .select()
@@ -307,7 +385,7 @@ export default async function handler(
     }
 
     const entityType = getEntityType(topic);
-    const payload = (req.body || {}) as Record<string, unknown>;
+    const payload = payloadForStore;
     const wooId = payload.id as number | undefined;
 
     if (entityType && wooId) {
