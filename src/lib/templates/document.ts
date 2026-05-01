@@ -205,7 +205,15 @@ export function blankInvoiceHtml(): string {
     border-bottom: 1px solid var(--line);
     padding-bottom: 10px;
   }
-  .beam-brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .beam-brand { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 auto; justify-content: flex-start; }
+  .beam-site-name {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    line-height: 1.2;
+    max-width: min(360px, 55vw);
+  }
   .beam-tagline {
     font-size: 11px;
     color: var(--ink-soft);
@@ -222,15 +230,10 @@ export function blankInvoiceHtml(): string {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 2px;
+    gap: 4px;
     color: var(--ink);
     flex-shrink: 0;
     text-align: right;
-  }
-  .beam-header-store {
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.2;
   }
   .beam-header-right .beam-email {
     font-size: 12px;
@@ -246,11 +249,103 @@ export function blankInvoiceHtml(): string {
     color: var(--ink);
     line-height: 1.1;
   }
+  .beam-invoice-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 2px;
+  }
   .beam-invoice-id {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink-soft);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.02em;
+  }
+  .beam-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .beam-status-pill::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
+  }
+  .beam-status-pill--success {
+    background: #ecfdf5;
+    border-color: #6ee7b7;
+    color: #065f46;
+  }
+  .beam-status-pill--success::before {
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+  }
+  .beam-status-pill--info {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1e3a8a;
+  }
+  .beam-status-pill--info::before {
+    background: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+  }
+  .beam-status-pill--warning {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+  .beam-status-pill--warning::before {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+  }
+  .beam-status-pill--muted {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #475569;
+  }
+  .beam-status-pill--muted::before {
+    background: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.35);
+  }
+  .beam-status-pill--danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+  .beam-status-pill--danger::before {
+    background: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35);
+  }
+  .beam-status-pill--neutral {
+    background: #fafafa;
+    border-color: #e4e4e7;
+    color: #3f3f46;
+  }
+  .beam-status-pill--neutral::before {
+    background: #71717a;
+    box-shadow: 0 0 0 3px rgba(113, 113, 122, 0.3);
+  }
+  .beam-status-pill--violet {
+    background: #f5f3ff;
+    border-color: #c4b5fd;
+    color: #5b21b6;
+  }
+  .beam-status-pill--violet::before {
+    background: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.35);
   }
   .beam-details {
     display: grid;
@@ -525,12 +620,22 @@ export function blankInvoiceHtml(): string {
       <header class="beam-header">
         <div class="beam-brand">
           {{#if store.tagline}}<span class="beam-tagline">{{store.tagline}}</span>{{/if}}
-          {{#if store.logo}}<img class="beam-logo" src="{{store.logo}}" alt="{{store.name}}" />{{/if}}
+          {{#if store.has_invoice_logo}}
+            {{#ifFilled store.invoice_logo_url}}
+            <img class="beam-logo" src="{{store.invoice_logo_url}}" alt="{{store.name}}" />
+            {{/ifFilled}}
+          {{else}}
+            <div class="beam-site-name">{{store.name}}</div>
+          {{/if}}
         </div>
         <div class="beam-header-right">
-          {{#unless store.logo}}<div class="beam-header-store">{{store.name}}</div>{{/unless}}
           <div class="beam-title">Invoice</div>
-          {{#ifFilled order.invoice_number}}<div class="beam-invoice-id">#{{order.invoice_number}}</div>{{/ifFilled}}
+          {{#ifFilled order.invoice_number}}
+          <div class="beam-invoice-meta">
+            <span class="beam-invoice-id">#{{order.invoice_number}}</span>
+            <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">{{payment.status_label}}</span>
+          </div>
+          {{/ifFilled}}
         </div>
       </header>
 
@@ -552,7 +657,6 @@ export function blankInvoiceHtml(): string {
           {{#ifFilled order.woo_order_id}}<div class="beam-info"><span class="beam-info-label">Order Number:</span><span class="beam-info-value">{{order.woo_order_id}}</span></div>{{/ifFilled}}
           {{#ifFilled order.date_iso}}<div class="beam-info"><span class="beam-info-label">Order Date:</span><span class="beam-info-value">{{date order.date_iso "long"}}</span></div>{{/ifFilled}}
           {{#ifFilled payment.title}}<div class="beam-info"><span class="beam-info-label">Payment Method:</span><span class="beam-info-value">{{payment.title}}</span></div>{{/ifFilled}}
-          {{#ifFilled payment.display_status}}<div class="beam-info"><span class="beam-info-label">Payment Status:</span><span class="beam-info-value">{{payment.display_status}}</span></div>{{/ifFilled}}
         </div>
       </section>
 
@@ -641,9 +745,6 @@ export function blankInvoiceHtml(): string {
     <footer class="beam-footer">
       {{#ifFilled payment.title}}
       <div class="beam-footer-pay"><strong>Payment method:</strong> {{payment.title}}</div>
-      {{/ifFilled}}
-      {{#ifFilled payment.display_status}}
-      <div class="beam-footer-pay"><strong>Payment status:</strong> {{payment.display_status}}</div>
       {{/ifFilled}}
       <div class="beam-footer-links">
         {{#if store.terms_url}}

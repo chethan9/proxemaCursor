@@ -33,6 +33,8 @@ export interface OrderContext {
     site_logo_url: string;
     /** Uploaded invoice-only logo URL (empty if using site logo). */
     invoice_logo_url: string;
+    /** True when `invoice_logo_url` is set — default invoice shows logo; otherwise site name on the left. */
+    has_invoice_logo: boolean;
     /** Display tagline under logo (empty string if not configured on store). */
     tagline: string;
     email: string;
@@ -90,6 +92,8 @@ export interface OrderContext {
     payment_state: string;
     payment_state_label: string;
     display_status: string;
+    /** Visual tone for invoice header status pill (success, info, warning, …). */
+    invoice_badge_tone: string;
     transaction_id: string;
   };
   shipping_method: {
@@ -229,6 +233,19 @@ function resolvePaymentStatusLabels(orderStatus: string): {
   return { status, statusLabel, paymentState, paymentStateLabel, displayStatus };
 }
 
+/** Maps Woo order status → CSS tone for invoice PDF status pill (next to invoice #). */
+function invoiceOrderStatusBadgeTone(orderStatus: string): string {
+  const s = String(orderStatus || "").trim().toLowerCase();
+  if (s === "completed") return "success";
+  if (s === "processing") return "info";
+  if (s === "on-hold") return "warning";
+  if (s === "pending") return "muted";
+  if (s === "failed") return "danger";
+  if (s === "cancelled") return "neutral";
+  if (s === "refunded") return "violet";
+  return "muted";
+}
+
 function buildVariation(meta: Array<{ key: string; value: string }>): Record<string, string> & { text: string } {
   const obj: Record<string, string> = {};
   const cleaned: Array<{ key: string; value: string }> = [];
@@ -356,6 +373,7 @@ export async function resolveOrderContext(
       logo_url: effectiveInvoiceLogo,
       site_logo_url: siteLogo,
       invoice_logo_url: invoiceOnly,
+      has_invoice_logo: invoiceOnly.length > 0,
       tagline: "",
       email: String(store?.support_email || ""),
       phone: String(store?.phone || ""),
@@ -409,6 +427,7 @@ export async function resolveOrderContext(
       payment_state: paymentStatus.paymentState,
       payment_state_label: paymentStatus.paymentStateLabel,
       display_status: paymentStatus.displayStatus,
+      invoice_badge_tone: invoiceOrderStatusBadgeTone(String(order.status || "")),
       transaction_id: String(rawData.transaction_id || ""),
     },
     shipping_method: {
@@ -481,6 +500,7 @@ export function getSampleContext(templateMeta: { name: string; type: string }): 
       logo_url: "",
       site_logo_url: "",
       invoice_logo_url: "",
+      has_invoice_logo: false,
       tagline: "",
       email: "support@sample.store",
       phone: "+1 555 0100",
@@ -525,6 +545,7 @@ export function getSampleContext(templateMeta: { name: string; type: string }): 
       payment_state: "paid",
       payment_state_label: "Paid",
       display_status: "Paid (Processing)",
+      invoice_badge_tone: "info",
       transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc",
     },
     shipping_method: { name: "Standard Shipping", title: "Standard Shipping", tracking_number: "1Z999AA10123456784" },
