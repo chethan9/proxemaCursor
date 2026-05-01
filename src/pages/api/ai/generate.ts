@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
 import { isBillingDevMode } from "@/lib/billing-dev-mode.server";
 import { consumeAICredits, getAICreditsState, aiQuotaErrorPayload } from "@/lib/ai-credits.server";
-import { renderPromptTemplate } from "@/lib/ai/prompt-render";
+import { appendAdditionalPromptSegment, renderPromptTemplate } from "@/lib/ai/prompt-render";
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
 import { getDecryptedProviderApiKey } from "@/services/aiProviderCredentials.server";
 import type { TablesInsert } from "@/integrations/supabase/helpers";
@@ -15,6 +15,8 @@ type GenerateBody = {
   sources?: Array<{ url: string; role?: string }>;
   userInput?: Record<string, string | number | boolean>;
   outputCount?: number;
+  /** Extra instructions appended to every rendered prompt (generation + optional regenerate flows). */
+  additionalPrompt?: string;
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -30,9 +32,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const storeId = typeof body.storeId === "string" ? body.storeId : "";
   const featureSlug = typeof body.featureSlug === "string" ? body.featureSlug : "";
   const sources = Array.isArray(body.sources) ? body.sources : [];
+  const additionalPrompt = typeof body.additionalPrompt === "string" ? body.additionalPrompt.trim() : "";
 
-  if (!storeId || !featureSlug || sources.length === 0 || !sources.every((s) => s?.url?.startsWith("http"))) {
-    return res.status(400).json({ error: "Invalid body: storeId, featureSlug, sources[].url required" });
+  if (!storeId || !featureSlug) {
+    return res.status(400).json({ error: "Invalid body: storeId and featureSlug required" });
+  }
+
+  if (sources.some((s) => !s?.url?.startsWith("http"))) {
+    return res.status(400).json({ error: "Each source must include a valid http(s) URL" });
   }
 
   const gate = await assertStoreAccess(userRes.user.id, storeId);
@@ -53,6 +60,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq("is_active", true)
     .maybeSingle();
   if (featErr || !feature) return res.status(404).json({ error: "Feature not found or inactive" });
+
+  const urls = sources.map((s) => s.url);
+  const requiresSource = (feature as { requires_source_image?: boolean }).requires_source_image !== false;
+  if (requiresSource && urls.length === 0) {
+    return res.status(400).json({ error: "Source image required for this feature", code: "source_required" });
+  }
+  if (urls.length === 0 && feature.provider === "openai_image") {
+    return res.status(400).json({
+      error: "OpenAI image edits require a reference image. Select or upload a source image.",
+      code: "openai_requires_source",
+    });
+  }
 
   const outputCount = Math.min(
     Math.max(1, Number(body.outputCount ?? feature.default_output_count) || 1),
@@ -97,18 +116,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   for (const [k, v] of Object.entries(rawIn)) {
     userInputStr[k] = v === undefined || v === null ? "" : String(v);
   }
+  const persistedUserInput = { ...userInputStr };
+  if (additionalPrompt) persistedUserInput.additional_prompt = additionalPrompt;
 
-  const urls = sources.map((s) => s.url);
   const prompts: string[] = [];
   for (let i = 0; i < outputCount; i++) {
-    prompts.push(
-      renderPromptTemplate(feature.prompt_template, {
-        product_name: productName,
-        user_input: userInputStr,
-        index: i + 1,
-        total: outputCount,
-      })
-    );
+    const rendered = renderPromptTemplate(feature.prompt_template, {
+      product_name: productName,
+      user_input: userInputStr,
+      index: i + 1,
+      total: outputCount,
+    });
+    prompts.push(appendAdditionalPromptSegment(rendered, additionalPrompt));
   }
 
   const buffers: Buffer[] = [];
@@ -136,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       feature_id: feature.id,
       actor_user_id: userRes.user.id,
       input_image_urls: urls,
-      user_input: userInputStr as unknown as TablesInsert<"ai_generations">["user_input"],
+      user_input: persistedUserInput as unknown as TablesInsert<"ai_generations">["user_input"],
       output_storage_paths: [],
       output_wp_ids: [],
       status: "failed",
@@ -180,7 +199,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     feature_id: feature.id,
     actor_user_id: userRes.user.id,
     input_image_urls: urls,
-    user_input: userInputStr as unknown as TablesInsert<"ai_generations">["user_input"],
+    user_input: persistedUserInput as unknown as TablesInsert<"ai_generations">["user_input"],
     output_storage_paths: paths,
     output_wp_ids: [],
     status: "success",

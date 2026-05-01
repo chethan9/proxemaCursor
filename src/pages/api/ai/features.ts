@@ -13,7 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data, error } = await supabaseAdmin
     .from("ai_features")
-    .select("id, slug, name, description, provider, model, default_output_count, supports_main, supports_gallery, credit_cost_per_output, user_input_schema, sort_order")
+    .select(
+      "id, slug, name, description, provider, model, default_output_count, supports_main, supports_gallery, credit_cost_per_output, user_input_schema, sort_order, requires_source_image"
+    )
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 

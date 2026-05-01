@@ -47,6 +47,7 @@ const emptyForm: Partial<Feature> = {
   default_output_count: 1,
   supports_main: true,
   supports_gallery: true,
+  requires_source_image: true,
   credit_cost_per_output: 1,
   user_input_schema: { fields: [] } as Feature["user_input_schema"],
   is_active: true,
@@ -236,6 +237,7 @@ function Inner() {
                   <TableHead>{t("ai.provider")}</TableHead>
                   <TableHead>{t("ai.model")}</TableHead>
                   <TableHead>{t("ai.credits")}</TableHead>
+                  <TableHead>Src image</TableHead>
                   <TableHead>{t("ai.active")}</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -248,6 +250,7 @@ function Inner() {
                     <TableCell>{f.provider}</TableCell>
                     <TableCell className="max-w-[140px] truncate text-xs">{f.model}</TableCell>
                     <TableCell>{f.credit_cost_per_output}</TableCell>
+                    <TableCell>{(f as { requires_source_image?: boolean }).requires_source_image !== false ? "Yes" : "No"}</TableCell>
                     <TableCell>{f.is_active ? "Yes" : "No"}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="outline" size="sm" onClick={() => testFeature.mutate(f.id)} disabled={testFeature.isPending}>
@@ -381,7 +384,7 @@ function Inner() {
                   onChange={(e) => setForm((p) => ({ ...p, credit_cost_per_output: parseInt(e.target.value, 10) || 1 }))}
                 />
               </div>
-              <div className="flex items-end gap-4 pb-2">
+              <div className="flex flex-wrap items-end gap-4 pb-2">
                 <label className="flex items-center gap-2 text-sm">
                   <Switch checked={Boolean(form.supports_main)} onCheckedChange={(c) => setForm((p) => ({ ...p, supports_main: c }))} />
                   Main
@@ -390,7 +393,17 @@ function Inner() {
                   <Switch checked={Boolean(form.supports_gallery)} onCheckedChange={(c) => setForm((p) => ({ ...p, supports_gallery: c }))} />
                   Gallery
                 </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={(form as { requires_source_image?: boolean }).requires_source_image !== false}
+                    onCheckedChange={(c) => setForm((p) => ({ ...p, requires_source_image: c }))}
+                  />
+                  Require source image
+                </label>
               </div>
+              <p className="text-[11px] text-muted-foreground -mt-2">
+                When off, Gemini may run without a reference image; OpenAI image edits still need one.
+              </p>
             </div>
             <div>
               <Label>user_input_schema (JSON)</Label>

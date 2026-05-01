@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
 import { isBillingDevMode } from "@/lib/billing-dev-mode.server";
 import { consumeAICredits, getAICreditsState, aiQuotaErrorPayload } from "@/lib/ai-credits.server";
-import { renderPromptTemplate } from "@/lib/ai/prompt-render";
+import { appendAdditionalPromptSegment, renderPromptTemplate } from "@/lib/ai/prompt-render";
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
 import { getDecryptedProviderApiKey } from "@/services/aiProviderCredentials.server";
 
@@ -19,8 +19,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const generationId = typeof req.query.generationId === "string" ? req.query.generationId : "";
   if (!generationId) return res.status(400).json({ error: "Missing generation id" });
 
-  const body = req.body as { storeId?: string; outputIndices?: number[] };
+  const body = req.body as { storeId?: string; outputIndices?: number[]; additionalPrompt?: string };
   const storeId = typeof body.storeId === "string" ? body.storeId : "";
+  const additionalPrompt = typeof body.additionalPrompt === "string" ? body.additionalPrompt.trim() : "";
   if (!storeId) return res.status(400).json({ error: "storeId required" });
 
   const gate = await assertStoreAccess(userRes.user.id, storeId);
@@ -87,12 +88,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     for (let j = 0; j < indices.length; j++) {
       const idx = indices[j];
-      const prompt = renderPromptTemplate(feature.prompt_template, {
-        product_name: productName,
-        user_input: userInputStr,
-        index: idx + 1,
-        total,
-      });
+      const prompt = appendAdditionalPromptSegment(
+        renderPromptTemplate(feature.prompt_template, {
+          product_name: productName,
+          user_input: userInputStr,
+          index: idx + 1,
+          total,
+        }),
+        additionalPrompt
+      );
       const out = await provider.generate(
         {
           prompt,

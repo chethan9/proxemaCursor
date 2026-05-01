@@ -1592,6 +1592,7 @@ export type Database = {
           name: string
           prompt_template: string
           provider: string
+          requires_source_image: boolean
           slug: string
           sort_order: number
           supports_gallery: boolean
@@ -1610,6 +1611,7 @@ export type Database = {
           name: string
           prompt_template: string
           provider: string
+          requires_source_image?: boolean
           slug: string
           sort_order?: number
           supports_gallery?: boolean
@@ -1628,6 +1630,7 @@ export type Database = {
           name?: string
           prompt_template?: string
           provider?: string
+          requires_source_image?: boolean
           slug?: string
           sort_order?: number
           supports_gallery?: boolean
