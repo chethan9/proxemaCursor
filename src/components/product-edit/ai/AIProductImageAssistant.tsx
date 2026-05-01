@@ -355,186 +355,212 @@ export function AIProductImageAssistant({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t("products.ai.title")}</DialogTitle>
+        <DialogContent className="flex max-h-[min(92vh,760px)] w-[calc(100vw-1.5rem)] max-w-[min(100vw-1.5rem,560px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]">
+          <DialogHeader className="shrink-0 space-y-0 border-b border-border px-4 py-2.5 pr-11 text-left">
+            <div className="flex items-start justify-between gap-2">
+              <DialogTitle className="text-base font-semibold leading-tight">{t("products.ai.title")}</DialogTitle>
+              <Button type="button" variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2 text-[11px]" onClick={revertLocal}>
+                <Undo2 className="h-3 w-3" />
+                {t("products.ai.revert")}
+              </Button>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <Button type="button" variant="ghost" size="sm" className="gap-1 h-8 -mt-1" onClick={revertLocal}>
-              <Undo2 className="h-3.5 w-3.5" />
-              {t("products.ai.revert")}
-            </Button>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            <div className="grid gap-3 md:grid-cols-2 md:gap-x-4 md:items-start">
+              {/* Source column */}
+              <div className="space-y-2">
+                <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.referenceImage")}</Label>
+                <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as SourceTab)}>
+                  <TabsList className="grid h-8 w-full grid-cols-3 gap-0 p-0.5">
+                    <TabsTrigger value="product" className="px-1.5 py-1 text-[11px]">
+                      {t("products.ai.tabProduct")}
+                    </TabsTrigger>
+                    <TabsTrigger value="upload" className="gap-0.5 px-1.5 py-1 text-[11px]">
+                      <Upload className="h-3 w-3 shrink-0" />
+                      {t("products.ai.tabUpload")}
+                    </TabsTrigger>
+                    <TabsTrigger value="library" className="gap-0.5 px-1.5 py-1 text-[11px]">
+                      <Images className="h-3 w-3 shrink-0" />
+                      {t("products.ai.tabLibrary")}
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="product" className="mt-2 space-y-1.5">
+                    {thumbCount === 0 ? (
+                      <p className="text-[11px] text-muted-foreground">{t("products.ai.noProductImages")}</p>
+                    ) : (
+                      <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin]">
+                        {form.images.map((img, i) => (
+                          <button
+                            key={`${img.src}-${i}`}
+                            type="button"
+                            onClick={() => setSelectedImageIdx(i)}
+                            className={cn(
+                              "relative h-14 w-14 shrink-0 overflow-hidden rounded border-2 transition-colors",
+                              selectedImageIdx === i ? "border-primary ring-1 ring-primary/25" : "border-border hover:border-muted-foreground/40",
+                            )}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={img.src} alt="" className="h-full w-full object-cover" />
+                            {i === 0 && (
+                              <span className="absolute bottom-0 left-0 right-0 bg-background/90 py-px text-center text-[8px]">{t("products.ai.mainBadge")}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">{t("products.ai.hintOriginalUrl")}</p>
+                  </TabsContent>
+                  <TabsContent value="upload" className="mt-2 space-y-1.5">
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onPickFile(e.target.files)} />
+                    <Button type="button" variant="outline" size="sm" className="h-8 w-full text-xs" onClick={() => fileRef.current?.click()}>
+                      <Upload className="mr-1.5 h-3 w-3" />
+                      {t("products.ai.chooseFile")}
+                    </Button>
+                    {uploadPreview && (
+                      <div className="aspect-video max-h-28 overflow-hidden rounded border bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={uploadPreview} alt="" className="h-full w-full object-contain" />
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="library" className="mt-2 space-y-1.5">
+                    <Button type="button" variant="outline" size="sm" className="h-8 w-full text-xs" onClick={() => setLibraryOpen(true)}>
+                      {t("products.ai.openMediaLibrary")}
+                    </Button>
+                    {sourceTab === "library" && externalSourceUrl && (
+                      <p className="text-[10px] text-muted-foreground">{t("products.ai.librarySelected")}</p>
+                    )}
+                  </TabsContent>
+                </Tabs>
 
-            <div className="space-y-2">
-              <Label className="text-xs">{t("products.ai.referenceImage")}</Label>
-              <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as SourceTab)}>
-                <TabsList className="grid w-full grid-cols-3 h-9">
-                  <TabsTrigger value="product" className="text-xs">
-                    {t("products.ai.tabProduct")}
-                  </TabsTrigger>
-                  <TabsTrigger value="upload" className="text-xs gap-1">
-                    <Upload className="h-3 w-3 shrink-0" />
-                    {t("products.ai.tabUpload")}
-                  </TabsTrigger>
-                  <TabsTrigger value="library" className="text-xs gap-1">
-                    <Images className="h-3 w-3 shrink-0" />
-                    {t("products.ai.tabLibrary")}
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="product" className="mt-3 space-y-2">
-                  {thumbCount === 0 ? (
-                    <p className="text-xs text-muted-foreground">{t("products.ai.noProductImages")}</p>
-                  ) : (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {form.images.map((img, i) => (
-                        <button
-                          key={`${img.src}-${i}`}
-                          type="button"
-                          onClick={() => setSelectedImageIdx(i)}
-                          className={cn(
-                            "relative h-16 w-16 shrink-0 rounded-md border-2 overflow-hidden transition-colors",
-                            selectedImageIdx === i ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-muted-foreground/40"
-                          )}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img.src} alt="" className="h-full w-full object-cover" />
-                          {i === 0 && (
-                            <span className="absolute bottom-0 left-0 right-0 bg-background/90 text-[9px] py-0.5 text-center">{t("products.ai.mainBadge")}</span>
-                          )}
-                        </button>
-                      ))}
+                <div className="space-y-1.5 border-t border-border pt-2">
+                  <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.applyTarget")}</Label>
+                  <RadioGroup value={sourceMode} onValueChange={(v) => setSourceMode(v as "main" | "gallery")} className="flex flex-wrap gap-x-4 gap-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="main" id="ai-src-main" className="h-3.5 w-3.5" />
+                      <label htmlFor="ai-src-main" className="cursor-pointer text-xs">
+                        {t("products.ai.sourceMain")}
+                      </label>
                     </div>
-                  )}
-                  <p className="text-[11px] text-muted-foreground leading-snug">{t("products.ai.hintOriginalUrl")}</p>
-                </TabsContent>
-                <TabsContent value="upload" className="mt-3 space-y-2">
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onPickFile(e.target.files)} />
-                  <Button type="button" variant="outline" size="sm" className="w-full h-9" onClick={() => fileRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5 mr-2" />
-                    {t("products.ai.chooseFile")}
-                  </Button>
-                  {uploadPreview && (
-                    <div className="rounded-md border overflow-hidden aspect-video max-h-40 bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={uploadPreview} alt="" className="h-full w-full object-contain" />
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="gallery" id="ai-src-gal" className="h-3.5 w-3.5" disabled={galleryLen === 0} />
+                      <label htmlFor="ai-src-gal" className={cn("cursor-pointer text-xs", galleryLen === 0 && "opacity-50")}>
+                        {t("products.ai.sourceGallery")}
+                      </label>
                     </div>
+                  </RadioGroup>
+                  {sourceMode === "gallery" && galleryLen > 0 && (
+                    <Select value={String(gallerySlot)} onValueChange={(v) => setGallerySlot(Number(v))}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: galleryLen }, (_, i) => (
+                          <SelectItem key={i} value={String(i)}>
+                            {t("products.ai.gallerySlot", { n: i + 1 })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
-                </TabsContent>
-                <TabsContent value="library" className="mt-3 space-y-2">
-                  <Button type="button" variant="outline" size="sm" className="w-full h-9" onClick={() => setLibraryOpen(true)}>
-                    {t("products.ai.openMediaLibrary")}
-                  </Button>
-                  {sourceTab === "library" && externalSourceUrl && (
-                    <p className="text-[11px] text-muted-foreground">{t("products.ai.librarySelected")}</p>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs">{t("products.ai.applyTarget")}</Label>
-              <RadioGroup value={sourceMode} onValueChange={(v) => setSourceMode(v as "main" | "gallery")} className="flex gap-4">
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="main" id="ai-src-main" />
-                  <label htmlFor="ai-src-main" className="text-sm">
-                    {t("products.ai.sourceMain")}
-                  </label>
+                  <p className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">
+                    {sourceMode === "main" ? t("products.ai.hintApplyMain") : t("products.ai.hintApplyGallery", { n: gallerySlot + 1 })}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="gallery" id="ai-src-gal" disabled={galleryLen === 0} />
-                  <label htmlFor="ai-src-gal" className="text-sm">
-                    {t("products.ai.sourceGallery")}
-                  </label>
-                </div>
-              </RadioGroup>
-              {sourceMode === "gallery" && galleryLen > 0 && (
-                <Select value={String(gallerySlot)} onValueChange={(v) => setGallerySlot(Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: galleryLen }, (_, i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {t("products.ai.gallerySlot", { n: i + 1 })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                {sourceMode === "main" ? t("products.ai.hintApplyMain") : t("products.ai.hintApplyGallery", { n: gallerySlot + 1 })}
-              </p>
-            </div>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("products.ai.feature")}</Label>
-              <Select value={featureSlug} onValueChange={setFeatureSlug}>
-                <SelectTrigger>
-                  <SelectValue placeholder="…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {features.map((f) => (
-                    <SelectItem key={f.id} value={f.slug}>
-                      {f.name} ({f.credit_cost_per_output} cr)
-                      {f.requires_source_image === false ? ` · ${t("products.ai.optionalRef")}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selected && (selected.user_input_schema?.fields || []).map((f) => (
-              <div key={f.key} className="space-y-1">
-                <Label className="text-xs">{f.label}</Label>
-                {f.type === "select" && f.options ? (
-                  <Select value={userValues[f.key] ?? ""} onValueChange={(v) => setUserValues((p) => ({ ...p, [f.key]: v }))}>
-                    <SelectTrigger>
-                      <SelectValue />
+              {/* Options column */}
+              <div className="space-y-2 md:border-l md:border-border md:pl-4">
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.feature")}</Label>
+                  <Select value={featureSlug} onValueChange={setFeatureSlug}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="…" />
                     </SelectTrigger>
                     <SelectContent>
-                      {f.options.map((o) => (
-                        <SelectItem key={o} value={o}>
-                          {o}
+                      {features.map((f) => (
+                        <SelectItem key={f.id} value={f.slug} className="text-xs">
+                          {f.name} ({f.credit_cost_per_output} cr)
+                          {f.requires_source_image === false ? ` · ${t("products.ai.optionalRef")}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <Input value={userValues[f.key] ?? ""} onChange={(e) => setUserValues((p) => ({ ...p, [f.key]: e.target.value }))} />
-                )}
+                </div>
+
+                {selected &&
+                  (selected.user_input_schema?.fields || []).length > 0 && (
+                    <div className="grid gap-2 sm:grid-cols-1">
+                      {(selected.user_input_schema?.fields || []).map((f) => (
+                        <div key={f.key} className="space-y-0.5">
+                          <Label className="text-[11px] font-medium text-muted-foreground">{f.label}</Label>
+                          {f.type === "select" && f.options ? (
+                            <Select value={userValues[f.key] ?? ""} onValueChange={(v) => setUserValues((p) => ({ ...p, [f.key]: v }))}>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {f.options.map((o) => (
+                                  <SelectItem key={o} value={o} className="text-xs">
+                                    {o}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input className="h-8 text-xs" value={userValues[f.key] ?? ""} onChange={(e) => setUserValues((p) => ({ ...p, [f.key]: e.target.value }))} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                <div className="space-y-0.5">
+                  <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.additionalPrompt")}</Label>
+                  <Textarea
+                    value={additionalPrompt}
+                    onChange={(e) => setAdditionalPrompt(e.target.value)}
+                    placeholder={t("products.ai.additionalPromptPlaceholder")}
+                    rows={2}
+                    className="min-h-0 resize-none text-xs leading-snug"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.outputCount")}</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={8}
+                      className="h-8 w-full max-w-[5rem] text-xs"
+                      value={outCount}
+                      onChange={(e) => setOutCount(Number(e.target.value) || 1)}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="h-9 w-full shrink-0 gap-1.5 px-4 text-xs sm:w-auto"
+                    disabled={generating || !featureSlug}
+                    onClick={() => void runGenerate()}
+                  >
+                    {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {generating ? t("products.ai.generating") : t("products.ai.generate")}
+                  </Button>
+                </div>
               </div>
-            ))}
-
-            <div className="space-y-1">
-              <Label className="text-xs">{t("products.ai.additionalPrompt")}</Label>
-              <Textarea
-                value={additionalPrompt}
-                onChange={(e) => setAdditionalPrompt(e.target.value)}
-                placeholder={t("products.ai.additionalPromptPlaceholder")}
-                className="min-h-[72px] text-sm resize-y"
-              />
             </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">{t("products.ai.outputCount")}</Label>
-              <Input type="number" min={1} max={8} value={outCount} onChange={(e) => setOutCount(Number(e.target.value) || 1)} />
-            </div>
-
-            <Button type="button" className="w-full gap-2" disabled={generating || !featureSlug} onClick={() => void runGenerate()}>
-              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {generating ? t("products.ai.generating") : t("products.ai.generate")}
-            </Button>
 
             {outputs.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-border">
-                <div className="text-xs text-muted-foreground">{t("products.ai.creditsUsed", { count: creditsSpent })}</div>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="mt-3 space-y-2 border-t border-border pt-3">
+                <div className="text-[11px] text-muted-foreground">{t("products.ai.creditsUsed", { count: creditsSpent })}</div>
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                   {outputs.map((o) => (
                     <button
                       key={o.index}
                       type="button"
-                      className="relative rounded-md border overflow-hidden aspect-square focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="relative aspect-square overflow-hidden rounded border focus:outline-none focus:ring-2 focus:ring-ring"
                       onClick={() => setLightboxUrl(o.signedUrl)}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -542,11 +568,12 @@ export function AIProductImageAssistant({
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground">{t("products.ai.hintRegenerateActions")}</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="line-clamp-2 text-[10px] text-muted-foreground">{t("products.ai.hintRegenerateActions")}</p>
+                <div className="flex flex-wrap gap-1.5">
                   <Button
                     type="button"
                     size="sm"
+                    className="h-7 text-[11px]"
                     onClick={() =>
                       void applyPlacements([
                         {
@@ -559,13 +586,19 @@ export function AIProductImageAssistant({
                   >
                     {t("products.ai.applyBest")}
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => void applyPlacements(outputs.map((o) => ({ outputIndex: o.index, applyAs: "gallery_append" as const })))}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 text-[11px]"
+                    onClick={() => void applyPlacements(outputs.map((o) => ({ outputIndex: o.index, applyAs: "gallery_append" as const })))}
+                  >
                     {t("products.ai.appendAllGallery")}
                   </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => void runRegenerate()}>
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void runRegenerate()}>
                     {t("products.ai.regenerate")}
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => void rejectStaging()}>
+                  <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => void rejectStaging()}>
                     {t("products.ai.discard")}
                   </Button>
                 </div>
@@ -573,8 +606,8 @@ export function AIProductImageAssistant({
             )}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => void rejectStaging()}>
+          <DialogFooter className="shrink-0 gap-2 border-t border-border px-4 py-2">
+            <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => void rejectStaging()}>
               {t("products.ai.close")}
             </Button>
           </DialogFooter>
