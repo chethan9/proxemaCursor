@@ -422,7 +422,7 @@
       "lastName": "Last name",
       "email": "Email",
       "phone": "Phone",
-      "itemCount": "Item count",
+      "itemCount": "Item",
       "lineItemsSummary": "Items (name × qty)",
       "currency": "Currency",
       "total": "Total",

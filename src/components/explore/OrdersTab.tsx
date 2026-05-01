@@ -1204,8 +1204,17 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                       const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
                       const headerSortDisabled = liveOrdersMode && c.sortable === "status";
                       return (
-                        <TableHead key={c.key} className={`cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
-                          <span className="inline-flex items-center gap-1.5 min-w-0">
+                        <TableHead
+                          key={c.key}
+                          className={cn(
+                            "cursor-move select-none",
+                            dragKey === c.key && "opacity-50",
+                            c.key === "date_created" && "whitespace-nowrap min-w-[13rem]",
+                            c.key === "items" && "w-12 max-w-[3.5rem] text-right",
+                          )}
+                          {...dragProps}
+                        >
+                          <span className={cn("inline-flex items-center gap-1.5 min-w-0", c.key === "items" && "justify-end w-full")}>
                             <span className="text-xs font-medium truncate">{c.label}</span>
                             {isSortable ? (
                               <button
@@ -1291,7 +1300,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.customer_id ?? "—"}</TableCell>;
                             }
                             if (c.key === "items") {
-                              return <TableCell key={c.key} className="text-sm text-right">{getItemCount(o.line_items)}</TableCell>;
+                              return <TableCell key={c.key} className="text-sm text-right w-12 max-w-[3.5rem] tabular-nums">{getItemCount(o.line_items)}</TableCell>;
                             }
                             if (c.key === "line_items_summary") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate" title={getLineItemsSummary(o.line_items)}>{getLineItemsSummary(o.line_items) || "—"}</TableCell>;
@@ -1352,7 +1361,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               return <TableCell key={c.key} className="text-xs text-muted-foreground capitalize">{cv || "—"}</TableCell>;
                             }
                             if (c.key === "date_created") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_created ? formatStoreDateTime(o.date_created, storeTz) : "—"}</TableCell>;
+                              return (
+                                <TableCell key={c.key} className="text-xs text-muted-foreground whitespace-nowrap min-w-[13rem]">
+                                  {o.date_created ? formatStoreDateTime(o.date_created, storeTz) : "—"}
+                                </TableCell>
+                              );
                             }
                             if (c.key === "date_modified") {
                               return <TableCell key={c.key} className="text-xs text-muted-foreground">{o.date_modified ? formatStoreDateTime(o.date_modified, storeTz) : "—"}</TableCell>;
