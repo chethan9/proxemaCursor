@@ -17,9 +17,16 @@ import { acknowledgeDownloadArtifacts } from "@/lib/downloads-artifacts-ack";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InfiniteScrollSentinel } from "@/components/explore/InfiniteScrollSentinel";
 import { cn } from "@/lib/utils";
+
+/** Target density on wide screens; fewer columns on smaller breakpoints. */
+const GRID_COLS_CLASS =
+  "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3";
+const ITEMS_PER_ROW_LG = 7;
+const INITIAL_VISIBLE_ROWS = 3;
+const LOAD_MORE_ROWS = 1;
 
 const TYPE_BADGE: Record<DownloadFile["type"], { icon: React.ComponentType<{ className?: string }>; badge: string; tile: string }> = {
   invoice: {
@@ -162,6 +169,24 @@ function DownloadsInner() {
       return true;
     });
   }, [files, typeFilter, search]);
+
+  const filterSig = useMemo(() => filtered.map((f) => f.id).join(","), [filtered]);
+
+  const initialVisibleCap = ITEMS_PER_ROW_LG * INITIAL_VISIBLE_ROWS;
+  const [visibleCount, setVisibleCount] = useState(initialVisibleCap);
+
+  useEffect(() => {
+    setVisibleCount(Math.min(initialVisibleCap, filtered.length));
+  }, [filterSig, filtered.length, initialVisibleCap]);
+
+  const visibleFiles = useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount],
+  );
+
+  const loadMoreGrid = useCallback(() => {
+    setVisibleCount((c) => Math.min(c + ITEMS_PER_ROW_LG * LOAD_MORE_ROWS, filtered.length));
+  }, [filtered.length]);
 
   const allSelected = filtered.length > 0 && filtered.every((f) => selected.has(f.id));
   const toggleAll = () => {
@@ -335,6 +360,13 @@ function DownloadsInner() {
       <Card>
         <CardContent className="p-3">
           <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="h-3.5 w-3.5 rounded border-border shrink-0"
+              aria-label={t("downloads.selectAll")}
+            />
             <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <div className="relative flex-1 min-w-[180px] max-w-md">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -390,30 +422,9 @@ function DownloadsInner() {
               <p>{files.length === 0 ? t("downloads.empty.noFilesHint") : t("downloads.empty.noMatchesHint")}</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-9 h-8 px-2 py-1">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="h-3.5 w-3.5 rounded border-border"
-                      aria-label={t("downloads.selectAll")}
-                    />
-                  </TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium">{t("downloads.columns.type")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium min-w-[120px]">{t("downloads.columns.fileName")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium hidden md:table-cell">{t("downloads.columns.orderRef")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium hidden lg:table-cell">{t("downloads.columns.customer")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium whitespace-nowrap">{t("downloads.columns.generated")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium whitespace-nowrap hidden sm:table-cell">{t("downloads.columns.size")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium whitespace-nowrap">{t("downloads.columns.expires")}</TableHead>
-                  <TableHead className="h-8 px-2 py-1 text-[11px] font-medium text-right w-[1%]">{t("downloads.columns.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((f) => {
+            <>
+              <div className={cn(GRID_COLS_CLASS, "p-3 pt-2")}>
+                {visibleFiles.map((f) => {
                   const meta = TYPE_BADGE[f.type];
                   const Icon = meta.icon;
                   const exp = expiresIn(f.expires_at);
@@ -421,93 +432,112 @@ function DownloadsInner() {
                   const sel = selected.has(f.id);
                   const pdf = isPdfFile(f);
                   return (
-                    <TableRow
+                    <div
                       key={f.id}
+                      role={pdf && f.download_url ? "button" : undefined}
+                      tabIndex={pdf && f.download_url ? 0 : undefined}
                       data-state={sel ? "selected" : undefined}
-                      className={cn(pdf && f.download_url && "cursor-pointer")}
+                      className={cn(
+                        "relative rounded-lg border border-border/80 bg-card p-2.5 flex flex-col gap-1.5 text-left transition-colors hover:bg-muted/35 min-h-[148px]",
+                        sel && "ring-2 ring-primary/25 bg-primary/[0.04]",
+                        pdf && f.download_url && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      )}
                       onClick={(e) => {
                         const el = e.target as HTMLElement;
-                        if (el.closest("button, input, [role='checkbox']")) return;
+                        if (el.closest("button, input")) return;
                         if (pdf && f.download_url) void openPreview(f);
                       }}
+                      onKeyDown={(e) => {
+                        if (!pdf || !f.download_url) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          void openPreview(f);
+                        }
+                      }}
                     >
-                      <TableCell className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
                           checked={sel}
                           onChange={() => toggleOne(f.id)}
-                          className="h-3.5 w-3.5 rounded border-border"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-3.5 w-3.5 rounded border-border mt-0.5 shrink-0"
                           aria-label={t("downloads.selectFile", { name: f.file_name })}
                         />
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className={cn("h-7 w-7 rounded flex items-center justify-center shrink-0", meta.tile)}>
-                            <Icon className="h-3.5 w-3.5 opacity-90" />
-                          </div>
-                          <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-5 font-normal truncate max-w-[5.5rem]", meta.badge)}>
+                        <div className={cn("h-8 w-8 rounded-md flex items-center justify-center shrink-0", meta.tile)}>
+                          <Icon className="h-4 w-4 opacity-90" />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 h-5 font-normal w-fit max-w-full truncate", meta.badge)}>
                             {t(TYPE_LABEL_KEY[f.type])}
                           </Badge>
+                          <p className="text-[11px] font-semibold leading-snug line-clamp-2 break-words" title={f.file_name}>
+                            {f.file_name}
+                          </p>
                         </div>
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2 text-xs font-medium max-w-[200px]">
-                        <span className="line-clamp-2 break-all" title={f.file_name}>{f.file_name}</span>
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2 text-[11px] text-muted-foreground hidden md:table-cell max-w-[140px] truncate" title={f.reference ?? undefined}>
-                        {f.reference ?? "—"}
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2 text-[11px] text-muted-foreground hidden lg:table-cell max-w-[120px] truncate" title={f.customer ?? undefined}>
-                        {f.customer ?? "—"}
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2 text-[11px] text-muted-foreground whitespace-nowrap">{formatDate(f.generated_at, i18n.language)}</TableCell>
-                      <TableCell className="py-1.5 px-2 text-[11px] font-mono text-muted-foreground hidden sm:table-cell">{formatBytes(f.size_bytes)}</TableCell>
-                      <TableCell className={cn("py-1.5 px-2 text-[11px] font-mono whitespace-nowrap", exp.cls)}>{exp.label}</TableCell>
-                      <TableCell className="py-1.5 px-2 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-0.5">
-                          {pdf && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              title={t("downloads.actions.preview")}
-                              aria-label={t("downloads.actions.preview")}
-                              onClick={() => void openPreview(f)}
-                              disabled={!f.download_url || (previewLoading && previewFile?.id === f.id)}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground space-y-0.5 pl-6 sm:pl-0 sm:ml-0 border-t border-border/50 pt-1.5 flex-1 min-h-0">
+                        <p className="truncate" title={f.reference ?? undefined}>{f.reference ?? "—"}</p>
+                        <p className="truncate hidden sm:block" title={f.customer ?? undefined}>{f.customer ?? "—"}</p>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-1 border-t border-border/50">
+                        <span className="whitespace-nowrap">{formatDate(f.generated_at, i18n.language)}</span>
+                        <span className="font-mono tabular-nums">{formatBytes(f.size_bytes)}</span>
+                        <span className={cn("font-mono whitespace-nowrap", exp.cls)}>{exp.label}</span>
+                      </div>
+                      <div className="flex justify-end gap-0.5 pt-0.5" onClick={(e) => e.stopPropagation()}>
+                        {pdf && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0"
-                            title={t("downloads.actions.download")}
-                            aria-label={t("downloads.actions.download")}
-                            onClick={() => downloadFile(f)}
-                            disabled={isDownloading || !f.download_url}
+                            title={t("downloads.actions.preview")}
+                            aria-label={t("downloads.actions.preview")}
+                            onClick={() => void openPreview(f)}
+                            disabled={!f.download_url || (previewLoading && previewFile?.id === f.id)}
                           >
-                            {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <DownloadIcon className="h-3.5 w-3.5" />}
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            title={t("downloads.actions.remove")}
-                            aria-label={t("downloads.actions.remove")}
-                            onClick={() => dismissFile(f)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          title={t("downloads.actions.download")}
+                          aria-label={t("downloads.actions.download")}
+                          onClick={() => downloadFile(f)}
+                          disabled={isDownloading || !f.download_url}
+                        >
+                          {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <DownloadIcon className="h-3.5 w-3.5" />}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          title={t("downloads.actions.remove")}
+                          aria-label={t("downloads.actions.remove")}
+                          onClick={() => dismissFile(f)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+              <InfiniteScrollSentinel
+                hasMore={visibleCount < filtered.length}
+                isLoading={false}
+                onLoadMore={loadMoreGrid}
+                loaded={visibleFiles.length}
+                total={filtered.length}
+                scrollDepthThreshold={0.35}
+                rootMargin="320px"
+              />
+            </>
           )}
           {!isLoading && filtered.length > 0 && (
             <p className="text-[10px] text-muted-foreground px-3 py-2 border-t border-border/80">{t("downloads.gridHint")}</p>

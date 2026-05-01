@@ -839,7 +839,7 @@
       "clear": "Clear"
     },
     "selected": "{{count}} selected",
-    "gridHint": "Use checkboxes to select · Click a PDF row or Preview to open · Bulk exports appear here when the job finishes",
+    "gridHint": "Use checkboxes to select · Up to 7 cards per row on wide screens · Scroll to load more · Click a PDF card or Preview to open · Bulk exports appear here when the job finishes",
     "preview": "Preview",
     "previewTitle": "{{name}}",
     "previewLoading": "Loading preview…",
