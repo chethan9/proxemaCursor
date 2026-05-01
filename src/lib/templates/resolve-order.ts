@@ -258,13 +258,15 @@ function invoicePaymentBadgeTone(paymentState: string, orderStatus: string): str
   return invoiceOrderStatusBadgeTone(String(orderStatus || ""));
 }
 
-/** Compact SVG for PDF/HTML invoice pills — uses currentColor. */
+/** Compact SVG for PDF/HTML invoice pills — uses currentColor (pill supplies semantic color). */
 const BADGE_ICON_SVG = {
-  paid: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><path d="M5 10.5l3 3 7-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  failed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`,
-  reversed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M6 10h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-  pending: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>`,
-  fallback: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg>`,
+  /** Check inside a circle ring — reads clearly inside the rounded pill at small sizes. */
+  paid: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.35" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M6.25 10.1l2.35 2.35 5.15-5.15" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+  /** X inside a circle ring — pairs visually with paid. */
+  failed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.35" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"/></svg>`,
+  reversed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.35" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M6.5 10h7" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"/></svg>`,
+  pending: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.35" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M10 6.5v3.5l2 1.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>`,
+  fallback: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.35" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="10" cy="10" r="2.25" fill="currentColor"/></svg>`,
 } as const;
 
 function invoiceBadgeIconSvg(paymentState: string): string {

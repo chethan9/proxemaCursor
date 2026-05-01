@@ -322,13 +322,13 @@ export function blankInvoiceHtml(): string {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
   .beam-status-pill__glyph svg {
     display: block;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
   .beam-status-pill__label {
     line-height: 1.2;
