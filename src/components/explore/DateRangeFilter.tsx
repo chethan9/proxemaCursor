@@ -9,6 +9,26 @@ import { useTranslation } from "next-i18next";
 
 export type DateRangePresetValue = "all" | "today" | "yesterday" | "7d" | "30d" | "90d" | "custom";
 
+/** Defaults when the `site` bundle is not hydrated yet (matches `public/locales/en/site.json`). */
+const DATE_RANGE_FALLBACKS: Record<string, string> = {
+  "orders.dateRange.trigger": "Date",
+  "orders.dateRange.custom": "Custom",
+  "orders.dateRange.fromPrefix": "From {{date}}",
+  "orders.dateRange.rangeSeparator": "–",
+  "orders.dateRange.pickEndDate": "{{start}} – pick end date",
+  "orders.dateRange.pickStartEnd": "Pick start and end dates",
+  "orders.dateRange.cancel": "Cancel",
+  "orders.dateRange.apply": "Apply",
+  "orders.dateRange.presets.all": "All time",
+  "orders.dateRange.presets.today": "Today",
+  "orders.dateRange.presets.yesterday": "Yesterday",
+  "orders.dateRange.presets.7d": "Last 7 days",
+  "orders.dateRange.presets.30d": "Last 30 days",
+  "orders.dateRange.presets.90d": "Last 90 days",
+  "orders.dateRange.presets.custom": "Custom range…",
+  "orders.toolbar.lockedHint": "Available after initial sync completes",
+};
+
 const PRESET_KEYS: { v: DateRangePresetValue; i18nKey: string }[] = [
   { v: "all", i18nKey: "orders.dateRange.presets.all" },
   { v: "today", i18nKey: "orders.dateRange.presets.today" },
@@ -32,7 +52,7 @@ export function DateRangeFilter({
   onChange: (range: DateRangePresetValue, from?: Date, to?: Date) => void;
   disabled?: boolean;
 }) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const [open, setOpen] = useState(false);
   const [draftRange, setDraftRange] = useState<DateRangePresetValue>(range);
   const [draftDates, setDraftDates] = useState<DateRange | undefined>(
@@ -40,19 +60,32 @@ export function DateRangeFilter({
   );
 
   const presetLabel = useMemo(() => {
-    const map = Object.fromEntries(PRESET_KEYS.map((p) => [p.v, t(p.i18nKey)])) as Record<DateRangePresetValue, string>;
+    const map = Object.fromEntries(
+      PRESET_KEYS.map((p) => [
+        p.v,
+        t(p.i18nKey, DATE_RANGE_FALLBACKS[p.i18nKey] ?? p.i18nKey),
+      ]),
+    ) as Record<DateRangePresetValue, string>;
     return map;
-  }, [t]);
+  }, [t, i18n.language]);
 
   const triggerText = useMemo(() => {
-    if (range === "all") return t("orders.dateRange.trigger");
+    const fb = (k: keyof typeof DATE_RANGE_FALLBACKS) => DATE_RANGE_FALLBACKS[k] ?? k;
+    if (range === "all") return t("orders.dateRange.trigger", fb("orders.dateRange.trigger"));
     if (range === "custom") {
-      if (from && to) return `${format(from, "MMM d")} ${t("orders.dateRange.rangeSeparator")} ${format(to, "MMM d")}`;
-      if (from) return t("orders.dateRange.fromPrefix", { date: format(from, "MMM d") });
-      return t("orders.dateRange.custom");
+      if (from && to) {
+        return `${format(from, "MMM d")} ${t("orders.dateRange.rangeSeparator", fb("orders.dateRange.rangeSeparator"))} ${format(to, "MMM d")}`;
+      }
+      if (from) {
+        return t("orders.dateRange.fromPrefix", {
+          date: format(from, "MMM d"),
+          defaultValue: fb("orders.dateRange.fromPrefix"),
+        });
+      }
+      return t("orders.dateRange.custom", fb("orders.dateRange.custom"));
     }
-    return presetLabel[range] ?? t("orders.dateRange.trigger");
-  }, [range, from, to, t, presetLabel]);
+    return presetLabel[range] ?? t("orders.dateRange.trigger", fb("orders.dateRange.trigger"));
+  }, [range, from, to, t, presetLabel, i18n.language]);
 
   useEffect(() => {
     if (open) {
@@ -79,13 +112,17 @@ export function DateRangeFilter({
   const canApply = !!(draftDates?.from && draftDates?.to);
 
   const customSummary = (() => {
+    const sep = t("orders.dateRange.rangeSeparator", DATE_RANGE_FALLBACKS["orders.dateRange.rangeSeparator"]);
     if (draftDates?.from && draftDates?.to) {
-      return `${format(draftDates.from, "MMM d")} ${t("orders.dateRange.rangeSeparator")} ${format(draftDates.to, "MMM d, yyyy")}`;
+      return `${format(draftDates.from, "MMM d")} ${sep} ${format(draftDates.to, "MMM d, yyyy")}`;
     }
     if (draftDates?.from) {
-      return t("orders.dateRange.pickEndDate", { start: format(draftDates.from, "MMM d, yyyy") });
+      return t("orders.dateRange.pickEndDate", {
+        start: format(draftDates.from, "MMM d, yyyy"),
+        defaultValue: DATE_RANGE_FALLBACKS["orders.dateRange.pickEndDate"],
+      });
     }
-    return t("orders.dateRange.pickStartEnd");
+    return t("orders.dateRange.pickStartEnd", DATE_RANGE_FALLBACKS["orders.dateRange.pickStartEnd"]);
   })();
 
   return (
@@ -96,7 +133,7 @@ export function DateRangeFilter({
           size="sm"
           className="h-9 text-xs gap-1.5 px-2.5"
           disabled={disabled}
-          title={disabled ? t("orders.toolbar.lockedHint") : undefined}
+          title={disabled ? t("orders.toolbar.lockedHint", DATE_RANGE_FALLBACKS["orders.toolbar.lockedHint"]) : undefined}
         >
           <Filter className="h-3.5 w-3.5" />
           <span>{triggerText}</span>
@@ -135,10 +172,10 @@ export function DateRangeFilter({
               />
               <div className="flex items-center justify-end gap-1.5 px-3 py-2 border-t border-border">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>
-                  {t("orders.dateRange.cancel")}
+                  {t("orders.dateRange.cancel", DATE_RANGE_FALLBACKS["orders.dateRange.cancel"])}
                 </Button>
                 <Button size="sm" className="h-7 text-xs" onClick={handleApply} disabled={!canApply}>
-                  {t("orders.dateRange.apply")}
+                  {t("orders.dateRange.apply", DATE_RANGE_FALLBACKS["orders.dateRange.apply"])}
                 </Button>
               </div>
             </div>
