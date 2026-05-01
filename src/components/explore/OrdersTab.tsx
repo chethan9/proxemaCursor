@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useMemo, useRef, useCallback } from "react";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,11 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, GripVertical, Trash2, CheckCircle2, ChevronRight, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, type LucideIcon } from "lucide-react";
+import { Search, Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, ShoppingCart, Filter, GripVertical, Trash2, CheckCircle2, ChevronRight, X, Loader2, FilterX, Hourglass, PauseCircle, AlertCircle, CircleDashed, XCircle, RotateCcw, DollarSign, Receipt, ClipboardList, Printer, Tag, type LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useOrderDistinctStatuses } from "@/hooks/queries/useOrderDistinctStatuses";
+import { orderStatusDisplayLabel } from "@/lib/order-status-ui";
 import { listTemplates } from "@/services/templateService";
 import { updateOrderStatus } from "@/services/orderService";
 import { DateRangeFilter } from "./DateRangeFilter";
@@ -68,6 +70,7 @@ import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner"
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
 import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
+import { useStoreSyncStatus } from "@/hooks/queries/useStoreSyncStatus";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
@@ -75,55 +78,89 @@ import { formatNumber } from "@/lib/format-number";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { PrintInvoicesDialog } from "./PrintInvoicesDialog";
 
-const PENDING_LABELS: Record<string, string> = {
-  delete: "Scheduled for deletion",
-  status_change: "Scheduled for status change",
-};
-function pendingLabel(action?: string | null) {
+function pendingLabel(action: string | null | undefined, translate: (key: string, opt?: Record<string, string>) => string) {
   if (!action) return "";
-  return PENDING_LABELS[action] || `Scheduled: ${action}`;
+  if (action === "delete") return translate("orders.pending.delete");
+  if (action === "status_change") return translate("orders.pending.statusChange");
+  return translate("orders.pending.scheduledGeneric", { action });
 }
 
 type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | "last_name" | "email" | "phone" | "customer_id" | "items" | "line_items_summary" | "total" | "payment" | "payment_method" | "currency" | "date_created" | "date_modified" | "synced_at" | "woo_id" | "subtotal" | "tax" | "shipping" | "discount" | "source" | "created_via" | "actions";
 
-const COLUMNS: { key: ColumnKey; label: string; group: string; sortable?: OrderSortField }[] = [
-  { key: "id", label: "Internal ID", group: "Order" },
-  { key: "woo_id", label: "Woo ID", group: "Order" },
-  { key: "order_number", label: "Order #", group: "Order", sortable: "order_number" },
-  { key: "status", label: "Status", group: "Order" },
-  { key: "date_created", label: "Date created", group: "Order", sortable: "date_created" },
-  { key: "date_modified", label: "Date modified", group: "Order" },
-  { key: "synced_at", label: "Last synced", group: "Order", sortable: "synced_at" },
-  { key: "source", label: "Source (UTM)", group: "Order" },
-  { key: "created_via", label: "Created via", group: "Order" },
-  { key: "customer_id", label: "Customer ID", group: "Customer" },
-  { key: "customer", label: "Name", group: "Customer" },
-  { key: "first_name", label: "First name", group: "Customer" },
-  { key: "last_name", label: "Last name", group: "Customer" },
-  { key: "email", label: "Email", group: "Customer" },
-  { key: "phone", label: "Phone", group: "Customer" },
-  { key: "items", label: "Item count", group: "Customer" },
-  { key: "line_items_summary", label: "Items (name × qty)", group: "Customer" },
-  { key: "currency", label: "Currency", group: "Payment & Amounts" },
-  { key: "total", label: "Total", group: "Payment & Amounts", sortable: "total" },
-  { key: "subtotal", label: "Subtotal", group: "Payment & Amounts" },
-  { key: "tax", label: "Tax", group: "Payment & Amounts" },
-  { key: "shipping", label: "Shipping", group: "Payment & Amounts" },
-  { key: "discount", label: "Discount", group: "Payment & Amounts" },
-  { key: "payment", label: "Payment title", group: "Payment & Amounts" },
-  { key: "payment_method", label: "Payment method", group: "Payment & Amounts" },
-  { key: "actions", label: "Actions", group: "Actions" },
+type OrderSortState = { field: OrderSortField; direction: SortDirection };
+
+const COLUMN_META: { key: ColumnKey; labelKey: string; groupKey: string; sortable?: OrderSortField }[] = [
+  { key: "id", labelKey: "orders.columns.internalId", groupKey: "orders.columnGroups.order" },
+  { key: "woo_id", labelKey: "orders.columns.wooId", groupKey: "orders.columnGroups.order" },
+  { key: "order_number", labelKey: "orders.columns.orderNumber", groupKey: "orders.columnGroups.order", sortable: "order_number" },
+  { key: "status", labelKey: "orders.columns.status", groupKey: "orders.columnGroups.order", sortable: "status" },
+  { key: "date_created", labelKey: "orders.columns.dateCreated", groupKey: "orders.columnGroups.order", sortable: "date_created" },
+  { key: "date_modified", labelKey: "orders.columns.dateModified", groupKey: "orders.columnGroups.order" },
+  { key: "synced_at", labelKey: "orders.columns.syncedAt", groupKey: "orders.columnGroups.order", sortable: "synced_at" },
+  { key: "source", labelKey: "orders.columns.sourceUtm", groupKey: "orders.columnGroups.order" },
+  { key: "created_via", labelKey: "orders.columns.createdVia", groupKey: "orders.columnGroups.order" },
+  { key: "customer_id", labelKey: "orders.columns.customerId", groupKey: "orders.columnGroups.customer" },
+  { key: "customer", labelKey: "orders.columns.customerName", groupKey: "orders.columnGroups.customer" },
+  { key: "first_name", labelKey: "orders.columns.firstName", groupKey: "orders.columnGroups.customer" },
+  { key: "last_name", labelKey: "orders.columns.lastName", groupKey: "orders.columnGroups.customer" },
+  { key: "email", labelKey: "orders.columns.email", groupKey: "orders.columnGroups.customer" },
+  { key: "phone", labelKey: "orders.columns.phone", groupKey: "orders.columnGroups.customer" },
+  { key: "items", labelKey: "orders.columns.itemCount", groupKey: "orders.columnGroups.customer" },
+  { key: "line_items_summary", labelKey: "orders.columns.lineItemsSummary", groupKey: "orders.columnGroups.customer" },
+  { key: "currency", labelKey: "orders.columns.currency", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "total", labelKey: "orders.columns.total", groupKey: "orders.columnGroups.paymentAmounts", sortable: "total" },
+  { key: "subtotal", labelKey: "orders.columns.subtotal", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "tax", labelKey: "orders.columns.tax", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "shipping", labelKey: "orders.columns.shipping", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "discount", labelKey: "orders.columns.discount", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "payment", labelKey: "orders.columns.paymentTitle", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "payment_method", labelKey: "orders.columns.paymentMethod", groupKey: "orders.columnGroups.paymentAmounts" },
+  { key: "actions", labelKey: "orders.columns.actions", groupKey: "orders.columnGroups.actions" },
 ];
 
-const SORT_OPTIONS: { field: OrderSortField; direction: SortDirection; label: string }[] = [
-  { field: "date_created", direction: "desc", label: "Newest first" },
-  { field: "date_created", direction: "asc", label: "Oldest first" },
-  { field: "total", direction: "desc", label: "Total high to low" },
-  { field: "total", direction: "asc", label: "Total low to high" },
-  { field: "order_number", direction: "asc", label: "Order # ascending" },
-  { field: "order_number", direction: "desc", label: "Order # descending" },
-  { field: "synced_at", direction: "desc", label: "Recently synced" },
+const VALID_SORT_FIELDS: OrderSortField[] = ["date_created", "total", "order_number", "synced_at", "created_at", "status"];
+
+function normalizeSortFromRemote(raw: unknown): OrderSortState | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as { field?: string; direction?: string };
+  if (!o.field || !o.direction) return null;
+  if (!VALID_SORT_FIELDS.includes(o.field as OrderSortField)) return null;
+  if (o.direction !== "asc" && o.direction !== "desc") return null;
+  return { field: o.field as OrderSortField, direction: o.direction };
+}
+
+const DEFAULT_SORT: OrderSortState = { field: "date_created", direction: "desc" };
+
+const SORT_PRESETS: OrderSortState[] = [
+  { field: "date_created", direction: "desc" },
+  { field: "date_created", direction: "asc" },
+  { field: "total", direction: "desc" },
+  { field: "total", direction: "asc" },
+  { field: "order_number", direction: "asc" },
+  { field: "order_number", direction: "desc" },
+  { field: "synced_at", direction: "desc" },
+  { field: "status", direction: "asc" },
+  { field: "status", direction: "desc" },
 ];
+
+function sortOptionLabelKey(s: OrderSortState): string {
+  const map: Record<string, string> = {
+    "date_created:desc": "orders.sortOptions.newestFirst",
+    "date_created:asc": "orders.sortOptions.oldestFirst",
+    "total:desc": "orders.sortOptions.totalHigh",
+    "total:asc": "orders.sortOptions.totalLow",
+    "order_number:asc": "orders.sortOptions.orderNumAsc",
+    "order_number:desc": "orders.sortOptions.orderNumDesc",
+    "synced_at:desc": "orders.sortOptions.recentlySynced",
+    "status:asc": "orders.sortOptions.statusAsc",
+    "status:desc": "orders.sortOptions.statusDesc",
+  };
+  return map[`${s.field}:${s.direction}`] ?? "orders.sortOptions.newestFirst";
+}
+
+function sortsEqual(a: OrderSortState, b: OrderSortState): boolean {
+  return a.field === b.field && a.direction === b.direction;
+}
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000, 2500, 5000];
 const ORDER_STATUSES = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
@@ -138,8 +175,21 @@ const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIco
   failed: { wrap: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900", dot: "bg-red-500", Icon: AlertCircle },
 };
 
+/** Woo/plugin-specific statuses: neutral pill + icon */
+const CUSTOM_STATUS_VISUAL = { wrap: "bg-muted/80 text-foreground ring-border dark:bg-muted/40", dot: "bg-muted-foreground/60", Icon: Tag } as const;
+
+function resolveStatusVisual(slug: string | null | undefined) {
+  if (!slug) return STATUS_COLORS.pending;
+  return STATUS_COLORS[slug] ?? CUSTOM_STATUS_VISUAL;
+}
+
+
 export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; storeTimezone?: string | null; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const { t, i18n } = useTranslation("site");
+  const columnsDef = useMemo(
+    () => COLUMN_META.map((c) => ({ ...c, label: t(c.labelKey), group: t(c.groupKey) })),
+    [t, i18n.language],
+  );
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   useScrollExpandedIntoView(expandedRowId);
   const router = useRouter();
@@ -159,11 +209,42 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   const [dateRange, setDateRange] = useState<string>(() => getQueryString(router.query, "range") ?? "all");
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
-  const [sort, setSort] = useState(SORT_OPTIONS[0]);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [sort, setSort] = useState<OrderSortState>(() => DEFAULT_SORT);
+
+  const sortSummaryLabel = useMemo(() => t(sortOptionLabelKey(sort)), [sort, t, i18n.language]);
+
+  const { data: syncStatus } = useStoreSyncStatus(storeId);
+  const liveOrdersMode = syncStatus ? !syncStatus.initialSyncDone : false;
+
+  useEffect(() => {
+    if (liveOrdersMode && sort.field === "status") {
+      setSort(DEFAULT_SORT);
+    }
+  }, [liveOrdersMode, sort.field]);
+
+  const { data: distinctStatuses = [] } = useOrderDistinctStatuses(storeId);
+  const customTabStatuses = useMemo(
+    () => distinctStatuses.filter((s) => !ORDER_STATUSES.includes(s)),
+    [distinctStatuses],
+  );
+  const bulkStatusChoices = useMemo(() => {
+    const seen = new Set<string>(ORDER_STATUS_OPTIONS as unknown as string[]);
+    const out: string[] = [...ORDER_STATUS_OPTIONS];
+    for (const s of distinctStatuses) {
+      if (!seen.has(s)) {
+        seen.add(s);
+        out.push(s);
+      }
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [distinctStatuses]);
 
   const { data: paymentOptions = [] } = useOrderPaymentOptions(storeId);
   const { data: pmRegistry = {} as Record<string, PaymentMethodRow> } = usePaymentMethods();
+  const paymentMethodDisplay = useCallback(
+    (methodId: string) => pmRegistry[methodId]?.label?.trim() || methodId,
+    [pmRegistry],
+  );
   const { data: activeSyncs = [] } = useAllActiveSyncs();
   const activeSync = activeSyncs.find((s) => s.store_id === storeId);
   const { locked } = useSyncLocked(storeId);
@@ -196,14 +277,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
         const saved = localStorage.getItem("orders-col-order");
         if (saved) {
           const parsed = JSON.parse(saved) as ColumnKey[];
-          const allKeys = COLUMNS.map((c) => c.key);
+          const allKeys = COLUMN_META.map((c) => c.key);
           const valid = parsed.filter((k) => allKeys.includes(k));
           const missing = allKeys.filter((k) => !valid.includes(k));
           return [...valid, ...missing];
         }
       } catch { /* ignore */ }
     }
-    return COLUMNS.map((c) => c.key);
+    return COLUMN_META.map((c) => c.key);
   });
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
 
@@ -277,7 +358,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   const isPending = (o: OrderRow) => !!(o as OrderRow & { pending_action?: string | null }).pending_action;
   const showLockedToast = useCallback((o: OrderRow) => {
     const action = (o as OrderRow & { pending_action?: string | null }).pending_action;
-    toast({ title: pendingLabel(action), description: t("orders.pending.lockedTooltip") });
+    toast({ title: pendingLabel(action, t), description: t("orders.pending.lockedTooltip") });
   }, [toast, t]);
 
   // Clear selection when data/filters change
@@ -287,9 +368,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
 
   const visibleColList = useMemo(
     () => columnOrder
-      .map((k) => COLUMNS.find((c) => c.key === k))
-      .filter((c): c is typeof COLUMNS[number] => !!c && visibleCols[c.key]),
-    [visibleCols, columnOrder]
+      .map((k) => columnsDef.find((c) => c.key === k))
+      .filter((c): c is (typeof columnsDef)[number] => !!c && visibleCols[c.key]),
+    [visibleCols, columnOrder, columnsDef],
   );
 
   const dateBounds = useMemo(() => {
@@ -335,9 +416,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     totalMax: normalizedTotalMax,
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
-    enabled: isHydrated,
+    enabled: router.isReady,
   });
-  const showInitialLoading = !isHydrated || loading;
+  const showInitialLoading = !router.isReady || loading;
   const showRefetchOverlay = isFetching && !loading && !isFetchingNextPage && orders.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({ searchRef: searchInputRef });
@@ -468,8 +549,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       storeId,
       metadata: { row_count: selected.length, filename },
     });
-    toast({ title: "Export ready", description: `Exported ${selected.length} orders to CSV` });
-  }, [orders, selectedIds, visibleColList, pmRegistry, storeTz, storeName, storeId, toast]);
+    toast({ title: t("orders.exportCsv.ready"), description: t("orders.exportCsv.description", { count: selected.length }) });
+  }, [orders, selectedIds, visibleColList, pmRegistry, storeTz, storeName, storeId, toast, t]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
@@ -492,10 +573,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     if (typeof window !== "undefined") localStorage.setItem("orders-page-size", String(pageSize));
   }, [pageSize]);
 
-  useEffect(() => {
-    if (prefsLoaded.current || prefsLoading.current) return;
+  useLayoutEffect(() => {
     if (!router.isReady) return;
-    prefsLoading.current = true;
     const urlStatus = getQueryString(router.query, "status");
     const urlPay = getQueryString(router.query, "pay");
     const urlTmin = getQueryString(router.query, "tmin");
@@ -506,10 +585,18 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     if (urlTmin !== undefined) setTotalMin(urlTmin);
     if (urlTmax !== undefined) setTotalMax(urlTmax);
     if (urlRange !== undefined) setDateRange(urlRange);
+  }, [router.isReady, router.query]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (prefsLoaded.current || prefsLoading.current) return;
+    prefsLoading.current = true;
+    const urlStatus = getQueryString(router.query, "status");
+    const urlPay = getQueryString(router.query, "pay");
     fetchPreferences("orders").then((remote) => {
       if (remote) {
         if (Array.isArray(remote.columnOrder)) {
-          const allKeys = COLUMNS.map((c) => c.key);
+          const allKeys = COLUMN_META.map((c) => c.key);
           const valid = (remote.columnOrder as ColumnKey[]).filter((k) => allKeys.includes(k));
           const missing = allKeys.filter((k) => !valid.includes(k));
           setColumnOrder([...valid, ...missing]);
@@ -518,15 +605,18 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (urlStatus === undefined && typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
         if (urlPay === undefined && typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
-        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+        if (remote.sort && typeof remote.sort === "object") {
+          const ns = normalizeSortFromRemote(remote.sort);
+          if (ns) setSort(ns);
+        }
       }
       prefsLoaded.current = true;
-      setIsHydrated(true);
     }).catch(() => {
       prefsLoaded.current = true;
-      setIsHydrated(true);
     });
-  }, [router.isReady, router.query]);
+    // Single merge from server prefs when router becomes ready; URL filters already synced in layout effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps intentional (avoid refetching prefs on every query change)
+  }, [router.isReady]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -554,23 +644,23 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                     size="sm"
                     className="h-9 text-xs gap-1.5 px-2.5"
                     disabled={locked}
-                    title={locked ? "Available after initial sync completes" : undefined}
+                    title={locked ? t("orders.toolbar.lockedHint") : undefined}
                   >
                     <Filter className="h-3.5 w-3.5" />
-                    <span className="max-w-[120px] truncate">{paymentFilter === "all" ? "Payment" : paymentFilter}</span>
+                    <span className="max-w-[120px] truncate">{paymentFilter === "all" ? t("orders.filters.payment") : paymentMethodDisplay(paymentFilter)}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-64 p-0">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                    <span className="text-xs font-semibold">Filter by payment</span>
+                    <span className="text-xs font-semibold">{t("orders.filters.filterByPayment")}</span>
                     {paymentFilter !== "all" && (
-                      <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setPaymentFilter("all")}>Clear</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setPaymentFilter("all")}>{t("orders.filters.clear")}</Button>
                     )}
                   </div>
                   <div className="max-h-[280px] overflow-y-auto p-1">
-                    <button onClick={() => setPaymentFilter("all")} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${paymentFilter === "all" ? "bg-accent" : ""}`}>All payment methods</button>
+                    <button onClick={() => setPaymentFilter("all")} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${paymentFilter === "all" ? "bg-accent" : ""}`}>{t("orders.filters.allPaymentMethods")}</button>
                     {paymentOptions.map((p) => (
-                      <button key={p} onClick={() => setPaymentFilter(p)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${paymentFilter === p ? "bg-accent" : ""}`}>{p}</button>
+                      <button key={p} onClick={() => setPaymentFilter(p)} className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${paymentFilter === p ? "bg-accent" : ""}`}>{paymentMethodDisplay(p)}</button>
                     ))}
                   </div>
                 </PopoverContent>
@@ -594,30 +684,30 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                   size="sm"
                   className="h-9 text-xs gap-1.5 px-2.5"
                   disabled={locked}
-                  title={locked ? "Available after initial sync completes" : undefined}
+                  title={locked ? t("orders.toolbar.lockedHint") : undefined}
                 >
                   <DollarSign className="h-3.5 w-3.5" />
                   <span>
                     {totalMin || totalMax
                       ? `${totalMin || "0"} – ${totalMax || "∞"}`
-                      : "Total"}
+                      : t("orders.filters.total")}
                   </span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-64 p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold">Filter by total</span>
+                  <span className="text-xs font-semibold">{t("orders.filters.filterByTotal")}</span>
                   {(totalMin || totalMax) && (
-                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => { setTotalMin(""); setTotalMax(""); }}>Clear</Button>
+                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => { setTotalMin(""); setTotalMax(""); }}>{t("orders.filters.clear")}</Button>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground uppercase">Min</label>
+                    <label className="text-[10px] text-muted-foreground uppercase">{t("orders.filters.min")}</label>
                     <Input type="number" value={totalMin} onChange={(e) => setTotalMin(e.target.value)} placeholder="0" className="h-8 text-xs" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground uppercase">Max</label>
+                    <label className="text-[10px] text-muted-foreground uppercase">{t("orders.filters.max")}</label>
                     <Input type="number" value={totalMax} onChange={(e) => setTotalMax(e.target.value)} placeholder="∞" className="h-8 text-xs" />
                   </div>
                 </div>
@@ -641,7 +731,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("orders.toolbar.sort")}: ${sort.label}`} disabled={locked}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("orders.toolbar.sort")}: ${sortSummaryLabel}`} disabled={locked}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
                   <span className="text-xs">{t("orders.toolbar.sort")}</span>
                 </Button>
@@ -649,9 +739,22 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{t("orders.toolbar.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {SORT_OPTIONS.map((opt, i) => (
-                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
-                ))}
+                {SORT_PRESETS.map((preset, i) => {
+                  const presetDisabled = liveOrdersMode && preset.field === "status";
+                  return (
+                    <DropdownMenuItem
+                      key={i}
+                      disabled={presetDisabled}
+                      title={presetDisabled ? t("orders.toolbar.statusSortOptionDisabledLive") : undefined}
+                      onClick={() => {
+                        if (!presetDisabled) setSort(preset);
+                      }}
+                      className={sortsEqual(sort, preset) ? "bg-accent" : ""}
+                    >
+                      {t(sortOptionLabelKey(preset))}
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
             <Popover>
@@ -667,15 +770,15 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                   <div className="text-sm font-medium">{t("orders.toolbar.customizeColumns")}</div>
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                     const none: Record<string, boolean> = {};
-                    COLUMNS.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
+                    COLUMN_META.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
                     setVisibleCols(none as Record<ColumnKey, boolean>);
                   }}>{t("orders.toolbar.reset")}</Button>
                 </div>
                 <div className="max-h-[380px] overflow-y-auto p-4">
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                     {(() => {
-                      const grouped: Record<string, typeof COLUMNS> = {};
-                      COLUMNS.forEach((c) => {
+                      const grouped: Record<string, (typeof columnsDef)[number][]> = {};
+                      columnsDef.forEach((c) => {
                         if (!grouped[c.group]) grouped[c.group] = [];
                         grouped[c.group].push(c);
                       });
@@ -695,10 +798,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                   </label>
                                 );
                               }
-                              const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
-                              const alignCls = isNumeric ? "text-right" : "text-left";
                               const isActive = sort.field === c.sortable;
                               const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+                              const sortDisabled = liveOrdersMode && c.sortable === "status";
                               return (
                                 <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
                                   <Checkbox
@@ -709,11 +811,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                   />
                                   <button
                                     type="button"
+                                    disabled={sortDisabled}
+                                    title={sortDisabled ? t("orders.toolbar.statusSortDisabledLive") : undefined}
                                     onClick={() => {
+                                      if (sortDisabled) return;
                                       const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
-                                      setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                      setSort({ field: c.sortable!, direction: nextDir });
                                     }}
-                                    className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                                    className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"} disabled:opacity-40 disabled:pointer-events-none`}
                                   >
                                     {c.label}
                                     <SortIcon className="h-3 w-3" />
@@ -743,7 +848,21 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
             <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
               <Button variant="ghost" size="sm" className={`h-7 text-xs px-2.5 ${statusFilter === "all" ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter("all")}>{t("orders.filters.all")}</Button>
               {ORDER_STATUSES.map((s) => (
-                <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs capitalize px-2.5 ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)}>{s}</Button>
+                <Button key={s} variant="ghost" size="sm" className={`h-7 text-xs px-2.5 max-w-[140px] ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`} onClick={() => setStatusFilter(s)} title={orderStatusDisplayLabel(t, s)}>
+                  <span className="truncate">{orderStatusDisplayLabel(t, s)}</span>
+                </Button>
+              ))}
+              {customTabStatuses.map((s) => (
+                <Button
+                  key={`custom-${s}`}
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 text-xs px-2.5 max-w-[140px] ${statusFilter === s ? "bg-foreground/10 text-foreground font-medium hover:bg-foreground/15" : ""}`}
+                  onClick={() => setStatusFilter(s)}
+                  title={s}
+                >
+                  <span className="truncate">{orderStatusDisplayLabel(t, s)}</span>
+                </Button>
               ))}
             </div>
 
@@ -755,20 +874,20 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                     size="sm"
                     className="h-9 text-xs gap-1.5 px-2.5"
                     disabled={locked}
-                    title={locked ? "Available after initial sync completes" : undefined}
+                    title={locked ? t("orders.toolbar.lockedHint") : undefined}
                   >
                     <Filter className="h-3.5 w-3.5" />
                     <span className="max-w-[120px] truncate">
-                      {paymentFilter === "all" ? "Payment" : paymentFilter}
+                      {paymentFilter === "all" ? t("orders.filters.payment") : paymentMethodDisplay(paymentFilter)}
                     </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-64 p-0">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                    <span className="text-xs font-semibold">Filter by payment</span>
+                    <span className="text-xs font-semibold">{t("orders.filters.filterByPayment")}</span>
                     {paymentFilter !== "all" && (
                       <Button variant="ghost" size="sm" className="h-6 text-[11px] px-1.5" onClick={() => setPaymentFilter("all")}>
-                        Clear
+                        {t("orders.filters.clear")}
                       </Button>
                     )}
                   </div>
@@ -777,7 +896,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                       onClick={() => setPaymentFilter("all")}
                       className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted ${paymentFilter === "all" ? "bg-accent" : ""}`}
                     >
-                      All payment methods
+                      {t("orders.filters.allPaymentMethods")}
                     </button>
                     {paymentOptions.map((p) => (
                       <button
@@ -785,7 +904,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                         onClick={() => setPaymentFilter(p)}
                         className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate ${paymentFilter === p ? "bg-accent" : ""}`}
                       >
-                        {p}
+                        {paymentMethodDisplay(p)}
                       </button>
                     ))}
                   </div>
@@ -823,7 +942,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                 }}
               >
                 <FilterX className="h-3.5 w-3.5" />
-                Clear
+                {t("orders.filters.clearAll")}
               </Button>
             )}
 
@@ -833,42 +952,55 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`Sort: ${sort.label}`} disabled={locked}>
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" title={`${t("orders.toolbar.sortBy")}: ${sortSummaryLabel}`} disabled={locked}>
                       <ArrowUpDown className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                    <DropdownMenuLabel>{t("orders.toolbar.sortBy")}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {SORT_OPTIONS.map((opt, i) => (
-                      <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-accent" : ""}>{opt.label}</DropdownMenuItem>
-                    ))}
+                    {SORT_PRESETS.map((preset, i) => {
+                      const presetDisabled = liveOrdersMode && preset.field === "status";
+                      return (
+                        <DropdownMenuItem
+                          key={i}
+                          disabled={presetDisabled}
+                          title={presetDisabled ? t("orders.toolbar.statusSortOptionDisabledLive") : undefined}
+                          onClick={() => {
+                            if (!presetDisabled) setSort(preset);
+                          }}
+                          className={sortsEqual(sort, preset) ? "bg-accent" : ""}
+                        >
+                          {t(sortOptionLabelKey(preset))}
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title="Customize columns" disabled={locked}>
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1" title={t("orders.toolbar.customizeColumns")} disabled={locked}>
                       <Columns3 className="h-3.5 w-3.5" />
                       <span className="text-xs text-muted-foreground">{Object.values(visibleCols).filter(Boolean).length}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-[520px] p-0" sideOffset={6}>
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                      <div className="text-sm font-medium">Customize columns</div>
+                      <div className="text-sm font-medium">{t("orders.toolbar.customizeColumns")}</div>
                       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                         const none: Record<string, boolean> = {};
-                        COLUMNS.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
+                        COLUMN_META.forEach((c) => { none[c.key] = c.key === "order_number" || c.key === "status" || c.key === "total"; });
                         setVisibleCols(none as Record<ColumnKey, boolean>);
                       }}>
-                        Reset
+                        {t("orders.toolbar.reset")}
                       </Button>
                     </div>
                     <div className="max-h-[380px] overflow-y-auto p-4">
                       <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                         {(() => {
-                          const grouped: Record<string, typeof COLUMNS> = {};
-                          COLUMNS.forEach((c) => {
+                          const grouped: Record<string, (typeof columnsDef)[number][]> = {};
+                          columnsDef.forEach((c) => {
                             if (!grouped[c.group]) grouped[c.group] = [];
                             grouped[c.group].push(c);
                           });
@@ -890,10 +1022,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                       </label>
                                     );
                                   }
-                                  const isNumeric = ["total", "subtotal", "tax", "shipping", "discount", "items", "woo_id", "customer_id"].includes(c.key);
-                                  const alignCls = isNumeric ? "text-right" : "text-left";
                                   const isActive = sort.field === c.sortable;
                                   const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+                                  const sortDisabled = liveOrdersMode && c.sortable === "status";
                                   return (
                                     <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
                                       <Checkbox
@@ -904,11 +1035,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                       />
                                       <button
                                         type="button"
+                                        disabled={sortDisabled}
+                                        title={sortDisabled ? t("orders.toolbar.statusSortDisabledLive") : undefined}
                                         onClick={() => {
+                                          if (sortDisabled) return;
                                           const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
-                                          setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                          setSort({ field: c.sortable!, direction: nextDir });
                                         }}
-                                        className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                                        className={`inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"} disabled:opacity-40 disabled:pointer-events-none`}
                                       >
                                         {c.label}
                                         <SortIcon className="h-3 w-3" />
@@ -936,10 +1070,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                 <>
                   <div className="h-4 w-px bg-border" />
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>Batch:</span>
+                    <span>{t("orders.toolbar.batch")}</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1" title="Rows fetched per scroll">{pageSize}</Button>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1" title={t("orders.toolbar.rowsPerScroll")}>{pageSize}</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {PAGE_SIZE_OPTIONS.map((n) => (
@@ -987,9 +1121,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>{t("orders.bulk.changeStatusTo")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {ORDER_STATUS_OPTIONS.map((s) => (
-                    <DropdownMenuItem key={s} onClick={() => setTimeout(() => setBulkAction({ type: "update_status", status: s }), 0)} className="capitalize text-xs">
-                      {s}
+                  {bulkStatusChoices.map((s) => (
+                    <DropdownMenuItem key={s} onClick={() => setTimeout(() => setBulkAction({ type: "update_status", status: s }), 0)} className="text-xs max-w-[280px]">
+                      <span className="truncate" title={s}>{orderStatusDisplayLabel(t, s)}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -1066,25 +1200,28 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                       const isSortable = !!c.sortable;
                       const isActive = isSortable && sort.field === c.sortable;
                       const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+                      const headerSortDisabled = liveOrdersMode && c.sortable === "status";
                       return (
                         <TableHead key={c.key} className={`cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs font-medium truncate">{c.label}</span>
                             {isSortable ? (
                               <button
                                 type="button"
+                                disabled={headerSortDisabled}
+                                title={headerSortDisabled ? t("orders.toolbar.statusSortDisabledLive") : undefined}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (headerSortDisabled) return;
                                   const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
-                                  setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                  setSort({ field: c.sortable!, direction: nextDir });
                                 }}
-                                className={`inline-flex items-center justify-center h-3.5 w-3.5 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                                className={`inline-flex items-center justify-center h-3.5 w-3.5 shrink-0 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
                               >
-                                {sort.direction === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+                                <SortIcon className="h-3.5 w-3.5" />
                               </button>
-                            ) : (
-                              <span className="text-xs font-medium">{c.label}</span>
-                            )}
-                            <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                            ) : null}
+                            <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/30" />
                           </span>
                         </TableHead>
                       );
@@ -1120,13 +1257,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.woo_id}</TableCell>;
                             }
                             if (c.key === "status") {
-                              const s = STATUS_COLORS[o.status || ""] || STATUS_COLORS.pending;
+                              const s = resolveStatusVisual(o.status);
                               const SIcon = s.Icon;
+                              const label = o.status ? orderStatusDisplayLabel(t, o.status) : "—";
                               return (
                                 <TableCell key={c.key}>
-                                  <span className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset ${s.wrap}`}>
-                                    <SIcon className="h-3 w-3" />
-                                    {o.status || "—"}
+                                  <span className={`inline-flex items-center gap-1.5 min-h-6 max-w-[11rem] px-2 rounded-full text-[11px] font-medium ring-1 ring-inset ${s.wrap}`}>
+                                    <SIcon className="h-3 w-3 shrink-0" />
+                                    <span className="truncate min-w-0" title={o.status || undefined}>{label}</span>
                                   </span>
                                 </TableCell>
                               );
