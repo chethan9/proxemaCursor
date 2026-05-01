@@ -1260,6 +1260,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                           className={cn(
                             "cursor-move select-none",
                             dragKey === c.key && "opacity-50",
+                            c.key === "order_number" && "whitespace-nowrap w-[8rem]",
+                            c.key === "status" && "whitespace-nowrap w-[9rem]",
+                            c.key === "phone" && "whitespace-nowrap max-w-[15ch]",
+                            c.key === "payment" && "whitespace-nowrap w-[11rem]",
                             c.key === "date_created" && "whitespace-nowrap min-w-[13rem]",
                             c.key === "items" && "w-12 max-w-[3.5rem] text-right",
                           )}
@@ -1307,8 +1311,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                             }
                             if (c.key === "order_number") {
                               return (
-                                <TableCell key={c.key} className="font-mono font-medium">
-                                  <span className="inline-flex items-center gap-2">
+                                <TableCell key={c.key} className="font-mono font-medium whitespace-nowrap">
+                                  <span className="inline-flex items-center gap-1.5">
                                     #{o.order_number || o.woo_id}
                                     <SyncPill entityType="order" entityId={o.id} />
                                   </span>
@@ -1324,7 +1328,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               const label = o.status ? orderStatusDisplayLabel(t, o.status) : "—";
                               return (
                                 <TableCell key={c.key}>
-                                  <span className={`inline-flex items-center gap-1.5 min-h-6 max-w-[11rem] px-2 rounded-full text-[11px] font-medium ring-1 ring-inset ${s.wrap}`}>
+                                  <span className={`inline-flex items-center gap-1 min-h-6 max-w-[9.25rem] px-1.5 rounded-full text-[11px] font-medium ring-1 ring-inset ${s.wrap}`}>
                                     <SIcon className="h-3 w-3 shrink-0" />
                                     <span className="truncate min-w-0" title={o.status || undefined}>{label}</span>
                                   </span>
@@ -1332,7 +1336,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               );
                             }
                             if (c.key === "customer") {
-                              return <TableCell key={c.key} className="max-w-[200px] truncate">{getCustomerName(o.billing)}</TableCell>;
+                              return <TableCell key={c.key} className="max-w-[170px] truncate">{getCustomerName(o.billing)}</TableCell>;
                             }
                             if (c.key === "first_name") {
                               return <TableCell key={c.key} className="max-w-[140px] truncate">{getBillingFirstName(o.billing) || "—"}</TableCell>;
@@ -1345,7 +1349,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                             }
                             if (c.key === "phone") {
                               const phone = getCustomerPhone(o.billing);
-                              return <TableCell key={c.key} className="font-mono text-xs">{phone || "—"}</TableCell>;
+                              return (
+                                <TableCell key={c.key} className="font-mono text-xs whitespace-nowrap max-w-[15ch]">
+                                  <span className="block truncate" title={phone || undefined}>{phone || "—"}</span>
+                                </TableCell>
+                              );
                             }
                             if (c.key === "customer_id") {
                               return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.customer_id ?? "—"}</TableCell>;
@@ -1378,13 +1386,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               const pm = o.payment_method ? pmRegistry[o.payment_method] : null;
                               const display = pm?.label || o.payment_method_title || o.payment_method || "";
                               return (
-                                <TableCell key={c.key} className="max-w-[180px]">
+                                <TableCell key={c.key} className="max-w-[11rem] w-[11rem]">
                                   <div className="flex items-center gap-1.5 min-w-0">
                                     {pm?.icon_url && (
                                       // eslint-disable-next-line @next/next/no-img-element
                                       <img src={pm.icon_url} alt="" className="h-4 w-4 rounded object-contain bg-white flex-shrink-0" />
                                     )}
-                                    <span className="text-xs text-muted-foreground truncate">{display || "—"}</span>
+                                    <span className="block truncate whitespace-nowrap text-xs text-muted-foreground" title={display || undefined}>{display || "—"}</span>
                                   </div>
                                 </TableCell>
                               );
