@@ -1,16 +1,13 @@
 /**
- * Settings hub layout: left column lists `/settings/*` and linked admin entries for discoverability.
- *
- * Do **not** wrap `/admin/*` standalone tooling pages in this layout — they already appear in the
- * primary sidebar (and optional panel submenu). Using SettingsLayout there stacks a third nav column.
- * Use {@link AppLayout} for `/admin/*` pages instead (see `admin/ai-settings.tsx`, `admin/cloudflare-images.tsx`).
+ * Settings hub layout: left column lists `/settings/*` routes only.
+ * Admin tools (`/admin/*`) are surfaced via the primary sidebar / menu editor, not duplicated here.
  */
 import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import { AppLayout } from "./AppLayout";
-import { User, Palette, CreditCard, ListTree, Layers, Sparkles, Activity, Receipt, Languages, ShieldAlert, ImagePlus, Wand2, Cloud } from "lucide-react";
+import { User, Palette, CreditCard, ListTree, Layers, Sparkles, Activity, Receipt, Languages, ImagePlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -47,10 +44,6 @@ export function SettingsLayout({ children, title, requirePermission, requireSupe
       label: t("settings.groups.admin"),
       items: [
         { href: "/settings/plans", icon: Layers, label: t("settings.items.plans"), show: isSuperAdmin },
-        { href: "/admin/billing", icon: ShieldAlert, label: t("settings.items.billingControls"), show: isSuperAdmin },
-        { href: "/admin/ai-settings", icon: Wand2, label: t("settings.items.adminAiSettings"), show: isSuperAdmin },
-        { href: "/admin/ai-features", icon: Sparkles, label: t("settings.items.adminAiFeatures"), show: isSuperAdmin },
-        { href: "/admin/cloudflare-images", icon: Cloud, label: t("settings.items.adminCloudflareImages"), show: isSuperAdmin },
         { href: "/settings/subscriptions", icon: Receipt, label: t("settings.items.subscriptions"), show: isSuperAdmin },
         { href: "/settings/menu-editor", icon: ListTree, label: t("settings.items.menuEditor"), show: isSuperAdmin },
         { href: "/settings/payment-methods", icon: CreditCard, label: t("settings.items.paymentMethods"), show: isSuperAdmin },
