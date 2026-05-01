@@ -5,7 +5,7 @@ import { renderHtmlToPdf } from "@/lib/templates/render-pdf";
 import { resolveOrderContext, getSampleContext } from "@/lib/templates/resolve-order";
 import { getReportSampleContext, resolveReportContext } from "@/lib/templates/resolve-report";
 import { renderPdfFilename } from "@/lib/templates/render-filename";
-import type { TemplateConfig } from "@/lib/templates/document";
+import { blankInvoiceHtml, type TemplateConfig } from "@/lib/templates/document";
 
 export const config = { api: { bodyParser: { sizeLimit: "1mb" }, responseLimit: false } };
 
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { data: tpl, error: tplErr } = await supabaseAdmin
       .from("templates")
-      .select("id, name, type, current_version_id")
+      .select("id, name, type, is_sample, current_version_id")
       .eq("id", templateId)
       .maybeSingle();
     if (tplErr || !tpl) return res.status(404).json({ error: "Template not found" });
@@ -37,7 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (verErr || !ver) return res.status(404).json({ error: "Template version not found" });
 
     const cfg = ver.document as unknown as TemplateConfig;
-    const html = typeof cfg?.html === "string" ? cfg.html : "";
+    const isMainInvoiceSample =
+      tpl.is_sample === true &&
+      String(tpl.type || "").toLowerCase() === "invoice" &&
+      String(tpl.name || "").trim().toLowerCase() === "main invoice";
+    const html =
+      isMainInvoiceSample
+        ? blankInvoiceHtml()
+        : (typeof cfg?.html === "string" ? cfg.html : "");
     if (!html) return res.status(400).json({ error: "Template has no HTML content" });
 
     const meta = { name: tpl.name as string, type: tpl.type as string };
@@ -72,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const err = e as Error & { renderError?: { message: string; line?: number; column?: number }; status?: number };
       return res.status(err.status ?? 500).json({ error: err.message, detail: err.renderError });
     }
+
 
     const entityKey = orderId || storeId || "sample";
 

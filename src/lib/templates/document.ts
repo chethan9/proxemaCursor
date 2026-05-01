@@ -157,7 +157,7 @@ export function blankInvoiceHtml(): string {
     --bg: #f8fafc;
     --thumb-bg: #f5f5f4;
   }
-  @page { size: A4; margin: 14mm 14mm 14mm 14mm; }
+  @page { size: A4; margin: 10mm 10mm 10mm 10mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { height: 100%; }
   body {
@@ -177,7 +177,7 @@ export function blankInvoiceHtml(): string {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 32px 16px;
+    padding: 12px 8px;
     width: 100%;
     box-sizing: border-box;
   }
@@ -187,9 +187,9 @@ export function blankInvoiceHtml(): string {
     flex-direction: column;
     width: 100%;
     max-width: 820px;
-    min-height: calc(100vh - 64px);
+    min-height: calc(100vh - 24px);
     background: var(--paper);
-    padding: 48px 56px;
+    padding: 24px 30px;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(15, 23, 41, 0.04), 0 8px 24px -8px rgba(15, 23, 41, 0.08);
   }
@@ -203,8 +203,8 @@ export function blankInvoiceHtml(): string {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 28px;
-    gap: 16px;
+    margin-bottom: 14px;
+    gap: 12px;
   }
   .beam-brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .beam-tagline {
@@ -219,62 +219,70 @@ export function blankInvoiceHtml(): string {
     object-fit: contain;
     display: block;
   }
-  .beam-store-fallback {
-    font-weight: 700;
-    font-size: 18px;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-    line-height: 1.2;
-  }
   .beam-header-right {
-    text-align: right;
-    font-size: 16px;
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
     color: var(--ink);
     flex-shrink: 0;
+    text-align: right;
+  }
+  .beam-header-store {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
   }
   .beam-header-right .beam-email {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--ink-soft);
-    margin-top: 4px;
+    margin: 0;
   }
   .beam-title {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    margin-bottom: 28px;
     text-transform: uppercase;
     color: var(--ink);
+    line-height: 1.1;
   }
   .beam-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 28px 32px;
-    margin-bottom: 28px;
+    gap: 12px 18px;
+    margin-bottom: 14px;
   }
   .beam-section-head {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
-    margin-bottom: 14px;
+    margin-bottom: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--ink);
   }
-  .beam-info { margin-bottom: 12px; }
+  .beam-info {
+    margin-bottom: 5px;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    line-height: 1.25;
+  }
   .beam-info:last-child { margin-bottom: 0; }
   .beam-info-label {
     font-size: 11px;
     font-weight: 600;
-    margin-bottom: 2px;
+    white-space: nowrap;
     color: var(--ink);
   }
   .beam-info-value {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--ink-soft);
   }
   table.beam-items {
     width: 100%;
     border-collapse: collapse;
-    margin: 0 0 20px;
+    margin: 0 0 10px;
     table-layout: fixed;
   }
   table.beam-items thead { display: table-header-group; }
@@ -284,14 +292,14 @@ export function blankInvoiceHtml(): string {
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--ink-mute);
-    padding: 10px 0;
+    padding: 7px 0;
     border-bottom: 1px solid var(--line);
     text-align: left;
   }
   table.beam-items thead th.col-qty { text-align: center; width: 88px; }
   table.beam-items thead th.col-price { text-align: right; width: 120px; }
   table.beam-items tbody td {
-    padding: 12px 0;
+    padding: 8px 0;
     border-bottom: 1px solid var(--line-soft);
     vertical-align: middle;
     font-size: 14px;
@@ -300,12 +308,12 @@ export function blankInvoiceHtml(): string {
   .beam-product-cell {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 9px;
     min-width: 0;
   }
   .beam-thumb {
-    width: 44px;
-    height: 52px;
+    width: 40px;
+    height: 48px;
     border-radius: 3px;
     background: var(--thumb-bg);
     flex-shrink: 0;
@@ -321,24 +329,24 @@ export function blankInvoiceHtml(): string {
   }
   .beam-thumb-empty { width: 100%; height: 100%; background: var(--line-soft); }
   .beam-product-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     color: var(--ink);
     word-break: break-word;
   }
   .beam-variation {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--ink-mute);
   }
   .beam-qty {
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--ink-soft);
   }
   .beam-price {
     text-align: right;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
     color: var(--ink);
@@ -346,7 +354,7 @@ export function blankInvoiceHtml(): string {
   .beam-totals-wrap {
     display: flex;
     justify-content: flex-end;
-    margin-top: 12px;
+    margin-top: 6px;
     page-break-inside: avoid;
   }
   .beam-totals {
@@ -356,8 +364,8 @@ export function blankInvoiceHtml(): string {
   .beam-total-row {
     display: flex;
     justify-content: space-between;
-    padding: 6px 0;
-    font-size: 13px;
+    padding: 4px 0;
+    font-size: 12px;
     gap: 16px;
   }
   .beam-total-row .beam-lbl { color: var(--ink-soft); }
@@ -373,17 +381,17 @@ export function blankInvoiceHtml(): string {
   .beam-grand {
     display: flex;
     justify-content: space-between;
-    padding-top: 10px;
-    margin-top: 6px;
-    border-top: 1px solid var(--ink);
-    font-size: 16px;
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 2px solid var(--ink);
+    font-size: 15px;
     font-weight: 700;
     color: var(--ink);
   }
   .beam-footer {
     margin-top: auto;
     flex-shrink: 0;
-    padding-top: 16px;
+    padding-top: 10px;
     border-top: 1px solid var(--line);
     text-align: right;
     font-size: 12px;
@@ -392,7 +400,7 @@ export function blankInvoiceHtml(): string {
   }
   .beam-footer-pay strong { font-weight: 600; color: var(--ink); }
   .beam-footer-links {
-    margin-top: 12px;
+    margin-top: 8px;
     text-align: center;
     font-size: 11px;
   }
@@ -402,7 +410,7 @@ export function blankInvoiceHtml(): string {
   }
   .beam-footer-muted { color: var(--ink-mute); }
   .beam-generated {
-    margin-top: 10px;
+    margin-top: 7px;
     font-size: 10px;
     color: var(--ink-mute);
     text-align: center;
@@ -419,11 +427,11 @@ export function blankInvoiceHtml(): string {
     }
   }
   @media (max-width: 640px) {
-    .beam-card { padding: 24px 20px; min-height: auto; }
+    .beam-card { padding: 16px 14px; min-height: auto; }
     .beam-details { grid-template-columns: 1fr; gap: 20px; }
-    .beam-title { font-size: 26px; }
+    .beam-title { font-size: 22px; }
     .beam-totals { max-width: 100%; }
-    .beam-thumb { width: 38px; height: 44px; }
+    .beam-thumb { width: 34px; height: 40px; }
   }
 </style>
 </head>
@@ -434,38 +442,33 @@ export function blankInvoiceHtml(): string {
       <header class="beam-header">
         <div class="beam-brand">
           {{#if store.tagline}}<span class="beam-tagline">{{store.tagline}}</span>{{/if}}
-          {{#if store.logo}}
-            <img class="beam-logo" src="{{store.logo}}" alt="{{store.name}}" />
-          {{else}}
-            <div class="beam-store-fallback">{{store.name}}</div>
-          {{/if}}
+          {{#if store.logo}}<img class="beam-logo" src="{{store.logo}}" alt="{{store.name}}" />{{/if}}
         </div>
         <div class="beam-header-right">
-          <div>{{store.name}}</div>
+          <div class="beam-header-store">{{store.name}}</div>
           {{#if store.email}}<div class="beam-email">{{store.email}}</div>{{/if}}
+          <div class="beam-title">Invoice</div>
         </div>
       </header>
-
-      <h1 class="beam-title">Invoice</h1>
 
       <section class="beam-details">
         <div>
           <div class="beam-section-head">Billing Details</div>
-          {{#ifFilled billing.name}}<div class="beam-info"><div class="beam-info-label">Name</div><div class="beam-info-value">{{billing.name}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.country}}<div class="beam-info"><div class="beam-info-label">Country</div><div class="beam-info-value">{{billing.country}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.city}}<div class="beam-info"><div class="beam-info-label">Area</div><div class="beam-info-value">{{billing.city}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.address.line1}}<div class="beam-info"><div class="beam-info-label">Street</div><div class="beam-info-value">{{billing.address.line1}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.address.line2}}<div class="beam-info"><div class="beam-info-label">Block</div><div class="beam-info-value">{{billing.address.line2}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.company}}<div class="beam-info"><div class="beam-info-label">Apartment</div><div class="beam-info-value">{{billing.company}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.phone}}<div class="beam-info"><div class="beam-info-label">Phone</div><div class="beam-info-value">{{billing.phone}}</div></div>{{/ifFilled}}
-          {{#ifFilled billing.email}}<div class="beam-info"><div class="beam-info-label">Email</div><div class="beam-info-value">{{billing.email}}</div></div>{{/ifFilled}}
+          {{#ifFilled billing.name}}<div class="beam-info"><span class="beam-info-label">Name:</span><span class="beam-info-value">{{billing.name}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.country}}<div class="beam-info"><span class="beam-info-label">Country:</span><span class="beam-info-value">{{billing.country}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.city}}<div class="beam-info"><span class="beam-info-label">Area:</span><span class="beam-info-value">{{billing.city}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.address.line1}}<div class="beam-info"><span class="beam-info-label">Street:</span><span class="beam-info-value">{{billing.address.line1}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.address.line2}}<div class="beam-info"><span class="beam-info-label">Block:</span><span class="beam-info-value">{{billing.address.line2}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.company}}<div class="beam-info"><span class="beam-info-label">Apartment:</span><span class="beam-info-value">{{billing.company}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.phone}}<div class="beam-info"><span class="beam-info-label">Phone:</span><span class="beam-info-value">{{billing.phone}}</span></div>{{/ifFilled}}
+          {{#ifFilled billing.email}}<div class="beam-info"><span class="beam-info-label">Email:</span><span class="beam-info-value">{{billing.email}}</span></div>{{/ifFilled}}
         </div>
         <div>
-          {{#ifFilled order.invoice_number}}<div class="beam-info"><div class="beam-info-label">Invoice Number</div><div class="beam-info-value">{{order.invoice_number}}</div></div>{{/ifFilled}}
-          {{#ifFilled order.date_iso}}<div class="beam-info"><div class="beam-info-label">Invoice Date</div><div class="beam-info-value">{{date order.date_iso "long"}}</div></div>{{/ifFilled}}
-          {{#ifFilled order.woo_order_id}}<div class="beam-info"><div class="beam-info-label">Order Number</div><div class="beam-info-value">{{order.woo_order_id}}</div></div>{{/ifFilled}}
-          {{#ifFilled order.date_iso}}<div class="beam-info"><div class="beam-info-label">Order Date</div><div class="beam-info-value">{{date order.date_iso "long"}}</div></div>{{/ifFilled}}
-          {{#ifFilled payment.title}}<div class="beam-info"><div class="beam-info-label">Payment Method</div><div class="beam-info-value">{{payment.title}}</div></div>{{/ifFilled}}
+          {{#ifFilled order.invoice_number}}<div class="beam-info"><span class="beam-info-label">Invoice Number:</span><span class="beam-info-value">{{order.invoice_number}}</span></div>{{/ifFilled}}
+          {{#ifFilled order.date_iso}}<div class="beam-info"><span class="beam-info-label">Invoice Date:</span><span class="beam-info-value">{{date order.date_iso "long"}}</span></div>{{/ifFilled}}
+          {{#ifFilled order.woo_order_id}}<div class="beam-info"><span class="beam-info-label">Order Number:</span><span class="beam-info-value">{{order.woo_order_id}}</span></div>{{/ifFilled}}
+          {{#ifFilled order.date_iso}}<div class="beam-info"><span class="beam-info-label">Order Date:</span><span class="beam-info-value">{{date order.date_iso "long"}}</span></div>{{/ifFilled}}
+          {{#ifFilled payment.title}}<div class="beam-info"><span class="beam-info-label">Payment Method:</span><span class="beam-info-value">{{payment.title}}</span></div>{{/ifFilled}}
         </div>
       </section>
 

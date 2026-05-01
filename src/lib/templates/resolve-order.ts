@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveMirroredProductImageUrl } from "@/lib/product-image-urls";
 
 export interface AddressNested {
   line1: string;
@@ -186,13 +187,59 @@ function asStoreAddress(a: Record<string, unknown> | null | undefined): AddressN
 
 function buildVariation(meta: Array<{ key: string; value: string }>): Record<string, string> & { text: string } {
   const obj: Record<string, string> = {};
+  const cleaned: Array<{ key: string; value: string }> = [];
   for (const m of meta) {
-    if (!m.key) continue;
-    const k = m.key.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-    obj[k] = m.value;
+    const rawKey = String(m.key || "").trim();
+    if (!rawKey || rawKey.startsWith("_")) continue;
+    const rawValue = String(m.value || "").trim();
+    if (!rawValue || rawValue === "[object Object]") continue;
+    const cleanedKey = rawKey.replace(/^pa_/, "").replace(/_/g, " ").trim();
+    const cleanedValue = rawValue.replace(/\s+/g, " ").trim();
+    if (!cleanedKey || !cleanedValue) continue;
+    cleaned.push({ key: cleanedKey, value: cleanedValue });
+    const k = cleanedKey.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    obj[k] = cleanedValue;
   }
-  const text = meta.filter((m) => m.key).map((m) => `${m.key}: ${m.value}`).join(", ");
+  const text = cleaned.map((m) => `${m.key}: ${m.value}`).join(", ");
   return Object.assign(obj, { text }) as Record<string, string> & { text: string };
+}
+
+/**
+ * Keep invoice item images lightweight for PDF generation.
+ * Many Woo image CDNs (e.g. Optimole) deliver 2K+ by default, which balloons PDF size.
+ */
+function optimizeInvoiceImageSrc(raw: string): string {
+  const src = String(raw || "").trim();
+  if (!src) return src;
+  // Optimole encoded transform block: /w:2560/h:2560/q:mauto/...
+  if (/\.i\.optimole\.com\//i.test(src)) {
+    return src.replace(/\/w:\d+\/h:\d+\/q:[^/]+/i, "/w:220/h:260/q:60");
+  }
+  try {
+    const u = new URL(src);
+    // Cloudflare Images direct delivery URL => force thumb variant when possible.
+    if (/imagedelivery\.net$/i.test(u.hostname)) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length >= 3) {
+        u.pathname = `/${parts[0]}/${parts[1]}/thumb`;
+        return u.toString();
+      }
+    }
+    // Generic width/height query params: cap aggressively for invoice thumbs.
+    const width = Number(u.searchParams.get("w") || u.searchParams.get("width") || "0");
+    if (width > 0) {
+      if (u.searchParams.has("w")) u.searchParams.set("w", "220");
+      if (u.searchParams.has("width")) u.searchParams.set("width", "220");
+      if (u.searchParams.has("h")) u.searchParams.set("h", "260");
+      if (u.searchParams.has("height")) u.searchParams.set("height", "260");
+      if (u.searchParams.has("q")) u.searchParams.set("q", "60");
+      if (u.searchParams.has("quality")) u.searchParams.set("quality", "60");
+      return u.toString();
+    }
+    return src;
+  } catch {
+    return src;
+  }
 }
 
 export async function resolveOrderContext(
@@ -217,6 +264,22 @@ export async function resolveOrderContext(
   const shippingLines = Array.isArray(order.shipping_lines) ? (order.shipping_lines as Record<string, unknown>[]) : [];
   const rawData = (order.raw_data as Record<string, unknown>) || {};
   const metaData = Array.isArray(rawData.meta_data) ? (rawData.meta_data as Array<{ key: string; value: unknown }>) : [];
+  const cloudflareEnabled =
+    process.env.NEXT_PUBLIC_CLOUDFLARE_PRODUCT_IMAGES === "true" ||
+    process.env.CLOUDFLARE_PRODUCT_IMAGES === "true";
+  const wooProductIds = [...new Set(itemsRaw.map((it) => Number(it.product_id || 0)).filter((id) => Number.isFinite(id) && id > 0))];
+  const mirrorByWooId = new Map<number, unknown>();
+  if (cloudflareEnabled && wooProductIds.length > 0) {
+    const { data: mirrorRows } = await supabase
+      .from("products")
+      .select("woo_id, image_mirror_urls")
+      .eq("store_id", storeId)
+      .in("woo_id", wooProductIds);
+    for (const row of mirrorRows || []) {
+      const wooId = Number(row.woo_id || 0);
+      if (wooId > 0) mirrorByWooId.set(wooId, row.image_mirror_urls);
+    }
+  }
 
   const currency = String(order.currency || store?.currency || "USD");
   const billing = asAddress(billingRaw);
@@ -330,6 +393,12 @@ export async function resolveOrderContext(
     items: itemsRaw.map((it) => {
       const meta = Array.isArray(it.meta_data) ? (it.meta_data as Array<{ key: string; value: unknown }>).map((m) => ({ key: String(m.key || ""), value: String(m.value ?? "") })) : [];
       const variation = buildVariation(meta);
+      const baseImage = optimizeInvoiceImageSrc(((it.image as { src?: string } | undefined)?.src) || "");
+      const productId = it.product_id ? Number(it.product_id) : null;
+      const mirroredImage =
+        cloudflareEnabled && baseImage && productId
+          ? resolveMirroredProductImageUrl(baseImage, mirrorByWooId.get(productId), "thumb", true) || baseImage
+          : baseImage;
       return {
         name: String(it.name || ""),
         sku: String(it.sku || ""),
@@ -339,8 +408,8 @@ export async function resolveOrderContext(
         subtotal: Number(it.subtotal || it.total || 0),
         total: Number(it.total || 0),
         tax: Number(it.total_tax || 0),
-        image: ((it.image as { src?: string } | undefined)?.src) || "",
-        product_id: it.product_id ? Number(it.product_id) : null,
+        image: mirroredImage,
+        product_id: productId,
         variation_id: it.variation_id ? Number(it.variation_id) : null,
         variation,
         variation_text: variation.text,

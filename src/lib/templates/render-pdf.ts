@@ -41,7 +41,21 @@ function resolveLocalChromeExecutable(): string | null {
 async function getBrowser(): Promise<Browser> {
   if (_browser && _browser.connected) return _browser;
   const isProd = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
-  if (isProd) {
+  const localExecPath = resolveLocalChromeExecutable();
+  // Prefer local Chrome when available (works for local dev even if VERCEL is set in env).
+  if (localExecPath) {
+    const puppeteer = await import("puppeteer-core");
+    try {
+      _browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        executablePath: localExecPath,
+        headless: true,
+      });
+    } catch (e) {
+      _browser = null;
+      throw e;
+    }
+  } else if (isProd) {
     const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = await import("puppeteer-core");
     _browser = await puppeteer.launch({
@@ -50,23 +64,9 @@ async function getBrowser(): Promise<Browser> {
       headless: true,
     });
   } else {
-    const puppeteer = await import("puppeteer-core");
-    const execPath = resolveLocalChromeExecutable();
-    if (!execPath) {
-      throw new Error(
-        "Chrome/Chromium not found for PDF generation. Install Google Chrome or set PUPPETEER_EXECUTABLE_PATH to your Chrome binary (e.g. /Applications/Google Chrome.app/Contents/MacOS/Google Chrome on macOS).",
-      );
-    }
-    try {
-      _browser = await puppeteer.launch({
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        executablePath: execPath,
-        headless: true,
-      });
-    } catch (e) {
-      _browser = null;
-      throw e;
-    }
+    throw new Error(
+      "Chrome/Chromium not found for PDF generation. Install Google Chrome or set PUPPETEER_EXECUTABLE_PATH to your Chrome binary (e.g. /Applications/Google Chrome.app/Contents/MacOS/Google Chrome on macOS).",
+    );
   }
   return _browser as Browser;
 }
@@ -87,8 +87,9 @@ export async function renderHtmlToPdf(html: string, opts: RenderPdfOptions = {})
       format: opts.format ?? "A4",
       landscape: opts.landscape ?? false,
       printBackground: opts.printBackground ?? false,
+      tagged: false,
       preferCSSPageSize: true,
-      margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" },
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
     return Buffer.from(pdf);
   } finally {
