@@ -28,6 +28,10 @@ export interface OrderContext {
     name: string;
     logo: string;
     logo_url: string;
+    /** Site branding logo URL (may differ from logo when invoice_logo_url is set). */
+    site_logo_url: string;
+    /** Uploaded invoice-only logo URL (empty if using site logo). */
+    invoice_logo_url: string;
     /** Display tagline under logo (empty string if not configured on store). */
     tagline: string;
     email: string;
@@ -203,7 +207,7 @@ export async function resolveOrderContext(
 
   const { data: store } = await supabase
     .from("stores")
-    .select("name, url, logo_url, currency, support_email, phone, website, address")
+    .select("name, url, logo_url, invoice_logo_url, currency, support_email, phone, website, address")
     .eq("id", storeId)
     .maybeSingle();
 
@@ -233,11 +237,17 @@ export async function resolveOrderContext(
   const invNum = String(order.order_number?.trim() || order.woo_id || order.id);
   const wooOrderIdStr = String(order.woo_id ?? "");
 
+  const siteLogo = String(store?.logo_url || "").trim();
+  const invoiceOnly = String(store?.invoice_logo_url || "").trim();
+  const effectiveInvoiceLogo = invoiceOnly || siteLogo;
+
   return {
     store: {
       name: String(store?.name || "Store"),
-      logo: String(store?.logo_url || ""),
-      logo_url: String(store?.logo_url || ""),
+      logo: effectiveInvoiceLogo,
+      logo_url: effectiveInvoiceLogo,
+      site_logo_url: siteLogo,
+      invoice_logo_url: invoiceOnly,
       tagline: "",
       email: String(store?.support_email || ""),
       phone: String(store?.phone || ""),
@@ -351,6 +361,8 @@ export function getSampleContext(templateMeta: { name: string; type: string }): 
       name: "Sample Store",
       logo: "",
       logo_url: "",
+      site_logo_url: "",
+      invoice_logo_url: "",
       tagline: "",
       email: "support@sample.store",
       phone: "+1 555 0100",

@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, RefreshCw, Plug, AlertTriangle, Trash2, Clock, Upload, X as XIcon, Image as ImageIcon, CalendarClock, Zap } from "lucide-react";
+import { ArrowLeft, RefreshCw, Plug, AlertTriangle, Trash2, Clock, Upload, X as XIcon, Image as ImageIcon, CalendarClock, Zap, Receipt } from "lucide-react";
 import { useTranslation } from "next-i18next";
 import { formatDateTime, formatNumber } from "@/lib/format-number";
 import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
@@ -42,6 +42,7 @@ function SettingsInner() {
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [lastCron, setLastCron] = useState<{ started_at: string; status: string } | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingInvoiceLogo, setUploadingInvoiceLogo] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -94,9 +95,10 @@ function SettingsInner() {
     if (!store) return;
     setUploadingLogo(true);
     try {
-      const { data: list } = await supabase.storage.from("site-logos").list("", { search: store.id });
-      if (list && list.length > 0) {
-        await supabase.storage.from("site-logos").remove(list.map((f) => f.name));
+      const { data: list } = await supabase.storage.from("site-logos").list("", { limit: 500 });
+      const rootFiles = (list || []).filter((f) => f.name.startsWith(`${store.id}.`) && !f.name.includes("/"));
+      if (rootFiles.length > 0) {
+        await supabase.storage.from("site-logos").remove(rootFiles.map((f) => f.name));
       }
       await updateStore(store.id, { logo_url: null });
       const s = await getStore(store.id);
@@ -107,6 +109,55 @@ function SettingsInner() {
       toast({ title: t("settings.logo.removeFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const handleInvoiceLogoUpload = async (file: File) => {
+    if (!store) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: t("settings.invoiceLogo.tooLarge"), description: t("settings.invoiceLogo.tooLargeDesc"), variant: "destructive" });
+      return;
+    }
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+      toast({ title: t("settings.invoiceLogo.unsupported"), description: t("settings.invoiceLogo.unsupportedDesc"), variant: "destructive" });
+      return;
+    }
+    setUploadingInvoiceLogo(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `invoices/${store.id}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("site-logos").upload(path, file, { upsert: true, cacheControl: "3600" });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("site-logos").getPublicUrl(path);
+      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      await updateStore(store.id, { invoice_logo_url: url });
+      const s = await getStore(store.id);
+      setStore(s);
+      toast({ title: t("settings.invoiceLogo.updated") });
+    } catch (e) {
+      toast({ title: t("settings.invoiceLogo.uploadFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setUploadingInvoiceLogo(false);
+    }
+  };
+
+  const handleInvoiceLogoRemove = async () => {
+    if (!store) return;
+    setUploadingInvoiceLogo(true);
+    try {
+      const { data: invList } = await supabase.storage.from("site-logos").list("invoices", { limit: 500 });
+      const mine = (invList || []).filter((f) => f.name.startsWith(`${store.id}.`));
+      if (mine.length > 0) {
+        await supabase.storage.from("site-logos").remove(mine.map((f) => `invoices/${f.name}`));
+      }
+      await updateStore(store.id, { invoice_logo_url: null });
+      const s = await getStore(store.id);
+      setStore(s);
+      toast({ title: t("settings.invoiceLogo.removed") });
+    } catch (e) {
+      toast({ title: t("settings.invoiceLogo.removeFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setUploadingInvoiceLogo(false);
     }
   };
 
@@ -276,6 +327,52 @@ function SettingsInner() {
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground">{t("settings.logo.hint")}</p>
+            </CardContent>
+          </Card>
+
+          {/* Invoice logo — used on printed/PDF invoices; falls back to site logo when unset */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <Receipt className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-sm font-semibold">{t("settings.invoiceLogo.title")}</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-full border bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                  {store.invoice_logo_url ? (
+                    <img
+                      src={store.invoice_logo_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Receipt className="h-5 w-5 text-muted-foreground" aria-hidden />
+                  )}
+                </div>
+                <div className="flex-1 flex items-center gap-2">
+                  <label>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      disabled={uploadingInvoiceLogo}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleInvoiceLogoUpload(f); e.target.value = ""; }}
+                    />
+                    <Button asChild variant="outline" size="sm" disabled={uploadingInvoiceLogo} className="h-8">
+                      <span>
+                        {uploadingInvoiceLogo ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                        {store.invoice_logo_url ? t("settings.invoiceLogo.replace") : t("settings.invoiceLogo.upload")}
+                      </span>
+                    </Button>
+                  </label>
+                  {store.invoice_logo_url && (
+                    <Button variant="ghost" size="sm" onClick={handleInvoiceLogoRemove} disabled={uploadingInvoiceLogo} className="h-8">
+                      <XIcon className="h-3.5 w-3.5 mr-1.5" />{t("settings.invoiceLogo.remove")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t("settings.invoiceLogo.hint")}</p>
             </CardContent>
           </Card>
 

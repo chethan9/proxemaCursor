@@ -2670,6 +2670,7 @@ export type Database = {
           last_full_sync_at: string | null
           last_sync_at: string | null
           logo_url: string | null
+          invoice_logo_url: string | null
           name: string
           next_sync_at: string | null
           onboarding_completed_at: string | null
@@ -2710,6 +2711,7 @@ export type Database = {
           last_full_sync_at?: string | null
           last_sync_at?: string | null
           logo_url?: string | null
+          invoice_logo_url?: string | null
           name: string
           next_sync_at?: string | null
           onboarding_completed_at?: string | null
@@ -2750,6 +2752,7 @@ export type Database = {
           last_full_sync_at?: string | null
           last_sync_at?: string | null
           logo_url?: string | null
+          invoice_logo_url?: string | null
           name?: string
           next_sync_at?: string | null
           onboarding_completed_at?: string | null
