@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -295,11 +295,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     priceMin: normalizedPriceMin,
     priceMax: normalizedPriceMax,
     productTypeFilter,
-    enabled: isHydrated,
+    enabled: router.isReady,
   });
   const selectionTypeCounts = countSelectedProductTypes(products, selectedIds);
-  const showInitialLoading = !isHydrated || loading;
-  const showRefetchOverlay = isFetching && !loading && !isFetchingNextPage && products.length > 0;
+  const showInitialLoading = !router.isReady || loading;
+  const showRefetchOverlay = isFetching && !showInitialLoading && !isFetchingNextPage && products.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({ searchRef: searchInputRef });
   const handleLoadMore = useCallback(() => {
@@ -510,18 +510,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const prefsLoading = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (prefsLoaded.current || prefsLoading.current) return;
+  useLayoutEffect(() => {
     if (!router.isReady) return;
-    prefsLoading.current = true;
     const urlStatus = getQueryString(router.query, "status");
     const urlCat = getQueryString(router.query, "cat");
     const urlStock = getQueryString(router.query, "stock");
     const urlPmin = getQueryString(router.query, "pmin");
     const urlPmax = getQueryString(router.query, "pmax");
     const urlPtype = getQueryString(router.query, "ptype");
-    // Filters precedence URL > DB > defaults. URL is applied unconditionally first
-    // because the initial useState ran before router.isReady (router.query was empty).
     if (urlStatus !== undefined) setStatusFilter(urlStatus);
     if (urlCat !== undefined) setCategoryFilter(urlCat);
     if (urlStock !== undefined) setStockStatusFilter(urlStock);
@@ -534,14 +530,24 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       setFilterSimple(false);
       setFilterVariable(true);
     }
+  }, [router.isReady, router.query]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (prefsLoaded.current || prefsLoading.current) return;
+    prefsLoading.current = true;
+    const urlStatus = getQueryString(router.query, "status");
+    const urlCat = getQueryString(router.query, "cat");
+    const urlStock = getQueryString(router.query, "stock");
+    const urlPmin = getQueryString(router.query, "pmin");
+    const urlPmax = getQueryString(router.query, "pmax");
+    const urlPtype = getQueryString(router.query, "ptype");
     fetchPreferences("products").then((remote) => {
       if (remote) {
-        // Table preferences (columns/order/page-size/view mode) — DB always wins.
         if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
         if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
-        // Filters: only apply DB pref when URL didn't override.
         if (urlStatus === undefined && typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
         if (typeof remote.excludeOutOfStock === "boolean") setExcludeOutOfStock(remote.excludeOutOfStock);
         if (urlCat === undefined && typeof remote.categoryFilter === "string") setCategoryFilter(remote.categoryFilter);
@@ -561,12 +567,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
       prefsLoaded.current = true;
-      setIsHydrated(true);
     }).catch(() => {
       prefsLoaded.current = true;
-      setIsHydrated(true);
     });
-  }, [router.isReady, router.query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- single prefs merge when router becomes ready
+  }, [router.isReady]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;

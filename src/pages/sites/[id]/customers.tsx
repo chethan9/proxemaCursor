@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
@@ -198,7 +198,15 @@ function CustomersInner() {
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const prefsLoaded = useRef(false);
+  const prefsLoading = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useLayoutEffect(() => {
+    if (!router.isReady) return;
+    const q = getQueryString(router.query, "q") ?? "";
+    setSearch(q);
+    setDebouncedSearch(q);
+  }, [router.isReady, router.query]);
 
   useSyncUrl({ q: debouncedSearch }, { q: "" });
 
@@ -250,7 +258,9 @@ function CustomersInner() {
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
 
   useEffect(() => {
-    if (prefsLoaded.current) return;
+    if (!router.isReady) return;
+    if (prefsLoaded.current || prefsLoading.current) return;
+    prefsLoading.current = true;
     fetchPreferences("customers").then((remote) => {
       if (remote) {
         if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
@@ -259,8 +269,11 @@ function CustomersInner() {
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
       prefsLoaded.current = true;
-    }).catch(() => { prefsLoaded.current = true; });
-  }, []);
+    }).catch(() => {
+      prefsLoaded.current = true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- single prefs merge when router becomes ready
+  }, [router.isReady]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
@@ -292,8 +305,10 @@ function CustomersInner() {
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
+    enabled: router.isReady,
   });
-  const showRefetchOverlay = isFetching && !isLoading && !isFetchingNextPage && customers.length > 0;
+  const showInitialLoading = !router.isReady || isLoading;
+  const showRefetchOverlay = isFetching && !showInitialLoading && !isFetchingNextPage && customers.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({ searchRef: searchInputRef });
   const handleLoadMore = useCallback(() => {
@@ -463,7 +478,7 @@ function CustomersInner() {
 
       <Card className="relative">
         <CardContent className="p-0">
-          <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !isLoading && customers.length > 0 && "opacity-70")}>
+          <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !showInitialLoading && customers.length > 0 && "opacity-70")}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -499,7 +514,7 @@ function CustomersInner() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {showInitialLoading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={`sk-${i}`}>
                       {visibleColList.map((c) => (
@@ -581,7 +596,7 @@ function CustomersInner() {
                 )}
               </TableBody>
             </Table>
-            {!isLoading && customers.length > 0 && (
+            {!showInitialLoading && customers.length > 0 && (
               <InfiniteScrollSentinel
                 hasMore={hasNextPage}
                 isLoading={isFetchingNextPage}
