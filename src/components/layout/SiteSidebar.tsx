@@ -10,7 +10,6 @@ import { resolveIcon } from "@/lib/menu-registry";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Search, Check } from "lucide-react";
 import type { RoleKey } from "@/services/menuConfigService";
 import { useQueryClient } from "@tanstack/react-query";
