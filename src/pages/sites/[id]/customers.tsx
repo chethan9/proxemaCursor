@@ -236,9 +236,9 @@ function CustomersInner() {
   const [search, setSearch] = useState(() => getQueryString(router.query, "q") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => getQueryString(router.query, "q") ?? "");
   const [pageSize, setPageSize] = useState<number>(() => {
-    if (typeof window === "undefined") return 100;
-    const v = parseInt(localStorage.getItem("customers-page-size") || "100", 10);
-    return PAGE_SIZE_OPTIONS.includes(v) ? v : 100;
+    if (typeof window === "undefined") return 50;
+    const v = parseInt(localStorage.getItem("customers-page-size") || "50", 10);
+    return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
   });
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [expandedId, setExpandedId] = useState<string | null>(null);

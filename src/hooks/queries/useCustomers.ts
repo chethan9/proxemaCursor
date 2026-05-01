@@ -46,7 +46,8 @@ export function useCustomers(opts: UseCustomersOptions) {
       return allPages.length;
     },
     placeholderData: keepPreviousData,
-    enabled: !!fetchOpts.storeId && syncStatus !== undefined && (enabledOverride ?? true),
+    // Don't block the first customers fetch on sync-status query; start with DB mode immediately.
+    enabled: !!fetchOpts.storeId && (enabledOverride ?? true),
     staleTime: anySyncRunning ? 10_000 : 120_000,
     gcTime: 10 * 60_000,
     refetchOnMount: false,

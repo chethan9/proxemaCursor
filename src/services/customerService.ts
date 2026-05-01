@@ -22,6 +22,12 @@ export interface FetchCustomersOptions {
   useLive?: boolean;
 }
 
+/**
+ * Keep customers list payload lean: `raw_data` can be very large and is not needed on the list page.
+ */
+const CUSTOMER_LIST_SELECT =
+  "id,store_id,woo_id,email,first_name,last_name,username,role,billing,shipping,avatar_url,orders_count,total_spent,date_created,synced_at,created_at";
+
 function wooCustomerToRow(c: Record<string, unknown>, storeId: string): CustomerRow {
   return {
     id: `live-${c.id}`,
@@ -65,7 +71,7 @@ export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ dat
     return { data: (json.data as Record<string, unknown>[]).map((c) => wooCustomerToRow(c, storeId)), count: json.count, live: true };
   }
 
-  let q = supabase.from("customers").select("*", { count: "exact" }).eq("store_id", storeId);
+  let q = supabase.from("customers").select(CUSTOMER_LIST_SELECT, { count: "exact" }).eq("store_id", storeId);
   if (search && search.trim()) {
     const raw = search.trim();
     const s = raw.startsWith("@") ? raw.slice(1) : raw;
@@ -85,7 +91,7 @@ export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ dat
   q = q.range(page * pageSize, (page + 1) * pageSize - 1);
   const { data, count, error } = await q;
   if (error) throw error;
-  return { data: (data || []) as CustomerRow[], count: count || 0 };
+  return { data: ((data || []) as unknown as CustomerRow[]), count: count || 0 };
 }
 
 export async function fetchCustomerById(id: string): Promise<CustomerRow | null> {
