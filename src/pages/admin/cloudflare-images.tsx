@@ -49,6 +49,7 @@ import {
   Activity,
   Gauge,
   Zap,
+  Workflow,
   ChevronsUpDown,
   Check,
 } from "lucide-react";
@@ -114,6 +115,46 @@ function MirrorMonitoringSection() {
     refetchInterval: 60_000,
   });
 
+  const runPipelineMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/cloudflare-images-run-pipeline", {
+        method: "POST",
+        headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new Error(typeof body.error === "string" ? body.error : res.statusText || "Request failed");
+      return body;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-cloudflare-images-mirror-stats"] });
+      const repair = data.repair as { attempted?: number; ok?: number; failed?: number } | undefined;
+      const backfill = data.backfill as { touched?: number; skipped?: number; hasMore?: boolean } | undefined;
+      const rA = repair?.attempted ?? 0;
+      const rOk = repair?.ok ?? 0;
+      const bTouch = backfill?.touched ?? 0;
+      const more = backfill?.hasMore === true;
+      toast({
+        title: t("cloudflareImages.pipelineToastTitle", "Pipeline batch finished"),
+        description: t("cloudflareImages.pipelineToastDesc", {
+          defaultValue:
+            "Repair: {{rA}} attempted, {{rOk}} OK. Backfill: {{bTouch}} products touched.{{moreHint}}",
+          rA,
+          rOk,
+          bTouch,
+          moreHint: more ? ` ${t("cloudflareImages.pipelineMoreHint", "More catalog batches remain (cursor saved).")}` : "",
+        }),
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        variant: "destructive",
+        title: t("cloudflareImages.pipelineErrorTitle", "Pipeline run failed"),
+        description: err.message,
+      });
+    },
+  });
+
   const runRepairMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/admin/cloudflare-images-run-repair", {
@@ -168,14 +209,31 @@ function MirrorMonitoringSection() {
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             type="button"
+            variant="default"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => runPipelineMutation.mutate()}
+            disabled={runPipelineMutation.isPending || runRepairMutation.isPending || isFetching}
+            title={t(
+              "cloudflareImages.pipelineHint",
+              "Runs repair + catalog backfill (same as the scheduled server cron). Does not require keeping a browser tab open."
+            )}
+          >
+            {runPipelineMutation.isPending ?
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <Workflow className="h-3.5 w-3.5" />}
+            {t("cloudflareImages.runPipeline", "Run full pipeline")}
+          </Button>
+          <Button
+            type="button"
             variant="secondary"
             size="sm"
             className="gap-1.5"
             onClick={() => runRepairMutation.mutate()}
-            disabled={runRepairMutation.isPending || isFetching}
+            disabled={runRepairMutation.isPending || runPipelineMutation.isPending || isFetching}
             title={t(
               "cloudflareImages.forceRepairHint",
-              "Runs one repair batch (same as the scheduled cron). Use when you want to drain backlog without waiting."
+              "Runs one repair batch only (pending/failed rows). For catalog discovery use full pipeline or legacy backfill."
             )}
           >
             {runRepairMutation.isPending ?
@@ -254,7 +312,7 @@ function MirrorMonitoringSection() {
                   {t("cloudflareImages.repairQueueTitle", "Repair cron backlog")}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {t("cloudflareImages.repairQueueBody", "Pending + failed rows processed by /api/cron/mirror-product-images")}
+                  {t("cloudflareImages.repairQueueBody", "Pending + failed rows processed by the mirror pipeline cron (repair half of each run).")}
                 </p>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
                   <span>
@@ -408,7 +466,7 @@ function MirrorMonitoringSection() {
             <p className="text-xs text-muted-foreground">
               {t(
                 "cloudflareImages.monitorFootnote",
-                "Counts refresh automatically every 60s. Repair cron runs on Vercel (see vercel.json). Enable JSON mirror metrics in logs for detailed upload traces."
+                "Counts refresh automatically every 60s. Server cron /api/cron/mirror-product-images-pipeline runs repair + backfill every 10 minutes (see vercel.json). Configure Cloudflare variant thumb ~384px wide for catalog grid parity. Enable JSON mirror metrics in logs for detailed upload traces."
               )}
             </p>
           </>

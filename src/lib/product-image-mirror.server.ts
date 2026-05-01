@@ -4,7 +4,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { ResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
-import { getResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
+import { CLOUDFLARE_SETTINGS_SINGLETON_ID, getResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
 import { buildDeliveryUrls, deleteCloudflareImage, uploadImageFromUrl } from "@/lib/cloudflare-images.server";
 import {
   normalizeProductImageSrc,
@@ -417,4 +417,60 @@ export async function runMirrorBackfillBatch(opts: {
     nextAfterId: windowLastId,
     hasMore,
   };
+}
+
+export type MirrorProductImagesPipelineResult = {
+  repair: { attempted: number; ok: number; failed: number };
+  backfill: MirrorBackfillBatchResult;
+  repairLimit: number;
+  productLimit: number;
+};
+
+/**
+ * One server invocation: drain pending/failed mirror rows, then advance the catalog backfill cursor.
+ * Intended for Vercel Cron (no open browser) so mirroring is not dependent on the admin UI or products tab.
+ */
+export async function runMirrorProductImagesPipeline(opts?: {
+  repairLimit?: number;
+  productLimit?: number;
+  persistBackfillCursor?: boolean;
+}): Promise<MirrorProductImagesPipelineResult> {
+  const rawRepair = process.env.CF_MIRROR_REPAIR_BATCH;
+  const parsedRepair = rawRepair ? Number(rawRepair) : 50;
+  const defaultRepair = Number.isFinite(parsedRepair) ? Math.min(250, Math.max(10, parsedRepair)) : 50;
+  const repairLimit = opts?.repairLimit ?? defaultRepair;
+
+  const rawBf = process.env.CF_BACKFILL_PRODUCT_BATCH;
+  const parsedBf = rawBf ? Number(rawBf) : 30;
+  const defaultBf = Number.isFinite(parsedBf) ? Math.min(80, Math.max(1, parsedBf)) : 30;
+  const productLimit = opts?.productLimit ?? defaultBf;
+
+  const persist = opts?.persistBackfillCursor !== false;
+
+  const repair = await repairPendingMirrorsBatch(repairLimit);
+
+  const { data: row } = await supabaseAdmin
+    .from("cloudflare_images_settings")
+    .select("mirror_backfill_after_product_id")
+    .eq("id", CLOUDFLARE_SETTINGS_SINGLETON_ID)
+    .maybeSingle();
+
+  const afterId = row?.mirror_backfill_after_product_id ?? null;
+
+  const backfill = await runMirrorBackfillBatch({
+    afterId,
+    productLimit,
+  });
+
+  if (persist && backfill.ok && backfill.integrationEnabled) {
+    await supabaseAdmin
+      .from("cloudflare_images_settings")
+      .update({
+        mirror_backfill_after_product_id: backfill.hasMore ? backfill.nextAfterId : null,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", CLOUDFLARE_SETTINGS_SINGLETON_ID);
+  }
+
+  return { repair, backfill, repairLimit, productLimit };
 }

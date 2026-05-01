@@ -16,8 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const raw = process.env.CF_BACKFILL_PRODUCT_BATCH;
-  const parsed = raw ? Number(raw) : 20;
-  const productLimit = Number.isFinite(parsed) ? Math.min(80, Math.max(1, parsed)) : 20;
+  const parsed = raw ? Number(raw) : 30;
+  const productLimit = Number.isFinite(parsed) ? Math.min(80, Math.max(1, parsed)) : 30;
 
   const { data: row } = await supabaseAdmin
     .from("cloudflare_images_settings")

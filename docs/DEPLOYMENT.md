@@ -42,6 +42,19 @@ Large catalogs (for example ~50k orders, ~5k products, ~25k customers) finish vi
 
 Taxonomy aspects (categories, tags, brands) use slightly higher parallelism than heavy aspects when using defaults. Failed pages are **retried at lower concurrency** inside `fetchPagesChunked` before the chunk aborts (weak shared hosting).
 
+### Cloudflare product image mirroring (optional)
+
+| Item | Notes |
+|---|---|
+| `CRON_SECRET` | Must match Vercel **Cron** auth so `/api/cron/*` returns 200 in production. |
+| Scheduled job | `vercel.json` → `/api/cron/mirror-product-images-pipeline` every **10 minutes** (repair pending/failed + catalog backfill cursor). No open browser required. |
+| `CF_MIRROR_REPAIR_BATCH` | Default 50 (max 250) pending/failed rows per run. |
+| `CF_BACKFILL_PRODUCT_BATCH` | Default 30 products per backfill step (max 80). |
+| `CF_MIRROR_MASTER_MAX_EDGE_PX` | Longest edge for master before upload (default 2048). |
+| Cloudflare **thumb** variant | Size it to ~**384px** max width in the Cloudflare Images dashboard so delivery matches the product grid; the app stores `thumb` / `card` / `edit` / `zoom` variant URLs. See `src/lib/cloudflare-product-image-sizes.ts`. |
+
+Legacy endpoints `/api/cron/mirror-product-images` and `/api/cron/mirror-product-images-backfill` remain for manual use but are no longer on the default Vercel schedule.
+
 ## Domain or hostname changes (do not skip Supabase)
 
 Whenever production’s canonical URL changes — Vercel project rename, default `*.vercel.app` hostname, or custom domain add/remove — run this checklist in order:

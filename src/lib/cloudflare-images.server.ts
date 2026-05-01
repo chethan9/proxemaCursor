@@ -114,6 +114,8 @@ async function fetchRemoteImageBuffer(
 /**
  * Resize / re-encode large masters before upload so CF variants stay fast and storage stays smaller.
  * GIFs are skipped (animation). Set CF_MIRROR_SKIP_MASTER_OPTIMIZE=true to disable.
+ * Grid/list URLs use the **thumb** variant from Cloudflare — size that variant in the CF dashboard
+ * (see `cloudflare-product-image-sizes.ts`); keep master large enough for zoom/edit variants.
  */
 async function optimizeRasterForCfUpload(
   buffer: Buffer,
