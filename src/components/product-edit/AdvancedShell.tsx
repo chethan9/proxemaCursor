@@ -1,10 +1,11 @@
-import { ReactNode, useEffect, useMemo, useState, useCallback } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ProductFormState } from "@/services/productEditService";
 import { validateProductForm } from "@/services/productValidation";
 import { LivePreviewCard } from "@/components/product-edit/LivePreviewCard";
+import { isTabDirty } from "@/lib/product-edit/tab-slices";
 import { ArrowLeft, ArrowRight, Loader2, Check } from "lucide-react";
 
 export type AdvancedTabKey = "basic" | "pricing" | "inventory" | "variants";
@@ -24,6 +25,8 @@ const STATUS_OPTIONS: { value: ProductFormState["status"]; label: string; dot: s
 
 type Props = {
   form: ProductFormState;
+  /** Snapshot when the editor opened (or last explicit reset). Tab chrome stays neutral until a tab differs from this. */
+  baselineForm: ProductFormState | null;
   setForm?: (updater: (prev: ProductFormState) => ProductFormState) => void;
   activeTab: AdvancedTabKey;
   setActiveTab: (k: AdvancedTabKey) => void;
@@ -37,29 +40,14 @@ type Props = {
   productId?: string | null;
 };
 
-export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit, storeId, productId }: Props) {
+export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit, storeId, productId }: Props) {
   const [errors, setErrors] = useState<string | null>(null);
-  /** Tabs the user has opened at least once (drives red / green / neutral chrome). */
-  const [visitedTabs, setVisitedTabs] = useState<Set<AdvancedTabKey>>(() => new Set([activeTab]));
 
   const validation = useMemo(() => validateProductForm(form), [form]);
   const publishing = form.status === "publish";
   const publishBlocked = publishing && !validation.ok;
 
   const steps = ALL_STEPS;
-
-  const markTabVisited = useCallback((key: AdvancedTabKey) => {
-    setVisitedTabs((prev) => {
-      if (prev.has(key)) return prev;
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    markTabVisited(activeTab);
-  }, [activeTab, markTabVisited]);
 
   useEffect(() => {
     if (!steps.find((s) => s.key === activeTab)) {
@@ -89,11 +77,10 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
           <div className="flex items-center gap-4 sm:gap-6 px-6 border-b border-border overflow-x-auto scrollbar-none">
             {steps.map((step) => {
               const isActive = step.key === activeTab;
-              const visited = visitedTabs.has(step.key);
+              const dirty = baselineForm ? isTabDirty(baselineForm, form, step.key) : false;
               const complete = canAdvance(step.key);
-              const neutral = !visited;
-              const incomplete = visited && !complete;
-              const done = visited && complete;
+              const done = dirty && complete;
+              const incomplete = dirty && !complete;
 
               return (
                 <button
@@ -102,20 +89,20 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
                   onClick={() => { setErrors(null); setActiveTab(step.key); }}
                   aria-current={isActive ? "step" : undefined}
                   aria-label={
-                    neutral
-                      ? `${step.label}, not opened yet`
+                    !dirty
+                      ? `${step.label}, unchanged`
                       : incomplete
-                        ? `${step.label}, opened — required fields incomplete`
-                        : `${step.label}, complete`
+                        ? `${step.label}, edited — required fields incomplete`
+                        : `${step.label}, edited — complete`
                   }
                   className={cn(
                     "relative flex items-center gap-1.5 py-3.5 pr-1 text-sm font-medium transition-all whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md",
-                    neutral && !isActive && "text-muted-foreground hover:text-foreground",
+                    !dirty && !isActive && "text-muted-foreground hover:text-foreground",
+                    !dirty && isActive && "text-foreground",
                     incomplete && !isActive && "text-destructive bg-destructive/[0.07] px-2 -mx-1 ring-1 ring-destructive/25",
                     incomplete && isActive && "text-destructive",
                     done && !isActive && "text-emerald-700/90 dark:text-emerald-400/95 bg-emerald-500/[0.09] px-2 -mx-1 ring-1 ring-emerald-500/20",
                     done && isActive && "text-emerald-800 dark:text-emerald-300",
-                    isActive && neutral && "text-foreground",
                   )}
                 >
                   <span>{step.label}</span>
@@ -125,9 +112,10 @@ export function AdvancedShell({ form, setForm, activeTab, setActiveTab, tabConte
                   <span
                     className={cn(
                       "absolute inset-x-0 -bottom-px h-0.5 transition-all rounded-full",
-                      isActive ? "bg-foreground" : "bg-transparent",
-                      incomplete && isActive && "bg-destructive",
-                      done && isActive && "bg-emerald-600/70 dark:bg-emerald-500/80",
+                      isActive && !dirty && "bg-foreground",
+                      isActive && incomplete && "bg-destructive",
+                      isActive && done && "bg-emerald-600/70 dark:bg-emerald-500/80",
+                      !isActive && "bg-transparent",
                     )}
                   />
                 </button>

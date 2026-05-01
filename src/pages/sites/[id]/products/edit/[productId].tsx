@@ -8,7 +8,7 @@ import { BasicInfoTab } from "@/components/product-edit/tabs/BasicInfoTab";
 import { PricingTaxTab } from "@/components/product-edit/tabs/PricingTaxTab";
 import { InventoryShippingTab } from "@/components/product-edit/tabs/InventoryShippingTab";
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
-import { emptyProductForm, updateProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
+import { emptyProductForm, updateProduct, fetchProductVariations, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
@@ -46,12 +46,16 @@ function Inner() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [wooId, setWooId] = useState<number | null>(null);
+  const [baselineForm, setBaselineForm] = useState<ProductFormState | null>(null);
+  const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!storeId || !productId) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setBaselineForm(null);
+      setStorefrontUrl(null);
       try {
         const res = await fetch(`/api/stores/${storeId}/products/${productId}`);
         if (!res.ok) throw new Error(`Failed to load product (${res.status})`);
@@ -85,7 +89,30 @@ function Inner() {
           ? (raw.default_attributes as { id?: number; name: string; option: string }[])
           : [];
 
-        setForm({
+        let variations: ProductFormState["variations"] = [];
+        if (productType === "variable") {
+          try {
+            variations = await fetchProductVariations(storeId, productId);
+          } catch {
+            variations = [];
+          }
+        }
+
+        const slugStr = ((p.slug as string) || "").trim();
+        const rawPermalink =
+          raw && typeof raw === "object" && typeof (raw as { permalink?: string }).permalink === "string"
+            ? (raw as { permalink: string }).permalink.trim()
+            : "";
+        const baseStoreUrl = typeof store?.url === "string" ? store.url.replace(/\/$/, "") : "";
+        const resolvedStorefront =
+          rawPermalink.startsWith("http")
+            ? rawPermalink
+            : baseStoreUrl && slugStr
+              ? `${baseStoreUrl}/product/${encodeURIComponent(slugStr)}/`
+              : null;
+        if (!cancelled) setStorefrontUrl(resolvedStorefront);
+
+        const merged: ProductFormState = {
           ...base,
           name: (p.name as string) || "",
           description: (p.description as string) || "",
@@ -113,16 +140,17 @@ function Inner() {
           brands: brandsSrc.map((b) => ({ id: b.id, name: b.name || "" })),
           tags,
           attributes,
+          variations,
           default_attributes: defaultAttrs,
           image_mirror_urls:
             p.image_mirror_urls && typeof p.image_mirror_urls === "object"
               ? (p.image_mirror_urls as ProductFormState["image_mirror_urls"])
               : undefined,
-        });
-        setInitialFormJson(JSON.stringify({
-          ...base,
-          name: (p.name as string) || "",
-        }));
+        };
+
+        setForm(merged);
+        setBaselineForm(JSON.parse(JSON.stringify(merged)) as ProductFormState);
+        setInitialFormJson(JSON.stringify(merged));
         if (productType === "variable") setMode("advanced");
       } catch (e) {
         toast({ title: "Failed to load product", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
@@ -132,6 +160,14 @@ function Inner() {
     })();
     return () => { cancelled = true; };
   }, [storeId, productId, toast]);
+
+  useEffect(() => {
+    const slug = (form?.slug ?? "").trim();
+    const url = typeof store?.url === "string" ? store.url.trim() : "";
+    if (!slug || !url) return;
+    const built = `${url.replace(/\/$/, "")}/product/${encodeURIComponent(slug)}/`;
+    setStorefrontUrl((prev) => (prev?.startsWith("http") ? prev : built));
+  }, [form?.slug, store?.url]);
 
   const dirty = !!form && !savedOnce && initialFormJson !== "" && JSON.stringify(form) !== initialFormJson;
 
@@ -240,16 +276,24 @@ function Inner() {
           <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
           <h1 className="text-xl font-semibold">Edit product</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {storefrontUrl && (
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" asChild>
+              <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                View in store
+              </a>
+            </Button>
+          )}
           {wooId && store?.url && (
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" asChild>
               <a
                 href={`${(store.url as string).replace(/\/$/, "")}/wp-admin/post.php?post=${wooId}&action=edit`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <ExternalLink className="h-4 w-4 mr-1.5" />
-                View on store
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                Edit in WordPress
               </a>
             </Button>
           )}
@@ -288,6 +332,7 @@ function Inner() {
       ) : (
         <AdvancedShell
           form={form}
+          baselineForm={baselineForm}
           setForm={(u) => setForm((p) => (p ? u(p) : p))}
           activeTab={activeTab}
           setActiveTab={setActiveTab}

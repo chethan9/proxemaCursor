@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
@@ -42,6 +42,11 @@ function Inner() {
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
+
+  const baselineForm = useMemo(
+    () => JSON.parse(initialFormJson) as ProductFormState,
+    [initialFormJson],
+  );
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -163,6 +168,7 @@ function Inner() {
       ) : (
         <AdvancedShell
           form={form}
+          baselineForm={baselineForm}
           setForm={setForm}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
