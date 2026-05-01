@@ -100,6 +100,51 @@ const SORT_OPTIONS: { field: CustomerSortField; direction: SortDirection; key: s
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
 
+const CUSTOMERS_TABLE_LAYOUT_VERSION = 1;
+
+function migrateCustomersTableLayoutPrefs(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem("customers-layout-version");
+    const stored = raw ? Number.parseInt(raw, 10) : 0;
+    if (Number.isFinite(stored) && stored >= CUSTOMERS_TABLE_LAYOUT_VERSION) return;
+    localStorage.removeItem("customers-col-order");
+    localStorage.removeItem("customers-visible-cols");
+    localStorage.setItem("customers-layout-version", String(CUSTOMERS_TABLE_LAYOUT_VERSION));
+  } catch {
+    /* ignore */
+  }
+}
+
+function customersColumnHeadClass(key: ColumnKey): string {
+  switch (key) {
+    case "name":
+      return "min-w-0 max-w-[clamp(7rem,20vw,11rem)]";
+    case "username":
+      return "min-w-0 max-w-[9rem] hidden md:table-cell";
+    case "email":
+      return "min-w-0 max-w-[11rem] xl:max-w-[13rem]";
+    case "phone":
+      return "whitespace-nowrap w-[11ch] max-w-[11ch] hidden lg:table-cell";
+    case "orders":
+      return "whitespace-nowrap w-[3.25rem] text-right tabular-nums";
+    case "spent":
+      return "whitespace-nowrap w-[6.25rem] text-right";
+    case "aov":
+      return "whitespace-nowrap w-[5.75rem] text-right";
+    case "city":
+      return "min-w-0 max-w-[7.5rem] hidden sm:table-cell";
+    case "country":
+      return "w-[2.75rem] whitespace-nowrap text-center";
+    case "registered":
+      return "whitespace-nowrap w-[10rem] hidden xl:table-cell";
+    case "last_active":
+      return "whitespace-nowrap w-[10rem] hidden xl:table-cell";
+    default:
+      return "min-w-0";
+  }
+}
+
 function formatMoney(v: number | string | null | undefined, currency = "KWD") {
   const n = typeof v === "string" ? parseFloat(v) : v;
   if (!n || isNaN(n)) return `${currency} 0.00`;
@@ -225,6 +270,7 @@ function CustomersInner() {
       spent: true, aov: true, city: true, country: true, registered: false, last_active: false,
     };
     if (typeof window !== "undefined") {
+      migrateCustomersTableLayoutPrefs();
       try {
         const saved = localStorage.getItem("customers-visible-cols");
         if (saved) return { ...defaults, ...JSON.parse(saved) };
@@ -239,6 +285,7 @@ function CustomersInner() {
 
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (typeof window !== "undefined") {
+      migrateCustomersTableLayoutPrefs();
       try {
         const saved = localStorage.getItem("customers-col-order");
         if (saved) {
@@ -263,8 +310,17 @@ function CustomersInner() {
     prefsLoading.current = true;
     fetchPreferences("customers").then((remote) => {
       if (remote) {
-        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
-        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        const remoteLayoutV = Number((remote as { customersTableLayoutVersion?: unknown }).customersTableLayoutVersion ?? 0);
+        const layoutOk = Number.isFinite(remoteLayoutV) && remoteLayoutV >= CUSTOMERS_TABLE_LAYOUT_VERSION;
+        if (Array.isArray(remote.columnOrder) && layoutOk) {
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = (remote.columnOrder as ColumnKey[]).filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          setColumnOrder([...valid, ...missing]);
+        }
+        if (remote.visibleCols && typeof remote.visibleCols === "object" && layoutOk) {
+          setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        }
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
       }
@@ -272,14 +328,19 @@ function CustomersInner() {
     }).catch(() => {
       prefsLoaded.current = true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- single prefs merge when router becomes ready
   }, [router.isReady]);
 
   useEffect(() => {
     if (!prefsLoaded.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      savePreferences("customers", { columnOrder, visibleCols, pageSize, sort }).catch(() => {});
+      savePreferences("customers", {
+        columnOrder,
+        visibleCols,
+        pageSize,
+        sort,
+        customersTableLayoutVersion: CUSTOMERS_TABLE_LAYOUT_VERSION,
+      }).catch(() => {});
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, sort]);
@@ -479,7 +540,7 @@ function CustomersInner() {
       <Card className="relative">
         <CardContent className="p-0">
           <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !showInitialLoading && customers.length > 0 && "opacity-70")}>
-            <Table>
+            <Table className="[&_td]:px-1.5 [&_td]:py-1.5 [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-2">
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   {visibleColList.map((c) => {
@@ -503,8 +564,8 @@ function CustomersInner() {
                     };
                     const alignCls = c.numeric ? "text-right" : "text-left";
                     return (
-                      <TableHead key={c.key} {...dragProps} className={`${dragProps.className} ${alignCls}`}>
-                        <span className={`inline-flex items-center gap-1 ${c.numeric ? "justify-end w-full" : ""}`}>
+                      <TableHead key={c.key} {...dragProps} className={cn(dragProps.className, alignCls, customersColumnHeadClass(c.key))}>
+                        <span className={cn("inline-flex items-center gap-1 min-w-0", c.numeric && "justify-end w-full")}>
                           {t(`customers.columns.${c.key}`)}
                           <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                         </span>
@@ -543,38 +604,58 @@ function CustomersInner() {
                     return (
                       <Fragment key={c.id}>
                         <TableRow
-                          className={`bg-card hover:bg-muted/50 cursor-pointer ${isExpanded ? "bg-muted/50 border-b-0 hover:bg-muted/50" : ""}`}
+                          className={`bg-card hover:bg-muted/50 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${isExpanded ? "bg-muted/50 border-b-0 hover:bg-muted/50" : ""}`}
                           onClick={() => setExpandedId((cur) => cur === c.id ? null : c.id)}
                         >
                           {visibleColList.map((col) => {
                             if (col.key === "name") {
                               return (
-                                <TableCell key={col.key} className="max-w-[260px]">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0 text-[11px] font-semibold text-foreground/70">
+                                <TableCell key={col.key} className={cn(customersColumnHeadClass("name"))}>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center shrink-0 text-[10px] font-semibold text-foreground/70">
                                       {initials}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <div className="font-medium truncate">{name}</div>
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <div className="font-medium text-sm truncate">{name}</div>
                                         <SyncPill entityType="customer" entityId={c.id} />
                                       </div>
-                                      {c.username && <div className="text-[11px] text-muted-foreground truncate">@{c.username}</div>}
+                                      {c.username && !visibleCols.username && (
+                                        <div className="text-[10px] text-muted-foreground truncate">@{c.username}</div>
+                                      )}
                                     </div>
                                   </div>
                                 </TableCell>
                               );
                             }
-                            if (col.key === "username") return <TableCell key={col.key} className="text-xs text-muted-foreground">{c.username ? `@${c.username}` : "—"}</TableCell>;
-                            if (col.key === "email") return <TableCell key={col.key} className="text-xs text-muted-foreground max-w-[220px] truncate">{c.email || b.email || "—"}</TableCell>;
-                            if (col.key === "phone") return <TableCell key={col.key} className="font-mono text-xs">{b.phone || "—"}</TableCell>;
-                            if (col.key === "orders") return <TableCell key={col.key} className="text-right font-mono text-sm">{ordersCt}</TableCell>;
-                            if (col.key === "spent") return <TableCell key={col.key} className="text-right font-mono text-sm font-semibold">{formatMoney(total)}</TableCell>;
-                            if (col.key === "aov") return <TableCell key={col.key} className="text-right font-mono text-xs text-muted-foreground">{formatMoney(getAOV(c))}</TableCell>;
-                            if (col.key === "city") return <TableCell key={col.key} className="text-xs text-muted-foreground max-w-[140px] truncate">{b.city || "—"}</TableCell>;
-                            if (col.key === "country") return <TableCell key={col.key} className="text-xs font-mono text-muted-foreground">{b.country || "—"}</TableCell>;
-                            if (col.key === "registered") return <TableCell key={col.key} className="text-xs text-muted-foreground whitespace-nowrap">{c.date_created ? formatDate(c.date_created, i18n.language) : "—"}</TableCell>;
-                            if (col.key === "last_active") return <TableCell key={col.key} className="text-xs text-muted-foreground whitespace-nowrap">{c.synced_at ? formatDate(c.synced_at, i18n.language) : "—"}</TableCell>;
+                            if (col.key === "username") {
+                              return (
+                                <TableCell key={col.key} className={cn("text-xs text-muted-foreground truncate", customersColumnHeadClass("username"))}>
+                                  {c.username ? `@${c.username}` : "—"}
+                                </TableCell>
+                              );
+                            }
+                            if (col.key === "email") {
+                              return (
+                                <TableCell key={col.key} className={cn("text-xs text-muted-foreground truncate", customersColumnHeadClass("email"))} title={(c.email || b.email) ?? undefined}>
+                                  {c.email || b.email || "—"}
+                                </TableCell>
+                              );
+                            }
+                            if (col.key === "phone") {
+                              return (
+                                <TableCell key={col.key} className={cn("font-mono text-xs whitespace-nowrap hidden lg:table-cell", customersColumnHeadClass("phone"))}>
+                                  {b.phone || "—"}
+                                </TableCell>
+                              );
+                            }
+                            if (col.key === "orders") return <TableCell key={col.key} className={cn("text-right font-mono text-sm tabular-nums", customersColumnHeadClass("orders"))}>{ordersCt}</TableCell>;
+                            if (col.key === "spent") return <TableCell key={col.key} className={cn("text-right font-mono text-sm font-semibold whitespace-nowrap", customersColumnHeadClass("spent"))}>{formatMoney(total)}</TableCell>;
+                            if (col.key === "aov") return <TableCell key={col.key} className={cn("text-right font-mono text-xs text-muted-foreground whitespace-nowrap", customersColumnHeadClass("aov"))}>{formatMoney(getAOV(c))}</TableCell>;
+                            if (col.key === "city") return <TableCell key={col.key} className={cn("text-xs text-muted-foreground truncate hidden sm:table-cell", customersColumnHeadClass("city"))}>{b.city || "—"}</TableCell>;
+                            if (col.key === "country") return <TableCell key={col.key} className={cn("text-xs font-mono text-muted-foreground text-center", customersColumnHeadClass("country"))}>{b.country || "—"}</TableCell>;
+                            if (col.key === "registered") return <TableCell key={col.key} className={cn("text-xs text-muted-foreground whitespace-nowrap hidden xl:table-cell", customersColumnHeadClass("registered"))}>{c.date_created ? formatDate(c.date_created, i18n.language) : "—"}</TableCell>;
+                            if (col.key === "last_active") return <TableCell key={col.key} className={cn("text-xs text-muted-foreground whitespace-nowrap hidden xl:table-cell", customersColumnHeadClass("last_active"))}>{c.synced_at ? formatDate(c.synced_at, i18n.language) : "—"}</TableCell>;
                             return <TableCell key={col.key}>—</TableCell>;
                           })}
                         </TableRow>

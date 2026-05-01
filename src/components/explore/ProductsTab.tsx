@@ -61,9 +61,26 @@ import {
   catalogCellClass,
   catalogCellDisplay,
   catalogCellTextClass,
+  productsColumnDensityClass,
   stripHtmlForTablePreview,
 } from "@/lib/product-catalog-cell-display";
 import { supabase } from "@/integrations/supabase/client";
+
+const PRODUCTS_TABLE_LAYOUT_VERSION = 1;
+
+function migrateProductsTableLayoutPrefs(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem("products-layout-version");
+    const stored = raw ? Number.parseInt(raw, 10) : 0;
+    if (Number.isFinite(stored) && stored >= PRODUCTS_TABLE_LAYOUT_VERSION) return;
+    localStorage.removeItem("explore-col-order");
+    localStorage.removeItem("explore-visible-cols");
+    localStorage.setItem("products-layout-version", String(PRODUCTS_TABLE_LAYOUT_VERSION));
+  } catch {
+    /* ignore */
+  }
+}
 
 const PENDING_LABELS: Record<string, string> = {
   delete: "Scheduled for deletion",
@@ -184,6 +201,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       created: false, updated: false,
     };
     if (typeof window !== "undefined") {
+      migrateProductsTableLayoutPrefs();
       try {
         const saved = localStorage.getItem("explore-visible-cols");
         if (saved) return { ...defaults, ...JSON.parse(saved) };
@@ -193,6 +211,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   });
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (typeof window !== "undefined") {
+      migrateProductsTableLayoutPrefs();
       try {
         const saved = localStorage.getItem("explore-col-order");
         if (saved) {
@@ -544,8 +563,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     const urlPtype = getQueryString(router.query, "ptype");
     fetchPreferences("products").then((remote) => {
       if (remote) {
-        if (Array.isArray(remote.columnOrder)) setColumnOrder(remote.columnOrder as ColumnKey[]);
-        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        const remoteLayoutV = Number((remote as { productsTableLayoutVersion?: unknown }).productsTableLayoutVersion ?? 0);
+        const layoutOk = Number.isFinite(remoteLayoutV) && remoteLayoutV >= PRODUCTS_TABLE_LAYOUT_VERSION;
+        if (Array.isArray(remote.columnOrder) && layoutOk) {
+          const allKeys = COLUMNS.map((c) => c.key);
+          const valid = (remote.columnOrder as ColumnKey[]).filter((k) => allKeys.includes(k));
+          const missing = allKeys.filter((k) => !valid.includes(k));
+          setColumnOrder([...valid, ...missing]);
+        }
+        if (remote.visibleCols && typeof remote.visibleCols === "object" && layoutOk) {
+          setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        }
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (typeof remote.viewMode === "string") setViewMode(remote.viewMode as "table" | "grid" | "compact");
         if (urlStatus === undefined && typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
@@ -588,6 +616,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         stockStatusFilter,
         sort,
         ptype: productTypeFilter ?? "",
+        productsTableLayoutVersion: PRODUCTS_TABLE_LAYOUT_VERSION,
       }).catch(() => {});
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
@@ -1254,7 +1283,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </div>
           ) : (
             <div className={cn("overflow-x-auto transition-opacity duration-150", showRefetchOverlay && "opacity-70")}>
-              <Table>
+              <Table className="[&_td]:px-1.5 [&_td]:py-1.5 [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-2">
                 <TableHeader>
                   <TableRow className="bg-muted/30">
                     <TableHead className="w-8 pl-3 pr-0">
@@ -1269,7 +1298,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       />
                     </TableHead>
                     {visibleColList.map((c) => {
-                      const baseCls = c.key === "image" ? "w-14" : "";
+                      const baseCls = c.key === "image" ? "w-12" : "";
                       const numericKeys: ColumnKey[] = ["price", "regular_price", "sale_price", "stock", "wooId", "parent_id", "images_count"];
                       const isNumeric = numericKeys.includes(c.key);
                       const alignCls = isNumeric ? "text-right" : "text-left";
@@ -1294,7 +1323,17 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const isActive = isSortable && sort.field === c.sortable;
                       const SortIcon = isActive ? (sort.direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
                       return (
-                        <TableHead key={c.key} className={`${baseCls} ${alignCls} cursor-move select-none ${dragKey === c.key ? "opacity-50" : ""}`} {...dragProps}>
+                        <TableHead
+                          key={c.key}
+                          className={cn(
+                            baseCls,
+                            alignCls,
+                            "cursor-move select-none",
+                            dragKey === c.key && "opacity-50",
+                            productsColumnDensityClass(c.key),
+                          )}
+                          {...dragProps}
+                        >
                           <span className={`inline-flex items-center gap-1 ${isNumeric ? "justify-end w-full" : ""}`}>
                             {isSortable ? (
                               <button
@@ -1326,7 +1365,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                         <TableCell className="w-8 pl-3 pr-0"><Checkbox disabled /></TableCell>
                         {visibleColList.map((c) => (
                           <TableCell key={c.key}>
-                            {c.key === "image" ? <Skeleton className="h-10 w-10 rounded" /> : <Skeleton className="h-4 w-24" />}
+                            {c.key === "image" ? <Skeleton className="h-9 w-9 rounded" /> : <Skeleton className="h-4 w-24" />}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -1366,7 +1405,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       return (
                           <TableRow
                             key={p.id}
-                            className={`hover:bg-muted/30 cursor-pointer transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`}
+                            className={`hover:bg-muted/30 cursor-pointer transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`}
                             onClick={() => {
                               if (pending) { showLockedToast(p); return; }
                               if (selectedIds.size > 0 && !locked) { toggleSelect(p.id); return; }
@@ -1382,9 +1421,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   <TableCell key={c.key}>
                                     {thumb ? (
                                       // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={thumb} alt="" className="h-10 w-10 rounded object-cover border border-border" loading="lazy" />
+                                      <img src={thumb} alt="" className="h-9 w-9 rounded object-cover border border-border" loading="lazy" />
                                     ) : (
-                                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border border-border">
+                                      <div className="h-9 w-9 rounded bg-muted flex items-center justify-center border border-border">
                                         <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
                                       </div>
                                     )}

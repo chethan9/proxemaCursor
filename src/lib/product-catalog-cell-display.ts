@@ -49,13 +49,29 @@ export const PRODUCT_TABLE_CELL_MAX_CHARS: Partial<Record<CatalogColumnKey, numb
   updated: 22,
 };
 
+/** Responsive hiding for dense product table (mirrors Orders “de-prioritize wide columns”). */
+export function productsColumnDensityClass(key: CatalogColumnKey): string {
+  switch (key) {
+    case "slug":
+    case "permalink":
+    case "tax_class":
+    case "attributes":
+      return "hidden xl:table-cell";
+    case "short_desc":
+    case "description":
+      return "hidden 2xl:table-cell";
+    default:
+      return "";
+  }
+}
+
 /** Tailwind max-width per column so `truncate` can take effect. */
 export const PRODUCT_TABLE_CELL_MAX_WIDTH: Partial<Record<CatalogColumnKey, string>> = {
-  id: "max-w-[10rem]",
-  wooId: "max-w-[6rem]",
-  name: "max-w-[min(16rem,30vw)]",
-  slug: "max-w-[10rem]",
-  sku: "max-w-[7rem]",
+  id: "max-w-[9rem]",
+  wooId: "max-w-[5.5rem]",
+  name: "max-w-[min(14rem,28vw)]",
+  slug: "max-w-[9rem]",
+  sku: "max-w-[6.5rem]",
   type: "max-w-[8rem]",
   status: "max-w-[7rem]",
   permalink: "max-w-[12rem]",
@@ -69,9 +85,9 @@ export const PRODUCT_TABLE_CELL_MAX_WIDTH: Partial<Record<CatalogColumnKey, stri
   tax_status: "max-w-[8rem]",
   tax_class: "max-w-[9rem]",
   shipping_required: "max-w-[8rem]",
-  category: "max-w-[min(19rem,34vw)]",
-  brands: "max-w-[min(17rem,32vw)]",
-  attributes: "max-w-[min(17rem,32vw)]",
+  category: "max-w-[min(15rem,30vw)]",
+  brands: "max-w-[min(13rem,26vw)]",
+  attributes: "max-w-[min(14rem,28vw)]",
   images_count: "max-w-[6rem]",
   short_desc: "max-w-[min(18rem,34vw)]",
   description: "max-w-[min(20rem,36vw)]",
@@ -100,7 +116,8 @@ export function catalogCellTextClass(key: CatalogColumnKey): string {
 
 export function catalogCellClass(key: CatalogColumnKey): string {
   const w = PRODUCT_TABLE_CELL_MAX_WIDTH[key] ?? "max-w-[11rem]";
-  return `${w} min-w-0 align-top`;
+  const d = productsColumnDensityClass(key);
+  return [w, "min-w-0 align-top", d].filter(Boolean).join(" ");
 }
 
 const DEFAULT_MAX = 44;
