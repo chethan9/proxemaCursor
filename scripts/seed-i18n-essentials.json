@@ -11,7 +11,6 @@
       "billing": { "es": "Facturación", "fr": "Facturation", "de": "Abrechnung", "pt": "Faturamento", "hi": "बिलिंग", "zh": "计费", "ja": "請求", "ru": "Оплата" },
       "billingOverview": { "es": "Resumen", "fr": "Aperçu", "de": "Übersicht", "pt": "Visão geral", "hi": "अवलोकन", "zh": "概览", "ja": "概要", "ru": "Обзор" },
       "settings": { "es": "Ajustes", "fr": "Paramètres", "de": "Einstellungen", "pt": "Configurações", "hi": "सेटिंग्स", "zh": "设置", "ja": "設定", "ru": "Настройки" },
-      "explore": { "es": "Explorar", "fr": "Explorer", "de": "Entdecken", "pt": "Explorar", "hi": "एक्सप्लोर", "zh": "探索", "ja": "探す", "ru": "Обзор" },
       "templates": { "es": "Plantillas", "fr": "Modèles", "de": "Vorlagen", "pt": "Modelos", "hi": "टेम्पलेट", "zh": "模板", "ja": "テンプレート", "ru": "Шаблоны" },
       "orders": { "es": "Pedidos", "fr": "Commandes", "de": "Bestellungen", "pt": "Pedidos", "hi": "ऑर्डर", "zh": "订单", "ja": "注文", "ru": "Заказы" },
       "products": { "es": "Productos", "fr": "Produits", "de": "Produkte", "pt": "Produtos", "hi": "उत्पाद", "zh": "产品", "ja": "商品", "ru": "Товары" },

@@ -134,7 +134,6 @@ const BILLING_LOCKED_ALLOWED_IDS = new Set<string>([
   "admin-referrals",
   "admin-activity",
   "clients",
-  "explore",
 ]);
 
 export function resolveForSidebar(

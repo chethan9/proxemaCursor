@@ -3,7 +3,7 @@ import {
   Settings as SettingsIcon, Shield, UserCog, Package, ShoppingCart, Tag,
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
-  Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles, Compass,
+  Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles,
   Download, Award, Cloud, Brain, Languages,
   type LucideIcon,
 } from "lucide-react";
@@ -35,7 +35,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Settings: SettingsIcon, Shield, UserCog, Package, ShoppingCart, Tag,
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
-  Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles, Compass,
+  Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles,
   Download, Award, Cloud, Brain, Languages,
 };
 
@@ -66,7 +66,6 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW, superAdminOnly: true },
   { id: "sites", defaultLabel: "Projects", defaultIcon: "Store", href: "/projects", defaultGroup: "Stores", defaultOrder: 0, permission: PERMISSIONS.SITES_VIEW },
   { id: "templates", defaultLabel: "Templates", defaultIcon: "FileText", href: "/templates", defaultGroup: "Stores", defaultOrder: 1 },
-  { id: "explore", defaultLabel: "Explore", defaultIcon: "Compass", href: "/explore", defaultGroup: "Stores", defaultOrder: 2, permission: PERMISSIONS.SITES_VIEW },
   { id: "sync-runs", defaultLabel: "Sync Runs", defaultIcon: "RefreshCw", href: "/sync-runs", defaultGroup: "Developer", defaultOrder: 0, permission: PERMISSIONS.SYNC_VIEW },
   { id: "webhooks", defaultLabel: "Webhooks", defaultIcon: "Webhook", href: "/webhooks", defaultGroup: "Developer", defaultOrder: 1, permission: PERMISSIONS.WEBHOOKS_VIEW },
   { id: "webhooks-activity", defaultLabel: "Activity", defaultIcon: "Activity", href: "/webhooks/activity", defaultGroup: "Developer", defaultOrder: 2, permission: PERMISSIONS.WEBHOOKS_VIEW },

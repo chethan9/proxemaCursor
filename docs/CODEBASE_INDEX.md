@@ -52,8 +52,6 @@ docs/                 DEPLOYMENT.md, PAGE_CONVENTIONS.md, CODEBASE_INDEX.md, JOU
 | `/sync-runs` | `pages/sync-runs/index.tsx` | Global sync run log |
 | `/webhooks` | `pages/webhooks/index.tsx` | Webhook config & status |
 | `/webhooks/activity` | `pages/webhooks/activity.tsx` | Webhook event stream |
-| `/explore` | `pages/explore/index.tsx` | Cross-site data explorer entry |
-| `/explore/[id]` | `pages/explore/[id].tsx` | Explorer for selected site |
 | `/api-management` | `pages/api-management.tsx` | API keys + stats + reference |
 | `/settings/*` | `pages/settings/*` | Profile, users, roles, theme, menu-editor, payment-methods |
 | `/auth/*` | `pages/auth/*` | login, signup, forgot/reset password, confirm-email, bootstrap |

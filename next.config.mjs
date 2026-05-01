@@ -59,12 +59,6 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_BUILD_ID: getAppBuildIdForConfig(),
   },
-  async redirects() {
-    return [
-      { source: "/explore", destination: "/projects", permanent: true },
-      { source: "/explore/:id", destination: "/sites/:id/products", permanent: true },
-    ];
-  },
   i18n: nextI18NextConfig.i18n,
   experimental: {
     turbo: {
