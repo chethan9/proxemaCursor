@@ -1,4 +1,10 @@
 {
+  "deploymentUpdate": {
+    "title": "Update available",
+    "body": "A new version of the app is live. Refresh to load the latest changes.",
+    "refresh": "Refresh now",
+    "blocked": "Automatic refresh was tried several times. Close other tabs that use this app, then reload the page manually."
+  },
   "app": {
     "name": "{{brand}}"
   },
