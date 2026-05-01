@@ -454,8 +454,11 @@ function Inner() {
         headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ action: "test" }),
       });
-      const j = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok) throw new Error(j.error || "Test failed");
+      const j = (await res.json()) as { ok?: boolean; error?: string; hint?: string };
+      if (!res.ok) {
+        const msg = [j.error, j.hint].filter(Boolean).join("\n\n");
+        throw new Error(msg || "Test failed");
+      }
       return j;
     },
     onSuccess: (j) => {

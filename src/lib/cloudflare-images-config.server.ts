@@ -99,9 +99,22 @@ async function buildFromDatabaseRow(row: {
   };
 }
 
-export async function getResolvedCloudflareConfig(): Promise<ResolvedCloudflareConfig | null> {
+export type ResolveCloudflareConfigOptions = {
+  /**
+   * When true (default), the DB row must have `enabled === true` to resolve from database.
+   * Set false for admin "test connection" so credentials can be validated before turning integration on.
+   * Runtime mirroring always uses the default (enabled row required).
+   */
+  requireIntegrationEnabled?: boolean;
+};
+
+export async function getResolvedCloudflareConfig(
+  opts?: ResolveCloudflareConfigOptions,
+): Promise<ResolvedCloudflareConfig | null> {
+  const requireIntegrationEnabled = opts?.requireIntegrationEnabled !== false;
   const now = Date.now();
-  if (cache && now < cache.expires) {
+
+  if (requireIntegrationEnabled && cache && now < cache.expires) {
     return cache.value;
   }
 
@@ -116,7 +129,8 @@ export async function getResolvedCloudflareConfig(): Promise<ResolvedCloudflareC
   let resolved: ResolvedCloudflareConfig | null = null;
 
   const tryDb = async (): Promise<ResolvedCloudflareConfig | null> => {
-    if (!row || row.enabled !== true) return null;
+    if (!row) return null;
+    if (requireIntegrationEnabled && row.enabled !== true) return null;
     return buildFromDatabaseRow(row);
   };
 
@@ -133,7 +147,9 @@ export async function getResolvedCloudflareConfig(): Promise<ResolvedCloudflareC
     if (!resolved) resolved = await tryDb();
   }
 
-  cache = { value: resolved, expires: now + CACHE_TTL_MS };
+  if (requireIntegrationEnabled) {
+    cache = { value: resolved, expires: now + CACHE_TTL_MS };
+  }
   return resolved;
 }
 

@@ -68,9 +68,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     if (body.action === "test") {
-      const cfg = await getResolvedCloudflareConfig();
+      const cfg = await getResolvedCloudflareConfig({ requireIntegrationEnabled: false });
       if (!cfg) {
-        return res.status(400).json({ error: "No active configuration (database or environment)" });
+        const envOk = isCloudflareEnvConfigured();
+        return res.status(400).json({
+          error: "No usable Cloudflare Images credentials (database or environment)",
+          hint:
+            "Database: save account ID, hash, and API token (encryption needs PAYMENT_ENCRYPTION_KEY on Vercel). " +
+            "If mirroring is still toggled off, that only blocks uploads — test uses saved credentials. " +
+            (envOk ?
+              ""
+            : "Environment fallback needs CLOUDFLARE_PRODUCT_IMAGES_ENABLED=true plus CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_IMAGES_ACCOUNT_HASH."),
+        });
       }
       const test = await testCloudflareImagesConnection(cfg);
       await logActivity({
