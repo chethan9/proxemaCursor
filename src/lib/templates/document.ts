@@ -255,7 +255,7 @@ export function blankInvoiceHtml(): string {
     margin: 0;
   }
   .beam-title {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.02em;
     text-transform: uppercase;
@@ -272,15 +272,15 @@ export function blankInvoiceHtml(): string {
     max-width: 100%;
   }
   .beam-invoice-heading-sep {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--ink);
     letter-spacing: -0.02em;
-    padding: 0 6px;
+    padding: 0 5px;
     line-height: 1.05;
   }
   .beam-title--paired {
-    font-size: 26px;
+    font-size: 22px;
     line-height: 1.05;
   }
   .beam-invoice-meta {
@@ -298,7 +298,7 @@ export function blankInvoiceHtml(): string {
     letter-spacing: 0.02em;
   }
   .beam-invoice-id--hero {
-    font-size: 26px;
+    font-size: 22px;
     color: var(--ink);
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -673,10 +673,10 @@ export function blankInvoiceHtml(): string {
       border-top: 1px solid var(--line-soft);
       padding-top: 16px;
     }
-    .beam-title { font-size: 22px; }
-    .beam-title--paired { font-size: 22px; }
-    .beam-invoice-id--hero { font-size: 22px; }
-    .beam-invoice-heading-sep { font-size: 18px; padding: 0 4px; }
+    .beam-title { font-size: 19px; }
+    .beam-title--paired { font-size: 19px; }
+    .beam-invoice-id--hero { font-size: 19px; }
+    .beam-invoice-heading-sep { font-size: 15px; padding: 0 3px; }
     .beam-totals { max-width: 100%; }
     .beam-settlement-grid {
       grid-template-columns: 1fr;
@@ -707,6 +707,10 @@ export function blankInvoiceHtml(): string {
           {{/if}}
         </div>
         <div class="beam-header-right">
+          <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">
+            <span class="beam-status-pill__glyph">{{{payment.invoice_badge_icon}}}</span>
+            <span class="beam-status-pill__label">{{payment.payment_state_label}}</span>
+          </span>
           {{#ifFilled order.invoice_number}}
           <div class="beam-invoice-heading-line">
             <span class="beam-invoice-id beam-invoice-id--hero">#{{order.invoice_number}}</span>
@@ -716,10 +720,6 @@ export function blankInvoiceHtml(): string {
           {{else}}
           <div class="beam-title">Invoice</div>
           {{/ifFilled}}
-          <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">
-            <span class="beam-status-pill__glyph">{{{payment.invoice_badge_icon}}}</span>
-            <span class="beam-status-pill__label">{{payment.payment_state_label}}</span>
-          </span>
         </div>
       </header>
 
