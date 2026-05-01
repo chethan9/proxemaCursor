@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GetServerSideProps } from "next";
 import Link from "next/link";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -22,6 +22,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useStores } from "@/hooks/queries/useStores";
+import type { StoreWithClient } from "@/services/storeService";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import type { MirrorDashboardStats } from "@/pages/api/admin/cloudflare-images-mirror-stats";
 import {
   Loader2,
@@ -37,6 +49,8 @@ import {
   Activity,
   Gauge,
   Zap,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 
 async function authHeaders() {
@@ -430,11 +444,18 @@ function BackfillSection() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [storeFilter, setStoreFilter] = useState("");
+  const [storeComboOpen, setStoreComboOpen] = useState(false);
   const [batchSize, setBatchSize] = useState(25);
   const [afterCursor, setAfterCursor] = useState("");
   const [useStoredCursor, setUseStoredCursor] = useState(false);
   const [updateStoredCursor, setUpdateStoredCursor] = useState(false);
   const [lastJson, setLastJson] = useState<Record<string, unknown> | null>(null);
+
+  const { data: stores = [], isLoading: storesLoading } = useStores();
+  const selectedStore = useMemo(
+    () => (stores as StoreWithClient[]).find((s) => s.id === storeFilter.trim()),
+    [stores, storeFilter]
+  );
 
   const { data: settings } = useQuery({
     queryKey: ["admin-cloudflare-images-settings"],
@@ -532,9 +553,9 @@ function BackfillSection() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert>
+        <Alert className="min-w-0">
           <AlertTitle>{t("cloudflareImages.optimizeTitle", "Speed & compression")}</AlertTitle>
-          <AlertDescription className="text-sm space-y-1">
+          <AlertDescription className="text-sm break-words text-pretty min-w-0">
             <p>
               {t(
                 "cloudflareImages.optimizeBody",
@@ -544,18 +565,92 @@ function BackfillSection() {
           </AlertDescription>
         </Alert>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="bf-store">{t("cloudflareImages.backfillStoreId", "Store ID (optional)")}</Label>
-            <Input
-              id="bf-store"
-              value={storeFilter}
-              onChange={(e) => setStoreFilter(e.target.value)}
-              placeholder={t("cloudflareImages.backfillStorePlaceholder", "All stores")}
-              className="font-mono text-xs"
-            />
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Label htmlFor="bf-store-trigger">{t("cloudflareImages.backfillStoreId", "Store (optional)")}</Label>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              {t(
+                "cloudflareImages.backfillStoreHint",
+                "Shows the 10 newest sites first; search matches any store you can access."
+              )}
+            </p>
+            <Popover open={storeComboOpen} onOpenChange={setStoreComboOpen} modal={false}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="bf-store-trigger"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={storeComboOpen}
+                  disabled={storesLoading}
+                  className={cn(
+                    "h-9 w-full min-w-0 justify-between font-normal shadow-sm",
+                    selectedStore ? "font-medium text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  <span className="truncate text-left">
+                    {storesLoading ?
+                      t("actions.loading")
+                    : selectedStore ?
+                      <>
+                        <span className="font-medium">{selectedStore.name}</span>
+                        <span className="text-muted-foreground font-mono text-[11px] ms-1">
+                          {selectedStore.id.slice(0, 8)}…
+                        </span>
+                      </>
+                    : storeFilter.trim() ?
+                      <span className="font-mono text-xs truncate">{storeFilter.trim()}</span>
+                    : t("cloudflareImages.backfillStorePlaceholder", "All stores")}
+                  </span>
+                  <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[min(100vw-2rem,var(--radix-popover-trigger-width))] max-w-[min(100vw-2rem,520px)] p-0" align="start">
+                <Command shouldFilter>
+                  <CommandInput placeholder={t("cloudflareImages.backfillStoreSearch", "Search name, URL, or store id…")} className="h-9" />
+                  <CommandList className="max-h-[280px]">
+                    <CommandEmpty>{t("cloudflareImages.noStoresMatch", "No stores match.")}</CommandEmpty>
+                    <CommandGroup heading={t("cloudflareImages.backfillStoreGroupPick", "Choose store")}>
+                      <CommandItem
+                        value="__all stores catalog every"
+                        onSelect={() => {
+                          setStoreFilter("");
+                          setStoreComboOpen(false);
+                        }}
+                      >
+                        <Check className={cn("h-4 w-4 shrink-0", !storeFilter.trim() ? "opacity-100" : "opacity-0")} />
+                        <span>{t("cloudflareImages.backfillStorePlaceholder", "All stores")}</span>
+                      </CommandItem>
+                      {(stores as StoreWithClient[]).map((s) => (
+                        <CommandItem
+                          key={s.id}
+                          value={`${s.name} ${s.id} ${s.url || ""} ${s.client_name || ""}`}
+                          onSelect={() => {
+                            setStoreFilter(s.id);
+                            setStoreComboOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              storeFilter.trim() === s.id ? "opacity-100 text-primary" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                            <span className="truncate font-medium">{s.name}</span>
+                            <span className="truncate font-mono text-[10px] text-muted-foreground sm:max-w-[220px]">
+                              {s.id}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
-          <div className="space-y-1.5">
+          <div className="w-full shrink-0 space-y-1.5 sm:w-32">
             <Label htmlFor="bf-batch">{t("cloudflareImages.backfillBatch", "Products per batch (1–80)")}</Label>
             <Input
               id="bf-batch"

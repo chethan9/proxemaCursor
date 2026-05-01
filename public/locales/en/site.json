@@ -959,6 +959,7 @@
     "language": "Interface language",
     "languageHint": "Applies to your whole account, not only this site.",
     "timezone": "Timezone",
+    "selectTimezone": "Select timezone",
     "searchTimezone": "Search time zones…",
     "noTzMatches": "No matching time zones.",
     "currency": "Currency",

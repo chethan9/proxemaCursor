@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -22,6 +21,7 @@ import { REGION_COUNTRIES } from "@/lib/region-countries";
 import { getBrowserTimeZone } from "@/lib/store-preference-options";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
+import { cn } from "@/lib/utils";
 
 function buildInitialValues(
   store: Store,
@@ -138,35 +138,50 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
     <Dialog open={blocking} onOpenChange={() => { /* non-dismissable until saved */ }}>
       <DialogContent
         showClose={false}
-        className="max-w-2xl max-h-[90vh] flex flex-col gap-0"
+        className={cn(
+          "flex h-[min(92vh,680px)] w-[calc(100vw-1.25rem)] max-w-md flex-col gap-0 overflow-hidden p-0",
+          "border-2 border-primary/15 bg-background shadow-xl sm:w-full sm:max-w-[420px]"
+        )}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle>{t("storePreferences.wizardTitle")}</DialogTitle>
-          <DialogDescription>{t("storePreferences.wizardDescription")}</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
-          <StorePreferencesFields
-            values={values}
-            onChange={patch}
-            showLanguage={showLanguage}
-            enabledLocaleCodes={enabledLocales}
-            disabled={submitting}
-          />
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-              {submitting ? (
+        <div className="shrink-0 border-b border-border/80 bg-muted/30 px-5 py-4">
+          <DialogHeader className="space-y-1.5 text-left">
+            <DialogTitle className="text-base font-semibold leading-snug tracking-tight">
+              {t("storePreferences.wizardTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-relaxed">
+              {t("storePreferences.wizardDescription")}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 [-webkit-overflow-scrolling:touch]">
+            <StorePreferencesFields
+              values={values}
+              onChange={patch}
+              showLanguage={showLanguage}
+              enabledLocaleCodes={enabledLocales}
+              disabled={submitting}
+            />
+          </div>
+
+          <div className="shrink-0 space-y-2 border-t border-border bg-background px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            {error ?
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            : null}
+            <Button type="submit" disabled={submitting} className="w-full font-medium sm:min-w-[168px]">
+              {submitting ?
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t("storePreferences.saving")}
                 </>
-              ) : (
-                t("storePreferences.saveContinue")
-              )}
+              : t("storePreferences.saveContinue")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

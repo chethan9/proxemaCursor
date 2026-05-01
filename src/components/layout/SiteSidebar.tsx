@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
@@ -140,7 +139,7 @@ export function SiteSidebar({ siteId }: Props) {
 
   const beginSiteNavigation = useCallback((href: string) => {
     const p = href.split("?")[0].split("#")[0];
-    flushSync(() => setPendingPath(p));
+    setPendingPath(p);
   }, []);
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/hooks/queries/useStores";
@@ -14,11 +14,23 @@ export function SiteLayout({ children }: Props) {
   const router = useRouter();
   const { t } = useTranslation("common");
   const siteId = typeof router.query.id === "string" ? router.query.id : undefined;
-  const { data: store, isLoading, isFetched, isFetching } = useStore(siteId);
+  const { data: store, isLoading, isFetched } = useStore(siteId);
   const { toast } = useToast();
   const redirectedRef = useRef(false);
-  const [routeTransitioning, setRouteTransitioning] = useState(false);
   useSyncCompletionInvalidation(siteId);
+
+  /** Warm route JS early so first click Orders/Products feels instant (no full-content swap). */
+  useEffect(() => {
+    if (!siteId) return;
+    const paths = [
+      `/sites/${siteId}/orders`,
+      `/sites/${siteId}/products`,
+      `/sites/${siteId}/customers`,
+    ];
+    for (const p of paths) {
+      void router.prefetch(p);
+    }
+  }, [siteId, router]);
 
   useEffect(() => {
     if (!siteId) return;
@@ -30,28 +42,6 @@ export function SiteLayout({ children }: Props) {
       router.replace("/projects");
     }
   }, [siteId, isFetched, isLoading, store, router, toast]);
-
-  useEffect(() => {
-    const normalize = (url: string) => url.split("?")[0].split("#")[0];
-    const onStart = (nextUrl: string) => {
-      if (!siteId) return;
-      const current = normalize(router.asPath);
-      const next = normalize(nextUrl);
-      if (current === next) return;
-      if (next.startsWith(`/sites/${siteId}/`) || next === `/sites/${siteId}`) {
-        setRouteTransitioning(true);
-      }
-    };
-    const onDone = () => setRouteTransitioning(false);
-    router.events.on("routeChangeStart", onStart);
-    router.events.on("routeChangeComplete", onDone);
-    router.events.on("routeChangeError", onDone);
-    return () => {
-      router.events.off("routeChangeStart", onStart);
-      router.events.off("routeChangeComplete", onDone);
-      router.events.off("routeChangeError", onDone);
-    };
-  }, [router, siteId]);
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -66,21 +56,7 @@ export function SiteLayout({ children }: Props) {
       )}
       <div id="site-scroll-root" className="flex-1 overflow-y-auto">
         <InitialSyncBanner />
-        {routeTransitioning ? (
-          <div className="p-6 space-y-4">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-10 w-full max-w-xl" />
-            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-            </div>
-          </div>
-        ) : (
-          children
-        )}
+        {children}
       </div>
     </div>
   );
