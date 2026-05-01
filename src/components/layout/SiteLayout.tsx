@@ -26,6 +26,9 @@ export function SiteLayout({ children }: Props) {
       `/sites/${siteId}/orders`,
       `/sites/${siteId}/products`,
       `/sites/${siteId}/customers`,
+      `/sites/${siteId}/categories`,
+      `/sites/${siteId}/tags`,
+      `/sites/${siteId}/brands`,
     ];
     for (const p of paths) {
       void router.prefetch(p);

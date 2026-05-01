@@ -4,8 +4,6 @@ import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "next-i18next";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import type { GetStaticProps, GetStaticPaths } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw, AlertTriangle } from "lucide-react";
@@ -278,11 +276,3 @@ function HomeInner() {
 export default function SiteHomePage() {
   return <SitePageShell><HomeInner /></SitePageShell>;
 }
-
-export const getStaticPaths: GetStaticPaths = async () => ({ paths: [], fallback: "blocking" });
-
-export const getStaticProps: GetStaticProps = async ({ locale }) => ({
-  props: {
-    ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
-  },
-});

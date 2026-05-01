@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import type { GetServerSideProps } from "next";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { ProductsTab } from "@/components/explore/ProductsTab";
 import { getQueryString } from "@/hooks/useUrlState";
@@ -42,9 +40,3 @@ export default function SiteProductsPage() {
     </SitePageShell>
   );
 }
-
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
-  props: {
-    ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
-  },
-});

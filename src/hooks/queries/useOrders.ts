@@ -53,7 +53,7 @@ export function useOrders(opts: UseOrdersOptions) {
     enabled: !!fetchOpts.storeId && syncStatus !== undefined && (enabledOverride ?? true),
     staleTime: anySyncRunning ? 10_000 : 120_000,
     gcTime: 10 * 60_000,
-    refetchOnMount: true,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchInterval: anySyncRunning ? 25_000 : false,
     retry: 1,

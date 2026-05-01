@@ -418,9 +418,9 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     totalMax: normalizedTotalMax,
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
-    enabled: router.isReady,
+    enabled: true,
   });
-  const showInitialLoading = !router.isReady || loading;
+  const showInitialLoading = loading;
   const showRefetchOverlay = isFetching && !loading && !isFetchingNextPage && orders.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({ searchRef: searchInputRef });

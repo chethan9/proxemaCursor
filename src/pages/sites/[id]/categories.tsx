@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "next-i18next";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import type { GetServerSideProps } from "next";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { TaxonomyTab } from "@/components/explore/TaxonomyTab";
 
@@ -33,9 +31,3 @@ export default function SiteCategoriesPage() {
     </SitePageShell>
   );
 }
-
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
-  props: {
-    ...(await serverSideTranslations(locale ?? "en", ["common", "site"])),
-  },
-});

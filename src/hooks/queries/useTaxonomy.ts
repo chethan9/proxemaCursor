@@ -48,6 +48,7 @@ export function useTaxonomyRows(
     },
     enabled: !!storeId,
     staleTime: 60_000,
+    refetchOnMount: false,
     refetchInterval: anySyncRunning ? 5000 : false,
   });
 

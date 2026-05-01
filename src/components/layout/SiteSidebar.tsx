@@ -14,15 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Search, Check } from "lucide-react";
 import type { RoleKey } from "@/services/menuConfigService";
 import { useQueryClient } from "@tanstack/react-query";
-import { fetchProducts } from "@/services/productService";
-import { fetchOrders } from "@/services/orderService";
-import { fetchCategories, fetchTags, fetchBrands } from "@/services/taxonomyService";
-import { fetchCustomers } from "@/services/customerService";
 import { fetchSiteHomeStats } from "@/services/siteStatsService";
 import { listSiteDownloads } from "@/services/downloadsService";
 import { listBulkJobs } from "@/services/bulkJobService";
 import { getStore } from "@/services/storeService";
 import { queryKeys } from "@/lib/query-client";
+import { warmSiteExplorerPrefetch } from "@/lib/prefetch-site-explorer";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 import { useTranslation } from "next-i18next";
 
@@ -149,7 +146,8 @@ export function SiteSidebar({ siteId }: Props) {
     let cancelled = false;
     const run = () => {
       if (cancelled) return;
-      for (const href of hrefs) void router.prefetch(href);
+      /** Cap idle work — hover/focus warmup handles hot paths with correct query keys. */
+      for (const href of hrefs.slice(0, 10)) void router.prefetch(href);
     };
     const ric = window.requestIdleCallback?.bind(window);
     if (ric) {
@@ -199,7 +197,7 @@ export function SiteSidebar({ siteId }: Props) {
     [pendingPath, router.asPath, siteId]
   );
 
-  /** Next.js route chunk + list/cache data — mirrors AppSidebar `prefetchNavRoute` + data warmup. */
+  /** Next.js route chunk + infinite-query cache (matches OrdersTab/ProductsTab/etc. keys). */
   const warmRouteAndData = useCallback(
     (href: string | undefined) => {
       if (!href) return;
@@ -211,43 +209,14 @@ export function SiteSidebar({ siteId }: Props) {
       const sid = pathMatch[1];
       const section = pathMatch[2];
 
-      if (section === "products") {
-        const opts = { storeId: sid, page: 0, pageSize: 50 };
-        queryClient.prefetchQuery({
-          queryKey: queryKeys.products(sid, opts as unknown as Record<string, unknown>),
-          queryFn: () => fetchProducts(opts),
-        });
-      } else if (section === "orders") {
-        const opts = { storeId: sid, page: 0, pageSize: 50 };
-        queryClient.prefetchQuery({
-          queryKey: queryKeys.orders(sid, opts as unknown as Record<string, unknown>),
-          queryFn: () => fetchOrders(opts),
-        });
-      } else if (section === "categories") {
-        queryClient.prefetchQuery({
-          queryKey: ["taxonomy", "categories", sid, "", 0, 50] as const,
-          queryFn: () => fetchCategories(sid, "", 0, 50),
-        });
-      } else if (section === "tags") {
-        queryClient.prefetchQuery({
-          queryKey: ["taxonomy", "tags", sid, "", 0, 50] as const,
-          queryFn: () => fetchTags(sid, "", 0, 50),
-        });
-      } else if (section === "brands") {
-        queryClient.prefetchQuery({
-          queryKey: ["taxonomy", "brands", sid, "", 0, 50] as const,
-          queryFn: () => fetchBrands(sid, "", 0, 50),
-        });
-      } else if (section === "home") {
+      if (section === "products" || section === "orders" || section === "customers" || section === "categories" || section === "tags" || section === "brands") {
+        void warmSiteExplorerPrefetch(queryClient, sid, section);
+        return;
+      }
+      if (section === "home") {
         queryClient.prefetchQuery({
           queryKey: ["site-home-stats", sid, null, null],
           queryFn: () => fetchSiteHomeStats(sid, undefined, undefined),
-        });
-      } else if (section === "customers") {
-        const opts = { storeId: sid, page: 0, pageSize: 50 };
-        queryClient.prefetchQuery({
-          queryKey: ["customers", sid, opts, "db"] as const,
-          queryFn: () => fetchCustomers({ ...opts, useLive: false }),
         });
       } else if (section === "downloads") {
         queryClient.prefetchQuery({

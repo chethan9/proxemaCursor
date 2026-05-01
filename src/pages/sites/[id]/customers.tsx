@@ -305,9 +305,9 @@ function CustomersInner() {
     search: debouncedSearch,
     sortField: sort.field,
     sortDirection: sort.direction,
-    enabled: router.isReady,
+    enabled: !!storeId,
   });
-  const showInitialLoading = !router.isReady || isLoading;
+  const showInitialLoading = isLoading;
   const showRefetchOverlay = isFetching && !showInitialLoading && !isFetchingNextPage && customers.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({ searchRef: searchInputRef });
@@ -623,9 +623,4 @@ export default function CustomersPage() {
       </SitePageShell>
     </AuthGuard>
   );
-}
-
-export async function getServerSideProps({ locale }: { locale?: string }) {
-  const { serverSideTranslations } = await import("next-i18next/serverSideTranslations");
-  return { props: { ...(await serverSideTranslations(locale || "en", ["common", "site"])) } };
 }

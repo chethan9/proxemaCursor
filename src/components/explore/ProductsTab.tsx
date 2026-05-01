@@ -295,10 +295,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     priceMin: normalizedPriceMin,
     priceMax: normalizedPriceMax,
     productTypeFilter,
-    enabled: router.isReady,
+    enabled: true,
   });
   const selectionTypeCounts = countSelectedProductTypes(products, selectedIds);
-  const showInitialLoading = !router.isReady || loading;
+  const showInitialLoading = loading;
   const showRefetchOverlay = isFetching && !showInitialLoading && !isFetchingNextPage && products.length > 0;
   const searchInputRef = useRef<HTMLInputElement>(null);
   useExplorerKeyboard({ searchRef: searchInputRef });
