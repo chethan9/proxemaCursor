@@ -5,6 +5,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import type { TablesUpdate } from "@/integrations/supabase/helpers";
 import { WooApiError } from "@/lib/sync-error";
 import { renderInvoicePdfForOrder } from "@/lib/templates/render-invoice";
+import { slugifyFilenameSegment } from "@/lib/templates/render-filename";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 import { refreshOrderFromWoo } from "@/lib/order-refresh";
 
@@ -515,7 +516,7 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
 
   let artifactPath: string;
   try {
-    const result = await finalizeBulkInvoiceArtifact(pathScope, job.id, orderIds, outputMode);
+    const result = await finalizeBulkInvoiceArtifact(pathScope, job.store_id, job.id, orderIds, outputMode);
     artifactPath = result.path;
     console.log(`[print_invoices_bulk] jobId=${job.id} mode=${outputMode} parts=${result.partsCount} final_size=${result.sizeBytes} bytes (${(result.sizeBytes / 1024).toFixed(1)} KB)`);
     const newPayload = { ...payload, artifact_path: artifactPath, artifact_size_bytes: result.sizeBytes };
@@ -547,11 +548,32 @@ async function processPrintInvoicesJob(job: JobRow, deadline: number): Promise<"
 
 async function finalizeBulkInvoiceArtifact(
   pathScope: string,
+  storeId: string,
   jobId: string,
   orderIds: string[],
   outputMode: string,
 ): Promise<{ path: string; sizeBytes: number; partsCount: number }> {
   const partsPrefix = `${pathScope}/${jobId}/parts`;
+
+  const orderZipLabels: Record<string, string> = {};
+  if (orderIds.length > 0) {
+    const { data: ordRows } = await supabaseAdmin
+      .from("orders")
+      .select("id, order_number, woo_id")
+      .eq("store_id", storeId)
+      .in("id", orderIds);
+    for (const row of ordRows ?? []) {
+      const id = row.id as string;
+      const raw =
+        row.order_number != null && String(row.order_number).trim() !== ""
+          ? String(row.order_number).trim()
+          : String(row.woo_id ?? id);
+      orderZipLabels[id] = slugifyFilenameSegment(raw) || id.slice(0, 8);
+    }
+    for (const id of orderIds) {
+      if (!orderZipLabels[id]) orderZipLabels[id] = id.slice(0, 8);
+    }
+  }
   const ext = outputMode === "zip" ? "zip" : "pdf";
   const finalKey = `${pathScope}/${jobId}.${ext}`;
 
@@ -570,8 +592,14 @@ async function finalizeBulkInvoiceArtifact(
   if (outputMode === "zip") {
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
+    const usedStemCounts = new Map<string, number>();
     for (const p of parts) {
-      zip.file(`invoice-${p.id}.pdf`, p.data);
+      const label = orderZipLabels[p.id] || p.id.slice(0, 8);
+      const stem = `invoice-${label}`;
+      const n = (usedStemCounts.get(stem) || 0) + 1;
+      usedStemCounts.set(stem, n);
+      const entryName = n === 1 ? `${stem}.pdf` : `${stem}-${n}.pdf`;
+      zip.file(entryName, p.data);
     }
     finalBuf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 9 } });
     contentType = "application/zip";

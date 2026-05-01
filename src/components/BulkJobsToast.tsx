@@ -36,7 +36,24 @@ export function BulkJobsToast() {
     }
   };
 
-  const handleDownload = async (jobId: string) => {
+  const parseFilenameFromContentDisposition = (cd: string | null): string | undefined => {
+    if (!cd) return undefined;
+    const star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(cd);
+    if (star?.[1]) {
+      try {
+        return decodeURIComponent(star[1].replace(/^"(.+)"$/, "$1").trim());
+      } catch {
+        /* fall through */
+      }
+    }
+    const quoted = /filename="([^"]+)"/i.exec(cd);
+    if (quoted?.[1]) return quoted[1];
+    const plain = /filename=([^;\s]+)/i.exec(cd);
+    if (plain?.[1]) return plain[1].replace(/^"(.+)"$/, "$1");
+    return undefined;
+  };
+
+  const handleDownload = async (job: BulkJob) => {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -44,7 +61,7 @@ export function BulkJobsToast() {
         toast({ title: "Sign in required", variant: "destructive" });
         return;
       }
-      const res = await fetch(`/api/bulk-jobs/${jobId}/download`, {
+      const res = await fetch(`/api/bulk-jobs/${job.id}/download`, {
         headers: { Authorization: `Bearer ${token}` },
         redirect: "follow",
         cache: "no-store",
@@ -63,7 +80,14 @@ export function BulkJobsToast() {
       const a = document.createElement("a");
       a.href = url;
       const ext = res.headers.get("content-type")?.includes("zip") ? "zip" : "pdf";
-      a.download = `invoices-${jobId.slice(0, 8)}.${ext}`;
+      const fromHeader = parseFilenameFromContentDisposition(res.headers.get("Content-Disposition"));
+      const day =
+        job.completed_at && typeof job.completed_at === "string"
+          ? job.completed_at.slice(0, 10)
+          : new Date().toISOString().slice(0, 10);
+      a.download =
+        fromHeader ||
+        `invoices-bulk-${day}-${job.id.slice(0, 8)}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -139,7 +163,7 @@ export function BulkJobsToast() {
                     <Badge variant="outline" className="text-[10px]">{mode === "zip" ? "ZIP" : "PDF"}</Badge>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" className="h-7 text-xs gap-1.5 flex-1" onClick={() => handleDownload(j.id)}>
+                    <Button size="sm" className="h-7 text-xs gap-1.5 flex-1" onClick={() => handleDownload(j)}>
                       <Download className="h-3.5 w-3.5" />
                       Download
                     </Button>

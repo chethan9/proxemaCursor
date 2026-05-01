@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { slugifyStoreNameForFile } from "@/lib/templates/render-filename";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
@@ -18,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: job, error: jobErr } = await supabaseAdmin
     .from("bulk_jobs")
-    .select("id, store_id, job_type, status, payload, user_id")
+    .select("id, store_id, job_type, status, payload, user_id, completed_at")
     .eq("id", id)
     .maybeSingle();
   if (jobErr || !job) return res.status(404).json({ error: "Job not found" });
@@ -43,9 +44,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const path = payload?.artifact_path;
   if (!path) return res.status(404).json({ error: "Artifact missing or expired" });
 
+  const { data: storeRow } = await supabaseAdmin.from("stores").select("name").eq("id", job.store_id).maybeSingle();
+  const storeSlug = slugifyStoreNameForFile(String(storeRow?.name || "store"));
+  const day =
+    job.completed_at && typeof job.completed_at === "string"
+      ? job.completed_at.slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+  const ext = path.toLowerCase().endsWith(".zip") ? "zip" : "pdf";
+  const downloadName = `${storeSlug}-invoices-${day}.${ext}`;
+
   const { data: signed, error: signErr } = await supabaseAdmin.storage
     .from("bulk-invoices")
-    .createSignedUrl(path, 60 * 10, { download: true });
+    .createSignedUrl(path, 60 * 10, { download: downloadName });
   if (signErr || !signed?.signedUrl) {
     console.error("[bulk-invoices download]", signErr);
     return res.status(500).json({ error: "Could not sign download URL" });

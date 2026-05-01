@@ -88,6 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       context as Record<string, unknown>,
       tpl.name as string,
       entityKey,
+      tpl.type as string,
     );
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);

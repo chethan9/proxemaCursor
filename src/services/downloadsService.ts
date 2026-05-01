@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { slugifyStoreNameForFile } from "@/lib/templates/render-filename";
 
 export type DownloadFileType = "invoice" | "packing_slip" | "credit_note" | "report";
 
@@ -26,6 +27,10 @@ export async function listSiteDownloads(storeId: string): Promise<DownloadFile[]
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return [];
+
+  const { data: storeRow } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+  const storeSlug = slugifyStoreNameForFile(String(storeRow?.name || "store"));
+
   const { data, error } = await supabase
     .from("bulk_jobs")
     .select("id, store_id, job_type, payload, status, completed_at, total")
@@ -48,7 +53,9 @@ export async function listSiteDownloads(storeId: string): Promise<DownloadFile[]
     const type = JOB_TYPE_TO_FILE_TYPE[j.job_type] || "invoice";
     const ext = artifactPath.split(".").pop() || "pdf";
     const total = j.total || 0;
-    const fileName = `invoices_${j.id.slice(0, 8)}_${total}orders.${ext}`;
+    const day =
+      j.completed_at && typeof j.completed_at === "string" ? j.completed_at.slice(0, 10) : "export";
+    const fileName = `${storeSlug}-invoices-${day}.${ext}`;
     const sizeBytes = (payload.artifact_size_bytes as number | undefined) ?? null;
     const completedAt = j.completed_at as string;
     const expiresAt = completedAt
