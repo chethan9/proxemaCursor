@@ -14,7 +14,28 @@ function setNested(obj: Record<string, unknown>, key: string, value: string) {
     }
     cur = cur[k] as Record<string, unknown>;
   }
-  cur[parts[parts.length - 1]] = value;
+  const leaf = parts[parts.length - 1];
+  const existing = cur[leaf];
+  // Avoid replacing a nested JSON object from the file with a single flat string from the DB
+  // (e.g. key "myActivity" wiping `myActivity.title`, which breaks clients + i18n).
+  if (
+    typeof existing === "object" &&
+    existing !== null &&
+    !Array.isArray(existing) &&
+    typeof value === "string"
+  ) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        cur[leaf] = parsed as Record<string, unknown>;
+        return;
+      }
+    } catch {
+      /* not JSON — skip destructive replace */
+    }
+    return;
+  }
+  cur[leaf] = value;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

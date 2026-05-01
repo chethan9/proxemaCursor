@@ -19,10 +19,10 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { formatNumber } from "@/lib/format-number";
 import { supabase } from "@/integrations/supabase/client";
 import { AUDIT_MODULES } from "@/lib/audit/log";
-
-const MODULE_FILTER_VALUES = new Set<string>(["__all", ...Object.values(AUDIT_MODULES)]);
 import { buildActivityExportParams } from "@/lib/audit/export-query";
 import { useToast } from "@/hooks/use-toast";
+
+const MODULE_FILTER_VALUES = new Set<string>(["__all", ...Object.values(AUDIT_MODULES)]);
 
 const MODULE_OPTIONS = ["", ...Object.values(AUDIT_MODULES)];
 

@@ -150,8 +150,9 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
 }
 
 export function summarizeDiff(diff: { before?: Record<string, unknown>; after?: Record<string, unknown> } | null): string {
-  if (!diff || !diff.after) return "";
-  const entries = Object.entries(diff.after);
+  if (!diff || diff.after == null) return "";
+  if (typeof diff.after !== "object" || Array.isArray(diff.after)) return "";
+  const entries = Object.entries(diff.after as Record<string, unknown>);
   return entries.map(([key, value]) => {
     const before = diff.before?.[key];
     const fmt = (v: unknown): string => {
