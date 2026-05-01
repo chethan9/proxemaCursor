@@ -9,6 +9,7 @@ import {
 import { testCloudflareImagesConnection } from "@/lib/cloudflare-images.server";
 import { resolveUserFromRequest } from "@/lib/server-auth";
 import { logActivity } from "@/lib/activity-log";
+import { encryptCredentialWithPaymentKey } from "@/lib/credential-crypto.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const me = await resolveUserFromRequest(req);
@@ -105,14 +106,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (body.api_token != null && String(body.api_token).trim()) {
-      const { data: enc, error: encErr } = await supabaseAdmin.rpc("encrypt_credential", {
-        credential: String(body.api_token).trim(),
-        key_env_var: "PAYMENT_ENCRYPTION_KEY",
-      });
-      if (encErr || enc == null) {
-        return res.status(500).json({ error: encErr?.message || "Encrypt failed" });
+      try {
+        const { data: enc, error: encErr } = await encryptCredentialWithPaymentKey(String(body.api_token).trim());
+        if (encErr || enc == null) {
+          return res.status(500).json({
+            error:
+              encErr?.message ||
+              "Encrypt failed — ensure PAYMENT_ENCRYPTION_KEY is set in Vercel (same key used for payment credentials).",
+          });
+        }
+        patch.api_token_encrypted = enc;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Encrypt failed";
+        return res.status(500).json({
+          error:
+            msg.includes("PAYMENT_ENCRYPTION_KEY") ?
+              "Server missing PAYMENT_ENCRYPTION_KEY — add it to Vercel environment variables, then redeploy."
+            : msg,
+        });
       }
-      patch.api_token_encrypted = enc;
     }
 
     const { error: upErr } = await supabaseAdmin

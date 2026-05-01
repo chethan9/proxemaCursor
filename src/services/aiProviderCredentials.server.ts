@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { decryptCredentialWithPaymentKey } from "@/lib/credential-crypto.server";
 
 export async function getDecryptedProviderApiKey(provider: "google_gemini" | "openai_image"): Promise<string | null> {
   const { data, error } = await supabaseAdmin
@@ -9,10 +10,7 @@ export async function getDecryptedProviderApiKey(provider: "google_gemini" | "op
 
   if (error || !data?.is_active || !data.api_key_encrypted) return null;
 
-  const { data: decrypted, error: decErr } = await supabaseAdmin.rpc("decrypt_credential", {
-    encrypted_credential: data.api_key_encrypted,
-    key_env_var: "PAYMENT_ENCRYPTION_KEY",
-  });
-  if (decErr || !decrypted) return null;
+  const decrypted = await decryptCredentialWithPaymentKey(data.api_key_encrypted);
+  if (!decrypted) return null;
   return decrypted;
 }

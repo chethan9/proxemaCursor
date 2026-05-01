@@ -3579,8 +3579,16 @@ export type Database = {
         Args: { encrypted_credential: string; key_env_var?: string }
         Returns: string
       }
+      decrypt_credential_with_secret: {
+        Args: { encrypted_credential: string; encryption_secret: string }
+        Returns: string
+      }
       encrypt_credential: {
         Args: { credential: string; key_env_var?: string }
+        Returns: string
+      }
+      encrypt_credential_with_secret: {
+        Args: { credential: string; encryption_secret: string }
         Returns: string
       }
       generate_referral_code: { Args: { p_seed?: string }; Returns: string }

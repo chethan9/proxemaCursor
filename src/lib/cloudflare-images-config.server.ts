@@ -4,6 +4,7 @@
  */
 
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { decryptCredentialWithPaymentKey } from "@/lib/credential-crypto.server";
 
 export const CLOUDFLARE_SETTINGS_SINGLETON_ID = "a0000000-0000-4000-8000-000000000001";
 
@@ -71,12 +72,9 @@ async function buildFromDatabaseRow(row: {
   if (!row.account_id?.trim() || !row.images_account_hash?.trim() || !row.api_token_encrypted) {
     return null;
   }
-  const { data: decrypted, error } = await supabaseAdmin.rpc("decrypt_credential", {
-    encrypted_credential: row.api_token_encrypted,
-    key_env_var: "PAYMENT_ENCRYPTION_KEY",
-  });
-  if (error || !decrypted || typeof decrypted !== "string") {
-    console.warn("[cloudflare-images-config] decrypt failed", error?.message);
+  const decrypted = await decryptCredentialWithPaymentKey(row.api_token_encrypted);
+  if (!decrypted) {
+    console.warn("[cloudflare-images-config] decrypt failed (missing PAYMENT_ENCRYPTION_KEY or wrong key)");
     return null;
   }
   const rb = row.repair_batch_size;

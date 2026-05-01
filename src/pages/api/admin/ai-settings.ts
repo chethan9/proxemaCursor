@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { resolveUserFromRequest } from "@/lib/server-auth";
 import { logActivity } from "@/lib/activity-log";
+import { encryptCredentialWithPaymentKey } from "@/lib/credential-crypto.server";
 
 const PROVIDERS = ["google_gemini", "openai_image"] as const;
 
@@ -40,10 +41,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (body.openai_image?.apiKey?.trim()) updates.push({ provider: "openai_image", key: body.openai_image.apiKey.trim() });
 
     for (const u of updates) {
-      const { data: enc, error: encErr } = await supabaseAdmin.rpc("encrypt_credential", {
-        credential: u.key!,
-        key_env_var: "PAYMENT_ENCRYPTION_KEY",
-      });
+      let enc: string | null = null;
+      let encErr: { message: string } | null = null;
+      try {
+        const r = await encryptCredentialWithPaymentKey(u.key!);
+        enc = r.data as string | null;
+        encErr = r.error as { message: string } | null;
+      } catch (e) {
+        return res.status(500).json({
+          error: e instanceof Error ? e.message : "Encrypt failed — configure PAYMENT_ENCRYPTION_KEY on the server.",
+        });
+      }
       if (encErr || enc == null) return res.status(500).json({ error: encErr?.message || "Encrypt failed" });
 
       const { error } = await supabaseAdmin.from("ai_provider_credentials").upsert(

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { decryptCredentialWithPaymentKey, encryptCredentialWithPaymentKey } from "@/lib/credential-crypto.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type GatewayConfig = Database["public"]["Tables"]["payment_gateway_config"]["Row"];
@@ -36,8 +37,7 @@ export async function upsertGatewayConfig(
     enabled?: boolean;
   },
 ) {
-  const encryptionKey = process.env.PAYMENT_ENCRYPTION_KEY;
-  if (!encryptionKey) throw new Error("PAYMENT_ENCRYPTION_KEY not configured");
+  if (!process.env.PAYMENT_ENCRYPTION_KEY?.trim()) throw new Error("PAYMENT_ENCRYPTION_KEY not configured");
 
   const payload: Partial<GatewayConfigInsert> = {
     gateway,
@@ -47,28 +47,19 @@ export async function upsertGatewayConfig(
   };
 
   if (credentials.api_key) {
-    const { data: encrypted, error } = await supabaseAdmin.rpc("encrypt_credential", {
-      credential: credentials.api_key,
-      key_env_var: "PAYMENT_ENCRYPTION_KEY",
-    });
+    const { data: encrypted, error } = await encryptCredentialWithPaymentKey(credentials.api_key);
     if (error) throw error;
     payload.api_key_encrypted = encrypted;
   }
 
   if (credentials.api_secret) {
-    const { data: encrypted, error } = await supabaseAdmin.rpc("encrypt_credential", {
-      credential: credentials.api_secret,
-      key_env_var: "PAYMENT_ENCRYPTION_KEY",
-    });
+    const { data: encrypted, error } = await encryptCredentialWithPaymentKey(credentials.api_secret);
     if (error) throw error;
     payload.api_secret_encrypted = encrypted;
   }
 
   if (credentials.webhook_secret) {
-    const { data: encrypted, error } = await supabaseAdmin.rpc("encrypt_credential", {
-      credential: credentials.webhook_secret,
-      key_env_var: "PAYMENT_ENCRYPTION_KEY",
-    });
+    const { data: encrypted, error } = await encryptCredentialWithPaymentKey(credentials.webhook_secret);
     if (error) throw error;
     payload.webhook_secret_encrypted = encrypted;
   }
@@ -91,27 +82,18 @@ export async function decryptGatewayCredentials(config: GatewayConfig) {
   } = {};
 
   if (config.api_key_encrypted) {
-    const { data, error } = await supabaseAdmin.rpc("decrypt_credential", {
-      encrypted_credential: config.api_key_encrypted,
-      key_env_var: "PAYMENT_ENCRYPTION_KEY",
-    });
-    if (!error && data) result.api_key = data;
+    const data = await decryptCredentialWithPaymentKey(config.api_key_encrypted);
+    if (data) result.api_key = data;
   }
 
   if (config.api_secret_encrypted) {
-    const { data, error } = await supabaseAdmin.rpc("decrypt_credential", {
-      encrypted_credential: config.api_secret_encrypted,
-      key_env_var: "PAYMENT_ENCRYPTION_KEY",
-    });
-    if (!error && data) result.api_secret = data;
+    const data = await decryptCredentialWithPaymentKey(config.api_secret_encrypted);
+    if (data) result.api_secret = data;
   }
 
   if (config.webhook_secret_encrypted) {
-    const { data, error } = await supabaseAdmin.rpc("decrypt_credential", {
-      encrypted_credential: config.webhook_secret_encrypted,
-      key_env_var: "PAYMENT_ENCRYPTION_KEY",
-    });
-    if (!error && data) result.webhook_secret = data;
+    const data = await decryptCredentialWithPaymentKey(config.webhook_secret_encrypted);
+    if (data) result.webhook_secret = data;
   }
 
   return result;
