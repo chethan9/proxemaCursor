@@ -173,31 +173,23 @@ export function blankInvoiceHtml(): string {
     -webkit-font-smoothing: antialiased;
   }
   .beam-outer {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: block;
     padding: 12px 8px;
     width: 100%;
     box-sizing: border-box;
   }
   .beam-card {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
     width: 100%;
     max-width: 820px;
-    min-height: calc(100vh - 24px);
+    min-height: auto;
     background: var(--paper);
     padding: 24px 30px;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(15, 23, 41, 0.04), 0 8px 24px -8px rgba(15, 23, 41, 0.08);
+    margin: 0 auto;
   }
   .beam-main {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+    display: block;
   }
   .beam-header {
     display: flex;
@@ -205,6 +197,8 @@ export function blankInvoiceHtml(): string {
     align-items: flex-start;
     margin-bottom: 10px;
     gap: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
   }
   .beam-brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .beam-tagline {
@@ -247,11 +241,19 @@ export function blankInvoiceHtml(): string {
     color: var(--ink);
     line-height: 1.1;
   }
+  .beam-invoice-id {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
   .beam-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px 14px;
     margin-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
   }
   .beam-section-head {
     font-size: 11px;
@@ -389,7 +391,7 @@ export function blankInvoiceHtml(): string {
     color: var(--ink);
   }
   .beam-footer {
-    margin-top: auto;
+    margin-top: 12px;
     flex-shrink: 0;
     padding-top: 8px;
     border-top: 1px solid var(--line);
@@ -445,9 +447,9 @@ export function blankInvoiceHtml(): string {
           {{#if store.logo}}<img class="beam-logo" src="{{store.logo}}" alt="{{store.name}}" />{{/if}}
         </div>
         <div class="beam-header-right">
-          <div class="beam-header-store">{{store.name}}</div>
-          {{#if store.email}}<div class="beam-email">{{store.email}}</div>{{/if}}
+          {{#unless store.logo}}<div class="beam-header-store">{{store.name}}</div>{{/unless}}
           <div class="beam-title">Invoice</div>
+          {{#ifFilled order.invoice_number}}<div class="beam-invoice-id">#{{order.invoice_number}}</div>{{/ifFilled}}
         </div>
       </header>
 
