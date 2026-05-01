@@ -195,7 +195,7 @@ export async function resolveOrderContext(
   supabase: SupabaseClient,
   storeId: string,
   orderId: string,
-  templateMeta: { name: string; type: string }
+  templateMeta: { name: string; type: string },
 ): Promise<OrderContext> {
   const { data: order, error } = await supabase.from("orders").select("*").eq("id", orderId).eq("store_id", storeId).maybeSingle();
   if (error) throw error;
