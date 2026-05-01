@@ -230,7 +230,7 @@ export function blankInvoiceHtml(): string {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 3px;
     color: var(--ink);
     flex-shrink: 0;
     text-align: right;
@@ -254,7 +254,7 @@ export function blankInvoiceHtml(): string {
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 8px;
     margin-top: 2px;
   }
   .beam-invoice-id {
@@ -346,6 +346,16 @@ export function blankInvoiceHtml(): string {
   .beam-status-pill--violet::before {
     background: #8b5cf6;
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.35);
+  }
+  .beam-header-payment {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .beam-details {
     display: grid;
@@ -629,13 +639,14 @@ export function blankInvoiceHtml(): string {
           {{/if}}
         </div>
         <div class="beam-header-right">
+          <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">{{payment.payment_state_label}}</span>
           <div class="beam-title">Invoice</div>
           {{#ifFilled order.invoice_number}}
           <div class="beam-invoice-meta">
             <span class="beam-invoice-id">#{{order.invoice_number}}</span>
-            <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">{{payment.status_label}}</span>
           </div>
           {{/ifFilled}}
+          {{#ifFilled payment.title}}<div class="beam-header-payment">Payment Method: {{payment.title}}</div>{{/ifFilled}}
         </div>
       </header>
 
@@ -656,7 +667,6 @@ export function blankInvoiceHtml(): string {
           {{#ifFilled order.date_iso}}<div class="beam-info"><span class="beam-info-label">Invoice Date:</span><span class="beam-info-value">{{date order.date_iso "long"}}</span></div>{{/ifFilled}}
           {{#ifFilled order.woo_order_id}}<div class="beam-info"><span class="beam-info-label">Order Number:</span><span class="beam-info-value">{{order.woo_order_id}}</span></div>{{/ifFilled}}
           {{#ifFilled order.date_iso}}<div class="beam-info"><span class="beam-info-label">Order Date:</span><span class="beam-info-value">{{date order.date_iso "long"}}</span></div>{{/ifFilled}}
-          {{#ifFilled payment.title}}<div class="beam-info"><span class="beam-info-label">Payment Method:</span><span class="beam-info-value">{{payment.title}}</span></div>{{/ifFilled}}
         </div>
       </section>
 
@@ -743,9 +753,6 @@ export function blankInvoiceHtml(): string {
     </div>
 
     <footer class="beam-footer">
-      {{#ifFilled payment.title}}
-      <div class="beam-footer-pay"><strong>Payment method:</strong> {{payment.title}}</div>
-      {{/ifFilled}}
       <div class="beam-footer-links">
         {{#if store.terms_url}}
           <a href="{{store.terms_url}}" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>
