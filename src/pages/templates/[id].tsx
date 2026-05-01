@@ -30,7 +30,7 @@ function BuilderInner() {
     (async () => {
       try {
         const defaultName =
-          newType === "pickslip" ? "Untitled pick slip" : newType === "report" ? "Untitled report" : "Main Invoice";
+          newType === "pickslip" ? "Untitled pick slip" : newType === "report" ? "Untitled report" : "Untitled invoice";
         const defaultHtml =
           newType === "pickslip" ? blankPickslipHtml() : newType === "report" ? blankReportHtml() : blankInvoiceHtml();
         const newId = await createTemplate({
@@ -68,7 +68,14 @@ function BuilderInner() {
   useEffect(() => {
     if (data && !initialized.current) {
       setName(data.template.name);
-      const cfg = (data.version?.document as TemplateConfig | undefined) ?? { html: "" };
+      let cfg = (data.version?.document as TemplateConfig | undefined) ?? { html: "" };
+      if (
+        data.template.is_sample &&
+        data.template.type === "invoice" &&
+        (String(cfg.html ?? "").includes("font-size:22px") || String(cfg.html ?? "").length < 2800)
+      ) {
+        cfg = { ...cfg, html: blankInvoiceHtml(), grapesProject: undefined };
+      }
       setDocument({
         html: cfg.html ?? "",
         css: cfg.css,
@@ -90,13 +97,34 @@ function BuilderInner() {
   }, [document.html, dirty]);
 
   const saveMutation = useMutation({
-    mutationFn: async () => saveNewVersion(id, document),
-    onSuccess: () => {
+    mutationFn: async (): Promise<{ templateId: string; forkedFromSample: boolean }> => {
+      if (!profile?.client_id) throw new Error("No client");
+      if (!data) throw new Error("Template not loaded");
+      if (data.template.is_sample) {
+        const newId = await createTemplate({
+          name: `Copy of ${data.template.name}`,
+          type: data.template.type,
+          description: data.template.description ?? undefined,
+          clientId: profile.client_id as string,
+          document,
+        });
+        await router.replace(`/templates/${newId}`);
+        return { templateId: newId, forkedFromSample: true };
+      }
+      await saveNewVersion(id, document);
+      return { templateId: id, forkedFromSample: false };
+    },
+    onSuccess: ({ templateId, forkedFromSample }) => {
       setDirty(false);
-      qc.invalidateQueries({ queryKey: ["template", id] });
+      qc.invalidateQueries({ queryKey: ["template", templateId] });
       qc.invalidateQueries({ queryKey: ["templates"] });
       setPreviewKey((k) => k + 1);
-      toast({ title: "Template saved" });
+      toast({
+        title: forkedFromSample ? "Saved as your template" : "Template saved",
+        description: forkedFromSample
+          ? "You were editing a platform layout — a copy was created under your workspace."
+          : undefined,
+      });
     },
     onError: (e: Error) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
   });
@@ -154,7 +182,7 @@ function BuilderInner() {
           setDocument(doc);
           setDirty(true);
         }}
-        readOnly={isSample}
+        readOnly={false}
         name={name}
         editingName={editingName}
         onEditingNameChange={setEditingName}

@@ -129,11 +129,11 @@ export function BuilderTopBar({
       {/* Right */}
       <div className="flex items-center justify-end gap-1.5">
         <div className="hidden sm:flex items-center mr-1 rounded-md border border-slate-200">
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-none text-slate-600 disabled:opacity-40" onClick={onUndo} disabled={!canUndo || isSample} aria-label="Undo">
+          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-none text-slate-600 disabled:opacity-40" onClick={onUndo} disabled={!canUndo} aria-label="Undo">
             <Undo2 className="h-4 w-4" />
           </Button>
           <span className="w-px h-5 bg-slate-200" />
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-none text-slate-600 disabled:opacity-40" onClick={onRedo} disabled={!canRedo || isSample} aria-label="Redo">
+          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-none text-slate-600 disabled:opacity-40" onClick={onRedo} disabled={!canRedo} aria-label="Redo">
             <Redo2 className="h-4 w-4" />
           </Button>
         </div>
@@ -169,7 +169,7 @@ export function BuilderTopBar({
           size="sm"
           className="h-9 border-slate-200 text-xs gap-1.5"
           onClick={onSave}
-          disabled={savePending || !dirty || isSample}
+          disabled={savePending || !dirty}
         >
           {savePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           Save Template
@@ -182,7 +182,7 @@ export function BuilderTopBar({
             size="sm"
             className="h-9 text-xs px-3.5 rounded-r-none"
             onClick={onSaveAndClose}
-            disabled={savePending || isSample}
+            disabled={savePending}
           >
             Save &amp; Close
           </Button>
@@ -193,7 +193,7 @@ export function BuilderTopBar({
                 size="sm"
                 className="h-9 px-2 rounded-l-none border-l border-white/20"
                 aria-label="More actions"
-                disabled={isSample}
+                disabled={savePending}
               >
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
@@ -215,7 +215,7 @@ export function BuilderTopBar({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onSave} disabled={savePending || !dirty || isSample}>
+              <DropdownMenuItem onClick={onSave} disabled={savePending || !dirty}>
                 <Save className="h-4 w-4 mr-2" /> Save (keep open)
               </DropdownMenuItem>
             </DropdownMenuContent>

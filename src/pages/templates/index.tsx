@@ -124,7 +124,7 @@ function TemplatesInner() {
                       <div className="flex flex-wrap items-center gap-2 mb-4">
                         <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                         <h2 className="text-sm font-semibold text-slate-900">Starter layouts</h2>
-                        <span className="text-[11px] text-slate-500">Copy to customize · set Main Invoice as account default below</span>
+                        <span className="text-[11px] text-slate-500">Open to preview · use menu “Customize a copy” only if you want an editable duplicate</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {samples.map((t) => (
@@ -208,8 +208,8 @@ function TemplateCard({ t, onUse, onFork, onDelete, onSetDefault, forking }: { t
           <span className="text-[9px] text-slate-400">{format(new Date(t.updated_at), "MMM d")}</span>
         </div>
         {t.is_sample ? (
-          <Button size="sm" variant="outline" className="w-full h-8 text-[11px] border-slate-200" onClick={onFork} disabled={forking}>
-            {forking ? "Copying…" : "Customize"}
+          <Button size="sm" className="w-full h-8 text-[11px]" onClick={onUse}>
+            Open
           </Button>
         ) : (
           <Button size="sm" className="w-full h-8 text-[11px]" onClick={onUse}>Edit</Button>

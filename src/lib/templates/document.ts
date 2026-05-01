@@ -143,7 +143,7 @@ export function blankInvoiceHtml(): string {
 <meta charset="utf-8">
 <title>Invoice {{order.invoice_number}}</title>
 <style>
-  @page { size: A4; margin: 14mm; }
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -320,6 +320,10 @@ export function blankInvoiceHtml(): string {
     color: #374151;
     text-align: right;
   }
+  .inv-pay-note strong {
+    font-weight: 700;
+    color: #111827;
+  }
 
   .inv-footer {
     margin-top: 26px;
@@ -366,23 +370,23 @@ export function blankInvoiceHtml(): string {
     <div class="inv-billing">
       <div class="inv-section-head">Billing Details</div>
       <dl class="inv-dl">
-        <dt>Name</dt><dd>{{default billing.name "—"}}</dd>
-        <dt>Country</dt><dd>{{default billing.country "—"}}</dd>
-        <dt>Area</dt><dd>{{default billing.city "—"}}</dd>
-        <dt>Street</dt><dd>{{default billing.address.line1 "—"}}</dd>
-        <dt>Block</dt><dd>{{default billing.address.line2 "—"}}</dd>
-        <dt>Avenue</dt><dd>{{default billing.state "—"}}</dd>
-        <dt>Phone</dt><dd>{{default billing.phone "—"}}</dd>
-        <dt>Email</dt><dd>{{default billing.email "—"}}</dd>
+        {{#ifFilled billing.name}}<dt>Name</dt><dd>{{billing.name}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.country}}<dt>Country</dt><dd>{{billing.country}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.city}}<dt>Area</dt><dd>{{billing.city}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.address.line1}}<dt>Street</dt><dd>{{billing.address.line1}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.address.line2}}<dt>Block</dt><dd>{{billing.address.line2}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.company}}<dt>Apartment</dt><dd>{{billing.company}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.phone}}<dt>Phone</dt><dd>{{billing.phone}}</dd>{{/ifFilled}}
+        {{#ifFilled billing.email}}<dt>Email</dt><dd>{{billing.email}}</dd>{{/ifFilled}}
       </dl>
     </div>
     <div class="inv-meta">
       <dl class="inv-dl">
-        <dt>Invoice Number</dt><dd>{{order.invoice_number}}</dd>
-        <dt>Invoice Date</dt><dd>{{date order.date_iso "long"}}</dd>
-        <dt>Order Number</dt><dd>{{order.woo_order_id}}</dd>
-        <dt>Order Date</dt><dd>{{date order.date_iso "long"}}</dd>
-        <dt>Payment Method</dt><dd>{{default payment.title "—"}}</dd>
+        {{#ifFilled order.invoice_number}}<dt>Invoice Number</dt><dd>{{order.invoice_number}}</dd>{{/ifFilled}}
+        {{#ifFilled order.date_iso}}<dt>Invoice Date</dt><dd>{{date order.date_iso "long"}}</dd>{{/ifFilled}}
+        {{#ifFilled order.woo_order_id}}<dt>Order Number</dt><dd>{{order.woo_order_id}}</dd>{{/ifFilled}}
+        {{#ifFilled order.date_iso}}<dt>Order Date</dt><dd>{{date order.date_iso "long"}}</dd>{{/ifFilled}}
+        {{#ifFilled payment.title}}<dt>Payment Method</dt><dd>{{payment.title}}</dd>{{/ifFilled}}
       </dl>
     </div>
   </div>
@@ -423,7 +427,9 @@ export function blankInvoiceHtml(): string {
       <div class="inv-total-row"><span>Tax</span><span>{{currency totals.tax order.currency}}</span></div>
       {{/if}}
       <div class="inv-total-row inv-grand"><span>Total</span><span>{{currency totals.total order.currency}}</span></div>
-      <div class="inv-pay-note">Payment method: {{default payment.title "—"}}</div>
+      {{#ifFilled payment.title}}
+      <div class="inv-pay-note"><strong>Payment method:</strong> {{payment.title}}</div>
+      {{/ifFilled}}
     </div>
   </div>
 

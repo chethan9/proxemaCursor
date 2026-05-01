@@ -30,7 +30,15 @@ export async function getTemplate(id: string): Promise<{ template: TemplateRow; 
   return { template: tplRow, version };
 }
 
-export async function createTemplate(input: { name: string; type: TemplateType; description?: string; clientId: string; html?: string }): Promise<string> {
+export async function createTemplate(input: {
+  name: string;
+  type: TemplateType;
+  description?: string;
+  clientId: string;
+  html?: string;
+  /** Full persisted document (preferred over html when forking/saving builder state). */
+  document?: TemplateConfig;
+}): Promise<string> {
   const { data: tpl, error: e1 } = await supabase.from("templates").insert({
     name: input.name,
     type: input.type,
@@ -40,10 +48,15 @@ export async function createTemplate(input: { name: string; type: TemplateType; 
   }).select("*").single();
   if (e1) throw e1;
   const tplId = (tpl as { id: string }).id;
-  const html =
+  const fallbackHtml =
     input.html ??
     (input.type === "pickslip" ? blankPickslipHtml() : input.type === "report" ? blankReportHtml() : blankInvoiceHtml());
-  const config: TemplateConfig = { html };
+  const config: TemplateConfig =
+    input.document && String(input.document.html ?? "").trim()
+      ? input.document
+      : input.document
+        ? { ...input.document, html: input.document.html?.trim() ? input.document.html : fallbackHtml }
+        : { html: fallbackHtml };
   const { data: ver, error: e2 } = await supabase.from("template_versions").insert({
     template_id: tplId,
     version_number: 1,
@@ -55,10 +68,37 @@ export async function createTemplate(input: { name: string; type: TemplateType; 
   return tplId;
 }
 
+/** Platform invoice samples may still reference the short HTML from an older migration — swap for the full default layout. */
+function normalizeInvoiceSampleDocument(doc: TemplateConfig | null): TemplateConfig | null {
+  if (!doc) return null;
+  const h = String(doc.html ?? "");
+  const legacyStub = h.includes("font-size:22px") || h.length < 2800;
+  if (!legacyStub) return doc;
+  return { ...doc, html: blankInvoiceHtml(), grapesProject: undefined };
+}
+
 export async function forkSampleTemplate(sampleId: string, clientId: string, newName?: string): Promise<string> {
   const { template, version } = await getTemplate(sampleId);
-  const html = (version?.document as TemplateConfig | null)?.html ?? blankInvoiceHtml();
-  return createTemplate({ name: newName ?? `Copy of ${template.name}`, type: template.type, description: template.description ?? undefined, clientId, html });
+  const rawDoc = (version?.document as TemplateConfig | null) ?? null;
+  const doc =
+    template.type === "invoice" ? normalizeInvoiceSampleDocument(rawDoc) : rawDoc;
+  const emptyPick = template.type === "pickslip" ? blankPickslipHtml() : template.type === "report" ? blankReportHtml() : blankInvoiceHtml();
+  if (doc && String(doc.html ?? "").trim()) {
+    return createTemplate({
+      name: newName ?? `Copy of ${template.name}`,
+      type: template.type,
+      description: template.description ?? undefined,
+      clientId,
+      document: doc,
+    });
+  }
+  return createTemplate({
+    name: newName ?? `Copy of ${template.name}`,
+    type: template.type,
+    description: template.description ?? undefined,
+    clientId,
+    html: emptyPick,
+  });
 }
 
 export async function saveNewVersion(templateId: string, document: TemplateConfig | string, changeNote?: string): Promise<string> {

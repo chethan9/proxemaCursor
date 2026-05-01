@@ -122,6 +122,19 @@ export function registerHelpers(hb: HandlebarsLike) {
   hb.registerHelper("titlecase", (s: unknown) => String(s ?? "").replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()));
 
   hb.registerHelper("default", (value: unknown, fallback: unknown) => (value === null || value === undefined || value === "" ? fallback : value));
+
+  /** Omit rows when value is empty — use {{#ifFilled billing.city}}<dt>Area</dt><dd>…</dd>{{/ifFilled}} */
+  hb.registerHelper("ifFilled", function (this: unknown, ...args: unknown[]) {
+    const opts = args[args.length - 1] as HelperOptions | undefined;
+    const value = args.length >= 2 ? args[0] : undefined;
+    if (!opts || typeof opts.fn !== "function") return "";
+    const empty =
+      value === null ||
+      value === undefined ||
+      (typeof value === "number" && Number.isNaN(value)) ||
+      (typeof value === "string" && value.trim() === "");
+    return empty ? (opts.inverse?.(this) ?? "") : opts.fn(this);
+  });
   hb.registerHelper("concat", (...args: unknown[]) => args.slice(0, -1).map(String).join(""));
   hb.registerHelper("json", (obj: unknown) => JSON.stringify(obj, null, 2));
 
