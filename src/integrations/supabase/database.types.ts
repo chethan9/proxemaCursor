@@ -1695,6 +1695,57 @@ export type Database = {
         }
         Relationships: []
       }
+      cloudflare_images_settings: {
+        Row: {
+          id: string
+          enabled: boolean
+          prefer_database_over_env: boolean
+          account_id: string | null
+          api_token_encrypted: string | null
+          images_account_hash: string | null
+          variant_thumb: string
+          variant_card: string
+          variant_edit: string
+          variant_zoom: string
+          mirror_metrics_enabled: boolean
+          repair_batch_size: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          enabled?: boolean
+          prefer_database_over_env?: boolean
+          account_id?: string | null
+          api_token_encrypted?: string | null
+          images_account_hash?: string | null
+          variant_thumb?: string
+          variant_card?: string
+          variant_edit?: string
+          variant_zoom?: string
+          mirror_metrics_enabled?: boolean
+          repair_batch_size?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          enabled?: boolean
+          prefer_database_over_env?: boolean
+          account_id?: string | null
+          api_token_encrypted?: string | null
+          images_account_hash?: string | null
+          variant_thumb?: string
+          variant_card?: string
+          variant_edit?: string
+          variant_zoom?: string
+          mirror_metrics_enabled?: boolean
+          repair_batch_size?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           billing_interval: string

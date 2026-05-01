@@ -3,12 +3,9 @@
  */
 
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-import {
-  buildDeliveryUrls,
-  deleteCloudflareImage,
-  isCloudflareImagesConfigured,
-  uploadImageFromUrl,
-} from "@/lib/cloudflare-images.server";
+import type { ResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
+import { getResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
+import { buildDeliveryUrls, deleteCloudflareImage, uploadImageFromUrl } from "@/lib/cloudflare-images.server";
 import {
   normalizeProductImageSrc,
   productImageStorageKey,
@@ -18,13 +15,15 @@ import {
 
 const MIRROR_CONCURRENCY = 3;
 
-function logCfMirrorMetric(payload: Record<string, unknown>) {
-  if (process.env.CLOUDFLARE_IMAGE_MIRROR_METRICS !== "true") return;
+function logCfMirrorMetric(cfg: ResolvedCloudflareConfig | null, payload: Record<string, unknown>) {
+  const on = cfg?.metricsEnabled || process.env.CLOUDFLARE_IMAGE_MIRROR_METRICS === "true";
+  if (!on) return;
   console.log(JSON.stringify({ source: "cf_product_images", ts: new Date().toISOString(), ...payload }));
 }
 
-export function isProductImageMirroringEnabled(): boolean {
-  return isCloudflareImagesConfigured();
+export async function isProductImageMirroringEnabled(): Promise<boolean> {
+  const c = await getResolvedCloudflareConfig();
+  return c != null;
 }
 
 async function mergeMirrorJson(productId: string, storageKey: string, urls: ProductMirrorUrlsEntry): Promise<void> {
@@ -62,7 +61,8 @@ export async function mirrorOneImageForProduct(
   rawSrc: string,
   sourceKind: "sync" | "save" | "repair"
 ): Promise<void> {
-  if (!isProductImageMirroringEnabled()) return;
+  const cfg = await getResolvedCloudflareConfig();
+  if (!cfg) return;
   if (!rawSrc || !/^https?:\/\//i.test(rawSrc)) return;
 
   const normalized = normalizeProductImageSrc(rawSrc);
@@ -108,7 +108,7 @@ export async function mirrorOneImageForProduct(
   }
 
   if (cfId) {
-    const urls = buildDeliveryUrls(cfId);
+    const urls = buildDeliveryUrls(cfId, cfg);
     await mergeMirrorJsonForAllProductsWithKey(storeId, storageKey, urls);
     await supabaseAdmin
       .from("product_image_mirrors")
@@ -120,7 +120,7 @@ export async function mirrorOneImageForProduct(
       })
       .eq("store_id", storeId)
       .eq("storage_key", storageKey);
-    logCfMirrorMetric({
+    logCfMirrorMetric(cfg, {
       outcome: "ready",
       store_id: storeId,
       product_id: productId,
@@ -144,7 +144,7 @@ export async function mirrorOneImageForProduct(
       .eq("store_id", storeId)
       .eq("product_id", productId)
       .eq("storage_key", storageKey);
-    logCfMirrorMetric({
+    logCfMirrorMetric(cfg, {
       outcome: "failed",
       store_id: storeId,
       product_id: productId,
@@ -156,7 +156,7 @@ export async function mirrorOneImageForProduct(
   }
 
   cfId = up.id;
-  const urls = buildDeliveryUrls(cfId);
+  const urls = buildDeliveryUrls(cfId, cfg);
   await mergeMirrorJsonForAllProductsWithKey(storeId, storageKey, urls);
 
   await supabaseAdmin
@@ -169,7 +169,7 @@ export async function mirrorOneImageForProduct(
     })
     .eq("store_id", storeId)
     .eq("storage_key", storageKey);
-  logCfMirrorMetric({
+  logCfMirrorMetric(cfg, {
     outcome: "ready",
     store_id: storeId,
     product_id: productId,
@@ -185,7 +185,7 @@ export async function mirrorImagesForProductRow(
   imagesJson: unknown,
   sourceKind: "sync" | "save" | "repair"
 ): Promise<void> {
-  if (!isProductImageMirroringEnabled()) return;
+  if (!(await isProductImageMirroringEnabled())) return;
   if (!Array.isArray(imagesJson)) return;
   const urls = imagesJson as { src?: string }[];
   const uniqueSrcs = [...new Set(urls.map((x) => x?.src).filter(Boolean) as string[])];
@@ -199,7 +199,7 @@ export async function mirrorImagesForProductRows(
   rows: { id: string; images: unknown }[],
   sourceKind: "sync" | "save" | "repair"
 ): Promise<void> {
-  if (!isProductImageMirroringEnabled()) return;
+  if (!(await isProductImageMirroringEnabled())) return;
   for (const row of rows) {
     await mirrorImagesForProductRow(storeId, row.id, row.images, sourceKind);
   }
@@ -207,10 +207,11 @@ export async function mirrorImagesForProductRows(
 
 /** After removing mirror rows for a product, delete CF assets no longer referenced. */
 export async function deleteMirrorsForProduct(productId: string): Promise<void> {
-  if (!isCloudflareImagesConfigured()) return;
   const { data: rows } = await supabaseAdmin.from("product_image_mirrors").select("cf_image_id").eq("product_id", productId);
   const cfIds = [...new Set((rows || []).map((r) => r.cf_image_id).filter(Boolean) as string[])];
   await supabaseAdmin.from("product_image_mirrors").delete().eq("product_id", productId);
+  const cfg = await getResolvedCloudflareConfig();
+  if (!cfg) return;
   for (const cfId of cfIds) {
     const { count } = await supabaseAdmin
       .from("product_image_mirrors")
@@ -224,7 +225,6 @@ export async function deleteMirrorsForProduct(productId: string): Promise<void> 
 
 /** Call before deleting a store row — removes CF images tracked for this store. */
 export async function deleteMirrorsForStore(storeId: string): Promise<void> {
-  if (!isCloudflareImagesConfigured()) return;
   const { data: rows } = await supabaseAdmin
     .from("product_image_mirrors")
     .select("cf_image_id")
@@ -232,6 +232,8 @@ export async function deleteMirrorsForStore(storeId: string): Promise<void> {
     .not("cf_image_id", "is", null);
   const cfIds = [...new Set((rows || []).map((r) => r.cf_image_id).filter(Boolean) as string[])];
   await supabaseAdmin.from("product_image_mirrors").delete().eq("store_id", storeId);
+  const cfg = await getResolvedCloudflareConfig();
+  if (!cfg) return;
   for (const id of cfIds) {
     await deleteCloudflareImage(id);
   }
@@ -242,12 +244,14 @@ export async function repairPendingMirrorsBatch(limit: number): Promise<{
   ok: number;
   failed: number;
 }> {
-  if (!isProductImageMirroringEnabled()) return { attempted: 0, ok: 0, failed: 0 };
+  if (!(await isProductImageMirroringEnabled())) return { attempted: 0, ok: 0, failed: 0 };
+  const cfg = await getResolvedCloudflareConfig();
+  const effectiveLimit = Math.min(limit, cfg?.repairBatchSize ?? limit);
   const { data: pending } = await supabaseAdmin
     .from("product_image_mirrors")
     .select("store_id, product_id, src_normalized, storage_key")
     .in("status", ["pending", "failed"])
-    .limit(limit);
+    .limit(effectiveLimit);
 
   let ok = 0;
   let failed = 0;

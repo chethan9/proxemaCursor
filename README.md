@@ -14,6 +14,8 @@ Client (serve mirrored URLs in catalog + edit preview): set `NEXT_PUBLIC_CLOUDFL
 
 Observability: set `CLOUDFLARE_IMAGE_MIRROR_METRICS=true` to emit JSON lines for mirror outcomes and cron repair batches. Cron batch size: `CF_MIRROR_REPAIR_BATCH` (default 50).
 
+Super admins can manage integration settings (encrypted API token, account IDs, variants, repair batch, metrics) at **Settings → Cloudflare Images** (`/admin/cloudflare-images`). Database credentials override environment variables when enabled and complete; apply migration `20260502120000_cloudflare_images_settings.sql` so the singleton settings row exists.
+
 ## Publish
 
 Default Git remote `origin` targets the repo above. Push with:

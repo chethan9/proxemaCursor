@@ -165,8 +165,40 @@
       "translations": "Translations",
       "aiCredits": "AI credits",
       "adminAiSettings": "AI providers",
-      "adminAiFeatures": "AI features"
+      "adminAiFeatures": "AI features",
+      "adminCloudflareImages": "Cloudflare Images"
     }
+  },
+  "cloudflareImages": {
+    "title": "Cloudflare Images",
+    "subtitle": "Configure platform-wide product image mirroring. Credentials are encrypted in the database; environment variables are still supported as a fallback.",
+    "saved": "Settings saved",
+    "testOk": "Connection OK",
+    "statusTitle": "Runtime status",
+    "active": "Mirroring active",
+    "envFallback": "Environment fallback available",
+    "flags": "Feature flags",
+    "flagsHint": "Turn on only after API token and account details are set.",
+    "enableIntegration": "Enable Cloudflare Images mirroring",
+    "preferDb": "Prefer database credentials over environment",
+    "preferDbHint": "When off, Vercel/host env vars take priority if set.",
+    "metrics": "Emit JSON mirror metrics to logs",
+    "credentials": "API credentials",
+    "credentialsHint": "Account ID and Images delivery hash are non-secret. API token is stored encrypted (same key as payment credentials).",
+    "accountId": "Cloudflare account ID",
+    "imagesHash": "Images account hash (imagedelivery.net)",
+    "apiToken": "API token",
+    "configured": "configured",
+    "tokenPlaceholder": "Leave blank to keep existing",
+    "variants": "Variant names",
+    "variantsHint": "Must match variants defined in your Cloudflare Images dashboard.",
+    "repair": "Repair cron",
+    "repairHint": "Max rows processed per repair cron run (10–500).",
+    "repairBatch": "Repair batch size",
+    "clientEnvTitle": "Storefront / catalog",
+    "clientEnvBody": "Set NEXT_PUBLIC_CLOUDFLARE_PRODUCT_IMAGES=true on Vercel so the product grid and editor use mirrored URLs when available.",
+    "save": "Save",
+    "test": "Test connection"
   },
   "connect": {
     "setupInProgress": "Setup in progress"
