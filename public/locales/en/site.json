@@ -839,7 +839,12 @@
       "clear": "Clear"
     },
     "selected": "{{count}} selected",
-    "gridHint": "Click a tile to select · bulk exports appear here when the job finishes",
+    "gridHint": "Use checkboxes to select · Click a PDF row or Preview to open · Bulk exports appear here when the job finishes",
+    "preview": "Preview",
+    "previewTitle": "{{name}}",
+    "previewLoading": "Loading preview…",
+    "previewUnavailable": "Preview not available",
+    "previewUnavailableDesc": "Only PDF files can be previewed in the browser.",
     "downloadSelected": "Download selected",
     "expired": "Expired",
     "daysLeft": "{{days}}d left",
@@ -865,6 +870,7 @@
     },
     "actions": {
       "download": "Download",
+      "preview": "Preview",
       "remove": "Remove from downloads"
     },
     "toasts": {
