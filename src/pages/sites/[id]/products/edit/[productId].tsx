@@ -137,7 +137,16 @@ function Inner() {
 
   const save = useSiteMutation<unknown, void>({
     mutationFn: () => updateProduct(storeId, productId, form!),
-    invalidateKeys: [queryKeys.products(storeId), ["product", productId]],
+    invalidateKeys: [
+      queryKeys.products(storeId),
+      ["product", productId],
+      ["taxonomy", "categories", storeId],
+      ["taxonomy", "tags", storeId],
+      ["taxonomy", "brands", storeId],
+      ["woo", "taxonomy", storeId, "categories"],
+      ["woo", "taxonomy", storeId, "tags"],
+      ["woo", "taxonomy", storeId, "brands"],
+    ],
     siteName: store?.name,
     successToast: "Saved",
     onSuccessExtra: () => { setSavedOnce(true); router.push(returnTo); },
@@ -156,7 +165,15 @@ function Inner() {
       }
       return res.json();
     },
-    invalidateKeys: [queryKeys.products(storeId)],
+    invalidateKeys: [
+      queryKeys.products(storeId),
+      ["taxonomy", "categories", storeId],
+      ["taxonomy", "tags", storeId],
+      ["taxonomy", "brands", storeId],
+      ["woo", "taxonomy", storeId, "categories"],
+      ["woo", "taxonomy", storeId, "tags"],
+      ["woo", "taxonomy", storeId, "brands"],
+    ],
     siteName: store?.name,
     successToast: "Product deleted",
     onSuccessExtra: () => router.push(returnTo),
@@ -176,20 +193,21 @@ function Inner() {
     if (!form) return false;
     if (tab === "basic") return form.name.trim().length > 0;
     if (tab === "inventory") {
-      if (form.type === "variable") return false;
+      if (form.type === "variable") return true;
       const n = parseFloat((form.regular_price || "").trim());
       return !isNaN(n) && n > 0;
     }
     if (tab === "variants") {
-      if (form.type !== "variable") return false;
+      if (form.type !== "variable") return true;
       const vars = form.variations || [];
       if (vars.length === 0) return false;
       return vars.every((v) => {
+        if (v.enabled === false) return true;
         const n = parseFloat((v.regular_price || "").trim());
         return !isNaN(n) && n > 0;
       });
     }
-    return false;
+    return true;
   };
 
   if (storeLoading || loading) return <ProductEditSkeleton />;

@@ -1741,6 +1741,7 @@ export type Database = {
           variant_zoom: string
           mirror_metrics_enabled: boolean
           repair_batch_size: number | null
+          mirror_backfill_after_product_id: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -1757,6 +1758,7 @@ export type Database = {
           variant_zoom?: string
           mirror_metrics_enabled?: boolean
           repair_batch_size?: number | null
+          mirror_backfill_after_product_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1773,6 +1775,7 @@ export type Database = {
           variant_zoom?: string
           mirror_metrics_enabled?: boolean
           repair_batch_size?: number | null
+          mirror_backfill_after_product_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }

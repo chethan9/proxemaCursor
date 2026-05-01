@@ -210,7 +210,13 @@ export async function fetchProductVariations(storeId: string, productId: string)
 }
 
 export async function createProduct(storeId: string, form: ProductFormState) {
-  const { buildWooPayload } = await import("@/services/productValidation");
+  const { buildWooPayload, validateProductForm } = await import("@/services/productValidation");
+  const validation = validateProductForm(form);
+  if (!validation.ok) {
+    const e = new Error("Validation failed") as ProductError;
+    e.validationErrors = validation.errors.map(({ field, message }) => ({ field, message }));
+    throw e;
+  }
   const res = await fetch(`/api/stores/${storeId}/products/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -225,7 +231,13 @@ export async function createProduct(storeId: string, form: ProductFormState) {
 }
 
 export async function updateProduct(storeId: string, productId: string, form: ProductFormState) {
-  const { buildWooPayload } = await import("@/services/productValidation");
+  const { buildWooPayload, validateProductForm } = await import("@/services/productValidation");
+  const validation = validateProductForm(form);
+  if (!validation.ok) {
+    const e = new Error("Validation failed") as ProductError;
+    e.validationErrors = validation.errors.map(({ field, message }) => ({ field, message }));
+    throw e;
+  }
   const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

@@ -36,6 +36,7 @@ import {
   Trash2,
   Activity,
   Gauge,
+  Zap,
 } from "lucide-react";
 
 async function authHeaders() {
@@ -81,6 +82,8 @@ function StatTile({
 
 function MirrorMonitoringSection() {
   const { t } = useTranslation("common");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     data: stats,
     isLoading,
@@ -95,6 +98,40 @@ function MirrorMonitoringSection() {
       return res.json() as Promise<MirrorDashboardStats>;
     },
     refetchInterval: 60_000,
+  });
+
+  const runRepairMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/cloudflare-images-run-repair", {
+        method: "POST",
+        headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+      });
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new Error(typeof body.error === "string" ? body.error : res.statusText || "Request failed");
+      return body;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-cloudflare-images-mirror-stats"] });
+      const attempted = typeof data.attempted === "number" ? data.attempted : 0;
+      const okCount = typeof data.ok === "number" ? data.ok : 0;
+      const failed = typeof data.failed === "number" ? data.failed : 0;
+      toast({
+        title: t("cloudflareImages.forceRepairToastTitle", "Repair batch finished"),
+        description: t("cloudflareImages.forceRepairToastDesc", {
+          defaultValue: "Processed {{attempted}} rows: {{okCount}} OK, {{failed}} failed.",
+          attempted,
+          okCount,
+          failed,
+        }),
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        variant: "destructive",
+        title: t("cloudflareImages.forceRepairErrorTitle", "Repair run failed"),
+        description: err.message,
+      });
+    },
   });
 
   const nf = (n: number) => n.toLocaleString();
@@ -114,10 +151,29 @@ function MirrorMonitoringSection() {
             )}
           </CardDescription>
         </div>
-        <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-          {t("cloudflareImages.refreshStats", "Refresh")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => runRepairMutation.mutate()}
+            disabled={runRepairMutation.isPending || isFetching}
+            title={t(
+              "cloudflareImages.forceRepairHint",
+              "Runs one repair batch (same as the scheduled cron). Use when you want to drain backlog without waiting."
+            )}
+          >
+            {runRepairMutation.isPending ?
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <Zap className="h-3.5 w-3.5" />}
+            {t("cloudflareImages.forceRepair", "Run repair now")}
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            {t("cloudflareImages.refreshStats", "Refresh")}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {isLoading && (
@@ -361,12 +417,225 @@ type SettingsResponse = {
     variant_zoom: string;
     mirror_metrics_enabled: boolean;
     repair_batch_size: number | null;
+    mirror_backfill_after_product_id: string | null;
     updated_at: string | null;
   } | null;
   resolvedSource: "database" | "env" | null;
   resolvedActive: boolean;
   envFallbackAvailable: boolean;
 };
+
+function BackfillSection() {
+  const { t } = useTranslation("common");
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [storeFilter, setStoreFilter] = useState("");
+  const [batchSize, setBatchSize] = useState(25);
+  const [afterCursor, setAfterCursor] = useState("");
+  const [useStoredCursor, setUseStoredCursor] = useState(false);
+  const [updateStoredCursor, setUpdateStoredCursor] = useState(false);
+  const [lastJson, setLastJson] = useState<Record<string, unknown> | null>(null);
+
+  const { data: settings } = useQuery({
+    queryKey: ["admin-cloudflare-images-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/cloudflare-images-settings", { headers: await authHeaders() });
+      if (!res.ok) throw new Error("Failed to load");
+      return res.json() as Promise<SettingsResponse>;
+    },
+  });
+
+  const backfillMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/cloudflare-images-backfill", {
+        method: "POST",
+        headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: storeFilter.trim() || null,
+          productLimit: batchSize,
+          afterId: afterCursor.trim() || null,
+          useStoredCursor,
+          updateStoredCursor,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new Error(typeof body.error === "string" ? body.error : res.statusText || "Backfill failed");
+      return body;
+    },
+    onSuccess: async (data) => {
+      setLastJson(data);
+      await qc.invalidateQueries({ queryKey: ["admin-cloudflare-images-settings"] });
+      await qc.invalidateQueries({ queryKey: ["admin-cloudflare-images-mirror-stats"] });
+      const touched = typeof data.touched === "number" ? data.touched : 0;
+      const hasMore = data.hasMore === true;
+      const next = typeof data.nextAfterId === "string" ? data.nextAfterId : "";
+      if (hasMore && next) setAfterCursor(next);
+      toast({
+        title: t("cloudflareImages.backfillToastTitle", "Backfill batch finished"),
+        description: t("cloudflareImages.backfillToastDesc", {
+          defaultValue: "Touched {{touched}} products. {{moreHint}}",
+          touched,
+          moreHint: hasMore
+            ? t("cloudflareImages.backfillMoreHint", "More batches remain — cursor updated below.")
+            : t("cloudflareImages.backfillDoneHint", "Reached end of catalog window or nothing left to sync."),
+        }),
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        variant: "destructive",
+        title: t("cloudflareImages.backfillErrorTitle", "Backfill failed"),
+        description: err.message,
+      });
+    },
+  });
+
+  const resetCursorMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/cloudflare-images-settings", {
+        method: "PUT",
+        headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+        body: JSON.stringify({ mirror_backfill_after_product_id: null }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error || "Reset failed");
+      }
+    },
+    onSuccess: async () => {
+      setAfterCursor("");
+      await qc.invalidateQueries({ queryKey: ["admin-cloudflare-images-settings"] });
+      toast({
+        title: t("cloudflareImages.cursorResetTitle", "Cursor cleared"),
+        description: t("cloudflareImages.cursorResetDesc", "Scheduled backfill will start from the first products again."),
+      });
+    },
+    onError: (err: Error) => {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    },
+  });
+
+  const storedCursor = settings?.row?.mirror_backfill_after_product_id;
+
+  return (
+    <Card className="border-orange-500/15">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Layers className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+          {t("cloudflareImages.backfillTitle", "Legacy catalog backfill")}
+        </CardTitle>
+        <CardDescription>
+          {t(
+            "cloudflareImages.backfillSubtitle",
+            "Products that existed before mirroring may have no mirror rows yet. This walks the catalog in batches (same pipeline as Woo sync) and uploads missing images. Repair cron still drains pending/failed rows — run both for large imports."
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Alert>
+          <AlertTitle>{t("cloudflareImages.optimizeTitle", "Speed & compression")}</AlertTitle>
+          <AlertDescription className="text-sm space-y-1">
+            <p>
+              {t(
+                "cloudflareImages.optimizeBody",
+                "Uploads resize large masters server-side (max edge 2048px, JPEG/WebP). Set CF_MIRROR_MASTER_MAX_EDGE_PX or CF_MIRROR_SKIP_MASTER_OPTIMIZE on Vercel if needed. In Cloudflare Images, define variants to match the names below — typical widths: thumb 200px, card 600px, edit 1200px, zoom 1600px — so storefronts load small URLs."
+              )}
+            </p>
+          </AlertDescription>
+        </Alert>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="bf-store">{t("cloudflareImages.backfillStoreId", "Store ID (optional)")}</Label>
+            <Input
+              id="bf-store"
+              value={storeFilter}
+              onChange={(e) => setStoreFilter(e.target.value)}
+              placeholder={t("cloudflareImages.backfillStorePlaceholder", "All stores")}
+              className="font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bf-batch">{t("cloudflareImages.backfillBatch", "Products per batch (1–80)")}</Label>
+            <Input
+              id="bf-batch"
+              type="number"
+              min={1}
+              max={80}
+              value={batchSize}
+              onChange={(e) => setBatchSize(Number(e.target.value) || 25)}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="bf-after">{t("cloudflareImages.backfillAfterId", "Continue after product id (optional)")}</Label>
+          <Input
+            id="bf-after"
+            value={afterCursor}
+            onChange={(e) => setAfterCursor(e.target.value)}
+            placeholder="uuid"
+            className="font-mono text-xs"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("cloudflareImages.backfillAfterHint", "Leave empty to start from the beginning of the filtered list. After each batch with “more” left, the next cursor is filled automatically.")}
+          </p>
+        </div>
+
+        <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs space-y-1">
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-muted-foreground">{t("cloudflareImages.storedCronCursor", "Stored cron cursor")}</span>
+            <span className="font-mono break-all text-right">{storedCursor ?? "—"}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <Switch id="bf-use-stored" checked={useStoredCursor} onCheckedChange={setUseStoredCursor} />
+            <Label htmlFor="bf-use-stored" className="text-sm font-normal cursor-pointer">
+              {t("cloudflareImages.backfillUseStoredCursor", "Start from stored cron cursor")}
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch id="bf-persist" checked={updateStoredCursor} onCheckedChange={setUpdateStoredCursor} />
+            <Label htmlFor="bf-persist" className="text-sm font-normal cursor-pointer">
+              {t("cloudflareImages.backfillPersistCursor", "Save cursor after run (for cron alignment)")}
+            </Label>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            className="gap-1.5"
+            onClick={() => backfillMutation.mutate()}
+            disabled={backfillMutation.isPending}
+          >
+            {backfillMutation.isPending ?
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <ImageIcon className="h-3.5 w-3.5" />}
+            {t("cloudflareImages.backfillRun", "Run backfill batch")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => resetCursorMutation.mutate()}
+            disabled={resetCursorMutation.isPending}
+          >
+            {t("cloudflareImages.resetCronCursor", "Reset stored cursor")}
+          </Button>
+        </div>
+
+        {lastJson ?
+          <pre className="text-[11px] bg-muted/50 border rounded-md p-3 overflow-x-auto max-h-48 font-mono">
+            {JSON.stringify(lastJson, null, 2)}
+          </pre>
+        : null}
+      </CardContent>
+    </Card>
+  );
+}
 
 function Inner() {
   const { t } = useTranslation("common");
@@ -497,6 +766,8 @@ function Inner() {
       )}
 
       <MirrorMonitoringSection />
+
+      <BackfillSection />
 
       {data && (
         <Alert>

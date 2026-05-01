@@ -68,6 +68,11 @@ export function normalizeProductForm(form: ProductFormState): ProductFormState {
         option: trim(va.option),
       })),
     })),
+    default_attributes: (form.default_attributes || []).map((d) => ({
+      ...(typeof d.id === "number" && d.id > 0 ? { id: d.id } : {}),
+      name: trim(d.name),
+      option: trim(d.option),
+    })),
   };
 
   // Parent stock coupling (only meaningful for simple products)
@@ -149,6 +154,11 @@ export function validateProductForm(form: ProductFormState): ValidationResult {
   if (form.type === "simple") {
     if (publishing && !isPositivePriceString(form.regular_price)) {
       errors.push({ field: "regular_price", message: "Regular price is required and must be greater than 0" });
+    }
+    const regS = parseFloat(form.regular_price || "0");
+    const saleS = parseFloat(form.sale_price || "0");
+    if (publishing && regS > 0 && saleS > 0 && saleS >= regS) {
+      errors.push({ field: "sale_price", message: "Sale price must be less than regular price" });
     }
     if (form.manage_stock) {
       if (form.stock_quantity == null) {
@@ -336,6 +346,15 @@ export function buildWooPayload(formRaw: ProductFormState): Record<string, unkno
 
   if (form.deletedVariationIds && form.deletedVariationIds.length) {
     payload.deleted_variation_ids = form.deletedVariationIds;
+  }
+
+  // WooCommerce variable products: default form attributes (must match variation attribute names/options).
+  if (form.type === "variable") {
+    payload.default_attributes = (form.default_attributes || []).map((d) => ({
+      ...(typeof d.id === "number" && d.id > 0 ? { id: d.id } : {}),
+      name: d.name,
+      option: d.option,
+    }));
   }
 
   return payload;

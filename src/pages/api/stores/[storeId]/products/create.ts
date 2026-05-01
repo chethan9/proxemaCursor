@@ -107,6 +107,13 @@ async function validateCreatePayload(
     if (publishing && !priceIsPositive(payload.regular_price)) {
       errors.push({ field: "regular_price", message: "Regular price is required and must be greater than 0" });
     }
+    if (publishing) {
+      const reg = toNumeric(payload.regular_price);
+      const sale = toNumeric(payload.sale_price);
+      if (reg !== null && reg > 0 && sale !== null && sale > 0 && sale >= reg) {
+        errors.push({ field: "sale_price", message: "Sale price must be less than regular price" });
+      }
+    }
     normalizeStockFields(payload);
   } else if (type === "variable") {
     delete payload.regular_price;
@@ -145,6 +152,16 @@ async function validateCreatePayload(
       }
       if (v.manage_stock && v.stock_quantity != null && v.stock_quantity < 0) {
         errors.push({ field: `variation[${idx}].stock_quantity`, message: `Variation ${idx + 1}: stock cannot be negative` });
+      }
+      if (publishing) {
+        const reg = toNumeric(v.regular_price);
+        const sale = toNumeric(v.sale_price);
+        if (reg !== null && reg > 0 && sale !== null && sale > 0 && sale >= reg) {
+          errors.push({
+            field: `variation[${idx}].sale_price`,
+            message: `Variation ${idx + 1}: sale price must be less than regular price`,
+          });
+        }
       }
     });
   } else {
@@ -198,12 +215,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (Array.isArray(parentPayload.attributes) && variations.length > 0) {
       try {
+        const defaultAttrs = Array.isArray(parentPayload.default_attributes)
+          ? (parentPayload.default_attributes as Array<{ id?: number; name: string; option: string }>)
+          : undefined;
         const reconciled = await reconcileAttributeTerms(
           creds,
           parentPayload.attributes as Array<{ id?: number; name: string; options?: string[]; variation?: boolean }>,
-          variations as unknown as Array<{ attributes?: { id?: number; name: string; option: string }[] }>
+          variations as unknown as Array<{ attributes?: { id?: number; name: string; option: string }[] }>,
+          defaultAttrs,
         );
         parentPayload.attributes = reconciled.parentAttributes as unknown as Json;
+        if (reconciled.defaultAttributes !== undefined) {
+          parentPayload.default_attributes = reconciled.defaultAttributes;
+        }
         for (let i = 0; i < variations.length; i++) {
           variations[i] = { ...variations[i], attributes: reconciled.variations[i].attributes as { name: string; option: string }[] };
         }
@@ -267,8 +291,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const createdVars = Array.isArray(batchRes?.create) ? batchRes.create : [];
         if (createdVars.length > 0) {
           const now = new Date().toISOString();
+          // WooCommerce REST often persists default_attributes only after variations exist — sync parent again.
+          try {
+            await wooRequest<Record<string, unknown>>(creds, "PUT", `products/${wooId}`, {
+              default_attributes: Array.isArray(parentPayload.default_attributes)
+                ? parentPayload.default_attributes
+                : [],
+            });
+          } catch (e) {
+            console.warn("[product-create] PUT default_attributes after variations:", e);
+          }
+          let parentForDb: Record<string, unknown> = created;
+          try {
+            const refreshed = await wooRequest<Record<string, unknown>>(creds, "GET", `products/${wooId}`);
+            parentForDb = refreshed;
+          } catch (e) {
+            console.warn("[product-create] GET product after defaults:", e);
+          }
           // Insert parent first so variations have a parent_id to reference
-          const parentInsertRow = buildProductInsertRow(storeId, created);
+          const parentInsertRow = buildProductInsertRow(storeId, parentForDb);
           const { data: parentInserted, error: parentErr } = await supabaseAdmin
             .from("products")
             .upsert(parentInsertRow as never, { onConflict: "store_id,woo_id" })

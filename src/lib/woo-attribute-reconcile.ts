@@ -39,14 +39,17 @@ async function fetchAllTerms(creds: WooStoreCreds, attrId: number): Promise<WooT
   return all;
 }
 
+export type WooDefaultAttribute = { id?: number; name: string; option: string };
+
 export async function reconcileAttributeTerms<V extends WooVariation>(
   creds: WooStoreCreds,
   parentAttributes: WooAttribute[],
-  variations: V[]
-): Promise<{ parentAttributes: WooAttribute[]; variations: V[] }> {
+  variations: V[],
+  defaultAttributes?: WooDefaultAttribute[],
+): Promise<{ parentAttributes: WooAttribute[]; variations: V[]; defaultAttributes?: WooDefaultAttribute[] }> {
   const globalAttrs = parentAttributes.filter((a) => typeof a.id === "number" && a.id > 0);
   if (globalAttrs.length === 0) {
-    return { parentAttributes, variations };
+    return { parentAttributes, variations, defaultAttributes };
   }
 
   const canonicalByAttr = new Map<number, Map<string, string>>();
@@ -67,6 +70,14 @@ export async function reconcileAttributeTerms<V extends WooVariation>(
           if (t) usedOptions.add(t);
         }
       });
+    });
+    (defaultAttributes || []).forEach((da) => {
+      const matchById = da.id === attrId;
+      const matchByName = !da.id && da.name && da.name.toLowerCase() === attr.name.toLowerCase();
+      if (matchById || matchByName) {
+        const t = (da.option || "").trim();
+        if (t) usedOptions.add(t);
+      }
     });
 
     let existing: WooTerm[] = [];
@@ -137,5 +148,24 @@ export async function reconcileAttributeTerms<V extends WooVariation>(
     return { ...v, attributes: attrs };
   });
 
-  return { parentAttributes: rewrittenParent, variations: rewrittenVariations };
+  let rewrittenDefault: WooDefaultAttribute[] | undefined;
+  if (defaultAttributes !== undefined) {
+    if (defaultAttributes.length === 0) {
+      rewrittenDefault = [];
+    } else {
+      rewrittenDefault = defaultAttributes.map((da) => {
+        const matchedAttr = globalAttrs.find(
+          (g) => g.id === da.id || (!da.id && g.name.toLowerCase() === (da.name || "").toLowerCase()),
+        );
+        if (!matchedAttr || typeof matchedAttr.id !== "number") return da;
+        const canonical = canonicalByAttr.get(matchedAttr.id);
+        if (!canonical) return da;
+        const canonicalName = canonical.get((da.option || "").toLowerCase().trim());
+        if (!canonicalName) return da;
+        return { id: matchedAttr.id, name: matchedAttr.name, option: canonicalName };
+      });
+    }
+  }
+
+  return { parentAttributes: rewrittenParent, variations: rewrittenVariations, defaultAttributes: rewrittenDefault };
 }

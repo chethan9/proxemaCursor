@@ -59,10 +59,12 @@ function Inner() {
     mutationFn: () => createProduct(id, form),
     invalidateKeys: [
       queryKeys.products(id),
-      ["taxonomy", id, "categories"],
-      ["taxonomy", id, "tags"],
+      ["taxonomy", "categories", id],
+      ["taxonomy", "tags", id],
+      ["taxonomy", "brands", id],
       ["woo", "taxonomy", id, "categories"],
       ["woo", "taxonomy", id, "tags"],
+      ["woo", "taxonomy", id, "brands"],
     ],
     siteName: store?.name,
     successToast: () => `Product created`,
@@ -105,20 +107,21 @@ function Inner() {
   const canAdvance = (tab: AdvancedTabKey) => {
     if (tab === "basic") return form.name.trim().length > 0;
     if (tab === "inventory") {
-      if (form.type === "variable") return false;
+      if (form.type === "variable") return true;
       const n = parseFloat((form.regular_price || "").trim());
       return !isNaN(n) && n > 0;
     }
     if (tab === "variants") {
-      if (form.type !== "variable") return false;
+      if (form.type !== "variable") return true;
       const vars = form.variations || [];
       if (vars.length === 0) return false;
       return vars.every((v) => {
+        if (v.enabled === false) return true;
         const n = parseFloat((v.regular_price || "").trim());
         return !isNaN(n) && n > 0;
       });
     }
-    return false;
+    return true;
   };
 
   const submit = () => { setServerErrors([]); create.mutate(); };

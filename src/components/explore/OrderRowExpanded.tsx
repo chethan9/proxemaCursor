@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
 import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
 import { useTranslation } from "next-i18next";
+import { useOrderDistinctStatuses } from "@/hooks/queries/useOrderDistinctStatuses";
+import { orderStatusDisplayLabel } from "@/lib/order-status-ui";
 import { formatDate } from "@/lib/format-number";
 
 interface Props {
@@ -29,10 +31,12 @@ const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; rin
   pending: { dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200 dark:ring-amber-900", Icon: Hourglass },
 };
 
-const STATUS_CHANGE_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
+const STATUS_CHANGE_OPTIONS = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
+
+const CUSTOM_STATUS_STYLE = { dot: "bg-muted-foreground/50", bg: "bg-muted/70 dark:bg-muted/25", text: "text-foreground", ring: "ring-border", Icon: Tag };
 
 export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation("site");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { track, markSaved, markFailed } = useRecentMutations();
@@ -46,6 +50,19 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
     staleTime: 60_000,
   });
   const orderFull = detailOrder ? ({ ...order, ...detailOrder } as OrderRow) : order;
+
+  const { data: distinctStatuses = [] } = useOrderDistinctStatuses(orderFull.store_id);
+  const statusChangeTargets = useMemo(() => {
+    const seen = new Set(STATUS_CHANGE_OPTIONS);
+    const out = [...STATUS_CHANGE_OPTIONS];
+    for (const x of distinctStatuses) {
+      if (!seen.has(x)) {
+        seen.add(x);
+        out.push(x);
+      }
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [distinctStatuses]);
 
   const billing = (orderFull.billing || {}) as {
     first_name?: string; last_name?: string; email?: string; phone?: string;
@@ -259,23 +276,25 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Change status</div>
           <div className="space-y-1">
-            {STATUS_CHANGE_OPTIONS.filter((s) => s !== orderFull.status).map((s) => {
-              const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
+            {statusChangeTargets.filter((s) => s !== orderFull.status).map((s) => {
+              const style = STATUS_STYLES[s] ?? CUSTOM_STATUS_STYLE;
               const isSaving = saving === s;
               const Icon = style.Icon;
+              const label = orderStatusDisplayLabel(t, s);
               return (
                 <button
                   key={s}
                   disabled={!!saving}
                   onClick={() => handleStatusChange(s)}
-                  className={`w-full inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset transition-all ${style.bg} ${style.text} ${style.ring} hover:ring-2 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:ring-1`}
+                  title={s}
+                  className={`w-full inline-flex items-center gap-1.5 min-h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 ring-inset transition-all ${style.bg} ${style.text} ${style.ring} hover:ring-2 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:ring-1`}
                 >
                   {isSaving ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-3 w-3 animate-spin shrink-0" />
                   ) : (
                     <Icon className="h-3 w-3 shrink-0" />
                   )}
-                  <span className="truncate">{s}</span>
+                  <span className="truncate min-w-0 text-left">{label}</span>
                 </button>
               );
             })}

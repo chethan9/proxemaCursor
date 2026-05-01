@@ -96,6 +96,13 @@ async function validateUpdatePayload(
     if (publishing && payload.regular_price !== undefined && !pricePositive(payload.regular_price)) {
       errors.push({ field: "regular_price", message: "Regular price must be greater than 0" });
     }
+    if (publishing) {
+      const reg = toNumeric(payload.regular_price);
+      const sale = toNumeric(payload.sale_price);
+      if (reg !== null && reg > 0 && sale !== null && sale > 0 && sale >= reg) {
+        errors.push({ field: "sale_price", message: "Sale price must be less than regular price" });
+      }
+    }
     couplePayloadStock(payload);
   } else if (type === "variable") {
     delete payload.regular_price;
@@ -132,6 +139,16 @@ async function validateUpdatePayload(
         }
         if (v.manage_stock && typeof v.stock_quantity === "number" && (v.stock_quantity as number) < 0) {
           errors.push({ field: `variation[${idx}].stock_quantity`, message: `Variation ${idx + 1}: stock cannot be negative` });
+        }
+        if (publishing && enabled) {
+          const reg = toNumeric(v.regular_price);
+          const sale = toNumeric(v.sale_price);
+          if (reg !== null && reg > 0 && sale !== null && sale > 0 && sale >= reg) {
+            errors.push({
+              field: `variation[${idx}].sale_price`,
+              message: `Variation ${idx + 1}: sale price must be less than regular price`,
+            });
+          }
         }
       });
     }
@@ -316,12 +333,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (Array.isArray(wooPayload.attributes) && Array.isArray(variations) && variations.length > 0) {
       try {
+        const defaultAttrs = Array.isArray(wooPayload.default_attributes)
+          ? (wooPayload.default_attributes as Array<{ id?: number; name: string; option: string }>)
+          : undefined;
         const reconciled = await reconcileAttributeTerms(
           store,
           wooPayload.attributes as Array<{ id?: number; name: string; options?: string[]; variation?: boolean }>,
-          variations as Array<{ attributes?: { id?: number; name: string; option: string }[] }>
+          variations as Array<{ attributes?: { id?: number; name: string; option: string }[] }>,
+          defaultAttrs,
         );
         wooPayload.attributes = reconciled.parentAttributes as unknown as Json;
+        if (reconciled.defaultAttributes !== undefined) {
+          wooPayload.default_attributes = reconciled.defaultAttributes;
+        }
         for (let i = 0; i < variations.length; i++) {
           variations[i] = { ...variations[i], attributes: reconciled.variations[i].attributes as unknown as Record<string, unknown>[] };
         }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical, AlertCircle, Sparkles } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
+import { validateProductForm } from "@/services/productValidation";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
@@ -66,8 +67,10 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
   const saleNum = parseFloat(form.sale_price) || 0;
   const discountPct = regularNum > 0 && saleNum > 0 && saleNum < regularNum ? Math.round(((regularNum - saleNum) / regularNum) * 100) : 0;
   const publishing = form.status === "publish";
-  const priceInvalid = publishing && regularNum <= 0;
-  const publishBlocked = priceInvalid;
+  const validation = useMemo(() => validateProductForm(form), [form]);
+  const publishBlocked = publishing && !validation.ok;
+  /** Highlight simple product price field when publish requires a positive regular price */
+  const priceInvalid = publishing && form.type === "simple" && regularNum <= 0;
   /** Parent SKU is optional for variable products (SKUs live on variations). */
   const parentSkuRequired = publishing && form.type !== "variable";
 
@@ -422,10 +425,14 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
           <LivePreviewCard storeId={storeId} productId={productId} form={form} setForm={setForm} />
 
-          {publishBlocked && (
+          {publishBlocked && validation.errors.length > 0 && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
               <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
-              <span className="text-foreground/80">Regular price must be greater than 0 to publish. Save as Draft instead to skip pricing for now.</span>
+              <ul className="text-foreground/80 space-y-1 list-disc pl-4">
+                {validation.errors.slice(0, 8).map((err, i) => (
+                  <li key={`${err.field}-${i}`}>{err.message}</li>
+                ))}
+              </ul>
             </div>
           )}
 

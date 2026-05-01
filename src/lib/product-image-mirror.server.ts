@@ -273,3 +273,148 @@ export async function repairPendingMirrorsBatch(limit: number): Promise<{
   }
   return { attempted: (pending || []).length, ok, failed };
 }
+
+export type MirrorBackfillBatchResult = {
+  ok: boolean;
+  integrationEnabled: boolean;
+  scanned: number;
+  touched: number;
+  skipped: number;
+  errors: number;
+  nextAfterId: string | null;
+  hasMore: boolean;
+};
+
+const BACKFILL_MAX_PRODUCTS = 80;
+
+/**
+ * Walks products in id order and mirrors any HTTPS gallery URLs that are not already `ready` in product_image_mirrors.
+ * Idempotent with mirrorImagesForProductRow. Use small batches + cursor to stay within serverless timeouts.
+ */
+export async function runMirrorBackfillBatch(opts: {
+  storeId?: string | null;
+  afterId?: string | null;
+  productLimit: number;
+}): Promise<MirrorBackfillBatchResult> {
+  const enabled = await isProductImageMirroringEnabled();
+  if (!enabled) {
+    return {
+      ok: true,
+      integrationEnabled: false,
+      scanned: 0,
+      touched: 0,
+      skipped: 0,
+      errors: 0,
+      nextAfterId: null,
+      hasMore: false,
+    };
+  }
+
+  const limit = Math.min(BACKFILL_MAX_PRODUCTS, Math.max(1, opts.productLimit));
+
+  let q = supabaseAdmin
+    .from("products")
+    .select("id, store_id, images")
+    .not("images", "is", null)
+    .order("id", { ascending: true })
+    .limit(limit);
+
+  if (opts.storeId) q = q.eq("store_id", opts.storeId);
+  if (opts.afterId) q = q.gt("id", opts.afterId);
+
+  const { data: fetched, error } = await q;
+  if (error) {
+    console.warn("[product-image-mirror] backfill query", error.message);
+    return {
+      ok: false,
+      integrationEnabled: true,
+      scanned: 0,
+      touched: 0,
+      skipped: 0,
+      errors: 1,
+      nextAfterId: null,
+      hasMore: false,
+    };
+  }
+
+  const batch = fetched || [];
+  const windowLastId = batch.length ? batch[batch.length - 1].id : null;
+  const hasMore = batch.length === limit;
+
+  const rows = batch.filter((r) => Array.isArray(r.images) && r.images.length > 0);
+  if (rows.length === 0) {
+    return {
+      ok: true,
+      integrationEnabled: true,
+      scanned: 0,
+      touched: 0,
+      skipped: 0,
+      errors: 0,
+      nextAfterId: windowLastId,
+      hasMore,
+    };
+  }
+
+  const pids = rows.map((r) => r.id);
+  const { data: mirrors } = await supabaseAdmin
+    .from("product_image_mirrors")
+    .select("product_id, storage_key, status")
+    .in("product_id", pids);
+
+  const readyByProduct = new Map<string, Set<string>>();
+  for (const m of mirrors || []) {
+    if (m.status !== "ready") continue;
+    const set = readyByProduct.get(m.product_id) ?? new Set();
+    set.add(m.storage_key);
+    readyByProduct.set(m.product_id, set);
+  }
+
+  let touched = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const p of rows) {
+    const imgs = p.images as { src?: string }[];
+    const neededKeys = new Set<string>();
+    for (const im of imgs) {
+      const src = im?.src;
+      if (src && /^https?:\/\//i.test(src)) {
+        neededKeys.add(productImageStorageKey(normalizeProductImageSrc(src)));
+      }
+    }
+    if (neededKeys.size === 0) {
+      skipped++;
+      continue;
+    }
+    const ready = readyByProduct.get(p.id) ?? new Set();
+    let missing = false;
+    for (const k of neededKeys) {
+      if (!ready.has(k)) {
+        missing = true;
+        break;
+      }
+    }
+    if (!missing) {
+      skipped++;
+      continue;
+    }
+    try {
+      await mirrorImagesForProductRow(p.store_id, p.id, p.images, "repair");
+      touched++;
+    } catch (e) {
+      console.warn("[product-image-mirror] backfill product", p.id, e);
+      errors++;
+    }
+  }
+
+  return {
+    ok: true,
+    integrationEnabled: true,
+    scanned: rows.length,
+    touched,
+    skipped,
+    errors,
+    nextAfterId: windowLastId,
+    hasMore,
+  };
+}

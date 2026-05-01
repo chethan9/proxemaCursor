@@ -8,7 +8,7 @@ export type OrderRow = Database["public"]["Tables"]["orders"]["Row"] & {
   meta_data?: unknown;
   subtotal?: string | null;
 };
-export type OrderSortField = "date_created" | "total" | "order_number" | "synced_at" | "created_at";
+export type OrderSortField = "date_created" | "total" | "order_number" | "synced_at" | "created_at" | "status";
 export type SortDirection = "asc" | "desc";
 
 /** Columns for list/grid queries — omits heavy JSON blobs; expanded rows use `fetchOrderById`. */
@@ -102,8 +102,17 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
     if (effectiveStatus) qs.set("status", effectiveStatus);
     if (dateFrom) qs.set("after", dateFrom);
     if (dateTo) qs.set("before", dateTo);
-    const orderMap: Record<string, string> = { date_created: "date", total: "total", order_number: "id", created_at: "date" };
-    qs.set("orderby", orderMap[sortField] || "date");
+    /** WooCommerce REST order list does not support ordering by status; fall back to date. */
+    const effectiveSortField = sortField === "status" ? "date_created" : sortField;
+    const orderMap: Record<string, string> = {
+      date_created: "date",
+      total: "total",
+      order_number: "id",
+      created_at: "date",
+      synced_at: "date",
+      status: "date",
+    };
+    qs.set("orderby", orderMap[effectiveSortField] || "date");
     qs.set("order", sortDirection);
     const { data: { session } } = await supabase.auth.getSession();
     const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};

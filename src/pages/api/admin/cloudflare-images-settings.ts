@@ -42,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             variant_zoom: row.variant_zoom,
             mirror_metrics_enabled: row.mirror_metrics_enabled,
             repair_batch_size: row.repair_batch_size,
+            mirror_backfill_after_product_id: row.mirror_backfill_after_product_id,
             updated_at: row.updated_at,
           }
         : null,
@@ -65,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       variant_zoom?: string | null;
       mirror_metrics_enabled?: boolean;
       repair_batch_size?: number | null;
+      mirror_backfill_after_product_id?: string | null;
     };
 
     if (body.action === "test") {
@@ -112,6 +114,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         body.repair_batch_size == null
           ? null
           : Math.min(500, Math.max(10, Number(body.repair_batch_size)));
+    }
+    if (body.mirror_backfill_after_product_id !== undefined) {
+      patch.mirror_backfill_after_product_id =
+        body.mirror_backfill_after_product_id === null || body.mirror_backfill_after_product_id === ""
+          ? null
+          : String(body.mirror_backfill_after_product_id).trim();
     }
 
     if (body.api_token != null && String(body.api_token).trim()) {

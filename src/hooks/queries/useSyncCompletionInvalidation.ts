@@ -25,6 +25,7 @@ export function useSyncCompletionInvalidation(storeId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["stores", storeId, "orders"] });
       queryClient.invalidateQueries({ queryKey: ["taxonomy", "categories", storeId] });
       queryClient.invalidateQueries({ queryKey: ["taxonomy", "tags", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["taxonomy", "brands", storeId] });
       queryClient.invalidateQueries({ queryKey: ["stores", storeId, "taxonomy"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.productCategoryOptions(storeId) });
     }
