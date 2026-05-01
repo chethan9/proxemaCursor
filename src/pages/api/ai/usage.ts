@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { isBillingDevMode } from "@/lib/billing-dev-mode.server";
 import { getAICreditsState } from "@/lib/ai-credits.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,8 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const clientId = profile?.client_id;
   if (!clientId) return res.status(403).json({ error: "No client" });
 
+  const billingDevMode = await isBillingDevMode();
   const state = await getAICreditsState(clientId);
-  if (!state) return res.status(200).json({ credits: null });
 
   const { data: feats } = await supabaseAdmin
     .from("ai_features")
@@ -34,7 +35,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .order("created_at", { ascending: false })
     .limit(15);
 
+  if (!state) {
+    if (billingDevMode) {
+      return res.status(200).json({
+        billingDevMode: true,
+        credits: {
+          monthlyAllowance: 0,
+          usedThisPeriod: 0,
+          monthlyRemaining: 0,
+          topupBalance: 0,
+          totalAvailable: 1_000_000,
+          planName: "Billing dev mode",
+        },
+        features: feats ?? [],
+        purchases: recentPurchases ?? [],
+      });
+    }
+    return res.status(200).json({ credits: null });
+  }
+
   return res.status(200).json({
+    ...(billingDevMode ? { billingDevMode: true } : {}),
     credits: {
       monthlyAllowance: state.monthlyAllowance,
       usedThisPeriod: state.usedThisPeriod,

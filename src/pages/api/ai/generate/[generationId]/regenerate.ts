@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
+import { isBillingDevMode } from "@/lib/billing-dev-mode.server";
 import { consumeAICredits, getAICreditsState, aiQuotaErrorPayload } from "@/lib/ai-credits.server";
 import { renderPromptTemplate } from "@/lib/ai/prompt-render";
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
@@ -62,12 +63,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const costEach = Number(feature.credit_cost_per_output) || 1;
   const creditsNeeded = indices.length * costEach;
 
-  const state = await getAICreditsState(clientId);
-  if (!state) return res.status(402).json({ error: "No subscription" });
-  if (state.totalAvailable < creditsNeeded) return res.status(402).json(aiQuotaErrorPayload(state));
+  const billingDevMode = await isBillingDevMode();
+  if (!billingDevMode) {
+    const state = await getAICreditsState(clientId);
+    if (!state) return res.status(402).json({ error: "No subscription" });
+    if (state.totalAvailable < creditsNeeded) return res.status(402).json(aiQuotaErrorPayload(state));
 
-  const consumed = await consumeAICredits(clientId, creditsNeeded);
-  if (!consumed) return res.status(402).json(aiQuotaErrorPayload(state));
+    const consumed = await consumeAICredits(clientId, creditsNeeded);
+    if (!consumed) return res.status(402).json(aiQuotaErrorPayload(state));
+  }
 
   const providerId = feature.provider as "google_gemini" | "openai_image";
   const apiKey = await getDecryptedProviderApiKey(providerId);
