@@ -27,7 +27,6 @@ import {
 } from "@/services/productService";
 import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { ProductQuickEdit } from "@/components/explore/ProductQuickEdit";
-import { ProductRowExpanded } from "@/components/explore/ProductRowExpanded";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts, useProductBrandOptions, useProductCategoryOptions, useProductTagOptions } from "@/hooks/queries/useProducts";
@@ -41,7 +40,6 @@ import { Tags, Building2, Tag as TagIcon, Trash2, X, CheckCircle2, Loader2, Lock
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/router";
-import { useScrollExpandedIntoView } from "@/hooks/useScrollExpandedIntoView";
 import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoProductsIllustration } from "@/components/illustrations/EmptyIllustrations";
@@ -59,6 +57,12 @@ import {
   PRODUCT_CATALOG_COLUMNS as COLUMNS,
   type CatalogColumnKey as ColumnKey,
 } from "@/lib/product-catalog-columns";
+import {
+  catalogCellClass,
+  catalogCellDisplay,
+  catalogCellTextClass,
+  stripHtmlForTablePreview,
+} from "@/lib/product-catalog-cell-display";
 import { supabase } from "@/integrations/supabase/client";
 
 const PENDING_LABELS: Record<string, string> = {
@@ -110,6 +114,17 @@ function countSelectedProductTypes(products: ProductRow[], selectedIds: Set<stri
   return { simple, variable };
 }
 
+function ProductCatalogStringCell({ columnKey, raw }: { columnKey: ColumnKey; raw: string }) {
+  const { text, title } = catalogCellDisplay(columnKey, raw);
+  return (
+    <TableCell className={catalogCellClass(columnKey)}>
+      <span className={catalogCellTextClass(columnKey)} title={title}>
+        {text}
+      </span>
+    </TableCell>
+  );
+}
+
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
   const { t, i18n } = useTranslation("site");
   const queryClient = useQueryClient();
@@ -124,8 +139,6 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("explore-view-mode") as "table" | "grid" | "compact") || "table";
   });
-  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  useScrollExpandedIntoView(expandedRowId);
   const [quickEditProduct, setQuickEditProduct] = useState<ProductRow | null>(null);
   const [exporting, setExporting] = useState(false);
   const exportingRef = useRef(false);
@@ -376,33 +389,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     toast,
   ]);
 
-  useEffect(() => { setSelectedIds(new Set()); setExpandedRowId(null); }, [storeId, pageSize]);
-
-  const mergeProductIntoQueries = useCallback(
-    (updated: ProductRow) => {
-      queryClient.setQueriesData({ queryKey: queryKeys.products(storeId) }, (prev: unknown) => {
-        if (!prev || typeof prev !== "object") return prev;
-        const inf = prev as { pages?: { data: ProductRow[]; count: number }[]; data?: ProductRow[] };
-        if (Array.isArray(inf.pages)) {
-          return {
-            ...inf,
-            pages: inf.pages.map((pg) => ({
-              ...pg,
-              data: pg.data.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)),
-            })),
-          };
-        }
-        if (Array.isArray(inf.data)) {
-          return {
-            ...inf,
-            data: inf.data.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)),
-          };
-        }
-        return prev;
-      });
-    },
-    [queryClient, storeId],
-  );
+  useEffect(() => { setSelectedIds(new Set()); }, [storeId, pageSize]);
 
   const setProducts = (_updater: (prev: ProductRow[]) => ProductRow[]) => {
     // Inline mutations should invalidate query; placeholder no-op.
@@ -1371,15 +1358,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const maxPRow = (p as ProductRow & { max_price?: number | null }).max_price;
                       const hasRangeRow = p.type === "variable" && minPRow != null && maxPRow != null && minPRow !== maxPRow;
                       const rangeTextRow = hasRangeRow ? `${currency ? currency + " " : ""}${Number(minPRow).toFixed(2)}–${Number(maxPRow).toFixed(2)}` : null;
-                      const isExpanded = expandedRowId === p.id;
                       return (
-                        <React.Fragment key={p.id}>
                           <TableRow
-                            className={`hover:bg-muted/30 cursor-pointer transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30 !border-b-0" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`}
+                            key={p.id}
+                            className={`hover:bg-muted/30 cursor-pointer transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`}
                             onClick={() => {
                               if (pending) { showLockedToast(p); return; }
                               if (selectedIds.size > 0 && !locked) { toggleSelect(p.id); return; }
-                              if (!locked) setExpandedRowId((cur) => (cur === p.id ? null : p.id));
+                              if (!locked) setQuickEditProduct(p);
                             }}
                           >
                             <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
@@ -1400,219 +1386,163 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   </TableCell>
                                 );
                               }
+                              if (c.key === "id") {
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.id} />;
+                              }
                               if (c.key === "name") {
-                                return (
-                                  <TableCell key={c.key} className="max-w-[320px]">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className="truncate">{p.name || "—"}</span>
-                                    </div>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.name || ""} />;
                               }
                               if (c.key === "status") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-medium">{statusLabel}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={statusLabel} />;
                               }
                               if (c.key === "sku") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.sku || "—"}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.sku || ""} />;
                               }
                               if (c.key === "price") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{rangeTextRow ?? fmtPrice(p.price)}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={String(rangeTextRow ?? fmtPrice(p.price))} />
                                 );
                               }
                               if (c.key === "regular_price") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{fmtPrice(p.regular_price)}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={String(fmtPrice(p.regular_price))} />;
                               }
                               if (c.key === "sale_price") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{fmtPrice(p.sale_price)}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={String(fmtPrice(p.sale_price))} />;
                               }
                               if (c.key === "stock") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.stock_quantity ?? "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={p.stock_quantity != null ? String(p.stock_quantity) : ""}
+                                  />
                                 );
                               }
                               if (c.key === "stock_status") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.stock_status}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.stock_status || ""} />;
                               }
                               if (c.key === "manage_stock") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{String((p.raw_data?.manage_stock as boolean | string) ?? "")}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={String((p.raw_data?.manage_stock as boolean | string) ?? "")}
+                                  />
                                 );
                               }
                               if (c.key === "category") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{getCategoryNames(p.categories)}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={getCategoryNames(p.categories)} />
                                 );
+                              }
+                              if (c.key === "brands") {
+                                const brandStr = Array.isArray(p.brands)
+                                  ? (p.brands as { name?: string }[])
+                                      .map((b) => b.name)
+                                      .filter(Boolean)
+                                      .join(", ")
+                                  : "";
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={brandStr} />;
                               }
                               if (c.key === "type") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.type}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.type || ""} />;
                               }
                               if (c.key === "slug") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.slug}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.slug || ""} />;
                               }
                               if (c.key === "wooId") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.woo_id ?? "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.woo_id != null ? String(p.woo_id) : ""} />
                                 );
                               }
                               if (c.key === "parent_id") {
+                                const pid = (p.raw_data?.parent_id as number | undefined) ?? undefined;
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.raw_data?.parent_id as number) ?? "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={pid != null ? String(pid) : ""} />
                                 );
                               }
                               if (c.key === "permalink") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.raw_data?.permalink as string) || "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={(p.raw_data?.permalink as string) || ""}
+                                  />
                                 );
                               }
                               if (c.key === "tax_status") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.raw_data?.tax_status as string) || "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={(p.raw_data?.tax_status as string) || ""} />
                                 );
                               }
                               if (c.key === "tax_class") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.raw_data?.tax_class as string) || "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={(p.raw_data?.tax_class as string) || ""} />
                                 );
                               }
                               if (c.key === "shipping_required") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{String((p.raw_data?.shipping_required as boolean) ?? "")}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={String((p.raw_data?.shipping_required as boolean) ?? "")}
+                                  />
                                 );
                               }
                               if (c.key === "images_count") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{Array.isArray(p.images) ? p.images.length : 0}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={String(Array.isArray(p.images) ? p.images.length : 0)}
+                                  />
                                 );
                               }
                               if (c.key === "short_desc") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.short_description || "").replace(/<[^>]+>/g, "").slice(0, 200)}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={stripHtmlForTablePreview(p.short_description || "")}
+                                  />
                                 );
                               }
                               if (c.key === "description") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.description || "").replace(/<[^>]+>/g, "").slice(0, 500)}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell
+                                    key={c.key}
+                                    columnKey={c.key}
+                                    raw={stripHtmlForTablePreview(p.description || "")}
+                                  />
                                 );
                               }
                               if (c.key === "attributes") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{JSON.stringify(p.attributes || [])}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={JSON.stringify(p.attributes || [])} />
                                 );
                               }
                               if (c.key === "date_created") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.raw_data?.date_created as string) || "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={(p.raw_data?.date_created as string) || ""} />
                                 );
                               }
                               if (c.key === "date_modified") {
                                 return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{(p.raw_data?.date_modified as string) || "—"}</span>
-                                  </TableCell>
+                                  <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={(p.raw_data?.date_modified as string) || ""} />
                                 );
                               }
                               if (c.key === "sales") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.synced_at || "—"}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.synced_at || ""} />;
                               }
                               if (c.key === "created") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.created_at || "—"}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.created_at || ""} />;
                               }
                               if (c.key === "updated") {
-                                return (
-                                  <TableCell key={c.key}>
-                                    <span className="text-xs font-mono truncate">{p.updated_at || "—"}</span>
-                                  </TableCell>
-                                );
+                                return <ProductCatalogStringCell key={c.key} columnKey={c.key} raw={p.updated_at || ""} />;
                               }
                               return null;
                             })}
                           </TableRow>
-                          {isExpanded && (
-                            <TableRow className="bg-muted/30 hover:bg-muted/30" data-expanded-row={p.id}>
-                              <TableCell colSpan={visibleColList.length + 1} className="p-0">
-                                <div onClick={(e) => e.stopPropagation()}>
-                                  <ProductRowExpanded
-                                    product={p}
-                                    storeUrl={storeUrl}
-                                    onSaved={mergeProductIntoQueries}
-                                    onClose={() => setExpandedRowId(null)}
-                                    onQuickEdit={() => {
-                                      setQuickEditProduct(p);
-                                      setExpandedRowId(null);
-                                    }}
-                                  />
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
                       );
                     })
                   )}

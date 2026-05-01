@@ -39,7 +39,7 @@ interface InfiniteScrollSentinelProps {
   total: number;
   /**
    * Start loading the next chunk when scroll depth reaches this fraction (0–1).
-   * Default 0.75 so the next page begins loading before the user hits the bottom.
+   * Default 0.5 so the next page begins loading earlier (fast scrollers still see seamless paging).
    */
   scrollDepthThreshold?: number;
   /** Extra px margin for IntersectionObserver backup (sentinel near viewport). */
@@ -49,7 +49,7 @@ interface InfiniteScrollSentinelProps {
 
 /**
  * Infinite list footer: loads more when scroll position passes `scrollDepthThreshold`
- * (default 75%) inside the site scroll region, plus IntersectionObserver on the
+ * (default 50%) inside the site scroll region, plus IntersectionObserver on the
  * sentinel as a fallback. Manual "Load more" remains as a last resort.
  */
 export function InfiniteScrollSentinel({
@@ -58,7 +58,7 @@ export function InfiniteScrollSentinel({
   onLoadMore,
   loaded,
   total,
-  scrollDepthThreshold = 0.75,
+  scrollDepthThreshold = 0.5,
   rootMargin = "400px",
   className,
 }: InfiniteScrollSentinelProps) {
@@ -71,7 +71,7 @@ export function InfiniteScrollSentinel({
     onLoadMoreRef.current();
   }, [hasMore, isLoading]);
 
-  // Primary: scroll depth (e.g. 75%) on the real scroll container
+  // Primary: scroll depth (e.g. 50%) on the real scroll container
   useEffect(() => {
     if (!hasMore || isLoading) return;
 
