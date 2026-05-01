@@ -1,8 +1,9 @@
 import { renderTemplateHtml } from "./render-html";
 import { renderHtmlToPdf } from "./render-pdf";
 import { resolveOrderContext } from "./resolve-order";
-import type { TemplateConfig } from "./document";
+import { blankInvoiceHtml, type TemplateConfig } from "./document";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MAIN_INVOICE_SAMPLE_NAME } from "@/lib/template-resolve-default";
 
 export interface RenderedInvoice {
   pdf: Buffer;
@@ -16,7 +17,7 @@ export async function renderInvoicePdfForOrder(
 ): Promise<RenderedInvoice> {
   const { data: tpl, error: tplErr } = await supabaseAdmin
     .from("templates")
-    .select("id, name, type, current_version_id")
+    .select("id, name, type, is_sample, current_version_id")
     .eq("id", opts.templateId)
     .maybeSingle();
   if (tplErr) throw tplErr;
@@ -32,7 +33,14 @@ export async function renderInvoicePdfForOrder(
   if (!ver) throw new Error("Template version missing");
 
   const cfg = ver.document as unknown as TemplateConfig;
-  const html = typeof cfg?.html === "string" ? cfg.html : "";
+  const isMainInvoiceSample =
+    tpl.type === "invoice" &&
+    (tpl as { is_sample?: boolean }).is_sample === true &&
+    typeof tpl.name === "string" &&
+    tpl.name.trim().toLowerCase() === MAIN_INVOICE_SAMPLE_NAME.toLowerCase();
+  const html = isMainInvoiceSample
+    ? blankInvoiceHtml()
+    : (typeof cfg?.html === "string" ? cfg.html : "");
   if (!html) throw new Error("Template has no HTML content");
 
   const meta = { name: tpl.name as string, type: tpl.type as string };

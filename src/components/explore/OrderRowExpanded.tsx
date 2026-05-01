@@ -8,11 +8,15 @@ import { updateOrderStatus, getCustomerName, getCustomerEmail, fetchOrderById, t
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
-import { TemplatePrintMenu } from "@/components/templates/TemplatePrintMenu";
 import { useTranslation } from "next-i18next";
 import { useOrderDistinctStatuses } from "@/hooks/queries/useOrderDistinctStatuses";
 import { orderStatusDisplayLabel } from "@/lib/order-status-ui";
 import { formatDate } from "@/lib/format-number";
+import { listTemplates } from "@/services/templateService";
+import { getLatestInvoicePrintByOrderIds } from "@/services/templateRenderService";
+import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
+import { buildOrderTemplatePdfUrl } from "@/lib/templates/order-template-pdf-url";
+import { useAuth } from "@/contexts/AuthProvider";
 
 interface Props {
   order: OrderRow;
@@ -35,8 +39,24 @@ const STATUS_CHANGE_OPTIONS = ["pending", "processing", "on-hold", "completed", 
 
 const CUSTOM_STATUS_STYLE = { dot: "bg-muted-foreground/50", bg: "bg-muted/70 dark:bg-muted/25", text: "text-foreground", ring: "ring-border", Icon: Tag };
 
+function getPaymentBadge(status: string | null | undefined): { label: string; className: string } {
+  const s = (status || "").toLowerCase();
+  if (s === "completed" || s === "processing" || s === "on-hold") {
+    return { label: "Payment OK", className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" };
+  }
+  if (s === "failed") {
+    return { label: "Payment Failed", className: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900" };
+  }
+  if (s === "refunded" || s === "cancelled") {
+    return { label: "Payment Reversed", className: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900" };
+  }
+  return { label: "Payment Pending", className: "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700" };
+}
+
 export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) {
   const { t, i18n } = useTranslation("site");
+  const { profile } = useAuth();
+  const clientId = profile?.client_id ?? null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { track, markSaved, markFailed } = useRecentMutations();
@@ -78,6 +98,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
   const custName = getCustomerName(orderFull.billing);
   const custEmail = getCustomerEmail(orderFull.billing);
   const currency = orderFull.currency || "KWD";
+  const paymentBadge = getPaymentBadge(orderFull.status);
   const computedSubtotal = lineItems.reduce((s, li) => {
     const sub = Number(li.subtotal || 0);
     return s + (sub > 0 ? sub : Number(li.total || 0));
@@ -101,6 +122,31 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
     enabled: !!(orderFull.store_id && (orderFull.customer_id || custEmail)),
     staleTime: 60_000,
   });
+  const { data: invoiceTemplates = [] } = useQuery({
+    queryKey: ["templates", "invoice"],
+    queryFn: () => listTemplates("invoice"),
+    staleTime: 60_000,
+  });
+  const invoiceTemplateIds = useMemo(() => invoiceTemplates.map((tpl) => tpl.id), [invoiceTemplates]);
+  const defaultInvoiceTemplate = useMemo(
+    () => resolveDefaultTemplateForPrint(invoiceTemplates, "invoice", clientId),
+    [invoiceTemplates, clientId],
+  );
+  const { data: invoicePrintedByOrder = {} } = useQuery({
+    queryKey: ["order-row-expanded", "invoice-print-status", orderFull.id, invoiceTemplateIds],
+    queryFn: () => getLatestInvoicePrintByOrderIds([orderFull.id], invoiceTemplateIds),
+    enabled: !!orderFull.id && invoiceTemplateIds.length > 0,
+    staleTime: 20_000,
+  });
+  const lastInvoicePrint = invoicePrintedByOrder[orderFull.id];
+  const handleQuickInvoicePrint = () => {
+    if (!defaultInvoiceTemplate) {
+      toast({ title: "No invoice template", description: "Create or publish an invoice template first.", variant: "destructive" });
+      return;
+    }
+    const url = buildOrderTemplatePdfUrl(defaultInvoiceTemplate.id, orderFull.store_id, orderFull.id);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === orderFull.status) return;
@@ -247,6 +293,17 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
             <div className="text-xs text-muted-foreground pt-1">
               Payment: <span className="text-foreground">{orderFull.payment_method_title || orderFull.payment_method || "—"}</span>
             </div>
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${paymentBadge.className}`}>
+                {paymentBadge.label}
+              </span>
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${lastInvoicePrint ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" : "bg-muted text-muted-foreground ring-border"}`}
+                title={lastInvoicePrint ? `Last printed ${formatDate(lastInvoicePrint.rendered_at, i18n.language)}` : "No invoice print detected yet"}
+              >
+                {lastInvoicePrint ? "Invoice Printed" : "Not Printed"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -312,7 +369,15 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
               <span className="font-medium">Open order details</span>
               <span className="ml-auto">→</span>
             </Link>
-            <TemplatePrintMenu orderId={orderFull.id} storeId={orderFull.store_id} type="invoice" />
+            <button
+              type="button"
+              onClick={handleQuickInvoicePrint}
+              className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
+            >
+              <FileText className="h-2.5 w-2.5" />
+              <span>Print invoice</span>
+              <span className="ml-auto text-muted-foreground">→</span>
+            </button>
             {custEmail && (
               <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <Mail className="h-2.5 w-2.5" />
