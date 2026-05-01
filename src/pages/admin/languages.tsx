@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useBranding } from "@/contexts/BrandingProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Languages, Edit3, Star } from "lucide-react";
 
@@ -25,6 +26,7 @@ type Locale = {
 
 export default function AdminLanguagesPage() {
   const { toast } = useToast();
+  const { reload: reloadBranding } = useBranding();
   const [locales, setLocales] = useState<Locale[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingCode, setSavingCode] = useState<string | null>(null);
@@ -60,6 +62,7 @@ export default function AdminLanguagesPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
       await load();
+      await reloadBranding();
       toast({ title: "Updated" });
     } catch (e) {
       toast({ title: "Update failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });

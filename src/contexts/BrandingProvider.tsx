@@ -79,7 +79,13 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("app_settings").select("*").eq("id", "global").maybeSingle();
+    const [{ data }, { data: localeRows }] = await Promise.all([
+      supabase.from("app_settings").select("*").eq("id", "global").maybeSingle(),
+      supabase.from("locales").select("code").eq("enabled", true),
+    ]);
+
+    const enabledFromLocales = sanitizeLocales((localeRows || []).map((r) => r.code));
+
     if (data) {
       const next: BrandingSettings = {
         brandName: data.brand_name || DEFAULTS.brandName,
@@ -88,21 +94,36 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
         sidebarColor: data.sidebar_color || DEFAULTS.sidebarColor,
         accentColor: data.accent_color || DEFAULTS.accentColor,
         themePreset: ((data as { theme_preset?: string }).theme_preset as ThemePreset) || DEFAULTS.themePreset,
-        enabledLocales: sanitizeLocales((data as { enabled_locales?: unknown }).enabled_locales),
+        enabledLocales: enabledFromLocales,
       };
       setSettings(next);
       applyTheme(next);
     } else {
-      applyTheme(DEFAULTS);
+      const next = { ...DEFAULTS, enabledLocales: enabledFromLocales };
+      setSettings(next);
+      applyTheme(next);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("branding-locale-rows")
+      .on("postgres_changes", { event: "*", schema: "public", table: "locales" }, () => {
+        void load();
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [load]);
+
   const save = useCallback(async (updates: Partial<BrandingSettings>) => {
-    const next = { ...settings, ...updates };
-    if (updates.enabledLocales) next.enabledLocales = sanitizeLocales(updates.enabledLocales);
+    const { enabledLocales: _discard, ...rest } = updates;
+    void _discard;
+    const next = { ...settings, ...rest };
     setSettings(next);
     applyTheme(next);
     await supabase.from("app_settings").upsert({
