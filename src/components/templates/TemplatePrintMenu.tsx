@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Loader2, Receipt, FileText, Star, Sparkles, ChevronDown, Settings2 } from "lucide-react";
 import { listTemplates, setDefaultForType } from "@/services/templateService";
+import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import type { TemplateType } from "@/lib/templates/document";
@@ -34,13 +35,10 @@ export function TemplatePrintMenu({ storeId, orderId, type, variant = "outline",
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates", type],
     queryFn: () => listTemplates(type),
-    enabled: open,
     staleTime: 30_000,
   });
 
-  const defaultTpl = templates.find((t) => t.is_default_for_type && t.client_id === clientId)
-    || templates.find((t) => !t.is_sample && t.client_id === clientId)
-    || templates.find((t) => t.is_sample);
+  const defaultTpl = resolveDefaultTemplateForPrint(templates, type, clientId);
 
   const setDefault = useMutation({
     mutationFn: (id: string) => {
@@ -108,9 +106,16 @@ export function TemplatePrintMenu({ storeId, orderId, type, variant = "outline",
               <DropdownMenuSeparator />
             </>
           )}
-          {customs.length > 0 && (
+          {(customs.length > 0 || samples.length > 0) && (
             <>
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Set as default</DropdownMenuLabel>
+              {samples.map((t) => (
+                <DropdownMenuItem key={`def-sample-${t.id}`} onClick={(e) => { e.preventDefault(); setDefault.mutate(t.id); }} className="gap-2 text-xs" disabled={t.is_default_for_type}>
+                  <Star className={`h-3 w-3 ${t.is_default_for_type ? "fill-amber-500 text-amber-500" : "text-muted-foreground"}`} />
+                  <span className="flex-1 truncate">{t.name}</span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">Sample</span>
+                </DropdownMenuItem>
+              ))}
               {customs.map((t) => (
                 <DropdownMenuItem key={`def-${t.id}`} onClick={(e) => { e.preventDefault(); setDefault.mutate(t.id); }} className="gap-2 text-xs" disabled={t.is_default_for_type}>
                   <Star className={`h-3 w-3 ${t.is_default_for_type ? "fill-amber-500 text-amber-500" : "text-muted-foreground"}`} />

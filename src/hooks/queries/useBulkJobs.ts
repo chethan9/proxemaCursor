@@ -35,6 +35,7 @@ export function useStoreBulkJobs(storeId: string | null | undefined, limit = 50)
     const off = subscribeToStoreBulkJobs(storeId, () => {
       qc.invalidateQueries({ queryKey: ["bulk-jobs", "store", storeId] });
       qc.invalidateQueries({ queryKey: ["bulk-jobs", "active"] });
+      qc.invalidateQueries({ queryKey: ["site-downloads", storeId] });
     });
     return off;
   }, [storeId, qc]);

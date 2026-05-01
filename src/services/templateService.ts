@@ -113,6 +113,7 @@ export async function renameTemplate(id: string, name: string): Promise<void> {
 
 export async function setDefaultForType(clientId: string, type: TemplateType, templateId: string): Promise<void> {
   await supabase.from("templates").update({ is_default_for_type: false }).eq("client_id", clientId).eq("type", type as string);
+  await supabase.from("templates").update({ is_default_for_type: false }).eq("is_sample", true).eq("type", type as string).is("client_id", null);
   const { error } = await supabase.from("templates").update({ is_default_for_type: true }).eq("id", templateId);
   if (error) throw error;
 }

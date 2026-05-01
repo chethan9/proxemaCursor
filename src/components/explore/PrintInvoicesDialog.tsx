@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, FileText, Files, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { listTemplates } from "@/services/templateService";
-import type { TemplateRow } from "@/lib/templates/document";
+import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
+import { useAuth } from "@/contexts/AuthProvider";
 import { createBulkJob } from "@/services/bulkJobService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,8 @@ export function PrintInvoicesDialog({
   onQueued?: () => void;
 }) {
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const clientId = profile?.client_id ?? null;
   const { data: templates = [], isLoading: tplLoading } = useQuery({
     queryKey: ["templates", "invoice"],
     queryFn: () => listTemplates("invoice"),
@@ -38,13 +41,10 @@ export function PrintInvoicesDialog({
     enabled: open,
   });
 
-  const defaultTpl = useMemo(() => {
-    if (!templates.length) return null;
-    const def = templates.find((t: TemplateRow) => t.is_default_for_type && !t.is_sample);
-    if (def) return def;
-    const userTpl = templates.find((t: TemplateRow) => !t.is_sample);
-    return userTpl ?? templates[0];
-  }, [templates]);
+  const defaultTpl = useMemo(
+    () => resolveDefaultTemplateForPrint(templates, "invoice", clientId),
+    [templates, clientId],
+  );
 
   const [templateId, setTemplateId] = useState<string>("");
   const [outputMode, setOutputMode] = useState<OutputMode>("single-pdf");

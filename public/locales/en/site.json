@@ -821,6 +821,7 @@
       "clear": "Clear"
     },
     "selected": "{{count}} selected",
+    "gridHint": "Click a tile to select · bulk exports appear here when the job finishes",
     "downloadSelected": "Download selected",
     "expired": "Expired",
     "daysLeft": "{{days}}d left",
@@ -883,7 +884,8 @@
       "completed": "completed",
       "partial": "partial",
       "failed": "failed",
-      "cancelled": "cancelled"
+      "cancelled": "cancelled",
+      "cancelledByUser": "Cancelled by you"
     },
     "history": "Job History",
     "columns": {

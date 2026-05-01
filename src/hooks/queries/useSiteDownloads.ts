@@ -11,6 +11,8 @@ export function useSiteDownloads(storeId: string | undefined) {
     queryFn: () => listSiteDownloads(storeId!),
     enabled: !!storeId,
     staleTime: 15_000,
+    /** Bulk-print artifacts appear after job completion; polling covers environments without reliable realtime. */
+    refetchInterval: 6_000,
   });
 
   useEffect(() => {

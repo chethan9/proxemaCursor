@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileText, FileSpreadsheet, Files, Receipt, Search, Download as DownloadIcon, Filter, RefreshCw, Trash2, Loader2, Layers } from "lucide-react";
 import { useSiteDownloads } from "@/hooks/queries/useSiteDownloads";
 import { dismissJobArtifact, type DownloadFile } from "@/services/downloadsService";
@@ -283,113 +282,102 @@ function DownloadsInner() {
       </Card>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    className="h-4 w-4 rounded border-border"
-                    aria-label={t("downloads.selectAll")}
-                  />
-                </TableHead>
-                <TableHead>{t("downloads.columns.fileName")}</TableHead>
-                <TableHead>{t("downloads.columns.type")}</TableHead>
-                <TableHead>{t("downloads.columns.orderRef")}</TableHead>
-                <TableHead>{t("downloads.columns.customer")}</TableHead>
-                <TableHead>{t("downloads.columns.generated")}</TableHead>
-                <TableHead>{t("downloads.columns.expires")}</TableHead>
-                <TableHead className="text-right">{t("downloads.columns.size")}</TableHead>
-                <TableHead className="text-right">{t("downloads.columns.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-sm text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    {t("downloads.loading")}
-                  </TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16 text-sm text-muted-foreground">
-                    <Files className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                    <p className="font-medium mb-1">
-                      {files.length === 0 ? t("downloads.empty.noFiles") : t("downloads.empty.noMatches")}
-                    </p>
-                    <p className="text-xs">
-                      {files.length === 0 ? t("downloads.empty.noFilesHint") : t("downloads.empty.noMatchesHint")}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((f) => {
-                  const meta = TYPE_BADGE[f.type];
-                  const Icon = meta.icon;
-                  const exp = expiresIn(f.expires_at);
-                  const isDownloading = downloadingIds.has(f.id);
-                  return (
-                    <TableRow key={f.id} className={selected.has(f.id) ? "bg-muted/30" : ""}>
-                      <TableCell>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3 pb-3 mb-3 border-b border-border/80">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="h-4 w-4 rounded border-border shrink-0"
+              aria-label={t("downloads.selectAll")}
+            />
+            <span className="text-[11px] text-muted-foreground">{t("downloads.gridHint")}</span>
+          </div>
+          {isLoading ? (
+            <div className="text-center py-16 text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+              {t("downloads.loading")}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 text-sm text-muted-foreground">
+              <Files className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium mb-1">
+                {files.length === 0 ? t("downloads.empty.noFiles") : t("downloads.empty.noMatches")}
+              </p>
+              <p className="text-xs">
+                {files.length === 0 ? t("downloads.empty.noFilesHint") : t("downloads.empty.noMatchesHint")}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {filtered.map((f) => {
+                const meta = TYPE_BADGE[f.type];
+                const Icon = meta.icon;
+                const exp = expiresIn(f.expires_at);
+                const isDownloading = downloadingIds.has(f.id);
+                const sel = selected.has(f.id);
+                return (
+                  <div
+                    key={f.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleOne(f.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleOne(f.id); } }}
+                    className={`group relative rounded-xl border bg-card text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sel ? "border-primary/50 ring-1 ring-primary/30" : "border-border"}`}
+                  >
+                    <div className={`aspect-square rounded-t-xl flex flex-col items-center justify-center gap-2 ${meta.tile} border-b border-border/40`}>
+                      <Icon className="h-10 w-10 opacity-90" />
+                      <Badge variant="outline" className={`text-[9px] pointer-events-none ${meta.badge}`}>
+                        {t(TYPE_LABEL_KEY[f.type])}
+                      </Badge>
+                    </div>
+                    <div className="p-2.5 space-y-1.5">
+                      <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
-                          checked={selected.has(f.id)}
+                          checked={sel}
                           onChange={() => toggleOne(f.id)}
-                          className="h-4 w-4 rounded border-border"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-3.5 w-3.5 rounded border-border mt-0.5 shrink-0"
                           aria-label={t("downloads.selectFile", { name: f.file_name })}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`h-8 w-8 shrink-0 rounded flex items-center justify-center ${meta.tile}`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <span className="truncate font-medium text-sm">{f.file_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-[10px] ${meta.badge}`}>
-                          {t(TYPE_LABEL_KEY[f.type])}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{f.reference ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{f.customer ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatDate(f.generated_at, i18n.language)}</TableCell>
-                      <TableCell className={`text-xs font-mono ${exp.cls}`}>{exp.label}</TableCell>
-                      <TableCell className="text-right text-xs font-mono text-muted-foreground">{formatBytes(f.size_bytes)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 gap-1.5"
-                            onClick={() => downloadFile(f)}
-                            disabled={isDownloading || !f.download_url}
-                          >
-                            {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <DownloadIcon className="h-3.5 w-3.5" />}
-                            <span className="text-xs">{t("downloads.actions.download")}</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => dismissFile(f)}
-                            title={t("downloads.actions.remove")}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        <p className="text-[11px] font-medium leading-snug line-clamp-2 min-h-[2.25rem]" title={f.file_name}>
+                          {f.file_name}
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground truncate pl-5" title={f.reference ?? undefined}>{f.reference ?? "—"}</p>
+                      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground pl-5">
+                        <span>{formatDate(f.generated_at, i18n.language)}</span>
+                        <span className="font-mono">{formatBytes(f.size_bytes)}</span>
+                      </div>
+                      <p className={`text-[10px] font-mono pl-5 ${exp.cls}`}>{exp.label}</p>
+                      <div className="flex items-center gap-1 pt-1 pl-5" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 flex-1 gap-1 text-[11px]"
+                          onClick={() => downloadFile(f)}
+                          disabled={isDownloading || !f.download_url}
+                        >
+                          {isDownloading ? <Loader2 className="h-3 w-3 animate-spin" /> : <DownloadIcon className="h-3 w-3" />}
+                          {t("downloads.actions.download")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => dismissFile(f)}
+                          title={t("downloads.actions.remove")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

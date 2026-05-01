@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Star } from "lucide-react";
 import { listTemplates, setDefaultForType } from "@/services/templateService";
+import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props { clientId: string | null }
@@ -23,8 +24,8 @@ export function DefaultTemplatesCard({ clientId }: Props) {
     enabled: !!clientId,
   });
 
-  const defaultInvoice = invoices.find((t) => t.is_default_for_type && !t.is_sample)?.id ?? "";
-  const defaultPickslip = pickslips.find((t) => t.is_default_for_type && !t.is_sample)?.id ?? "";
+  const effectiveInvoiceId = resolveDefaultTemplateForPrint(invoices, "invoice", clientId)?.id ?? "";
+  const effectivePickslipId = resolveDefaultTemplateForPrint(pickslips, "pickslip", clientId)?.id ?? "";
 
   const setDefault = useMutation({
     mutationFn: async (vars: { id: string; type: "invoice" | "pickslip" }) => {
@@ -39,7 +40,12 @@ export function DefaultTemplatesCard({ clientId }: Props) {
   });
 
   const userInvoices = invoices.filter((t) => !t.is_sample);
+  const platformInvoices = invoices.filter((t) => t.is_sample).sort((a, b) => a.name.localeCompare(b.name));
+  const invoiceChoices = [...platformInvoices, ...userInvoices];
+
   const userPickslips = pickslips.filter((t) => !t.is_sample);
+  const platformPickslips = pickslips.filter((t) => t.is_sample).sort((a, b) => a.name.localeCompare(b.name));
+  const pickslipChoices = [...platformPickslips, ...userPickslips];
 
   return (
     <Card>
@@ -53,16 +59,21 @@ export function DefaultTemplatesCard({ clientId }: Props) {
             <Label className="text-xs flex items-center gap-1.5">
               <Star className="h-3 w-3 text-amber-500" /> Default invoice
             </Label>
-            {userInvoices.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">No custom invoice templates yet. Customize a sample on the <a href="/templates" className="underline">Templates page</a>.</p>
+            {invoiceChoices.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">No invoice templates available.</p>
             ) : (
               <Select
-                value={defaultInvoice}
+                value={effectiveInvoiceId}
                 onValueChange={(v) => setDefault.mutate({ id: v, type: "invoice" })}
               >
                 <SelectTrigger className="h-9"><SelectValue placeholder="Select invoice template" /></SelectTrigger>
                 <SelectContent>
-                  {userInvoices.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+                  {platformInvoices.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{`${t.name} (platform)`}</SelectItem>
+                  ))}
+                  {userInvoices.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}
@@ -71,21 +82,28 @@ export function DefaultTemplatesCard({ clientId }: Props) {
             <Label className="text-xs flex items-center gap-1.5">
               <Star className="h-3 w-3 text-amber-500" /> Default pick slip
             </Label>
-            {userPickslips.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">No custom pick-slip templates yet.</p>
+            {pickslipChoices.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">No pick-slip templates available.</p>
             ) : (
               <Select
-                value={defaultPickslip}
+                value={effectivePickslipId}
                 onValueChange={(v) => setDefault.mutate({ id: v, type: "pickslip" })}
               >
                 <SelectTrigger className="h-9"><SelectValue placeholder="Select pick-slip template" /></SelectTrigger>
                 <SelectContent>
-                  {userPickslips.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+                  {platformPickslips.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{`${t.name} (platform)`}</SelectItem>
+                  ))}
+                  {userPickslips.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">Defaults apply across your account when downloading invoices or pick slips from order pages.</p>
+          <p className="text-[11px] text-muted-foreground">
+            Defaults apply when printing from orders, bulk invoice export, and order detail actions. If you do not choose a custom default, the Main Invoice sample is used.
+          </p>
         </div>
       </CardContent>
     </Card>

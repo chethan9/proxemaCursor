@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/database.types";
 import type { Tables, TablesInsert } from "@/integrations/supabase/helpers";
 
 export type BulkJob = Tables<"bulk_jobs">;
@@ -144,9 +145,19 @@ export async function listActiveBulkJobs(): Promise<BulkJob[]> {
 }
 
 export async function cancelBulkJob(id: string): Promise<BulkJob> {
+  const existing = await getBulkJob(id);
+  const prevPayload =
+    existing?.payload && typeof existing.payload === "object" && !Array.isArray(existing.payload)
+      ? { ...(existing.payload as Record<string, unknown>) }
+      : {};
+  const merged = { ...prevPayload, cancelled_by: "user" as const };
   const { data, error } = await supabase
     .from("bulk_jobs")
-    .update({ status: "cancelled", completed_at: new Date().toISOString() })
+    .update({
+      status: "cancelled",
+      completed_at: new Date().toISOString(),
+      payload: merged as Json,
+    })
     .eq("id", id)
     .in("status", ["pending", "running"])
     .select("*")

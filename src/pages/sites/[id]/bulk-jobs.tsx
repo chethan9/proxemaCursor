@@ -32,6 +32,15 @@ function effectiveStatus(job: BulkJob): string {
   return job.status;
 }
 
+function statusTranslationKey(job: BulkJob): string {
+  const eff = effectiveStatus(job);
+  if (eff === "cancelled") {
+    const p = job.payload as Record<string, unknown> | null;
+    if (p?.cancelled_by === "user") return "cancelledByUser";
+  }
+  return eff;
+}
+
 function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
   const { t, i18n } = useTranslation("site");
@@ -73,6 +82,7 @@ function BulkJobsInner() {
     try {
       await cancelBulkJob(j.id);
       qc.invalidateQueries({ queryKey: ["bulk-jobs"] });
+      qc.invalidateQueries({ queryKey: ["site-downloads", id] });
       toast({ title: t("bulkJobs.toasts.cancelled") });
     } catch (e) {
       toast({ title: t("bulkJobs.toasts.cancelFailed"), description: e instanceof Error ? e.message : "", variant: "destructive" });
@@ -274,7 +284,7 @@ function BulkJobsInner() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Icon className={`h-3.5 w-3.5 ${meta.cls}`} />
-                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
+                          <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${statusTranslationKey(j)}`)}</Badge>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -371,7 +381,7 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
           <DialogTitle className="flex items-center gap-2">
             <Icon className={`h-5 w-5 ${meta.cls}`} />
             {JOB_TYPE_LABEL[job.job_type as keyof typeof JOB_TYPE_LABEL] || job.job_type}
-            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${eff}`)}</Badge>
+            <Badge variant="outline" className={`text-[10px] capitalize ${meta.badge}`}>{t(`bulkJobs.statuses.${statusTranslationKey(job)}`)}</Badge>
           </DialogTitle>
           <DialogDescription>{t("bulkJobs.details.jobId")} <code className="text-xs">{job.id}</code></DialogDescription>
         </DialogHeader>

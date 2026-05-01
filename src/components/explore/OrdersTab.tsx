@@ -34,6 +34,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useOrderDistinctStatuses } from "@/hooks/queries/useOrderDistinctStatuses";
 import { orderStatusDisplayLabel } from "@/lib/order-status-ui";
 import { listTemplates } from "@/services/templateService";
+import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
+import { useAuth } from "@/contexts/AuthProvider";
 import { updateOrderStatus } from "@/services/orderService";
 import { DateRangeFilter } from "./DateRangeFilter";
 import {
@@ -185,6 +187,8 @@ function resolveStatusVisual(slug: string | null | undefined) {
 
 
 export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; storeTimezone?: string | null; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
+  const { profile } = useAuth();
+  const clientId = profile?.client_id ?? null;
   const { t, i18n } = useTranslation("site");
   const columnsDef = useMemo(
     () => COLUMN_META.map((c) => ({ ...c, label: t(c.labelKey), group: t(c.groupKey) })),
@@ -306,17 +310,14 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     staleTime: 60_000,
   });
 
-  const resolveDefaultTemplate = useCallback((list: typeof invoiceTemplates) => {
-    if (!list.length) return null;
-    const def = list.find((t) => t.is_default_for_type && !t.is_sample);
-    if (def) return def;
-    const userTpl = list.find((t) => !t.is_sample);
-    if (userTpl) return userTpl;
-    return list[0];
-  }, []);
-
-  const defaultInvoice = useMemo(() => resolveDefaultTemplate(invoiceTemplates), [invoiceTemplates, resolveDefaultTemplate]);
-  const defaultPickslip = useMemo(() => resolveDefaultTemplate(pickslipTemplates), [pickslipTemplates, resolveDefaultTemplate]);
+  const defaultInvoice = useMemo(
+    () => resolveDefaultTemplateForPrint(invoiceTemplates, "invoice", clientId),
+    [invoiceTemplates, clientId],
+  );
+  const defaultPickslip = useMemo(
+    () => resolveDefaultTemplateForPrint(pickslipTemplates, "pickslip", clientId),
+    [pickslipTemplates, clientId],
+  );
 
   const handleMarkComplete = useCallback(async (orderId: string) => {
     setCompletingId(orderId);
