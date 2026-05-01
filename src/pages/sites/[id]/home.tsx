@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +19,7 @@ import { SiteBlockedBanner } from "@/components/site/SiteBlockedBanner";
 import { EmptyState } from "@/components/EmptyState";
 import { NoDataIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SitePreferencesOnboardingDialog } from "@/components/site/store-preferences/SitePreferencesOnboardingDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const SalesTrendCard = dynamic(
   () => import("@/components/site/home/SalesTrendCard").then((m) => m.SalesTrendCard),
@@ -68,6 +70,38 @@ function HomeInner() {
   const urlCurrency = typeof router.query.currency === "string" ? router.query.currency : null;
   const storeTz = store?.timezone ?? null;
   const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId, urlCurrency, storeTz);
+
+  useEffect(() => {
+    if (!storeId || storeLoading) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const tok = sessionData.session?.access_token;
+        if (!tok || cancelled) return;
+        const r = await fetch(`/api/stores/${storeId}/dashboard-summary/refresh`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${tok}` },
+        });
+        if (!cancelled && r.ok) {
+          qc.invalidateQueries({ queryKey: ["site-home-stats", storeId] });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [storeId, storeLoading, qc, urlCurrency, storeTz]);
+
+  const statsLoading = !data && isLoading;
+  const showRefreshing = !!data && isFetching;
+  const snapshotRel =
+    data?.snapshot_updated_at != null && String(data.snapshot_updated_at).length > 0
+      ? formatDistanceToNow(new Date(String(data.snapshot_updated_at)), { addSuffix: true })
+      : null;
 
   const s = data?.stats;
   const currencies = data?.currencies || [];
@@ -162,8 +196,19 @@ function HomeInner() {
             </Card>
           )}
 
+          {(snapshotRel || showRefreshing) && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground px-1">
+              {snapshotRel ? (
+                <span>{t("home.dataUpdated", { relative: snapshotRel })}</span>
+              ) : null}
+              {showRefreshing ? (
+                <span className="text-primary">{t("home.refreshingData")}</span>
+              ) : null}
+            </div>
+          )}
+
           <StatStrip
-            loading={isLoading}
+            loading={statsLoading}
             items={[
               { label: t("home.stats.ordersToday"), value: s?.orders_today ?? 0 },
               { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
@@ -176,7 +221,7 @@ function HomeInner() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-6">
-              <SalesTrendCard data={data?.daily || []} currency={currency} loading={isLoading} />
+              <SalesTrendCard data={data?.daily || []} currency={currency} loading={statsLoading} />
             </div>
             <div className="lg:col-span-2 flex flex-col gap-4">
               <SparklineTile
@@ -185,7 +230,7 @@ function HomeInner() {
                 subtext={multiCurrency ? t("home.spark.ordersInCurrency", { currency }) : t("home.spark.ordersLast30d")}
                 data={ordersSpark}
                 color="hsl(var(--primary))"
-                loading={isLoading}
+                loading={statsLoading}
                 compact
               />
               <SparklineTile
@@ -196,12 +241,12 @@ function HomeInner() {
                 data={salesSpark}
                 color="hsl(var(--success))"
                 delta={deltaPct}
-                loading={isLoading}
+                loading={statsLoading}
                 compact
               />
             </div>
             <div className="lg:col-span-4">
-              <OrderStatusDonut data={data?.status_breakdown || []} loading={isLoading} />
+              <OrderStatusDonut data={data?.status_breakdown || []} loading={statsLoading} />
             </div>
           </div>
 
@@ -212,7 +257,7 @@ function HomeInner() {
                 storeId={storeId || ""}
                 currency={currency}
                 storeTimezone={storeTz}
-                loading={isLoading}
+                loading={statsLoading}
               />
             </div>
             <div>
@@ -220,7 +265,7 @@ function HomeInner() {
                 products={data?.top_products || []}
                 storeId={storeId || ""}
                 currency={currency}
-                loading={isLoading}
+                loading={statsLoading}
               />
             </div>
           </div>

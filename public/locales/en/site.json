@@ -16,6 +16,8 @@
     "errorTitle": "Couldn't load dashboard",
     "errorBody": "Something went wrong fetching stats. Please try again.",
     "retry": "Retry",
+    "dataUpdated": "Updated {{relative}}",
+    "refreshingData": "Refreshing…",
     "emptyTitle": "No store activity yet",
     "emptyBody": "Once orders start coming in, you'll see metrics here.",
     "multiCurrency": "Multi-currency store",
@@ -350,6 +352,7 @@
     "search": "Search orders by #, customer, or email...",
     "filters": {
       "all": "All",
+      "date": "Date",
       "payment": "Payment",
       "allPaymentMethods": "All payment methods",
       "filterByPayment": "Filter by payment",
@@ -359,6 +362,59 @@
       "max": "Max",
       "clear": "Clear",
       "clearAll": "Clear"
+    },
+    "dateRange": {
+      "trigger": "Date",
+      "custom": "Custom",
+      "fromPrefix": "From {{date}}",
+      "rangeSeparator": "–",
+      "pickEndDate": "{{start}} – pick end date",
+      "pickStartEnd": "Pick start and end dates",
+      "cancel": "Cancel",
+      "apply": "Apply",
+      "presets": {
+        "all": "All time",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "90d": "Last 90 days",
+        "custom": "Custom range…"
+      }
+    },
+    "columnGroups": {
+      "order": "Order",
+      "customer": "Customer",
+      "paymentAmounts": "Payment & amounts",
+      "actions": "Actions"
+    },
+    "columns": {
+      "internalId": "Internal ID",
+      "wooId": "Woo ID",
+      "orderNumber": "Order #",
+      "status": "Status",
+      "dateCreated": "Date created",
+      "dateModified": "Date modified",
+      "syncedAt": "Last synced",
+      "sourceUtm": "Source (UTM)",
+      "createdVia": "Created via",
+      "customerId": "Customer ID",
+      "customerName": "Name",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "itemCount": "Item count",
+      "lineItemsSummary": "Items (name × qty)",
+      "currency": "Currency",
+      "total": "Total",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "shipping": "Shipping",
+      "discount": "Discount",
+      "paymentTitle": "Payment title",
+      "paymentMethod": "Payment method",
+      "actions": "Actions"
     },
     "statuses": {
       "processing": "Processing",
@@ -376,7 +432,11 @@
       "customizeColumns": "Customize columns",
       "export": "Export",
       "reset": "Reset",
-      "lockedHint": "Available after initial sync completes"
+      "lockedHint": "Available after initial sync completes",
+      "batch": "Batch:",
+      "rowsPerScroll": "Rows fetched per scroll",
+      "statusSortDisabledLive": "Sort by status is available after orders are synced to the database.",
+      "statusSortOptionDisabledLive": "Available after initial sync completes"
     },
     "sortOptions": {
       "newestFirst": "Newest first",
@@ -385,7 +445,13 @@
       "totalLow": "Total low to high",
       "orderNumAsc": "Order # ascending",
       "orderNumDesc": "Order # descending",
-      "recentlySynced": "Recently synced"
+      "recentlySynced": "Recently synced",
+      "statusAsc": "Status A → Z",
+      "statusDesc": "Status Z → A"
+    },
+    "exportCsv": {
+      "ready": "Export ready",
+      "description": "Exported {{count}} orders to CSV"
     },
     "empty": {
       "title": "No orders yet",

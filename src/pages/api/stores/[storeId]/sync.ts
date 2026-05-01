@@ -14,6 +14,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { waitUntil } from "@vercel/functions";
 import { getEffectiveHistoryFrom } from "@/lib/history-window";
 import { normalizeWooDate } from "@/lib/woo-date";
+import { scheduleDashboardSummaryRefresh } from "@/lib/dashboard-summary.server";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -614,6 +615,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             duration_seconds: overallDuration, is_initial: isInitial,
           });
           await supabase.from("stores").update({ status: "connected", last_sync_at: nowIso }).eq("id", storeId);
+          scheduleDashboardSummaryRefresh(storeId);
           await maybeFireCelebrationAndVariations(storeId, rawStore, isInitial, getAppUrl(req));
         } else {
           // still running — keep store status "syncing"
@@ -708,6 +710,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           duration_seconds: overallDuration, is_initial: isInitial,
         });
       }
+      scheduleDashboardSummaryRefresh(storeId);
       await maybeFireCelebrationAndVariations(storeId, rawStore, isInitial, getAppUrl(req));
     } else {
       // chunks remaining — update "all" run heartbeat with running totals; cron will resume

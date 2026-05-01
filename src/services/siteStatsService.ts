@@ -34,6 +34,8 @@ export interface SiteStatsResponse {
   }[];
   currencies: { code: string; count: number }[];
   currency: string;
+  /** Present when served from dashboard_summary cache or immediately after recompute */
+  snapshot_updated_at?: string | null;
 }
 
 export async function fetchSiteHomeStats(
@@ -50,5 +52,10 @@ export async function fetchSiteHomeStats(
     p_currency: currency || null,
   });
   if (error) throw error;
-  return data as unknown as SiteStatsResponse;
+  const raw = data as unknown as SiteStatsResponse & { snapshot_updated_at?: unknown };
+  let snapshot_updated_at: string | null | undefined = raw.snapshot_updated_at as string | null | undefined;
+  if (snapshot_updated_at != null && typeof snapshot_updated_at !== "string") {
+    snapshot_updated_at = String(snapshot_updated_at);
+  }
+  return { ...raw, snapshot_updated_at };
 }

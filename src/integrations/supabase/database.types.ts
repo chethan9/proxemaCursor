@@ -827,6 +827,38 @@ export type Database = {
           },
         ]
       }
+      dashboard_summary: {
+        Row: {
+          currency_key: string
+          payload: Json
+          store_id: string
+          tz: string
+          updated_at: string
+        }
+        Insert: {
+          currency_key?: string
+          payload: Json
+          store_id: string
+          tz: string
+          updated_at?: string
+        }
+        Update: {
+          currency_key?: string
+          payload?: Json
+          store_id?: string
+          tz?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_summary_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cron_logs: {
         Row: {
           completed_at: string | null
@@ -3552,9 +3584,17 @@ export type Database = {
         Returns: string
       }
       generate_referral_code: { Args: { p_seed?: string }; Returns: string }
+      compute_site_home_stats: {
+        Args: { p_currency?: string; p_store_id: string; p_tz?: string }
+        Returns: Json
+      }
       get_site_home_stats: {
         Args: { p_currency?: string; p_store_id: string; p_tz?: string }
         Returns: Json
+      }
+      refresh_dashboard_summaries_for_store: {
+        Args: { p_store_id: string }
+        Returns: undefined
       }
       has_permission: { Args: { perm: string }; Returns: boolean }
       increment_api_call_count: {

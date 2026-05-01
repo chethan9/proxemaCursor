@@ -225,7 +225,7 @@ function App({ Component, pageProps }: AppProps) {
       persistOptions={{
         persister,
         maxAge: 24 * 60 * 60 * 1000,
-        buster: "v1",
+        buster: "v2",
       }}
     >
       <Providers>

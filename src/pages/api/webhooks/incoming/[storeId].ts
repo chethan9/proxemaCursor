@@ -2,6 +2,7 @@ import type { IncomingHttpHeaders } from "http";
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { Json } from "@/integrations/supabase/database.types";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
+import { scheduleDashboardSummaryRefresh } from "@/lib/dashboard-summary.server";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 import { normalizeWooDate } from "@/lib/woo-date";
 
@@ -442,6 +443,9 @@ export default async function handler(
       // Actually upsert/delete the entity in the mirrored table
       try {
         await upsertEntityFromWebhook(storeId, entityType, changeType, payload);
+        if (entityType === "order" || entityType === "product") {
+          scheduleDashboardSummaryRefresh(storeId);
+        }
       } catch (upsertErr) {
         console.error(`[Webhook] Entity upsert failed for ${entityType}:`, upsertErr);
       }
