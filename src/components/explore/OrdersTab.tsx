@@ -92,6 +92,49 @@ type ColumnKey = "id" | "order_number" | "status" | "customer" | "first_name" | 
 
 type OrderSortState = { field: OrderSortField; direction: SortDirection };
 
+/** English defaults — shown only if i18n bundle is missing a key (e.g. before DB overlay hydrates). */
+const ORDER_SITE_FALLBACKS: Record<string, string> = {
+  "orders.columnGroups.order": "Order",
+  "orders.columnGroups.customer": "Customer",
+  "orders.columnGroups.paymentAmounts": "Payment & amounts",
+  "orders.columnGroups.actions": "Actions",
+  "orders.columns.internalId": "Internal ID",
+  "orders.columns.wooId": "Woo ID",
+  "orders.columns.orderNumber": "Order #",
+  "orders.columns.status": "Status",
+  "orders.columns.dateCreated": "Date created",
+  "orders.columns.dateModified": "Date modified",
+  "orders.columns.syncedAt": "Last synced",
+  "orders.columns.sourceUtm": "Source (UTM)",
+  "orders.columns.createdVia": "Created via",
+  "orders.columns.customerId": "Customer ID",
+  "orders.columns.customerName": "Name",
+  "orders.columns.firstName": "First name",
+  "orders.columns.lastName": "Last name",
+  "orders.columns.email": "Email",
+  "orders.columns.phone": "Phone",
+  "orders.columns.itemCount": "Item",
+  "orders.columns.lineItemsSummary": "Items (name × qty)",
+  "orders.columns.currency": "Currency",
+  "orders.columns.total": "Total",
+  "orders.columns.subtotal": "Subtotal",
+  "orders.columns.tax": "Tax",
+  "orders.columns.shipping": "Shipping",
+  "orders.columns.discount": "Discount",
+  "orders.columns.paymentTitle": "Payment title",
+  "orders.columns.paymentMethod": "Payment method",
+  "orders.columns.actions": "Actions",
+  "orders.sortOptions.newestFirst": "Newest first",
+  "orders.sortOptions.oldestFirst": "Oldest first",
+  "orders.sortOptions.totalHigh": "Total high to low",
+  "orders.sortOptions.totalLow": "Total low to high",
+  "orders.sortOptions.orderNumAsc": "Order # ascending",
+  "orders.sortOptions.orderNumDesc": "Order # descending",
+  "orders.sortOptions.recentlySynced": "Recently synced",
+  "orders.sortOptions.statusAsc": "Status A → Z",
+  "orders.sortOptions.statusDesc": "Status Z → A",
+};
+
 const COLUMN_META: { key: ColumnKey; labelKey: string; groupKey: string; sortable?: OrderSortField }[] = [
   { key: "id", labelKey: "orders.columns.internalId", groupKey: "orders.columnGroups.order" },
   { key: "woo_id", labelKey: "orders.columns.wooId", groupKey: "orders.columnGroups.order" },
@@ -192,7 +235,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   const clientId = profile?.client_id ?? null;
   const { t, i18n } = useTranslation("site");
   const columnsDef = useMemo(
-    () => COLUMN_META.map((c) => ({ ...c, label: t(c.labelKey), group: t(c.groupKey) })),
+    () =>
+      COLUMN_META.map((c) => ({
+        ...c,
+        label: t(c.labelKey, ORDER_SITE_FALLBACKS[c.labelKey] ?? c.labelKey),
+        group: t(c.groupKey, ORDER_SITE_FALLBACKS[c.groupKey] ?? c.groupKey),
+      })),
     [t, i18n.language],
   );
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -216,7 +264,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   const [sort, setSort] = useState<OrderSortState>(() => DEFAULT_SORT);
 
-  const sortSummaryLabel = useMemo(() => t(sortOptionLabelKey(sort)), [sort, t, i18n.language]);
+  const sortKey = sortOptionLabelKey(sort);
+  const sortSummaryLabel = useMemo(
+    () => t(sortKey, ORDER_SITE_FALLBACKS[sortKey] ?? "Sort"),
+    [sortKey, t, i18n.language],
+  );
 
   const { data: syncStatus } = useStoreSyncStatus(storeId);
   const liveOrdersMode = syncStatus ? !syncStatus.initialSyncDone : false;

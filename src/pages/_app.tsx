@@ -249,17 +249,23 @@ function DbTranslationOverlay() {
     let cancelled = false;
     const lang = i18n.language;
     if (!lang || loadedLanguagesRef.current.has(lang)) return;
+    const buildId =
+      typeof process !== "undefined" ? process.env.NEXT_PUBLIC_APP_BUILD_ID?.trim() : "";
+    const bust = buildId ? `?v=${encodeURIComponent(buildId)}` : "";
     (async () => {
       try {
         await Promise.all(
           NAMESPACES.map(async (ns) => {
-            if (i18n.hasResourceBundle(lang, ns)) return;
-            const res = await fetch(`/api/i18n/${lang}/${ns}`);
+            const res = await fetch(
+              `/api/i18n/${encodeURIComponent(lang)}/${encodeURIComponent(ns)}${bust}`,
+            );
             if (!res.ok) return;
             const merged = await res.json();
             if (cancelled) return;
+            // Deep-merge file + DB bundles so new keys from deploy/API are never skipped
+            // when hasResourceBundle was already true from SSR/static preload.
             i18n.addResourceBundle(lang, ns, merged, true, true);
-          })
+          }),
         );
         if (!cancelled) {
           loadedLanguagesRef.current.add(lang);
@@ -268,7 +274,9 @@ function DbTranslationOverlay() {
         /* network errors → keep file-based fallback */
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [i18n, i18n.language]);
   return null;
 }

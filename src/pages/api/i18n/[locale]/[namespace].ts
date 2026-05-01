@@ -45,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     setNested(baseJson, r.key as string, r.value as string);
   }
 
-  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+  // Private + no-store: merged DB overrides must not linger across deploys or behind shared caches.
+  res.setHeader("Cache-Control", "private, no-store, must-revalidate");
   return res.status(200).json(baseJson);
 }
