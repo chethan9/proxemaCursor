@@ -26,6 +26,12 @@ const MODULE_FILTER_VALUES = new Set<string>(["__all", ...Object.values(AUDIT_MO
 
 const MODULE_OPTIONS = ["", ...Object.values(AUDIT_MODULES)];
 
+/** Ensures merged DB translations never render objects into SelectItem / headings (causes React child errors). */
+function tx(t: (key: string, opts?: { defaultValue?: string }) => string, key: string, defaultValue: string) {
+  const v = t(key, { defaultValue });
+  return typeof v === "string" ? v : defaultValue;
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -99,10 +105,10 @@ export default function MyActivityPage() {
       const blob = await res.blob();
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       downloadBlob(blob, `my-activity-${stamp}.csv`);
-      toast({ title: t("myActivity.exportReady") });
+      toast({ title: tx(t, "myActivity.exportReady", "Download started") });
     } catch (e) {
       toast({
-        title: t("myActivity.exportFailed"),
+        title: tx(t, "myActivity.exportFailed", "Export failed"),
         description: e instanceof Error ? e.message : "",
         variant: "destructive",
       });
@@ -116,25 +122,31 @@ export default function MyActivityPage() {
     filters.module && MODULE_FILTER_VALUES.has(filters.module) ? filters.module : "__all";
 
   return (
-    <SettingsLayout title={t("myActivity.title")}>
+    <SettingsLayout title={tx(t, "myActivity.title", "My Activity")}>
       <div className="p-6 space-y-5 max-w-4xl">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              {t("myActivity.title")}
+              {tx(t, "myActivity.title", "My Activity")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {t("myActivity.subtitle")}
+              {tx(t, "myActivity.subtitle", "Your recent actions across the platform.")}
               {count !== null && (
                 <span className="ml-2">{formatNumber(count, i18n.language)}</span>
               )}
             </p>
-            <p className="text-xs text-muted-foreground mt-2 max-w-xl">{t("myActivity.immutableNotice")}</p>
+            <p className="text-xs text-muted-foreground mt-2 max-w-xl">
+              {tx(
+                t,
+                "myActivity.immutableNotice",
+                "Audit history cannot be deleted from the app; entries older than 90 days may be purged per retention policy."
+              )}
+            </p>
           </div>
           <Button variant="outline" size="sm" onClick={exportCsv} className="gap-1.5 shrink-0">
             <Download className="h-3.5 w-3.5" />
-            {t("myActivity.exportCsv")}
+            {tx(t, "myActivity.exportCsv", "Export CSV")}
           </Button>
         </div>
 
@@ -146,10 +158,10 @@ export default function MyActivityPage() {
                 onValueChange={(v) => applyFilter({ module: v === "__all" ? undefined : v })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t("myActivity.moduleLabel")} />
+                  <SelectValue placeholder={tx(t, "myActivity.moduleLabel", "Module")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all">{t("myActivity.moduleAll")}</SelectItem>
+                  <SelectItem value="__all">{tx(t, "myActivity.moduleAll", "All modules")}</SelectItem>
                   {MODULE_OPTIONS.filter(Boolean).map((m) => (
                     <SelectItem key={m} value={m}>
                       {m}
@@ -158,17 +170,19 @@ export default function MyActivityPage() {
                 </SelectContent>
               </Select>
               <Input
-                placeholder={t("myActivity.actionPlaceholder")}
+                placeholder={tx(t, "myActivity.actionPlaceholder", "Filter by action…")}
                 value={filters.action || ""}
                 onChange={(e) => applyFilter({ action: e.target.value || undefined })}
               />
               <Input
-                placeholder={t("myActivity.searchPlaceholder")}
+                placeholder={tx(t, "myActivity.searchPlaceholder", "Search action, entity…")}
                 value={filters.search || ""}
                 onChange={(e) => applyFilter({ search: e.target.value || undefined })}
               />
               <div className="flex gap-2 items-center">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{t("myActivity.fromDate")}</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {tx(t, "myActivity.fromDate", "From")}
+                </span>
                 <Input
                   type="date"
                   value={filters.from?.slice(0, 10) || ""}
@@ -181,7 +195,9 @@ export default function MyActivityPage() {
                 />
               </div>
               <div className="flex gap-2 items-center">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{t("myActivity.toDate")}</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {tx(t, "myActivity.toDate", "To")}
+                </span>
                 <Input
                   type="date"
                   value={filters.to?.slice(0, 10) || ""}
@@ -213,7 +229,7 @@ export default function MyActivityPage() {
           {!loading && rows.length === 0 && (
             <Card>
               <CardContent className="py-16 text-center text-sm text-muted-foreground">
-                {t("myActivity.empty")}
+                {tx(t, "myActivity.empty", "No activity yet.")}
               </CardContent>
             </Card>
           )}
@@ -233,7 +249,7 @@ export default function MyActivityPage() {
           <div className="flex justify-center py-4">
             <Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {t("myActivity.loadMore")}
+              {tx(t, "myActivity.loadMore", "Load more")}
             </Button>
           </div>
         )}
