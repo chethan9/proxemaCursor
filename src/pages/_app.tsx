@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { appWithTranslation, useTranslation } from "next-i18next";
 import nextI18NextConfig from "../../next-i18next.config.js";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
@@ -216,6 +217,7 @@ function App({ Component, pageProps }: AppProps) {
           <Component {...pageProps} />
           <Toaster />
           <Analytics />
+          <SpeedInsights />
         </Providers>
       </QueryClientProvider>
     );
@@ -234,6 +236,7 @@ function App({ Component, pageProps }: AppProps) {
         <Component {...pageProps} />
         <Toaster />
         <Analytics />
+        <SpeedInsights />
       </Providers>
     </PersistQueryClientProvider>
   );
