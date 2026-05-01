@@ -114,6 +114,10 @@ function Inner() {
           tags,
           attributes,
           default_attributes: defaultAttrs,
+          image_mirror_urls:
+            p.image_mirror_urls && typeof p.image_mirror_urls === "object"
+              ? (p.image_mirror_urls as ProductFormState["image_mirror_urls"])
+              : undefined,
         });
         setInitialFormJson(JSON.stringify({
           ...base,

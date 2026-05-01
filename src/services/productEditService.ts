@@ -1,3 +1,5 @@
+import type { ProductImageMirrorUrlsMap } from "@/lib/product-image-urls";
+
 export type ProductAttribute = {
   id?: number;
   name: string;
@@ -55,6 +57,8 @@ export type ProductFormState = {
   deletedVariationIds?: number[];
   meta_data?: { key: string; value: unknown }[];
   default_attributes?: { id?: number; name: string; option: string }[];
+  /** Cloudflare Images variant URLs from DB (preview acceleration; not sent to Woo). */
+  image_mirror_urls?: ProductImageMirrorUrlsMap;
 };
 
 export function emptyProductForm(): ProductFormState {

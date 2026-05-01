@@ -140,6 +140,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq("store_id", storeId)
     .eq("status", "running");
 
+  try {
+    const { deleteMirrorsForStore } = await import("@/lib/product-image-mirror.server");
+    await deleteMirrorsForStore(storeId);
+  } catch (e) {
+    console.warn("[store delete] CF mirror cleanup:", e);
+  }
+
   // Delete store (cascade removes local webhooks, sync_runs, etc via FK)
   const { error: delErr } = await supabaseAdmin
     .from("stores")

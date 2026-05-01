@@ -1015,7 +1015,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 return (
                   <div className={gridCls}>
                     {products.map((p) => {
-                      const thumb = getProductThumbnail(p.images);
+                      const thumb = getProductThumbnail(p.images, p.image_mirror_urls);
                       const cats = getCategoryNames(p.categories);
                       const brandList = Array.isArray(p.brands) ? (p.brands as { name?: string }[]).map((b) => b.name).filter(Boolean) : [];
                       const stockLow = p.stock_quantity != null && p.stock_quantity > 0 && p.stock_quantity < 5;
@@ -1327,7 +1327,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     </TableRow>
                   ) : (
                     products.map((p) => {
-                      const thumb = getProductThumbnail(p.images);
+                      const thumb = getProductThumbnail(p.images, p.image_mirror_urls);
                       const isSelected = selectedIds.has(p.id);
                       const priceHtml = (p.raw_data?.price_html as string) || "";
                       const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);

@@ -8,6 +8,7 @@ import { quotaErrorPayload } from "@/lib/quota";
 import { canAddProductServer } from "@/lib/quota.server";
 import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
 import { refreshTaxonomyCounts, extractTaxonomyIds } from "@/lib/refresh-taxonomy-counts";
+import { waitUntil } from "@vercel/functions";
 
 type WooVariationInput = {
   id?: number;
@@ -337,7 +338,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             req,
           });
 
-          return res.status(200).json(finalRow ?? parentInsertRow);
+          const outRow = finalRow ?? parentInsertRow;
+          waitUntil(
+            (async () => {
+              try {
+                const { mirrorImagesForProductRow } = await import("@/lib/product-image-mirror.server");
+                await mirrorImagesForProductRow(storeId, parentId, outRow.images, "save");
+              } catch (e) {
+                console.warn("[product-create] image mirror:", e);
+              }
+            })()
+          );
+
+          return res.status(200).json(outRow);
         }
       } catch (ve) {
         console.error("[product-create][variations-batch]", ve);
@@ -378,6 +391,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       refreshTaxonomyCounts(creds, storeId, "tags", extractTaxonomyIds(created.tags)),
       refreshTaxonomyCounts(creds, storeId, "brands", extractTaxonomyIds((created as Record<string, unknown>).brands)),
     ]);
+
+    waitUntil(
+      (async () => {
+        try {
+          const { mirrorImagesForProductRow } = await import("@/lib/product-image-mirror.server");
+          await mirrorImagesForProductRow(storeId, inserted.id, inserted.images, "save");
+        } catch (e) {
+          console.warn("[product-create] image mirror:", e);
+        }
+      })()
+    );
 
     return res.status(200).json(inserted);
   } catch (e) {

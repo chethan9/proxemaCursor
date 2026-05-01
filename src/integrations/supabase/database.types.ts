@@ -1869,6 +1869,66 @@ export type Database = {
           },
         ]
       }
+      product_image_mirrors: {
+        Row: {
+          id: string
+          store_id: string
+          product_id: string
+          src_normalized: string
+          storage_key: string
+          cf_image_id: string | null
+          status: string
+          error: string | null
+          source_kind: string
+          last_checked_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          product_id: string
+          src_normalized: string
+          storage_key: string
+          cf_image_id?: string | null
+          status?: string
+          error?: string | null
+          source_kind?: string
+          last_checked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          product_id?: string
+          src_normalized?: string
+          storage_key?: string
+          cf_image_id?: string | null
+          status?: string
+          error?: string | null
+          source_kind?: string
+          last_checked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_image_mirrors_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_mirrors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           attributes: Json | null
@@ -1878,6 +1938,7 @@ export type Database = {
           description: string | null
           downloadable: boolean | null
           id: string
+          image_mirror_urls: Json
           images: Json | null
           manage_stock: boolean | null
           max_price: number | null
@@ -1915,6 +1976,7 @@ export type Database = {
           description?: string | null
           downloadable?: boolean | null
           id?: string
+          image_mirror_urls?: Json
           images?: Json | null
           manage_stock?: boolean | null
           max_price?: number | null
@@ -1952,6 +2014,7 @@ export type Database = {
           description?: string | null
           downloadable?: boolean | null
           id?: string
+          image_mirror_urls?: Json
           images?: Json | null
           manage_stock?: boolean | null
           max_price?: number | null

@@ -5,6 +5,7 @@ import {
   applyProductCatalogOrder,
   getCategoryFilterMeta,
 } from "@/lib/products-list-query";
+import { getProductThumbnailWithMirrors } from "@/lib/product-image-urls";
 
 export interface ProductRow {
   id: string;
@@ -33,6 +34,8 @@ export interface ProductRow {
   pending_action?: string | null;
   pending_job_id?: string | null;
   pending_at?: string | null;
+  /** Denormalized Cloudflare Images variant URLs keyed by storage_key (see product-image-urls). */
+  image_mirror_urls?: unknown;
 }
 
 export type ProductSortField = "name" | "created_at" | "updated_at" | "synced_at" | "price" | "stock_quantity" | "woo_date_created";
@@ -149,10 +152,10 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
   return { data: (data || []) as unknown as ProductRow[], count: count || 0 };
 }
 
-export function getProductThumbnail(images: unknown): string | null {
-  if (!Array.isArray(images) || images.length === 0) return null;
-  const first = images[0] as { src?: string };
-  return first?.src || null;
+export function getProductThumbnail(images: unknown, imageMirrorUrls?: unknown): string | null {
+  const enabled =
+    typeof process !== "undefined" && process.env.NEXT_PUBLIC_CLOUDFLARE_PRODUCT_IMAGES === "true";
+  return getProductThumbnailWithMirrors(images, imageMirrorUrls, enabled);
 }
 
 export function getCategoryNames(categories: unknown): string {

@@ -3,6 +3,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProductFormState, ProductAttribute } from "@/services/productEditService";
+import {
+  isCloudflareProductImagesClientEnabled,
+  resolveMirroredProductImageUrl,
+  type ImageVariantName,
+} from "@/lib/product-image-urls";
 import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
 
 const MAX_PREVIEW_ATTRS = 4;
@@ -15,6 +20,11 @@ export type LivePreviewCardProps = {
 };
 
 export function LivePreviewCard({ form, storeId, productId, setForm }: LivePreviewCardProps) {
+  const cfImgEnabled = isCloudflareProductImagesClientEnabled();
+  const mirrorMap = form.image_mirror_urls;
+  const previewSrc = (rawSrc: string, variant: ImageVariantName) =>
+    resolveMirroredProductImageUrl(rawSrc, mirrorMap, variant, cfImgEnabled) || rawSrc;
+
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const thumbStripRef = useRef<HTMLDivElement>(null);
@@ -73,7 +83,7 @@ export function LivePreviewCard({ form, storeId, productId, setForm }: LivePrevi
           >
             {active ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={active.src} alt="" className="h-full w-full object-cover" />
+              <img src={previewSrc(active.src, "edit")} alt="" className="h-full w-full object-cover" />
             ) : (
               <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
             )}
@@ -133,7 +143,7 @@ export function LivePreviewCard({ form, storeId, productId, setForm }: LivePrevi
                     className={`h-14 w-14 rounded-md overflow-hidden shrink-0 snap-start border transition-all ${i === activeIdx ? "ring-2 ring-primary ring-offset-2 border-transparent" : "border-border hover:border-primary/40"}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.src} alt="" className="h-full w-full object-cover" />
+                    <img src={previewSrc(img.src, "thumb")} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -210,7 +220,7 @@ export function LivePreviewCard({ form, storeId, productId, setForm }: LivePrevi
             <div className="flex-1 relative flex items-center justify-center min-h-0">
               {active && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={active.src} alt="" className="max-h-full max-w-full object-contain" />
+                <img src={previewSrc(active.src, "zoom")} alt="" className="max-h-full max-w-full object-contain" />
               )}
               {count > 1 && (
                 <>
@@ -246,7 +256,7 @@ export function LivePreviewCard({ form, storeId, productId, setForm }: LivePrevi
                     className={`h-20 w-20 rounded overflow-hidden shrink-0 border-2 transition-all ${i === activeIdx ? "border-white" : "border-transparent opacity-60 hover:opacity-100"}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.src} alt="" className="h-full w-full object-cover" />
+                    <img src={previewSrc(img.src, "thumb")} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>

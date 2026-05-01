@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 import { reconcileAttributeTerms } from "@/lib/woo-attribute-reconcile";
 import { refreshTaxonomyCounts, extractTaxonomyIds } from "@/lib/refresh-taxonomy-counts";
+import { waitUntil } from "@vercel/functions";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -238,6 +239,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!store) throw new Error("Store not connected");
       const force = req.query.force !== "false";
       await wooRequest<WooProduct>(store, "DELETE", `products/${localProduct.woo_id}?force=${force}`);
+
+      try {
+        const { deleteMirrorsForProduct } = await import("@/lib/product-image-mirror.server");
+        await deleteMirrorsForProduct(productId);
+      } catch (e) {
+        console.warn("[product delete] CF mirror cleanup:", e);
+      }
 
       const { error: delErr } = await supabaseAdmin
         .from("products")
@@ -562,6 +570,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         refreshTaxonomyCounts(store, storeId, "brands", allBrands),
       ]);
     }
+
+    waitUntil(
+      (async () => {
+        try {
+          const { mirrorImagesForProductRow } = await import("@/lib/product-image-mirror.server");
+          await mirrorImagesForProductRow(storeId, productId, saved.images, "save");
+        } catch (e) {
+          console.warn("[product-update] image mirror:", e);
+        }
+      })()
+    );
 
     return res.status(200).json(saved);
   } catch (err) {

@@ -372,6 +372,30 @@ async function runAspectChunk(
         await persistAndCheckpoint(cfg.table, rows, store.id, run!.id, page, counters, {
           skipExistingLookup,
         });
+        if (aspectName === "products" && persistItems.length > 0) {
+          const wooIds = persistItems.map((i) => (i as { id: number }).id);
+          waitUntil(
+            (async () => {
+              try {
+                const { mirrorImagesForProductRows } = await import("@/lib/product-image-mirror.server");
+                const { data: prows } = await supabase
+                  .from("products")
+                  .select("id, images")
+                  .eq("store_id", store.id)
+                  .in("woo_id", wooIds);
+                if (prows?.length) {
+                  await mirrorImagesForProductRows(
+                    store.id,
+                    prows as { id: string; images: unknown }[],
+                    "sync"
+                  );
+                }
+              } catch (e) {
+                console.warn("[Sync] product image mirror:", e);
+              }
+            })()
+          );
+        }
       },
     });
 
