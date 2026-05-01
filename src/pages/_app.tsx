@@ -26,6 +26,7 @@ import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey 
 import { initPostHog, capturePostHogPageView } from "@/lib/posthog";
 import { isRtl } from "@/lib/i18n";
 import { NAMESPACES } from "@/lib/i18n";
+import { DeploymentVersionGate } from "@/components/DeploymentVersionGate";
 
 const AppSidebar = dynamic(
   () => import("@/components/layout/AppSidebar").then((m) => m.AppSidebar),
@@ -182,6 +183,7 @@ function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <AuthProvider>
+        <DeploymentVersionGate />
         <CacheBuster />
         <NavigationRouteProbe />
         <PostHogPageviews />

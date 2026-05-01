@@ -16,6 +16,10 @@ Observability: set `CLOUDFLARE_IMAGE_MIRROR_METRICS=true` to emit JSON lines for
 
 Super admins can manage integration settings (encrypted API token, account IDs, variants, repair batch, metrics) at **Settings → Cloudflare Images** (`/admin/cloudflare-images`). Database credentials override environment variables when enabled and complete; apply migration `20260502120000_cloudflare_images_settings.sql` so the singleton settings row exists.
 
+## Deploy refresh
+
+Each production bundle includes `NEXT_PUBLIC_APP_BUILD_ID` (typically `VERCEL_GIT_COMMIT_SHA`). The app compares it to `localStorage` and reloads once when a new deploy is detected, so users are not asked to hard-refresh after releases. Long-lived tabs poll `GET /api/build-info` every five minutes.
+
 ## Publish
 
 Default Git remote `origin` targets the repo above. Push with:
