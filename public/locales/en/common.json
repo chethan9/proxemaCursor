@@ -99,6 +99,10 @@
     "completed_one": "{{count}} recently completed",
     "completed_other": "{{count}} recently completed"
   },
+  "downloadsBadge": {
+    "new_one": "{{count}} new file ready in Downloads",
+    "new_other": "{{count}} new files ready in Downloads"
+  },
   "userMenu": {
     "user": "User",
     "language": "Language",

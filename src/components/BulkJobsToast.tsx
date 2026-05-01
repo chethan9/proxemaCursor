@@ -10,6 +10,7 @@ import { cancelBulkJob, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobS
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { acknowledgeDownloadArtifacts } from "@/lib/downloads-artifacts-ack";
 
 export function BulkJobsToast() {
   const { data: jobs = [] } = useActiveBulkJobs();
@@ -92,6 +93,7 @@ export function BulkJobsToast() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      acknowledgeDownloadArtifacts(job.store_id, [job.id]);
     } catch (e) {
       toast({ title: "Download failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
     }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useSiteDownloads } from "@/hooks/queries/useSiteDownloads";
 import { dismissJobArtifact, type DownloadFile } from "@/services/downloadsService";
+import { acknowledgeDownloadArtifacts } from "@/lib/downloads-artifacts-ack";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,6 +104,15 @@ function DownloadsInner() {
     if (previewBlobRef.current) URL.revokeObjectURL(previewBlobRef.current);
   }, []);
 
+  /** Visiting Downloads acknowledges every listed artifact so the sidebar badge clears. */
+  useEffect(() => {
+    if (!id || files.length === 0) return;
+    acknowledgeDownloadArtifacts(
+      id,
+      files.map((f) => f.id),
+    );
+  }, [id, files]);
+
   const fetchDownloadBlob = useCallback(async (file: DownloadFile): Promise<Blob> => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -183,6 +193,7 @@ function DownloadsInner() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      acknowledgeDownloadArtifacts(id, [file.id]);
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err.message === "SIGN_IN") {

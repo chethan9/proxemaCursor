@@ -20,6 +20,7 @@ import { getStore } from "@/services/storeService";
 import { queryKeys } from "@/lib/query-client";
 import { warmSiteExplorerPrefetch } from "@/lib/prefetch-site-explorer";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
+import { useUnseenDownloadCount } from "@/hooks/useUnseenDownloadCount";
 import { useTranslation } from "next-i18next";
 
 type Props = { siteId: string };
@@ -75,6 +76,7 @@ export function SiteSidebar({ siteId }: Props) {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
 
   const { data: bulkJobs = [] } = useStoreBulkJobs(siteId, 50);
+  const unseenDownloads = useUnseenDownloadCount(siteId);
   const bulkJobsCounts = useMemo(() => {
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
     let pending = 0;
@@ -242,8 +244,10 @@ export function SiteSidebar({ siteId }: Props) {
     const active = isItemActive(node.href);
     const Icon = resolveIcon(node.icon);
     const isBulkJobs = node.href.endsWith("/bulk-jobs");
+    const isDownloads = node.href.endsWith("/downloads");
     const showPending = isBulkJobs && bulkJobsCounts.pending > 0;
     const showRecent = isBulkJobs && bulkJobsCounts.recent > 0;
+    const showDownloadsUnseen = isDownloads && unseenDownloads > 0;
     // Map href section → nav.<key>; falls back to stored label so user customizations win.
     const sectionMatch = node.href.match(/\/sites\/[^/]+\/?([^/?#]*)/);
     const section = sectionMatch ? sectionMatch[1] : "";
@@ -289,6 +293,14 @@ export function SiteSidebar({ siteId }: Props) {
               className="inline-flex items-center justify-center min-w-[1.25rem] h-[1.125rem] px-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold tabular-nums"
             >
               {bulkJobsCounts.recent}
+            </span>
+          )}
+          {showDownloadsUnseen && (
+            <span
+              title={t("downloadsBadge.new", { count: unseenDownloads })}
+              className="inline-flex items-center justify-center min-w-[1.25rem] h-[1.125rem] px-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold tabular-nums"
+            >
+              {unseenDownloads}
             </span>
           )}
         </Link>
