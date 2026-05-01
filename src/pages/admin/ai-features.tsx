@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GetStaticProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -30,6 +30,13 @@ async function authHeaders() {
   return { Authorization: `Bearer ${session?.access_token ?? ""}` };
 }
 
+function isClearlyWrongProvider(provider: "google_gemini" | "openai_image", model: string): boolean {
+  const m = model.trim().toLowerCase();
+  if (!m) return false;
+  if (provider === "openai_image") return m.includes("gemini") || m.startsWith("models/");
+  return /^(dall-e|gpt-image)/i.test(model.trim());
+}
+
 const emptyForm: Partial<Feature> = {
   slug: "",
   name: "",
@@ -54,6 +61,54 @@ function Inner() {
   const [editing, setEditing] = useState<Feature | null>(null);
   const [form, setForm] = useState<Partial<Feature>>(emptyForm);
   const [schemaText, setSchemaText] = useState("{}");
+
+  const providerId = (form.provider || "google_gemini") as "google_gemini" | "openai_image";
+
+  const {
+    data: modelsPayload,
+    isLoading: modelsLoading,
+    isFetching: modelsFetching,
+    error: modelsQueryError,
+  } = useQuery({
+    queryKey: ["admin-ai-provider-models", providerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/ai-provider-models?provider=${encodeURIComponent(providerId)}`, {
+        headers: await authHeaders(),
+      });
+      const j = (await res.json()) as { models?: Array<{ id: string }>; error?: string | null };
+      if (!res.ok) throw new Error((j as { error?: string }).error || "Failed to load models");
+      return j as { models: Array<{ id: string }>; error: string | null };
+    },
+    enabled: dialogOpen,
+    staleTime: 60_000,
+  });
+
+  const modelIdsFromApi = useMemo(() => modelsPayload?.models?.map((m) => m.id) ?? [], [modelsPayload?.models]);
+  const modelsApiMessage = modelsPayload?.error ?? null;
+
+  const modelSelectIds = useMemo(() => {
+    const ids = [...modelIdsFromApi];
+    const cur = form.model?.trim();
+    if (cur && !ids.includes(cur)) ids.unshift(cur);
+    return ids;
+  }, [modelIdsFromApi, form.model]);
+
+  useEffect(() => {
+    if (!dialogOpen || modelsLoading) return;
+    if (modelIdsFromApi.length === 0) return;
+    const cur = form.model?.trim() ?? "";
+
+    if (cur && modelIdsFromApi.includes(cur)) return;
+
+    if (cur && isClearlyWrongProvider(providerId, cur)) {
+      setForm((p) => ({ ...p, model: modelIdsFromApi[0] }));
+      return;
+    }
+
+    if (!cur) {
+      setForm((p) => ({ ...p, model: modelIdsFromApi[0] }));
+    }
+  }, [dialogOpen, modelsLoading, providerId, modelIdsFromApi, form.model]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-ai-features"],
@@ -242,9 +297,12 @@ function Inner() {
               <Input value={form.description || ""} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <Label>{t("ai.provider")}</Label>
-                <Select value={form.provider || "google_gemini"} onValueChange={(v) => setForm((p) => ({ ...p, provider: v as Feature["provider"] }))}>
+                <Select
+                  value={form.provider || "google_gemini"}
+                  onValueChange={(v) => setForm((p) => ({ ...p, provider: v as Feature["provider"] }))}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="google_gemini">google_gemini</SelectItem>
@@ -252,10 +310,51 @@ function Inner() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>{t("ai.model")}</Label>
-                <Input value={form.model || ""} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} />
-              </div>
+            </div>
+            <div>
+              <Label>{t("ai.model")}</Label>
+              {modelsLoading || (modelsFetching && modelIdsFromApi.length === 0) ? (
+                <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-muted/30 px-3 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  Loading models for this provider…
+                </div>
+              ) : modelsQueryError ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-destructive">
+                    {modelsQueryError instanceof Error ? modelsQueryError.message : "Could not load models"}
+                  </p>
+                  <Input value={form.model || ""} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} placeholder="Enter model id" />
+                </div>
+              ) : modelSelectIds.length === 0 ? (
+                <div className="space-y-1">
+                  {modelsApiMessage && (
+                    <p className="text-xs text-muted-foreground">{modelsApiMessage}</p>
+                  )}
+                  <Input value={form.model || ""} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} placeholder="Enter model id" />
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Select
+                    value={form.model && modelSelectIds.includes(form.model) ? form.model : modelSelectIds[0]}
+                    onValueChange={(v) => setForm((p) => ({ ...p, model: v }))}
+                  >
+                    <SelectTrigger className="font-mono text-xs">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[min(280px,50vh)]">
+                      {modelSelectIds.map((id) => (
+                        <SelectItem key={id} value={id} className="font-mono text-xs">
+                          {id}
+                          {modelIdsFromApi.includes(id) ? "" : " (saved)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {modelsApiMessage && (
+                    <p className="text-xs text-amber-600 dark:text-amber-500">{modelsApiMessage}</p>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <Label>Prompt template</Label>
