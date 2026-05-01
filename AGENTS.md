@@ -1,16 +1,16 @@
 # Agent instructions
 
-## Completion workflow (do not ask—execute)
+## Completion workflow
 
-When work is finished (features merged, migrations added, or the user signals completion):
+When work is finished (unless the user opts out):
 
-1. **Git**: Ensure changes are committed and **`git push`** to the tracked remote and branch (typically `origin main`).
-2. **Supabase**: For new SQL under `supabase/migrations/`, apply to the linked project (**proximaCursor**, ref `fyqvmbrgyncthksbgrrr`) via Supabase MCP **`apply_migration`** or CLI—not only committing files locally.
-3. **Local dev + browser**: If **`npm run dev`** is not running, start it; default URL is **http://localhost:3000**. Open that URL in the browser for a quick smoke check.
+1. **Git**: Do **not** run **`git push`** unless the user explicitly asks to push (pushing triggers CI / production hooks). Local **`git commit`** only when the user asks to commit or agrees to a checkpoint—otherwise leave changes uncommitted or report `git status` for them to commit locally.
+2. **Supabase**: For new SQL under `supabase/migrations/`, apply to the linked project (**proximaCursor**, ref `fyqvmbrgyncthksbgrrr`) via Supabase MCP **`apply_migration`** or CLI—**only when migrations were added in this task** and the user has not asked to skip remote apply.
+3. **Local dev + browser**: If **`npm run dev`** is not running, start it; default URL is **http://localhost:3000**. Open that URL in the browser for a quick smoke check when useful.
 
-**Vercel:** Do not run production deploys as part of this workflow. The human deploys when they want (dashboard, `npm run deploy:prod`, or git integration if enabled).
+**Vercel:** Never run production deploys (`vercel deploy`, etc.) unless the user explicitly asks.
 
-Only skip a step when it is impossible (auth failure, missing tooling)—report the blocker briefly instead of asking for permission when automation is available.
+Report blockers briefly when a step is impossible (auth failure, missing tooling).
 
 ## Global navigation / menu editor
 
