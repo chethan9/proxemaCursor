@@ -20,7 +20,7 @@ import {
 import { ActivityFeedRow } from "@/components/ActivityFeedRow";
 import { ActivityDetailSheet } from "@/components/ActivityDetailSheet";
 import { useToast } from "@/hooks/use-toast";
-import { AUDIT_MODULES } from "@/lib/audit/log";
+import { AUDIT_MODULES } from "@/lib/audit/modules";
 import { buildActivityExportParams } from "@/lib/audit/export-query";
 
 const MODULE_OPTIONS = ["", ...Object.values(AUDIT_MODULES)];

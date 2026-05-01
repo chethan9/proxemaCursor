@@ -18,7 +18,7 @@ import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { formatNumber } from "@/lib/format-number";
 import { supabase } from "@/integrations/supabase/client";
-import { AUDIT_MODULES } from "@/lib/audit/log";
+import { AUDIT_MODULES } from "@/lib/audit/modules";
 import { buildActivityExportParams } from "@/lib/audit/export-query";
 import { useToast } from "@/hooks/use-toast";
 

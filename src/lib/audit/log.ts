@@ -2,16 +2,7 @@ import type { NextApiRequest } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { logActivity, type ActorType } from "@/lib/activity-log";
 import { buildFieldDiffs, capFieldDiffs, type FieldDiffItem } from "@/lib/audit/diff-engine";
-
-/** Standard `metadata.module` values for filtering activity. */
-export const AUDIT_MODULES = {
-  sites: "sites",
-  templates: "templates",
-  billing: "billing",
-  settings: "settings",
-  admin: "admin",
-  auth: "auth",
-} as const;
+import { AUDIT_MODULES } from "@/lib/audit/modules";
 
 export async function getClientIdForStore(storeId: string): Promise<string | null> {
   const { data } = await supabaseAdmin.from("stores").select("client_id").eq("id", storeId).maybeSingle();
