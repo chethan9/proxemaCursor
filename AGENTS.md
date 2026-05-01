@@ -10,3 +10,7 @@ When work is finished (features merged, migrations added, or the user signals co
 4. **Local dev + browser**: If **`npm run dev`** is not running, start it; default URL is **http://localhost:3000**. Open that URL in the browser for a quick smoke check.
 
 Only skip a step when it is impossible (auth failure, missing tooling)—report the blocker briefly instead of asking for permission when automation is available.
+
+## Global navigation / menu editor
+
+When adding a new **top-level** route under `src/pages/` (anything **not** under `src/pages/sites/`), add a matching row to **`MENU_REGISTRY`** in [`src/lib/menu-registry.ts`](src/lib/menu-registry.ts): `href`, label, icon (must exist on `ICON_MAP`), default group/order, and **`superAdminOnly`** or **`permission`** to match the page guard. Store/scoped routes stay in **`SITE_MENU_REGISTRY`** only.
