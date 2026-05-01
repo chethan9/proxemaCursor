@@ -80,7 +80,6 @@ import { useTranslation } from "next-i18next";
 import { formatNumber } from "@/lib/format-number";
 import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { PrintInvoicesDialog } from "./PrintInvoicesDialog";
-import { getLatestInvoicePrintByOrderIds } from "@/services/templateRenderService";
 
 function pendingLabel(action: string | null | undefined, translate: (key: string, opt?: Record<string, string>) => string) {
   if (!action) return "";
@@ -229,21 +228,6 @@ function resolveStatusVisual(slug: string | null | undefined) {
   if (!slug) return STATUS_COLORS.pending;
   return STATUS_COLORS[slug] ?? CUSTOM_STATUS_VISUAL;
 }
-
-function getPaymentBadge(status: string | null | undefined): { label: string; className: string } {
-  const s = (status || "").toLowerCase();
-  if (s === "completed" || s === "processing" || s === "on-hold") {
-    return { label: "Payment OK", className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" };
-  }
-  if (s === "failed") {
-    return { label: "Payment Failed", className: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900" };
-  }
-  if (s === "refunded" || s === "cancelled") {
-    return { label: "Payment Reversed", className: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900" };
-  }
-  return { label: "Payment Pending", className: "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700" };
-}
-
 
 export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, search: searchProp, onSearchChange, embedHeader = false }: { storeId: string; storeUrl?: string | null; storeName?: string; storeTimezone?: string | null; search?: string; onSearchChange?: (v: string) => void; embedHeader?: boolean }) {
   const { profile } = useAuth();
@@ -486,14 +470,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     dateFrom: dateBounds.from,
     dateTo: dateBounds.to,
     enabled: true,
-  });
-  const visibleOrderIds = useMemo(() => orders.map((o) => o.id), [orders]);
-  const invoiceTemplateIds = useMemo(() => invoiceTemplates.map((tpl) => tpl.id), [invoiceTemplates]);
-  const { data: invoicePrintedByOrder = {} } = useQuery({
-    queryKey: ["orders", "invoice-print-status", storeId, visibleOrderIds, invoiceTemplateIds],
-    queryFn: () => getLatestInvoicePrintByOrderIds(visibleOrderIds, invoiceTemplateIds),
-    enabled: visibleOrderIds.length > 0 && invoiceTemplateIds.length > 0,
-    staleTime: 20_000,
   });
   const showInitialLoading = loading;
   const showRefetchOverlay = isFetching && !loading && !isFetchingNextPage && orders.length > 0;
@@ -1452,29 +1428,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               const status = o.status || "";
                               const isFinalState = status === "completed" || status === "cancelled" || status === "refunded";
                               const isCompleting = completingId === o.id;
-                              const lastInvoicePrint = invoicePrintedByOrder[o.id];
-                              const paymentBadge = getPaymentBadge(status);
                               return (
                                 <TableCell key={c.key} className="hidden md:table-cell sticky right-0 bg-background/95 backdrop-blur z-10" onClick={(e) => e.stopPropagation()}>
                                   <TooltipProvider delayDuration={150}>
-                                    <div className="inline-flex flex-col items-end gap-1">
-                                      <div className="inline-flex items-center gap-1">
-                                        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset", paymentBadge.className)}>
-                                          {paymentBadge.label}
-                                        </span>
-                                        <span
-                                          className={cn(
-                                            "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
-                                            lastInvoicePrint
-                                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900"
-                                              : "bg-muted text-muted-foreground ring-border",
-                                          )}
-                                          title={lastInvoicePrint ? `Last printed ${formatStoreDateTime(lastInvoicePrint.rendered_at, storeTz)}` : "No invoice print detected yet"}
-                                        >
-                                          {lastInvoicePrint ? "Invoice Printed" : "Not Printed"}
-                                        </span>
-                                      </div>
-                                      <div className="inline-flex items-center gap-1">
+                                    <div className="inline-flex items-center gap-1">
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <button
@@ -1519,7 +1476,6 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                         </TooltipTrigger>
                                         <TooltipContent>{defaultPickslip ? "Print pick slip" : "No pick slip template"}</TooltipContent>
                                       </Tooltip>
-                                      </div>
                                     </div>
                                   </TooltipProvider>
                                 </TableCell>

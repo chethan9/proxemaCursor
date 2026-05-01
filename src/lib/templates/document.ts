@@ -552,6 +552,7 @@ export function blankInvoiceHtml(): string {
           {{#ifFilled order.woo_order_id}}<div class="beam-info"><span class="beam-info-label">Order Number:</span><span class="beam-info-value">{{order.woo_order_id}}</span></div>{{/ifFilled}}
           {{#ifFilled order.date_iso}}<div class="beam-info"><span class="beam-info-label">Order Date:</span><span class="beam-info-value">{{date order.date_iso "long"}}</span></div>{{/ifFilled}}
           {{#ifFilled payment.title}}<div class="beam-info"><span class="beam-info-label">Payment Method:</span><span class="beam-info-value">{{payment.title}}</span></div>{{/ifFilled}}
+          {{#ifFilled payment.display_status}}<div class="beam-info"><span class="beam-info-label">Payment Status:</span><span class="beam-info-value">{{payment.display_status}}</span></div>{{/ifFilled}}
         </div>
       </section>
 
@@ -640,6 +641,9 @@ export function blankInvoiceHtml(): string {
     <footer class="beam-footer">
       {{#ifFilled payment.title}}
       <div class="beam-footer-pay"><strong>Payment method:</strong> {{payment.title}}</div>
+      {{/ifFilled}}
+      {{#ifFilled payment.display_status}}
+      <div class="beam-footer-pay"><strong>Payment status:</strong> {{payment.display_status}}</div>
       {{/ifFilled}}
       <div class="beam-footer-links">
         {{#if store.terms_url}}

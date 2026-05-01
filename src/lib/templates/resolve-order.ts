@@ -86,6 +86,10 @@ export interface OrderContext {
     method: string;
     title: string;
     status: string;
+    status_label: string;
+    payment_state: string;
+    payment_state_label: string;
+    display_status: string;
     transaction_id: string;
   };
   shipping_method: {
@@ -183,6 +187,46 @@ function asStoreAddress(a: Record<string, unknown> | null | undefined): AddressN
     country: String(x.country || ""),
     zip: String(x.zip || x.postcode || ""),
   };
+}
+
+function toTitleCaseStatus(slug: string): string {
+  return slug
+    .split("-")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function resolvePaymentStatusLabels(orderStatus: string): {
+  status: string;
+  statusLabel: string;
+  paymentState: string;
+  paymentStateLabel: string;
+  displayStatus: string;
+} {
+  const status = String(orderStatus || "").trim().toLowerCase();
+  const statusLabel = status ? toTitleCaseStatus(status) : "Pending";
+  let paymentState = "pending";
+  let paymentStateLabel = "Pending";
+
+  if (status === "completed" || status === "processing" || status === "on-hold") {
+    paymentState = "paid";
+    paymentStateLabel = "Paid";
+  } else if (status === "failed") {
+    paymentState = "failed";
+    paymentStateLabel = "Failed";
+  } else if (status === "refunded" || status === "cancelled") {
+    paymentState = "reversed";
+    paymentStateLabel = "Reversed";
+  }
+
+  const displayStatus =
+    statusLabel.toLowerCase() === paymentStateLabel.toLowerCase()
+      ? paymentStateLabel
+      : `${paymentStateLabel} (${statusLabel})`;
+
+  return { status, statusLabel, paymentState, paymentStateLabel, displayStatus };
 }
 
 function buildVariation(meta: Array<{ key: string; value: string }>): Record<string, string> & { text: string } {
@@ -299,6 +343,7 @@ export async function resolveOrderContext(
   const wooIdNum = Number(order.woo_id ?? 0);
   const invNum = String(order.order_number?.trim() || order.woo_id || order.id);
   const wooOrderIdStr = String(order.woo_id ?? "");
+  const paymentStatus = resolvePaymentStatusLabels(String(order.status || ""));
 
   const siteLogo = String(store?.logo_url || "").trim();
   const invoiceOnly = String(store?.invoice_logo_url || "").trim();
@@ -359,7 +404,11 @@ export async function resolveOrderContext(
     payment: {
       method: String(order.payment_method || ""),
       title: String(order.payment_method_title || ""),
-      status: String(order.status || ""),
+      status: paymentStatus.status,
+      status_label: paymentStatus.statusLabel,
+      payment_state: paymentStatus.paymentState,
+      payment_state_label: paymentStatus.paymentStateLabel,
+      display_status: paymentStatus.displayStatus,
       transaction_id: String(rawData.transaction_id || ""),
     },
     shipping_method: {
@@ -468,7 +517,16 @@ export function getSampleContext(templateMeta: { name: string; type: string }): 
     billing,
     shipping,
     customer: { id: 42, name: "Sarah Johnson", first_name: "Sarah", last_name: "Johnson", email: "sarah@example.com", phone: "+1 555 0123" },
-    payment: { method: "stripe", title: "Credit Card (Stripe)", status: "processing", transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc" },
+    payment: {
+      method: "stripe",
+      title: "Credit Card (Stripe)",
+      status: "processing",
+      status_label: "Processing",
+      payment_state: "paid",
+      payment_state_label: "Paid",
+      display_status: "Paid (Processing)",
+      transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc",
+    },
     shipping_method: { name: "Standard Shipping", title: "Standard Shipping", tracking_number: "1Z999AA10123456784" },
     totals: { subtotal: 78.00, discount: 5.00, shipping: 8.00, tax: 7.80, total: 88.80 },
     meta: {

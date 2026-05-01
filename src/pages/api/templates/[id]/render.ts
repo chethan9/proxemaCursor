@@ -6,6 +6,7 @@ import { resolveOrderContext, getSampleContext } from "@/lib/templates/resolve-o
 import { getReportSampleContext, resolveReportContext } from "@/lib/templates/resolve-report";
 import { renderPdfFilename } from "@/lib/templates/render-filename";
 import { blankInvoiceHtml, type TemplateConfig } from "@/lib/templates/document";
+import { isMainInvoiceSampleTemplate } from "@/lib/template-resolve-default";
 
 export const config = { api: { bodyParser: { sizeLimit: "1mb" }, responseLimit: false } };
 
@@ -37,10 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (verErr || !ver) return res.status(404).json({ error: "Template version not found" });
 
     const cfg = ver.document as unknown as TemplateConfig;
-    const isMainInvoiceSample =
-      tpl.is_sample === true &&
-      String(tpl.type || "").toLowerCase() === "invoice" &&
-      String(tpl.name || "").trim().toLowerCase() === "main invoice";
+    const isMainInvoiceSample = isMainInvoiceSampleTemplate(
+      tpl as { type?: string | null; is_sample?: boolean | null; name?: string | null },
+    );
     const html =
       isMainInvoiceSample
         ? blankInvoiceHtml()

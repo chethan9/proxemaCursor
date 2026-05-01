@@ -81,12 +81,10 @@ function NavigationRouteProbe() {
   const router = useRouter();
   const t0Ref = useRef(0);
   useEffect(() => {
-    const onStart = (url: string) => {
+    const onStart = () => {
       t0Ref.current = performance.now();
     };
-    const onComplete = (url: string) => {
-      const deltaMs = Math.round(performance.now() - t0Ref.current);
-    };
+    const onComplete = () => {};
     router.events.on("routeChangeStart", onStart);
     router.events.on("routeChangeComplete", onComplete);
     return () => {
@@ -192,10 +190,11 @@ function Providers({ children }: { children: React.ReactNode }) {
           <RecentMutationsProvider>
             <LoadingProvider>
               <LocaleDirSync />
-              <DbTranslationOverlay />
               <TopProgressBar />
-              <Shell>{children}</Shell>
-              <GlobalScrollButton />
+              <I18nReadyGate>
+                <Shell>{children}</Shell>
+                <GlobalScrollButton />
+              </I18nReadyGate>
               <IncompleteOnboardingPrompt />
               <BlockingOverlay />
             </LoadingProvider>
@@ -242,43 +241,66 @@ function App({ Component, pageProps }: AppProps) {
   );
 }
 
-function DbTranslationOverlay() {
+function I18nReadyGate({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
-  const loadedLanguagesRef = useRef<Set<string>>(new Set());
+  const [ready, setReady] = useState(false);
+  const mergedLanguagesRef = useRef<Set<string>>(new Set());
+  const seqRef = useRef(0);
+
   useEffect(() => {
-    let cancelled = false;
     const lang = i18n.language;
-    if (!lang || loadedLanguagesRef.current.has(lang)) return;
+    if (!lang) {
+      setReady(true);
+      return;
+    }
+    const seq = ++seqRef.current;
+    setReady(false);
+
     const buildId =
       typeof process !== "undefined" ? process.env.NEXT_PUBLIC_APP_BUILD_ID?.trim() : "";
     const bust = buildId ? `?v=${encodeURIComponent(buildId)}` : "";
+
     (async () => {
       try {
-        await Promise.all(
-          NAMESPACES.map(async (ns) => {
-            const res = await fetch(
-              `/api/i18n/${encodeURIComponent(lang)}/${encodeURIComponent(ns)}${bust}`,
-            );
-            if (!res.ok) return;
-            const merged = await res.json();
-            if (cancelled) return;
-            // Deep-merge file + DB bundles so new keys from deploy/API are never skipped
-            // when hasResourceBundle was already true from SSR/static preload.
-            i18n.addResourceBundle(lang, ns, merged, true, true);
-          }),
-        );
-        if (!cancelled) {
-          loadedLanguagesRef.current.add(lang);
+        // Ensure static/file namespaces are loaded first.
+        await i18n.loadNamespaces([...NAMESPACES]);
+
+        // Then deep-merge DB overrides + file bundle snapshot from API.
+        if (!mergedLanguagesRef.current.has(lang)) {
+          await Promise.all(
+            NAMESPACES.map(async (ns) => {
+              const res = await fetch(
+                `/api/i18n/${encodeURIComponent(lang)}/${encodeURIComponent(ns)}${bust}`,
+              );
+              if (!res.ok) return;
+              const merged = await res.json();
+              i18n.addResourceBundle(lang, ns, merged, true, true);
+            }),
+          );
+          mergedLanguagesRef.current.add(lang);
         }
       } catch {
-        /* network errors → keep file-based fallback */
+        /* keep static file-based translations on network failure */
+      } finally {
+        if (seqRef.current === seq) {
+          setReady(true);
+        }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [i18n, i18n.language]);
-  return null;
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div
+          className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary"
+          aria-label="Loading translations"
+        />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 
 export default appWithTranslation(App, nextI18NextConfig);

@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   User,
   Mail,
-  Phone,
   MapPin,
   Package,
   Truck,
@@ -38,7 +37,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getStore } from "@/services/storeService";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
-import { useToast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
@@ -49,7 +47,6 @@ import { useBlockingEffect } from "@/contexts/LoadingProvider";
 import { useTranslation } from "next-i18next";
 import { formatDateTime } from "@/lib/format-number";
 import { listTemplates } from "@/services/templateService";
-import { getLatestInvoicePrintByOrderIds } from "@/services/templateRenderService";
 import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
 import { buildOrderTemplatePdfUrl } from "@/lib/templates/order-template-pdf-url";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -65,20 +62,6 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; rin
 };
 
 const STATUS_OPTIONS = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
-
-function getPaymentBadge(status: string | null | undefined): { label: string; className: string } {
-  const s = (status || "").toLowerCase();
-  if (s === "completed" || s === "processing" || s === "on-hold") {
-    return { label: "Payment OK", className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" };
-  }
-  if (s === "failed") {
-    return { label: "Payment Failed", className: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900" };
-  }
-  if (s === "refunded" || s === "cancelled") {
-    return { label: "Payment Reversed", className: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900" };
-  }
-  return { label: "Payment Pending", className: "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700" };
-}
 
 function fmtDateTime(s?: string | null, locale?: string) {
   if (!s) return "—";
@@ -139,13 +122,10 @@ export default function OrderDetailsPage() {
   const fallbackReturn = `/sites/${storeId}/orders`;
   const rawReturnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "";
   const returnTo = rawReturnTo && rawReturnTo.startsWith("/") ? rawReturnTo : fallbackReturn;
-  const { toast } = useToast();
   const { t, i18n } = useTranslation("site");
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState("");
   const [noteIsCustomer, setNoteIsCustomer] = useState(false);
-  const [savingStatus, setSavingStatus] = useState<string | null>(null);
-  const [localNotes, setLocalNotes] = useState<Array<{ note: string; date_created: string; author?: string }>>([]);
 
   const { data: store } = useQuery({ queryKey: queryKeys.store(storeId), queryFn: () => getStore(storeId), enabled: !!storeId, staleTime: 60_000 });
   const { data: order, isLoading } = useQuery<OrderRow | null>({
@@ -225,7 +205,6 @@ export default function OrderDetailsPage() {
     pending: "pending",
   };
   const statusLabel = (s: string) => t(`orderDetail.statuses.${STATUS_LABEL_KEYS[s] || "pending"}`);
-  const paymentBadge = getPaymentBadge(order?.status);
 
   const { data: invoiceTemplates = [] } = useQuery({
     queryKey: ["templates", "invoice"],
@@ -233,14 +212,6 @@ export default function OrderDetailsPage() {
     staleTime: 60_000,
     enabled: !!orderId,
   });
-  const invoiceTemplateIds = useMemo(() => invoiceTemplates.map((tpl) => tpl.id), [invoiceTemplates]);
-  const { data: invoicePrintedByOrder = {} } = useQuery({
-    queryKey: ["order-details", "invoice-print-status", orderId, invoiceTemplateIds],
-    queryFn: () => getLatestInvoicePrintByOrderIds([orderId], invoiceTemplateIds),
-    enabled: !!orderId && invoiceTemplateIds.length > 0,
-    staleTime: 20_000,
-  });
-  const lastInvoicePrint = invoicePrintedByOrder[orderId];
   const defaultInvoiceTemplate = useMemo(
     () => resolveDefaultTemplateForPrint(invoiceTemplates, "invoice", clientId),
     [invoiceTemplates, clientId],
@@ -388,20 +359,6 @@ export default function OrderDetailsPage() {
                         {raw.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.txnId")}</dt><dd className="text-right font-mono text-xs truncate">{raw.transaction_id}</dd></div>}
                         <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.paidOn")}</dt><dd className="text-right">{fmtDateTime(raw.date_paid, i18n.language)}</dd></div>
                         <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.updated")}</dt><dd className="text-right">{fmtDateTime(order.date_modified, i18n.language)}</dd></div>
-                        <div className="pt-1 border-t border-border">
-                          <dt className="text-muted-foreground text-xs mb-1">Invoice status</dt>
-                          <dd className="flex flex-wrap items-center gap-1.5">
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${paymentBadge.className}`}>
-                              {paymentBadge.label}
-                            </span>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${lastInvoicePrint ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" : "bg-muted text-muted-foreground ring-border"}`}
-                              title={lastInvoicePrint ? `Last printed ${fmtDateTime(lastInvoicePrint.rendered_at, i18n.language)}` : "No invoice print detected yet"}
-                            >
-                              {lastInvoicePrint ? "Invoice Printed" : "Not Printed"}
-                            </span>
-                          </dd>
-                        </div>
                         {raw.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">{t("orderDetail.details.customerNote")}</dt><dd className="text-xs">{raw.customer_note}</dd></div>}
                       </dl>
                     </CardContent>
@@ -518,10 +475,10 @@ export default function OrderDetailsPage() {
                     <div className="space-y-1.5">
                       {STATUS_OPTIONS.filter((s) => s !== order.status).map((s) => {
                         const style = STATUS_STYLES[s] || STATUS_STYLES.pending;
-                        const isSaving = savingStatus === s;
+                        const isSaving = statusMutation.isPending && statusMutation.variables === s;
                         const Icon = style.Icon;
                         return (
-                          <button key={s} disabled={!!savingStatus} onClick={() => handleStatusChange(s)} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs capitalize font-medium transition-all ring-1 hover:ring-2 disabled:opacity-50 disabled:cursor-not-allowed", style.bg, style.text, style.ring)}>
+                          <button key={s} disabled={statusMutation.isPending} onClick={() => handleStatusChange(s)} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs capitalize font-medium transition-all ring-1 hover:ring-2 disabled:opacity-50 disabled:cursor-not-allowed", style.bg, style.text, style.ring)}>
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
                             <span>{statusLabel(s)}</span>
                             {isSaving && <Check className="h-3 w-3 ml-auto" />}

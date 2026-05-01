@@ -3,7 +3,7 @@ import { renderHtmlToPdf } from "./render-pdf";
 import { resolveOrderContext } from "./resolve-order";
 import { blankInvoiceHtml, type TemplateConfig } from "./document";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MAIN_INVOICE_SAMPLE_NAME } from "@/lib/template-resolve-default";
+import { isMainInvoiceSampleTemplate } from "@/lib/template-resolve-default";
 
 export interface RenderedInvoice {
   pdf: Buffer;
@@ -33,11 +33,9 @@ export async function renderInvoicePdfForOrder(
   if (!ver) throw new Error("Template version missing");
 
   const cfg = ver.document as unknown as TemplateConfig;
-  const isMainInvoiceSample =
-    tpl.type === "invoice" &&
-    (tpl as { is_sample?: boolean }).is_sample === true &&
-    typeof tpl.name === "string" &&
-    tpl.name.trim().toLowerCase() === MAIN_INVOICE_SAMPLE_NAME.toLowerCase();
+  const isMainInvoiceSample = isMainInvoiceSampleTemplate(
+    tpl as { type?: string | null; is_sample?: boolean | null; name?: string | null },
+  );
   const html = isMainInvoiceSample
     ? blankInvoiceHtml()
     : (typeof cfg?.html === "string" ? cfg.html : "");

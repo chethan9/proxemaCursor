@@ -13,7 +13,6 @@ import { useOrderDistinctStatuses } from "@/hooks/queries/useOrderDistinctStatus
 import { orderStatusDisplayLabel } from "@/lib/order-status-ui";
 import { formatDate } from "@/lib/format-number";
 import { listTemplates } from "@/services/templateService";
-import { getLatestInvoicePrintByOrderIds } from "@/services/templateRenderService";
 import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
 import { buildOrderTemplatePdfUrl } from "@/lib/templates/order-template-pdf-url";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -38,20 +37,6 @@ const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string; rin
 const STATUS_CHANGE_OPTIONS = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
 const CUSTOM_STATUS_STYLE = { dot: "bg-muted-foreground/50", bg: "bg-muted/70 dark:bg-muted/25", text: "text-foreground", ring: "ring-border", Icon: Tag };
-
-function getPaymentBadge(status: string | null | undefined): { label: string; className: string } {
-  const s = (status || "").toLowerCase();
-  if (s === "completed" || s === "processing" || s === "on-hold") {
-    return { label: "Payment OK", className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" };
-  }
-  if (s === "failed") {
-    return { label: "Payment Failed", className: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900" };
-  }
-  if (s === "refunded" || s === "cancelled") {
-    return { label: "Payment Reversed", className: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900" };
-  }
-  return { label: "Payment Pending", className: "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700" };
-}
 
 export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) {
   const { t, i18n } = useTranslation("site");
@@ -98,7 +83,6 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
   const custName = getCustomerName(orderFull.billing);
   const custEmail = getCustomerEmail(orderFull.billing);
   const currency = orderFull.currency || "KWD";
-  const paymentBadge = getPaymentBadge(orderFull.status);
   const computedSubtotal = lineItems.reduce((s, li) => {
     const sub = Number(li.subtotal || 0);
     return s + (sub > 0 ? sub : Number(li.total || 0));
@@ -127,18 +111,10 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
     queryFn: () => listTemplates("invoice"),
     staleTime: 60_000,
   });
-  const invoiceTemplateIds = useMemo(() => invoiceTemplates.map((tpl) => tpl.id), [invoiceTemplates]);
   const defaultInvoiceTemplate = useMemo(
     () => resolveDefaultTemplateForPrint(invoiceTemplates, "invoice", clientId),
     [invoiceTemplates, clientId],
   );
-  const { data: invoicePrintedByOrder = {} } = useQuery({
-    queryKey: ["order-row-expanded", "invoice-print-status", orderFull.id, invoiceTemplateIds],
-    queryFn: () => getLatestInvoicePrintByOrderIds([orderFull.id], invoiceTemplateIds),
-    enabled: !!orderFull.id && invoiceTemplateIds.length > 0,
-    staleTime: 20_000,
-  });
-  const lastInvoicePrint = invoicePrintedByOrder[orderFull.id];
   const handleQuickInvoicePrint = () => {
     if (!defaultInvoiceTemplate) {
       toast({ title: "No invoice template", description: "Create or publish an invoice template first.", variant: "destructive" });
@@ -292,17 +268,6 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
             )}
             <div className="text-xs text-muted-foreground pt-1">
               Payment: <span className="text-foreground">{orderFull.payment_method_title || orderFull.payment_method || "—"}</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${paymentBadge.className}`}>
-                {paymentBadge.label}
-              </span>
-              <span
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${lastInvoicePrint ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" : "bg-muted text-muted-foreground ring-border"}`}
-                title={lastInvoicePrint ? `Last printed ${formatDate(lastInvoicePrint.rendered_at, i18n.language)}` : "No invoice print detected yet"}
-              >
-                {lastInvoicePrint ? "Invoice Printed" : "Not Printed"}
-              </span>
             </div>
           </div>
         </div>

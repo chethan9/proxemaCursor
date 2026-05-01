@@ -3,6 +3,18 @@ import type { TemplateRow, TemplateType } from "@/lib/templates/document";
 /** Platform invoice sample used when no explicit default is stored. */
 export const MAIN_INVOICE_SAMPLE_NAME = "Main Invoice";
 
+export function isMainInvoiceSampleTemplate(input: {
+  type?: string | null;
+  is_sample?: boolean | null;
+  name?: string | null;
+}): boolean {
+  return (
+    String(input.type || "").toLowerCase() === "invoice" &&
+    input.is_sample === true &&
+    String(input.name || "").trim().toLowerCase() === MAIN_INVOICE_SAMPLE_NAME.toLowerCase()
+  );
+}
+
 /**
  * Single rule for “which template prints first” across orders, bulk print, and menus.
  * 1) Row flagged `is_default_for_type` (sample or custom)
@@ -24,10 +36,7 @@ export function resolveDefaultTemplateForPrint(
 
   if (type === "invoice") {
     const main = list.find(
-      (t) =>
-        t.is_sample &&
-        typeof t.name === "string" &&
-        t.name.trim().toLowerCase() === MAIN_INVOICE_SAMPLE_NAME.toLowerCase(),
+      (t) => isMainInvoiceSampleTemplate(t),
     );
     if (main) return main;
   }
