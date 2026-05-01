@@ -94,6 +94,8 @@ export interface OrderContext {
     display_status: string;
     /** Visual tone for invoice header status pill (success, info, warning, …). */
     invoice_badge_tone: string;
+    /** Inline SVG for pill icon (check / x / etc.) — use {{{payment.invoice_badge_icon}}} in templates. */
+    invoice_badge_icon: string;
     transaction_id: string;
   };
   shipping_method: {
@@ -233,7 +235,7 @@ function resolvePaymentStatusLabels(orderStatus: string): {
   return { status, statusLabel, paymentState, paymentStateLabel, displayStatus };
 }
 
-/** Maps Woo order status → CSS tone for invoice PDF status pill (next to invoice #). */
+/** Maps Woo order status → CSS tone when payment-derived tone does not apply. */
 function invoiceOrderStatusBadgeTone(orderStatus: string): string {
   const s = String(orderStatus || "").trim().toLowerCase();
   if (s === "completed") return "success";
@@ -244,6 +246,34 @@ function invoiceOrderStatusBadgeTone(orderStatus: string): string {
   if (s === "cancelled") return "neutral";
   if (s === "refunded") return "violet";
   return "muted";
+}
+
+/** Invoice pill color follows payment semantics first — fixes “Paid” + blue (processing) mismatch. */
+function invoicePaymentBadgeTone(paymentState: string, orderStatus: string): string {
+  const ps = String(paymentState || "").trim().toLowerCase();
+  if (ps === "paid") return "success";
+  if (ps === "failed") return "danger";
+  if (ps === "reversed") return "neutral";
+  if (ps === "pending") return "muted";
+  return invoiceOrderStatusBadgeTone(String(orderStatus || ""));
+}
+
+/** Compact SVG for PDF/HTML invoice pills — uses currentColor. */
+const BADGE_ICON_SVG = {
+  paid: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><path d="M5 10.5l3 3 7-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  failed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  reversed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M6 10h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  pending: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>`,
+  fallback: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg>`,
+} as const;
+
+function invoiceBadgeIconSvg(paymentState: string): string {
+  const ps = String(paymentState || "").trim().toLowerCase();
+  if (ps === "paid") return BADGE_ICON_SVG.paid;
+  if (ps === "failed") return BADGE_ICON_SVG.failed;
+  if (ps === "reversed") return BADGE_ICON_SVG.reversed;
+  if (ps === "pending") return BADGE_ICON_SVG.pending;
+  return BADGE_ICON_SVG.fallback;
 }
 
 function buildVariation(meta: Array<{ key: string; value: string }>): Record<string, string> & { text: string } {
@@ -427,7 +457,8 @@ export async function resolveOrderContext(
       payment_state: paymentStatus.paymentState,
       payment_state_label: paymentStatus.paymentStateLabel,
       display_status: paymentStatus.displayStatus,
-      invoice_badge_tone: invoiceOrderStatusBadgeTone(String(order.status || "")),
+      invoice_badge_tone: invoicePaymentBadgeTone(paymentStatus.paymentState, String(order.status || "")),
+      invoice_badge_icon: invoiceBadgeIconSvg(paymentStatus.paymentState),
       transaction_id: String(rawData.transaction_id || ""),
     },
     shipping_method: {
@@ -545,7 +576,8 @@ export function getSampleContext(templateMeta: { name: string; type: string }): 
       payment_state: "paid",
       payment_state_label: "Paid",
       display_status: "Paid (Processing)",
-      invoice_badge_tone: "info",
+      invoice_badge_tone: "success",
+      invoice_badge_icon: BADGE_ICON_SVG.paid,
       transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc",
     },
     shipping_method: { name: "Standard Shipping", title: "Standard Shipping", tracking_number: "1Z999AA10123456784" },

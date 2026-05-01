@@ -199,11 +199,11 @@ export function blankInvoiceHtml(): string {
   .beam-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
+    align-items: flex-end;
+    margin-bottom: 6px;
     gap: 12px;
     border-bottom: 1px solid var(--line);
-    padding-bottom: 10px;
+    padding-bottom: 6px;
   }
   .beam-brand {
     display: flex;
@@ -211,9 +211,10 @@ export function blankInvoiceHtml(): string {
     gap: 6px;
     min-width: 0;
     flex: 1 1 auto;
-    justify-content: flex-start;
+    justify-content: flex-end;
     align-items: flex-start;
     text-align: left;
+    padding-top: 8px;
   }
   .beam-site-name {
     font-size: 20px;
@@ -242,7 +243,7 @@ export function blankInvoiceHtml(): string {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 3px;
+    gap: 6px;
     color: var(--ink);
     flex-shrink: 0;
     text-align: right;
@@ -259,7 +260,8 @@ export function blankInvoiceHtml(): string {
     letter-spacing: -0.02em;
     text-transform: uppercase;
     color: var(--ink);
-    line-height: 1.1;
+    line-height: 1.05;
+    margin-top: 0;
   }
   .beam-invoice-meta {
     display: flex;
@@ -267,7 +269,7 @@ export function blankInvoiceHtml(): string {
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 2px;
+    margin-top: 0;
   }
   .beam-invoice-id {
     font-size: 14px;
@@ -275,10 +277,16 @@ export function blankInvoiceHtml(): string {
     font-weight: 700;
     letter-spacing: 0.02em;
   }
+  .beam-invoice-id--hero {
+    font-size: 17px;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
   .beam-status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     padding: 8px 16px;
     border-radius: 999px;
     font-size: 14px;
@@ -288,76 +296,56 @@ export function blankInvoiceHtml(): string {
     border: 1px solid transparent;
     white-space: nowrap;
   }
-  .beam-status-pill::before {
-    content: "";
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
+  .beam-status-pill__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
+    width: 16px;
+    height: 16px;
+  }
+  .beam-status-pill__glyph svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+  }
+  .beam-status-pill__label {
+    line-height: 1.2;
   }
   .beam-status-pill--success {
-    background: #ecfdf5;
-    border-color: #6ee7b7;
-    color: #065f46;
-  }
-  .beam-status-pill--success::before {
-    background: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+    background: #d1fae5;
+    border-color: #34d399;
+    color: #047857;
   }
   .beam-status-pill--info {
-    background: #eff6ff;
-    border-color: #93c5fd;
-    color: #1e3a8a;
-  }
-  .beam-status-pill--info::before {
-    background: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1e40af;
   }
   .beam-status-pill--warning {
-    background: #fffbeb;
-    border-color: #fcd34d;
+    background: #fef3c7;
+    border-color: #fbbf24;
     color: #92400e;
   }
-  .beam-status-pill--warning::before {
-    background: #f59e0b;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
-  }
   .beam-status-pill--muted {
-    background: #f8fafc;
-    border-color: #e2e8f0;
+    background: #f1f5f9;
+    border-color: #cbd5e1;
     color: #475569;
   }
-  .beam-status-pill--muted::before {
-    background: #94a3b8;
-    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.35);
-  }
   .beam-status-pill--danger {
-    background: #fef2f2;
-    border-color: #fecaca;
+    background: #fee2e2;
+    border-color: #f87171;
     color: #991b1b;
   }
-  .beam-status-pill--danger::before {
-    background: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35);
-  }
   .beam-status-pill--neutral {
-    background: #fafafa;
-    border-color: #e4e4e7;
+    background: #f4f4f5;
+    border-color: #d4d4d8;
     color: #3f3f46;
   }
-  .beam-status-pill--neutral::before {
-    background: #71717a;
-    box-shadow: 0 0 0 3px rgba(113, 113, 122, 0.3);
-  }
   .beam-status-pill--violet {
-    background: #f5f3ff;
-    border-color: #c4b5fd;
+    background: #ede9fe;
+    border-color: #a78bfa;
     color: #5b21b6;
-  }
-  .beam-status-pill--violet::before {
-    background: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.35);
   }
   /* Thank-you (top-left) + subtotal rows (top-right); payment (bottom-left) + grand total (bottom-right) share one row with the thick divider. */
   .beam-settlement-grid {
@@ -695,13 +683,16 @@ export function blankInvoiceHtml(): string {
           {{/if}}
         </div>
         <div class="beam-header-right">
-          <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">{{payment.payment_state_label}}</span>
-          <div class="beam-title">Invoice</div>
           {{#ifFilled order.invoice_number}}
           <div class="beam-invoice-meta">
-            <span class="beam-invoice-id">#{{order.invoice_number}}</span>
+            <span class="beam-invoice-id beam-invoice-id--hero">#{{order.invoice_number}}</span>
           </div>
           {{/ifFilled}}
+          <span class="beam-status-pill beam-status-pill--{{payment.invoice_badge_tone}}">
+            <span class="beam-status-pill__glyph">{{{payment.invoice_badge_icon}}}</span>
+            <span class="beam-status-pill__label">{{payment.payment_state_label}}</span>
+          </span>
+          <div class="beam-title">Invoice</div>
         </div>
       </header>
 
