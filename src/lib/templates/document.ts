@@ -145,7 +145,7 @@ export function blankInvoiceHtml(): string {
 <title>Invoice {{order.invoice_number}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #0f1729;
@@ -166,7 +166,7 @@ export function blankInvoiceHtml(): string {
     display: flex;
     flex-direction: column;
     background: var(--bg);
-    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: Poppins, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     color: var(--ink);
     font-size: 14px;
     line-height: 1.5;
@@ -255,10 +255,20 @@ export function blankInvoiceHtml(): string {
   .beam-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px 14px;
+    column-gap: 36px;
+    row-gap: 14px;
     margin-bottom: 10px;
     border-bottom: 1px solid var(--line);
-    padding-bottom: 10px;
+    padding-bottom: 14px;
+  }
+  .beam-details > div {
+    min-width: 0;
+    padding-right: 8px;
+  }
+  .beam-details > div:last-child {
+    padding-right: 0;
+    padding-left: 8px;
+    border-left: 1px solid var(--line-soft);
   }
   .beam-section-head {
     font-size: 11px;
@@ -269,11 +279,11 @@ export function blankInvoiceHtml(): string {
     color: var(--ink);
   }
   .beam-info {
-    margin-bottom: 3px;
+    margin-bottom: 7px;
     display: flex;
-    gap: 6px;
+    gap: 10px;
     align-items: baseline;
-    line-height: 1.15;
+    line-height: 1.35;
   }
   .beam-info:last-child { margin-bottom: 0; }
   .beam-info-label {
@@ -457,19 +467,51 @@ export function blankInvoiceHtml(): string {
     text-align: center;
   }
   @media print {
-    body { background: #fff !important; padding: 0; }
-    .beam-outer { padding: 0; }
+    html { height: 100%; }
+    body {
+      background: #fff !important;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .beam-outer {
+      padding: 0;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
     .beam-card {
       box-shadow: none;
       border-radius: 0;
-      min-height: auto;
       max-width: none;
       padding: 0;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .beam-main {
+      flex: 1 1 auto;
+    }
+    .beam-footer {
+      margin-top: auto;
     }
   }
   @media (max-width: 640px) {
     .beam-card { padding: 14px 12px; min-height: auto; }
-    .beam-details { grid-template-columns: 1fr; gap: 20px; }
+    .beam-details {
+      grid-template-columns: 1fr;
+      column-gap: 0;
+      row-gap: 20px;
+    }
+    .beam-details > div:last-child {
+      padding-left: 0;
+      border-left: none;
+      border-top: 1px solid var(--line-soft);
+      padding-top: 16px;
+    }
     .beam-title { font-size: 22px; }
     .beam-totals { max-width: 100%; }
     .beam-thumb { width: 34px; height: 40px; }
