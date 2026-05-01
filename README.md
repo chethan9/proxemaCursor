@@ -20,6 +20,10 @@ Super admins can manage integration settings (encrypted API token, account IDs, 
 
 Each production bundle includes `NEXT_PUBLIC_APP_BUILD_ID` (typically `VERCEL_GIT_COMMIT_SHA`). The app compares it to `localStorage` and reloads once when a new deploy is detected, so users are not asked to hard-refresh after releases. Long-lived tabs poll `GET /api/build-info` every five minutes.
 
+## Navigation (menu editor)
+
+Pages under `/admin/*` should wrap content with **`AppLayout` only**, not `SettingsLayout`. Otherwise the primary sidebar / panel submenu plus the Settings inner nav produce duplicate columns. See comments on `SettingsLayout` and `MENU_REGISTRY` in the codebase.
+
 ## Publish
 
 Default Git remote `origin` targets the repo above. Push with:

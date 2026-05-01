@@ -408,7 +408,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     };
     const ric = window.requestIdleCallback?.bind(window);
     if (ric) {
-      const id = ric(run, { timeout: 1500 });
+      const id = ric(run, { timeout: 600 });
       return () => {
         cancelled = true;
         window.cancelIdleCallback?.(id);
@@ -464,6 +464,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     "admin-payment-logs": "adminPaymentLogs",
     "admin-activity": "adminActivity",
     "admin-referrals": "adminReferrals",
+    "admin-cloudflare-images": "adminCloudflareImages",
     "referrals": "referrals",
     "settings": "settings",
   };
@@ -483,6 +484,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
     const link = (
       <Link
         href={node.href}
+        prefetch
+        onPointerDown={() => prefetchNavRoute(node.href)}
         onClick={() => beginSidebarNavigation(node.href!)}
         onMouseEnter={() => prefetchNavRoute(node.href)}
         onFocus={() => prefetchNavRoute(node.href)}
@@ -620,6 +623,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                 setActivePanelId(node.id);
               }
             }}
+            onPointerDown={() => firstChild?.href && prefetchNavRoute(firstChild.href)}
             onMouseEnter={() => firstChild?.href && prefetchNavRoute(firstChild.href)}
             onFocus={() => firstChild?.href && prefetchNavRoute(firstChild.href)}
             aria-expanded={isOpen}
@@ -671,6 +675,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     <li key={child.id}>
                       <Link
                         href={child.href}
+                        prefetch
+                        onPointerDown={() => prefetchNavRoute(child.href)}
                         onClick={() => beginSidebarNavigation(child.href!)}
                         onMouseEnter={() => prefetchNavRoute(child.href)}
                         onFocus={() => prefetchNavRoute(child.href)}
@@ -806,7 +812,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                           <li key={site.id}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Link href={href} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
+                                <Link href={href} prefetch onPointerDown={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
                                   isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
                                   <span className={cn("absolute top-0.5 end-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
@@ -822,7 +828,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                       }
                       return (
                         <li key={site.id}>
-                          <Link href={href} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} aria-current={isActive ? "page" : undefined} className={cn(
+                          <Link href={href} prefetch onPointerDown={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} aria-current={isActive ? "page" : undefined} className={cn(
                             "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
                             isActive
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -978,6 +984,8 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                   <li key={child.id}>
                     <Link
                       href={child.href}
+                      prefetch
+                      onPointerDown={() => prefetchNavRoute(child.href)}
                       onClick={() => beginSidebarNavigation(child.href!)}
                       onMouseEnter={() => prefetchNavRoute(child.href)}
                       onFocus={() => prefetchNavRoute(child.href)}

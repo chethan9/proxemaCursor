@@ -55,6 +55,12 @@ export const GROUP_ICONS: Record<string, string> = {
   "System": "Settings",
 };
 
+/**
+ * Default menu seeds merged with DB editor config. Items here surface in the primary sidebar / panel.
+ *
+ * **Layout:** Pages whose `href` is under `/admin/*` should use `AppLayout` only — not `SettingsLayout` —
+ * so inline panel submenus stay the only secondary nav (avoid nested “settings” columns).
+ */
 export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "dashboard", defaultLabel: "Health", defaultIcon: "Activity", href: "/", defaultGroup: "Overview", defaultOrder: 0 },
   { id: "clients", defaultLabel: "Clients", defaultIcon: "Users", href: "/clients", defaultGroup: "Management", defaultOrder: 0, permission: PERMISSIONS.CLIENTS_VIEW, superAdminOnly: true },

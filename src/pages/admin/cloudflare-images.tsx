@@ -4,7 +4,7 @@ import Link from "next/link";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { SettingsLayout } from "@/components/layout/SettingsLayout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -654,9 +654,9 @@ function Inner() {
 
 export default function AdminCloudflareImagesPage() {
   return (
-    <SettingsLayout title="Cloudflare Images" requireSuperAdmin>
+    <AppLayout title="Cloudflare Images" requireSuperAdmin bypassBillingGate>
       <Inner />
-    </SettingsLayout>
+    </AppLayout>
   );
 }
 

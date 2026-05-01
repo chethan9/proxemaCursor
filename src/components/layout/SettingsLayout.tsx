@@ -1,3 +1,10 @@
+/**
+ * Settings hub layout: left column lists `/settings/*` and linked admin entries for discoverability.
+ *
+ * Do **not** wrap `/admin/*` standalone tooling pages in this layout — they already appear in the
+ * primary sidebar (and optional panel submenu). Using SettingsLayout there stacks a third nav column.
+ * Use {@link AppLayout} for `/admin/*` pages instead (see `admin/ai-settings.tsx`, `admin/cloudflare-images.tsx`).
+ */
 import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";

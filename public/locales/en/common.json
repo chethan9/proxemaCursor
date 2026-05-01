@@ -38,6 +38,7 @@
     "adminActivity": "Activity Log",
     "referrals": "Referrals",
     "adminReferrals": "Referrals",
+    "adminCloudflareImages": "Cloudflare Images",
     "moreSites": "+{{count}} more sites"
   },
   "siteNavGroups": {
