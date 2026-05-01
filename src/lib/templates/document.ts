@@ -138,210 +138,306 @@ export interface TemplateVersionRow {
 
 export function blankInvoiceHtml(): string {
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Invoice {{order.number}}</title>
+<title>Invoice {{order.invoice_number}}</title>
 <style>
-  @page { size: A4; margin: 12mm; }
+  @page { size: A4; margin: 14mm; }
   * { box-sizing: border-box; }
-  body { font-family: "Inter", "Segoe UI", Arial, sans-serif; color: #232323; font-size: 12px; line-height: 1.45; margin: 0; background: #fff; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #111827;
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 0;
+    background: #fff;
+  }
+  .inv { max-width: 100%; }
+  .inv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 4px;
+  }
+  .inv-logo {
+    max-height: 56px;
+    max-width: 240px;
+    object-fit: contain;
+    display: block;
+  }
+  .inv-header-right {
+    text-align: right;
+    font-size: 12px;
+    color: #111827;
+  }
+  .inv-store-name {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .inv-store-email {
+    color: #374151;
+  }
+  .inv-title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    margin: 14px 0 18px;
+    text-transform: uppercase;
+    color: #111827;
+  }
+  .inv-columns {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+  }
+  .inv-billing,
+  .inv-meta {
+    display: table-cell;
+    vertical-align: top;
+    width: 50%;
+  }
+  .inv-billing {
+    padding-right: 20px;
+  }
+  .inv-meta {
+    padding-left: 20px;
+  }
+  .inv-section-head {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 10px;
+    color: #111827;
+  }
+  .inv-dl dt {
+    font-weight: 700;
+    font-size: 11px;
+    color: #374151;
+    margin: 0;
+    padding-top: 6px;
+  }
+  .inv-dl dd {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    color: #111827;
+  }
+  .inv-meta .inv-dl dt {
+    padding-top: 5px;
+  }
 
-  .invoice { width: 100%; }
-  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-  .brand { display: flex; align-items: flex-start; gap: 10px; }
-  .brand-logo { width: 48px; height: 48px; object-fit: contain; filter: grayscale(100%); }
-  .brand-name { font-size: 44px; line-height: 1; letter-spacing: -0.8px; font-weight: 700; color: #151515; }
-  .brand-tagline { margin-top: 2px; font-size: 14px; color: #5a5a5a; letter-spacing: 0.1px; }
-  .invoice-head { text-align: right; }
-  .invoice-title { font-size: 54px; line-height: 0.95; letter-spacing: 1px; font-weight: 700; color: #111; }
-  .invoice-number { margin-top: 8px; font-size: 25px; font-weight: 600; color: #222; }
-  .rule { margin: 18px 0 14px; border-top: 2px solid #bdbdbd; }
+  table.inv-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 14px;
+    table-layout: fixed;
+  }
+  table.inv-items thead {
+    display: table-header-group;
+  }
+  table.inv-items thead th {
+    background: #000;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  table.inv-items thead th.col-qty,
+  table.inv-items thead th.col-price {
+    text-align: right;
+  }
+  table.inv-items tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+    font-size: 12px;
+  }
+  table.inv-items tbody tr {
+    page-break-inside: avoid;
+  }
+  table.inv-items .col-qty,
+  table.inv-items .col-price {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .inv-product-name {
+    font-weight: 600;
+    color: #111827;
+  }
+  .inv-variation {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
 
-  .meta-grid { display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px; }
-  .meta-col { display: table-cell; width: 33.333%; padding: 8px 14px 10px 0; vertical-align: top; border-right: 1px solid #d6d6d6; }
-  .meta-col:last-child { border-right: 0; padding-right: 0; padding-left: 14px; }
-  .meta-col:nth-child(2) { padding-left: 14px; }
-  .meta-label { font-size: 11px; letter-spacing: 0.8px; color: #5f5f5f; font-weight: 700; text-transform: uppercase; margin-top: 8px; }
-  .meta-value { font-size: 18px; color: #1f1f1f; margin-top: 2px; font-weight: 500; }
+  .inv-totals-wrap {
+    display: flex;
+    justify-content: flex-end;
+    page-break-inside: avoid;
+    margin-top: 4px;
+  }
+  .inv-totals {
+    width: 100%;
+    max-width: 300px;
+  }
+  .inv-total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 3px 0;
+    font-size: 12px;
+    color: #374151;
+  }
+  .inv-total-row span:last-child {
+    font-weight: 500;
+    color: #111827;
+    text-align: right;
+  }
+  .inv-ship-note {
+    font-size: 10px;
+    color: #6b7280;
+    margin: -2px 0 8px;
+    text-align: right;
+  }
+  .inv-grand {
+    border-top: 2px solid #111827;
+    border-bottom: 2px solid #111827;
+    padding: 10px 0 !important;
+    margin-top: 6px;
+    font-weight: 800;
+    font-size: 14px;
+    color: #111827 !important;
+  }
+  .inv-pay-note {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #374151;
+    text-align: right;
+  }
 
-  .section-rule { border-top: 1px dashed #cfcfcf; margin: 10px 0 12px; }
-  .party-grid { display: table; width: 100%; table-layout: fixed; margin-bottom: 10px; }
-  .party-col { display: table-cell; width: 50%; vertical-align: top; padding-right: 16px; }
-  .party-col:last-child { padding-left: 16px; padding-right: 0; border-left: 1px solid #d6d6d6; }
-  .section-title { font-size: 11px; letter-spacing: 1.2px; color: #4f4f4f; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
-  .party-name { font-size: 29px; line-height: 1.05; font-weight: 700; color: #171717; margin-bottom: 6px; letter-spacing: -0.3px; }
-  .party-line { font-size: 18px; color: #2a2a2a; margin-bottom: 2px; }
-
-  table.items { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  table.items thead th { text-align: left; padding: 9px 8px; font-size: 11px; letter-spacing: 0.9px; color: #525252; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #bdbdbd; }
-  table.items tbody td { padding: 10px 8px; border-bottom: 1px dashed #d0d0d0; vertical-align: top; }
-  table.items tbody tr:last-child td { border-bottom: 1px solid #bdbdbd; }
-  .item-col { width: 39%; }
-  .sku-col { width: 18%; }
-  .qty-col { width: 10%; text-align: center; }
-  .unit-col { width: 16%; text-align: right; }
-  .total-col { width: 17%; text-align: right; font-weight: 600; }
-  .item-wrap { display: flex; gap: 8px; align-items: flex-start; }
-  .item-image { width: 48px; height: 48px; object-fit: cover; border-radius: 2px; border: 1px solid #d6d6d6; filter: grayscale(100%); flex-shrink: 0; }
-  .item-name { font-size: 16px; line-height: 1.2; font-weight: 700; color: #212121; }
-  .item-desc { margin-top: 2px; font-size: 11px; line-height: 1.35; color: #555; }
-  .sku { font-size: 14px; line-height: 1.2; color: #2f2f2f; margin-top: 7px; }
-  .qty { font-size: 16px; color: #212121; margin-top: 7px; }
-  .money { font-size: 16px; color: #212121; margin-top: 7px; }
-
-  .bottom { display: table; width: 100%; table-layout: fixed; margin-top: 10px; }
-  .bottom-left { display: table-cell; width: 57%; vertical-align: top; padding-right: 20px; }
-  .bottom-right { display: table-cell; width: 43%; vertical-align: top; }
-  .notes-body { font-size: 18px; line-height: 1.35; color: #2a2a2a; max-width: 95%; }
-  .totals-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
-  .totals-table td { padding: 5px 0; font-size: 16px; color: #303030; }
-  .totals-table td:last-child { text-align: right; }
-  .totals-table .negative { color: #232323; }
-  .totals-table .grand td { border-top: 2px solid #bdbdbd; padding-top: 10px; font-size: 37px; line-height: 1; font-weight: 700; color: #111; letter-spacing: -0.5px; }
-  .totals-table .grand td:last-child { text-align: right; }
-
-  .footer { margin-top: 16px; border-top: 2px solid #bdbdbd; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .footer-left { display: flex; align-items: center; gap: 8px; color: #262626; font-size: 16px; font-weight: 600; }
-  .footer-left img { width: 34px; height: 34px; object-fit: contain; filter: grayscale(100%); }
-  .footer-right { font-size: 19px; font-weight: 500; color: #262626; text-align: right; }
+  .inv-footer {
+    margin-top: 26px;
+    padding-top: 14px;
+    border-top: 1px solid #d1d5db;
+    text-align: center;
+    font-size: 11px;
+    page-break-inside: avoid;
+  }
+  .inv-footer a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+  .inv-footer-muted {
+    color: #9ca3af;
+  }
+  .inv-generated {
+    margin-top: 10px;
+    font-size: 10px;
+    color: #9ca3af;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
-  <div class="invoice">
-    <div class="top">
-      <div class="brand">
-        {{#if store.logo}}
-          <img src="{{store.logo}}" alt="{{store.name}}" class="brand-logo" />
-        {{else}}
-          <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png" alt="Store icon" class="brand-logo" />
-        {{/if}}
-        <div>
-          <div class="brand-name">{{default store.name "Minimal Store"}}</div>
-          <div class="brand-tagline">{{default store.tagline "Quality Products. Simple Living."}}</div>
-        </div>
-      </div>
-      <div class="invoice-head">
-        <div class="invoice-title">INVOICE</div>
-        <div class="invoice-number">#{{default order.number "INV-2024-0158"}}</div>
-      </div>
+<div class="inv">
+  <header class="inv-header">
+    <div class="inv-header-left">
+      {{#if store.logo}}
+        <img class="inv-logo" src="{{store.logo}}" alt="{{store.name}}" />
+      {{else}}
+        <div class="inv-store-name" style="font-size:17px;font-weight:800">{{store.name}}</div>
+      {{/if}}
     </div>
-    <div class="rule"></div>
-
-    <div class="meta-grid">
-      <div class="meta-col">
-        <div class="meta-label">Invoice Date</div>
-        <div class="meta-value">{{date order.created_at "long"}}</div>
-        <div class="meta-label">Order Date</div>
-        <div class="meta-value">{{date order.date_iso "long"}}</div>
-      </div>
-      <div class="meta-col">
-        <div class="meta-label">Payment Method</div>
-        <div class="meta-value">{{default payment.title "Credit Card"}}</div>
-        <div class="meta-label">Order Number</div>
-        <div class="meta-value">#{{default order.number "10258"}}</div>
-      </div>
-      <div class="meta-col">
-        <div class="meta-label">Customer ID</div>
-        <div class="meta-value">#{{default customer.id "CUS-1045"}}</div>
-        <div class="meta-label">Shipping Method</div>
-        <div class="meta-value">{{default shipping_method.title "Free Shipping"}}</div>
-      </div>
+    <div class="inv-header-right">
+      <div class="inv-store-name">{{store.name}}</div>
+      {{#if store.email}}<div class="inv-store-email">{{store.email}}</div>{{/if}}
     </div>
+  </header>
 
-    <div class="section-rule"></div>
+  <h1 class="inv-title">Invoice</h1>
 
-    <div class="party-grid">
-      <div class="party-col">
-        <div class="section-title">From</div>
-        <div class="party-name">{{default store.name "Minimal Store"}}</div>
-        <div class="party-line">{{default store.address.line1 "123 Commerce Street"}}</div>
-        <div class="party-line">{{default store.address.city "New York"}}, {{default store.address.state "NY"}} {{default store.address.zip "10001"}}, {{default store.address.country "USA"}}</div>
-        {{#if store.phone}}<div class="party-line">Phone: {{store.phone}}</div>{{/if}}
-        {{#if store.email}}<div class="party-line">Email: {{store.email}}</div>{{/if}}
-        {{#if store.website}}<div class="party-line">Website: {{store.website}}</div>{{/if}}
-      </div>
-      <div class="party-col">
-        <div class="section-title">Bill To</div>
-        <div class="party-name">{{default billing.name "John Doe"}}</div>
-        {{#if billing.address.line1}}<div class="party-line">{{billing.address.line1}}</div>{{/if}}
-        {{#if billing.address.line2}}<div class="party-line">{{billing.address.line2}}</div>{{/if}}
-        <div class="party-line">{{default billing.city "Springfield"}}, {{default billing.state "IL"}} {{default billing.zip "62704"}}, {{default billing.country "USA"}}</div>
-        {{#if billing.email}}<div class="party-line">Email: {{billing.email}}</div>{{/if}}
-        {{#if billing.phone}}<div class="party-line">Phone: {{billing.phone}}</div>{{/if}}
-      </div>
+  <div class="inv-columns">
+    <div class="inv-billing">
+      <div class="inv-section-head">Billing Details</div>
+      <dl class="inv-dl">
+        <dt>Name</dt><dd>{{default billing.name "—"}}</dd>
+        <dt>Country</dt><dd>{{default billing.country "—"}}</dd>
+        <dt>Area</dt><dd>{{default billing.city "—"}}</dd>
+        <dt>Street</dt><dd>{{default billing.address.line1 "—"}}</dd>
+        <dt>Block</dt><dd>{{default billing.address.line2 "—"}}</dd>
+        <dt>Avenue</dt><dd>{{default billing.state "—"}}</dd>
+        <dt>Phone</dt><dd>{{default billing.phone "—"}}</dd>
+        <dt>Email</dt><dd>{{default billing.email "—"}}</dd>
+      </dl>
     </div>
-    <div class="section-rule"></div>
-
-    <table class="items">
-      <thead>
-        <tr>
-          <th class="item-col">Item</th>
-          <th class="sku-col">SKU</th>
-          <th class="qty-col">Quantity</th>
-          <th class="unit-col">Unit Price</th>
-          <th class="total-col">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each items}}
-        <tr>
-          <td class="item-col">
-            <div class="item-wrap">
-              {{#if image}}
-                <img src="{{image}}" alt="{{name}}" class="item-image" />
-              {{else}}
-                <img src="https://placehold.co/48x48/e7e7e7/555?text=IMG" alt="{{name}}" class="item-image" />
-              {{/if}}
-              <div>
-                <div class="item-name">{{name}}</div>
-                {{#if variation_text}}<div class="item-desc">{{variation_text}}</div>{{/if}}
-              </div>
-            </div>
-          </td>
-          <td class="sku-col"><div class="sku">{{default sku "N/A"}}</div></td>
-          <td class="qty-col"><div class="qty">{{quantity}}</div></td>
-          <td class="unit-col"><div class="money">{{currency price ../order.currency}}</div></td>
-          <td class="total-col"><div class="money">{{currency total ../order.currency}}</div></td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-
-    <div class="bottom">
-      <div class="bottom-left">
-        <div class="section-title">Notes</div>
-        <div class="notes-body">
-          {{#if order.notes}}
-            {{order.notes}}
-          {{else}}
-            Thank you for your order! If you have any questions, please contact us anytime. We appreciate your business.
-          {{/if}}
-        </div>
-      </div>
-      <div class="bottom-right">
-        <table class="totals-table">
-          <tr><td>Subtotal</td><td>{{currency totals.subtotal order.currency}}</td></tr>
-          {{#if (gt totals.discount 0)}}<tr><td>Discount</td><td class="negative">−{{currency totals.discount order.currency}}</td></tr>{{/if}}
-          <tr><td>Shipping</td><td>{{currency totals.shipping order.currency}}</td></tr>
-          <tr><td>Tax</td><td>{{currency totals.tax order.currency}}</td></tr>
-          <tr class="grand"><td>Total</td><td>{{currency totals.total order.currency}}</td></tr>
-        </table>
-      </div>
-    </div>
-
-    <div class="footer">
-      <div class="footer-left">
-        {{#if store.logo}}
-          <img src="{{store.logo}}" alt="{{store.name}}" />
-        {{else}}
-          <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png" alt="Store icon" />
-        {{/if}}
-        <span>{{uppercase (default store.name "Woo Commerce")}}</span>
-      </div>
-      <div class="footer-right">Thank you for shopping with us!</div>
+    <div class="inv-meta">
+      <dl class="inv-dl">
+        <dt>Invoice Number</dt><dd>{{order.invoice_number}}</dd>
+        <dt>Invoice Date</dt><dd>{{date order.date_iso "long"}}</dd>
+        <dt>Order Number</dt><dd>{{order.woo_order_id}}</dd>
+        <dt>Order Date</dt><dd>{{date order.date_iso "long"}}</dd>
+        <dt>Payment Method</dt><dd>{{default payment.title "—"}}</dd>
+      </dl>
     </div>
   </div>
+
+  <table class="inv-items">
+    <thead>
+      <tr>
+        <th style="width:58%">Product</th>
+        <th class="col-qty" style="width:14%">Quantity</th>
+        <th class="col-price" style="width:28%">Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>
+          <div class="inv-product-name">{{name}}</div>
+          {{#if variation_text}}<div class="inv-variation">{{variation_text}}</div>{{/if}}
+        </td>
+        <td class="col-qty">{{quantity}}</td>
+        <td class="col-price">{{currency price ../order.currency}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <div class="inv-totals-wrap">
+    <div class="inv-totals">
+      <div class="inv-total-row"><span>Subtotal</span><span>{{currency totals.subtotal order.currency}}</span></div>
+      {{#if (gt totals.discount 0)}}
+      <div class="inv-total-row"><span>Discount</span><span>−{{currency totals.discount order.currency}}</span></div>
+      {{/if}}
+      <div class="inv-total-row"><span>Shipping</span><span>{{currency totals.shipping order.currency}}</span></div>
+      {{#if shipping_method.name}}
+      <div class="inv-ship-note">via {{shipping_method.name}}</div>
+      {{/if}}
+      {{#if (gt totals.tax 0)}}
+      <div class="inv-total-row"><span>Tax</span><span>{{currency totals.tax order.currency}}</span></div>
+      {{/if}}
+      <div class="inv-total-row inv-grand"><span>Total</span><span>{{currency totals.total order.currency}}</span></div>
+      <div class="inv-pay-note">Payment method: {{default payment.title "—"}}</div>
+    </div>
+  </div>
+
+  <footer class="inv-footer">
+    {{#if store.terms_url}}
+      <a href="{{store.terms_url}}" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>
+      <span class="inv-footer-muted"> | </span>
+      <a href="{{store.privacy_url}}" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+    {{else}}
+      <span class="inv-footer-muted">Terms &amp; Conditions | Privacy Policy</span>
+    {{/if}}
+    <div class="inv-generated">Generated {{meta.printed_at}}</div>
+  </footer>
+</div>
 </body>
 </html>`;
 }

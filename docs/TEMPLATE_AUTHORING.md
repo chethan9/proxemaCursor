@@ -215,3 +215,12 @@ table.items td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align
 8. Money always through `{{currency value order.currency}}`.
 9. System fonts only. No web fonts. No gradients. No shadows.
 10. Test with 1, 8, 25 items before shipping.
+
+---
+
+## 15. Default invoice template (`blankInvoiceHtml`) upgrades
+
+- New user-created invoice templates and forks that have **no** saved HTML use the latest `blankInvoiceHtml()` from [`src/lib/templates/document.ts`](../src/lib/templates/document.ts).
+- **Sample** rows (e.g. “Main Invoice”) in the database may still point at an **older** `template_versions` document until you **publish a new version** in the template editor or **fork** the sample again.
+- To refresh an existing template to the new layout: open **Templates →** your invoice → replace body HTML (copy from a newly created invoice template) or use **Save** with the updated default from a fresh template.
+- New context fields for invoice PDFs: `order.invoice_number`, `order.woo_order_id`, `order.created_at`, `shipping_method.title` (alias of `name`), `store.terms_url` / `store.privacy_url` (derived from `store.website` when it is a valid `http(s)` URL).

@@ -28,18 +28,31 @@ export interface OrderContext {
     name: string;
     logo: string;
     logo_url: string;
+    /** Display tagline under logo (empty string if not configured on store). */
+    tagline: string;
     email: string;
     phone: string;
     website: string;
     url: string;
     currency: string;
     address: AddressNested;
+    /** Optional footer links — derived from store.website when set. */
+    terms_url: string;
+    privacy_url: string;
   };
   order: {
     id: string;
     number: string;
+    /** WooCommerce numeric id. */
+    woo_id: number;
+    /** Same as woo_id, string — use for “Order number” when it must be the Woo id. */
+    woo_order_id: string;
+    /** Shop-facing invoice # — prefers Woo order_number, then woo_id. */
+    invoice_number: string;
     date: string;
     date_iso: string;
+    /** ISO timestamp for Handlebars {{date order.created_at}} — same source as date_iso. */
+    created_at: string;
     status: string;
     currency: string;
     currency_symbol: string;
@@ -72,6 +85,8 @@ export interface OrderContext {
   };
   shipping_method: {
     name: string;
+    /** Alias of name — templates historically used `.title`. */
+    title: string;
     tracking_number: string;
   };
   totals: {
@@ -138,6 +153,21 @@ function asAddress(a: Record<string, unknown> | null | undefined): PartyContext 
   };
 }
 
+function absoluteUrlsFromWebsite(website: string): { terms_url: string; privacy_url: string } {
+  const w = (website || "").trim();
+  if (!/^https?:\/\//i.test(w)) return { terms_url: "", privacy_url: "" };
+  try {
+    const base = new URL(w);
+    const origin = base.origin;
+    return {
+      terms_url: `${origin}/terms`,
+      privacy_url: `${origin}/privacy-policy`,
+    };
+  } catch {
+    return { terms_url: "", privacy_url: "" };
+  }
+}
+
 function asStoreAddress(a: Record<string, unknown> | null | undefined): AddressNested {
   const x = (a || {}) as Record<string, unknown>;
   return {
@@ -196,24 +226,39 @@ export async function resolveOrderContext(
   const metaLookup = (key: RegExp): string => String(metaData.find((m) => key.test(String(m.key || "")))?.value ?? "");
 
   const storeAddress = asStoreAddress(store?.address as Record<string, unknown> | null);
+  const websiteStr = String(store?.website || store?.url || "");
+  const linkUrls = absoluteUrlsFromWebsite(websiteStr);
+  const dateIso = order.date_created ? new Date(order.date_created as string).toISOString() : "";
+  const wooIdNum = Number(order.woo_id ?? 0);
+  const invNum = String(order.order_number?.trim() || order.woo_id || order.id);
+  const wooOrderIdStr = String(order.woo_id ?? "");
 
   return {
     store: {
       name: String(store?.name || "Store"),
       logo: String(store?.logo_url || ""),
       logo_url: String(store?.logo_url || ""),
+      tagline: "",
       email: String(store?.support_email || ""),
       phone: String(store?.phone || ""),
-      website: String(store?.website || store?.url || ""),
+      website: websiteStr,
       url: String(store?.url || ""),
       currency,
       address: storeAddress,
+      terms_url: linkUrls.terms_url,
+      privacy_url: linkUrls.privacy_url,
     },
     order: {
       id: String(order.id),
-      number: String(order.order_number || order.woo_id || order.id),
+      number: invNum,
+      woo_id: wooIdNum,
+      woo_order_id: wooOrderIdStr,
+      invoice_number: order.order_number?.trim()
+        ? String(order.order_number.trim())
+        : String(order.woo_id || order.id),
       date: order.date_created ? new Date(order.date_created as string).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
-      date_iso: order.date_created ? new Date(order.date_created as string).toISOString() : "",
+      date_iso: dateIso,
+      created_at: dateIso,
       status: String(order.status || ""),
       currency,
       currency_symbol: CURRENCY_SYMBOLS[currency] || currency,
@@ -246,6 +291,7 @@ export async function resolveOrderContext(
     },
     shipping_method: {
       name: String(shipMethod.method_title || ""),
+      title: String(shipMethod.method_title || ""),
       tracking_number: tracking,
     },
     totals: {
@@ -302,21 +348,47 @@ export function getSampleContext(templateMeta: { name: string; type: string }): 
   const shipping: PartyContext = { ...billing, company: "" };
   return {
     store: {
-      name: "Sample Store", logo: "", logo_url: "", email: "support@sample.store", phone: "+1 555 0100", website: "https://sample.store", url: "https://sample.store",
+      name: "Sample Store",
+      logo: "",
+      logo_url: "",
+      tagline: "",
+      email: "support@sample.store",
+      phone: "+1 555 0100",
+      website: "https://sample.store",
+      url: "https://sample.store",
       currency: "USD",
       address: { line1: "100 Main Street", line2: "", city: "Springfield", state: "IL", country: "United States", zip: "62704" },
+      terms_url: "https://sample.store/terms",
+      privacy_url: "https://sample.store/privacy-policy",
     },
     order: {
-      id: "sample-1", number: "1024", date: "May 22, 2024", date_iso: "2024-05-22T10:30:00Z", status: "processing",
-      currency: "USD", currency_symbol: "$", notes: "Please leave at the front door.", customer_note: "Please leave at the front door.",
-      transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc", payment_method: "stripe", payment_method_title: "Credit Card (Stripe)",
-      total: 88.80, subtotal: 78.00, tax_total: 7.80, shipping_total: 8.00, discount_total: 5.00,
+      id: "sample-1",
+      number: "1024",
+      woo_id: 138327,
+      woo_order_id: "138327",
+      invoice_number: "1024",
+      date: "May 22, 2024",
+      date_iso: "2024-05-22T10:30:00Z",
+      created_at: "2024-05-22T10:30:00Z",
+      status: "processing",
+      currency: "USD",
+      currency_symbol: "$",
+      notes: "Please leave at the front door.",
+      customer_note: "Please leave at the front door.",
+      transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc",
+      payment_method: "stripe",
+      payment_method_title: "Credit Card (Stripe)",
+      total: 88.80,
+      subtotal: 78.00,
+      tax_total: 7.80,
+      shipping_total: 8.00,
+      discount_total: 5.00,
     },
     billing,
     shipping,
     customer: { id: 42, name: "Sarah Johnson", first_name: "Sarah", last_name: "Johnson", email: "sarah@example.com", phone: "+1 555 0123" },
     payment: { method: "stripe", title: "Credit Card (Stripe)", status: "processing", transaction_id: "ch_3OqXyZ2eZvKYlo2C1abc" },
-    shipping_method: { name: "Standard Shipping", tracking_number: "1Z999AA10123456784" },
+    shipping_method: { name: "Standard Shipping", title: "Standard Shipping", tracking_number: "1Z999AA10123456784" },
     totals: { subtotal: 78.00, discount: 5.00, shipping: 8.00, tax: 7.80, total: 88.80 },
     meta: {
       note: "Please leave at the front door.", gift_message: "Happy birthday!", delivery_date: "May 25, 2024", custom_field_1: "", custom_field_2: "",
