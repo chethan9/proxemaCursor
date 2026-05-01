@@ -8,7 +8,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard";
 import { UsageMeterCard } from "@/components/billing/UsageMeterCard";
-import { SubscriptionStatusBanner } from "@/components/billing/SubscriptionStatusBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +69,6 @@ function BillingInner() {
 
   return (
     <AppLayout>
-      <SubscriptionStatusBanner />
       <div className="p-6 space-y-5 max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <div>

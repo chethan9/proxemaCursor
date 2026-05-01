@@ -2,7 +2,6 @@ import { useState } from "react";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,7 @@ function PlansContent() {
   }
 
   return (
-    <SettingsLayout>
+    <SettingsLayout title={t("plans.title")} requireSuperAdmin>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">{t("plans.title")}</h1>
@@ -146,9 +145,7 @@ function PlansContent() {
 export default function PlansPage() {
   return (
     <AuthGuard requireSuperAdmin>
-      <AppLayout>
-        <PlansContent />
-      </AppLayout>
+      <PlansContent />
     </AuthGuard>
   );
 }

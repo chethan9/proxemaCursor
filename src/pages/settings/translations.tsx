@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { SettingsLayout } from "@/components/layout/SettingsLayout";
-import { AuthGuard } from "@/components/AuthGuard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -211,14 +209,11 @@ function TranslationsContent() {
 }
 
 export default function TranslationsPage() {
+  const { t } = useTranslation("settings");
   return (
-    <AuthGuard requireSuperAdmin>
-      <AppLayout>
-        <SettingsLayout>
-          <TranslationsContent />
-        </SettingsLayout>
-      </AppLayout>
-    </AuthGuard>
+    <SettingsLayout title={t("translations.title")} requireSuperAdmin>
+      <TranslationsContent />
+    </SettingsLayout>
   );
 }
 
