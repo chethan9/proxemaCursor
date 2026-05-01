@@ -80,6 +80,10 @@
       "status": "Status",
       "typeSimple": "Simple products",
       "typeVariable": "Variable products",
+      "typeAll": "All",
+      "typeAllHint": "All product types",
+      "typeSimpleShort": "Simple",
+      "typeVariableShort": "Variable",
       "productType": "Product type filters"
     },
     "statuses": {

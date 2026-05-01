@@ -231,11 +231,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     return undefined;
   }, [filterSimple, filterVariable]);
 
-  useEffect(() => {
-    if (!filterSimple && !filterVariable) {
-      setFilterSimple(true);
-      setFilterVariable(true);
-    }
+  const productTypeSegment = useMemo((): "simple" | "all" | "variable" => {
+    if (filterSimple && filterVariable) return "all";
+    if (filterSimple && !filterVariable) return "simple";
+    return "variable";
   }, [filterSimple, filterVariable]);
 
   useSyncUrl(
@@ -762,37 +761,70 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   <SelectItem value="private">Private</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9" role="group" aria-label={t("products.filters.productType")}>
-                <Button
+              <div
+                className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5 h-9 gap-0.5"
+                role="tablist"
+                aria-label={t("products.filters.productType")}
+              >
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "h-7 w-8 p-0",
-                    filterSimple && "bg-foreground/10 text-foreground",
-                    !filterSimple && "text-muted-foreground opacity-60",
-                  )}
+                  role="tab"
+                  aria-selected={productTypeSegment === "simple"}
                   title={t("products.filters.typeSimple")}
                   disabled={locked}
-                  onClick={() => setFilterSimple((s) => !s)}
-                >
-                  <Package className="h-4 w-4" aria-hidden />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
+                  onClick={() => {
+                    setFilterSimple(true);
+                    setFilterVariable(false);
+                  }}
                   className={cn(
-                    "h-7 w-8 p-0",
-                    filterVariable && "bg-foreground/10 text-foreground",
-                    !filterVariable && "text-muted-foreground opacity-60",
+                    "h-8 shrink-0 rounded-md px-2 sm:px-2.5 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1",
+                    productTypeSegment === "simple"
+                      ? "bg-orange-500 text-white shadow-sm hover:bg-orange-500"
+                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
                   )}
+                >
+                  <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="hidden sm:inline">{t("products.filters.typeSimpleShort")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={productTypeSegment === "all"}
+                  title={t("products.filters.typeAllHint")}
+                  disabled={locked}
+                  onClick={() => {
+                    setFilterSimple(true);
+                    setFilterVariable(true);
+                  }}
+                  className={cn(
+                    "h-8 shrink-0 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-colors tabular-nums",
+                    productTypeSegment === "all"
+                      ? "bg-orange-500 text-white shadow-sm hover:bg-orange-500"
+                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                  )}
+                >
+                  {t("products.filters.typeAll")}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={productTypeSegment === "variable"}
                   title={t("products.filters.typeVariable")}
                   disabled={locked}
-                  onClick={() => setFilterVariable((v) => !v)}
+                  onClick={() => {
+                    setFilterSimple(false);
+                    setFilterVariable(true);
+                  }}
+                  className={cn(
+                    "h-8 shrink-0 rounded-md px-2 sm:px-2.5 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1",
+                    productTypeSegment === "variable"
+                      ? "bg-orange-500 text-white shadow-sm hover:bg-orange-500"
+                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                  )}
                 >
-                  <Layers className="h-4 w-4" aria-hidden />
-                </Button>
+                  <Layers className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="hidden sm:inline">{t("products.filters.typeVariableShort")}</span>
+                </button>
               </div>
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
