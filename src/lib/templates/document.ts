@@ -205,7 +205,16 @@ export function blankInvoiceHtml(): string {
     border-bottom: 1px solid var(--line);
     padding-bottom: 10px;
   }
-  .beam-brand { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 auto; justify-content: flex-start; }
+  .beam-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    align-items: flex-start;
+    text-align: left;
+  }
   .beam-site-name {
     font-size: 20px;
     font-weight: 700;
@@ -213,6 +222,8 @@ export function blankInvoiceHtml(): string {
     color: var(--ink);
     line-height: 1.2;
     max-width: min(360px, 55vw);
+    align-self: flex-start;
+    text-align: left;
   }
   .beam-tagline {
     font-size: 11px;
@@ -225,6 +236,7 @@ export function blankInvoiceHtml(): string {
     max-width: 220px;
     object-fit: contain;
     display: block;
+    align-self: flex-start;
   }
   .beam-header-right {
     display: flex;
@@ -347,15 +359,55 @@ export function blankInvoiceHtml(): string {
     background: #8b5cf6;
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.35);
   }
-  .beam-header-payment {
-    margin-top: 2px;
+  /* Thank-you (top-left) + subtotal rows (top-right); payment (bottom-left) + grand total (bottom-right) share one row with the thick divider. */
+  .beam-settlement-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-rows: auto auto;
+    column-gap: 28px;
+    row-gap: 0;
+    margin-top: 4px;
+    page-break-inside: avoid;
+    align-items: stretch;
+  }
+  .beam-cell-note {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    align-self: start;
+    text-align: left;
+  }
+  .beam-cell-total-rows {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-self: stretch;
+    width: 100%;
+  }
+  .beam-cell-payment {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+    min-width: 0;
+    text-align: left;
+    padding-top: 6px;
+  }
+  .beam-cell-grand {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    width: 100%;
+  }
+  .beam-payment-foot {
     font-size: 12px;
     color: var(--ink-soft);
     font-weight: 500;
-    max-width: 320px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+  .beam-payment-foot strong {
+    font-weight: 600;
+    color: var(--ink);
   }
   .beam-details {
     display: grid;
@@ -501,17 +553,12 @@ export function blankInvoiceHtml(): string {
   }
   .beam-note {
     margin-top: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 0;
     font-size: 12px;
     color: var(--ink-soft);
     border-top: 1px dashed var(--line);
     padding-top: 8px;
-  }
-  .beam-totals-wrap {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 4px;
-    page-break-inside: avoid;
+    flex-shrink: 0;
   }
   .beam-totals {
     width: 100%;
@@ -619,6 +666,15 @@ export function blankInvoiceHtml(): string {
     }
     .beam-title { font-size: 22px; }
     .beam-totals { max-width: 100%; }
+    .beam-settlement-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto auto;
+      row-gap: 10px;
+    }
+    .beam-cell-note { grid-column: 1; grid-row: 1; }
+    .beam-cell-total-rows { grid-column: 1; grid-row: 2; }
+    .beam-cell-payment { grid-column: 1; grid-row: 3; padding-top: 0; }
+    .beam-cell-grand { grid-column: 1; grid-row: 4; }
     .beam-thumb { width: 34px; height: 40px; }
   }
 </style>
@@ -646,7 +702,6 @@ export function blankInvoiceHtml(): string {
             <span class="beam-invoice-id">#{{order.invoice_number}}</span>
           </div>
           {{/ifFilled}}
-          {{#ifFilled payment.title}}<div class="beam-header-payment">Payment Method: {{payment.title}}</div>{{/ifFilled}}
         </div>
       </header>
 
@@ -729,25 +784,37 @@ export function blankInvoiceHtml(): string {
         </tbody>
       </table>
 
-      <div class="beam-note">Thank you for your order. We appreciate your business.</div>
-
-      <div class="beam-totals-wrap">
-        <div class="beam-totals">
-          <div class="beam-total-row"><span class="beam-lbl">Subtotal</span><span class="beam-val">{{currency totals.subtotal order.currency}}</span></div>
-          {{#if (gt totals.discount 0)}}
-          <div class="beam-total-row"><span class="beam-lbl">Discount</span><span class="beam-val">−{{currency totals.discount order.currency}}</span></div>
-          {{/if}}
-          <div class="beam-total-row">
-            <span class="beam-lbl">Shipping</span>
-            <span class="beam-val beam-ship-val">
-              {{currency totals.shipping order.currency}}
-              {{#if shipping_method.name}}<small>via {{shipping_method.name}}</small>{{/if}}
-            </span>
+      <div class="beam-settlement-grid">
+        <div class="beam-cell-note">
+          <div class="beam-note">Thank you for your order. We appreciate your business.</div>
+        </div>
+        <div class="beam-cell-total-rows">
+          <div class="beam-totals">
+            <div class="beam-total-row"><span class="beam-lbl">Subtotal</span><span class="beam-val">{{currency totals.subtotal order.currency}}</span></div>
+            {{#if (gt totals.discount 0)}}
+            <div class="beam-total-row"><span class="beam-lbl">Discount</span><span class="beam-val">−{{currency totals.discount order.currency}}</span></div>
+            {{/if}}
+            <div class="beam-total-row">
+              <span class="beam-lbl">Shipping</span>
+              <span class="beam-val beam-ship-val">
+                {{currency totals.shipping order.currency}}
+                {{#if shipping_method.name}}<small>via {{shipping_method.name}}</small>{{/if}}
+              </span>
+            </div>
+            {{#if (gt totals.tax 0)}}
+            <div class="beam-total-row"><span class="beam-lbl">Tax</span><span class="beam-val">{{currency totals.tax order.currency}}</span></div>
+            {{/if}}
           </div>
-          {{#if (gt totals.tax 0)}}
-          <div class="beam-total-row"><span class="beam-lbl">Tax</span><span class="beam-val">{{currency totals.tax order.currency}}</span></div>
-          {{/if}}
-          <div class="beam-grand"><span>Total</span><span>{{currency totals.total order.currency}}</span></div>
+        </div>
+        <div class="beam-cell-payment">
+          {{#ifFilled payment.title}}
+          <div class="beam-payment-foot"><strong>Payment Method:</strong> {{payment.title}}</div>
+          {{/ifFilled}}
+        </div>
+        <div class="beam-cell-grand">
+          <div class="beam-totals">
+            <div class="beam-grand"><span>Total</span><span>{{currency totals.total order.currency}}</span></div>
+          </div>
         </div>
       </div>
     </div>
