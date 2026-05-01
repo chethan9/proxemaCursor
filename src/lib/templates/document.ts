@@ -179,9 +179,11 @@ export function blankInvoiceHtml(): string {
     box-sizing: border-box;
   }
   .beam-card {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     max-width: 820px;
-    min-height: auto;
+    min-height: calc(100vh - 24px);
     background: var(--paper);
     padding: 24px 30px;
     border-radius: 6px;
@@ -189,7 +191,10 @@ export function blankInvoiceHtml(): string {
     margin: 0 auto;
   }
   .beam-main {
-    display: block;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
   .beam-header {
     display: flex;
@@ -298,8 +303,10 @@ export function blankInvoiceHtml(): string {
     border-bottom: 1px solid var(--line);
     text-align: left;
   }
-  table.beam-items thead th.col-qty { text-align: center; width: 88px; }
-  table.beam-items thead th.col-price { text-align: right; width: 120px; }
+  table.beam-items thead th.col-sku { width: 120px; text-align: left; }
+  table.beam-items thead th.col-qty { text-align: center; width: 80px; }
+  table.beam-items thead th.col-unit { text-align: right; width: 110px; }
+  table.beam-items thead th.col-total { text-align: right; width: 120px; }
   table.beam-items tbody td {
     padding: 7px 0;
     border-bottom: 1px solid var(--line-soft);
@@ -346,12 +353,44 @@ export function blankInvoiceHtml(): string {
     font-size: 13px;
     color: var(--ink-soft);
   }
-  .beam-price {
+  .beam-sku {
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    word-break: break-word;
+  }
+  .beam-unit,
+  .beam-total {
     text-align: right;
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
     color: var(--ink);
+  }
+  .beam-price-compare {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+    gap: 1px;
+  }
+  .beam-price-old {
+    font-size: 11px;
+    color: var(--ink-mute);
+    text-decoration: line-through;
+  }
+  .beam-price-new {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .beam-note {
+    margin-top: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    border-top: 1px dashed var(--line);
+    padding-top: 8px;
   }
   .beam-totals-wrap {
     display: flex;
@@ -391,7 +430,7 @@ export function blankInvoiceHtml(): string {
     color: var(--ink);
   }
   .beam-footer {
-    margin-top: 12px;
+    margin-top: auto;
     flex-shrink: 0;
     padding-top: 8px;
     border-top: 1px solid var(--line);
@@ -477,9 +516,11 @@ export function blankInvoiceHtml(): string {
       <table class="beam-items">
         <thead>
           <tr>
-            <th>Product</th>
+            <th>Item</th>
+            <th class="col-sku">SKU</th>
             <th class="col-qty">Quantity</th>
-            <th class="col-price">Price</th>
+            <th class="col-unit">Unit Price</th>
+            <th class="col-total">Total</th>
           </tr>
         </thead>
         <tbody>
@@ -500,12 +541,38 @@ export function blankInvoiceHtml(): string {
                 </div>
               </div>
             </td>
+            <td class="beam-sku">{{#ifFilled sku}}{{sku}}{{else}}—{{/ifFilled}}</td>
             <td class="beam-qty">{{quantity}}</td>
-            <td class="beam-price">{{currency total ../order.currency}}</td>
+            <td class="beam-unit">
+              {{#if (gt quantity 0)}}
+                {{#if (gt subtotal total)}}
+                  <div class="beam-price-compare">
+                    <span class="beam-price-old">{{currency (divide subtotal quantity) ../order.currency}}</span>
+                    <span class="beam-price-new">{{currency (divide total quantity) ../order.currency}}</span>
+                  </div>
+                {{else}}
+                  {{currency (divide total quantity) ../order.currency}}
+                {{/if}}
+              {{else}}
+                {{currency total ../order.currency}}
+              {{/if}}
+            </td>
+            <td class="beam-total">
+              {{#if (gt subtotal total)}}
+                <div class="beam-price-compare">
+                  <span class="beam-price-old">{{currency subtotal ../order.currency}}</span>
+                  <span class="beam-price-new">{{currency total ../order.currency}}</span>
+                </div>
+              {{else}}
+                {{currency total ../order.currency}}
+              {{/if}}
+            </td>
           </tr>
           {{/each}}
         </tbody>
       </table>
+
+      <div class="beam-note">Thank you for your order. We appreciate your business.</div>
 
       <div class="beam-totals-wrap">
         <div class="beam-totals">
