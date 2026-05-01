@@ -28,6 +28,20 @@ import { DefaultTemplatesCard } from "@/components/site/DefaultTemplatesCard";
 import { StoreProfileCard } from "@/components/site/StoreProfileCard";
 import { StorePreferencesSettingsCard } from "@/components/site/store-preferences/StorePreferencesSettingsCard";
 
+/** Logo URL from Supabase — detect SVG for preview styling (query/hash-safe). */
+function isSvgPublicUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith(".svg");
+  } catch {
+    return /\.svg(\?|#|$)/i.test(url);
+  }
+}
+
+function invoiceLogoUploadExtension(file: File): string {
+  if (file.type === "image/svg+xml") return "svg";
+  return file.name.split(".").pop()?.toLowerCase() || "png";
+}
+
 function SettingsInner() {
   const { t, i18n } = useTranslation("site");
   const router = useRouter();
@@ -118,13 +132,13 @@ function SettingsInner() {
       toast({ title: t("settings.invoiceLogo.tooLarge"), description: t("settings.invoiceLogo.tooLargeDesc"), variant: "destructive" });
       return;
     }
-    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+    if (!/^image\/(png|jpe?g|webp|svg\+xml)$/i.test(file.type)) {
       toast({ title: t("settings.invoiceLogo.unsupported"), description: t("settings.invoiceLogo.unsupportedDesc"), variant: "destructive" });
       return;
     }
     setUploadingInvoiceLogo(true);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const ext = invoiceLogoUploadExtension(file);
       const path = `invoices/${store.id}.${ext}`;
       const { error: upErr } = await supabase.storage.from("site-logos").upload(path, file, { upsert: true, cacheControl: "3600" });
       if (upErr) throw upErr;
@@ -343,7 +357,11 @@ function SettingsInner() {
                     <img
                       src={store.invoice_logo_url}
                       alt=""
-                      className="h-full w-full object-cover"
+                      className={
+                        isSvgPublicUrl(store.invoice_logo_url)
+                          ? "h-full w-full object-contain p-1"
+                          : "h-full w-full object-cover"
+                      }
                     />
                   ) : (
                     <Receipt className="h-5 w-5 text-muted-foreground" aria-hidden />
@@ -353,7 +371,7 @@ function SettingsInner() {
                   <label>
                     <input
                       type="file"
-                      accept="image/png,image/jpeg,image/webp"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
                       className="hidden"
                       disabled={uploadingInvoiceLogo}
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) handleInvoiceLogoUpload(f); e.target.value = ""; }}
