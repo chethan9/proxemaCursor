@@ -258,6 +258,30 @@ function ordersColumnHeadClass(key: ColumnKey): string {
   }
 }
 
+/** Orders list table: show at most this many digits in the Order # cell (full value on hover). */
+const ORDER_NUMBER_TABLE_MAX_DIGITS = 10;
+
+function formatOrderNumberTableDisplay(
+  orderNumber: string | number | null | undefined,
+  wooId: string | number | null | undefined,
+): { display: string; title: string } {
+  const primary =
+    orderNumber != null && String(orderNumber).trim() !== ""
+      ? String(orderNumber).trim()
+      : wooId != null && String(wooId).trim() !== ""
+        ? String(wooId).trim()
+        : "";
+  if (!primary) return { display: "—", title: "" };
+  const fullLabel = primary.startsWith("#") ? primary : `#${primary}`;
+  const digits = primary.replace(/\D/g, "");
+  if (digits.length > 0) {
+    const shown = digits.slice(0, ORDER_NUMBER_TABLE_MAX_DIGITS);
+    return { display: `#${shown}`, title: fullLabel };
+  }
+  const shownChars = primary.slice(0, ORDER_NUMBER_TABLE_MAX_DIGITS);
+  return { display: `#${shownChars}`, title: fullLabel };
+}
+
 const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIcon }> = {
   completed: { wrap: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900", dot: "bg-emerald-500", Icon: CheckCircle2 },
   processing: { wrap: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900", dot: "bg-blue-500", Icon: CircleDashed },
@@ -1367,10 +1391,11 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               return <TableCell key={c.key} className="font-mono text-[10px] text-muted-foreground">{o.id.slice(0, 8)}</TableCell>;
                             }
                             if (c.key === "order_number") {
+                              const { display, title } = formatOrderNumberTableDisplay(o.order_number, o.woo_id);
                               return (
                                 <TableCell key={c.key} className={cn("font-mono font-medium whitespace-nowrap", ordersColumnHeadClass("order_number"))}>
-                                  <span className="inline-flex items-center gap-1 min-w-0">
-                                    #{o.order_number || o.woo_id}
+                                  <span className="inline-flex items-center gap-1 min-w-0" title={title || undefined}>
+                                    {display}
                                     <SyncPill entityType="order" entityId={o.id} />
                                   </span>
                                 </TableCell>
