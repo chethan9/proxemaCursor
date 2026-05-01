@@ -3592,6 +3592,7 @@ export type Database = {
         Returns: string
       }
       generate_referral_code: { Args: { p_seed?: string }; Returns: string }
+      get_product_image_mirror_dashboard_stats: { Args: never; Returns: Json }
       compute_site_home_stats: {
         Args: { p_currency?: string; p_store_id: string; p_tz?: string }
         Returns: Json
