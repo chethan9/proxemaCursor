@@ -211,6 +211,53 @@ function sortsEqual(a: OrderSortState, b: OrderSortState): boolean {
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000, 2500, 5000];
 const ORDER_STATUSES = ["processing", "on-hold", "completed", "cancelled", "refunded", "failed"];
 
+/** Bump when default column visibility/order/density should reset for all clients once. */
+const ORDERS_TABLE_LAYOUT_VERSION = 2;
+
+function migrateOrdersTableLayoutPrefs(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem("orders-layout-version");
+    const stored = raw ? Number.parseInt(raw, 10) : 0;
+    if (Number.isFinite(stored) && stored >= ORDERS_TABLE_LAYOUT_VERSION) return;
+    localStorage.removeItem("orders-col-order");
+    localStorage.removeItem("orders-visible-cols");
+    localStorage.setItem("orders-layout-version", String(ORDERS_TABLE_LAYOUT_VERSION));
+  } catch {
+    /* ignore */
+  }
+}
+
+function ordersColumnHeadClass(key: ColumnKey): string {
+  switch (key) {
+    case "order_number":
+      return "whitespace-nowrap w-[7rem]";
+    case "status":
+      return "whitespace-nowrap w-[7.75rem]";
+    case "phone":
+      return "whitespace-nowrap w-[11ch] max-w-[11ch]";
+    case "payment":
+      return "whitespace-nowrap w-[8.25rem] max-w-[8.25rem] hidden xl:table-cell";
+    case "date_created":
+      return "whitespace-nowrap w-[10.25rem]";
+    case "items":
+      return "w-9 max-w-[2.25rem] text-right";
+    case "total":
+      return "whitespace-nowrap w-[6.75rem] text-right";
+    case "customer":
+      return "min-w-0 max-w-[clamp(7rem,22vw,11rem)] xl:max-w-[11rem]";
+    case "first_name":
+    case "last_name":
+      return "min-w-0 max-w-[9rem]";
+    case "email":
+      return "min-w-0 max-w-[12rem]";
+    case "line_items_summary":
+      return "min-w-0 max-w-[14rem]";
+    default:
+      return "min-w-0";
+  }
+}
+
 const STATUS_COLORS: Record<string, { wrap: string; dot: string; Icon: LucideIcon }> = {
   completed: { wrap: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900", dot: "bg-emerald-500", Icon: CheckCircle2 },
   processing: { wrap: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900", dot: "bg-blue-500", Icon: CircleDashed },
@@ -319,6 +366,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       actions: true,
     };
     if (typeof window !== "undefined") {
+      migrateOrdersTableLayoutPrefs();
       try {
         const saved = localStorage.getItem("orders-visible-cols");
         if (saved) return { ...defaults, ...JSON.parse(saved) };
@@ -329,6 +377,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
 
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (typeof window !== "undefined") {
+      migrateOrdersTableLayoutPrefs();
       try {
         const saved = localStorage.getItem("orders-col-order");
         if (saved) {
@@ -609,7 +658,15 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     if (!prefsLoaded.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      savePreferences("orders", { columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort }).catch(() => {});
+      savePreferences("orders", {
+        columnOrder,
+        visibleCols,
+        pageSize,
+        statusFilter,
+        paymentFilter,
+        sort,
+        ordersTableLayoutVersion: ORDERS_TABLE_LAYOUT_VERSION,
+      }).catch(() => {});
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [columnOrder, visibleCols, pageSize, statusFilter, paymentFilter, sort]);
@@ -648,13 +705,17 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     const urlPay = getQueryString(router.query, "pay");
     fetchPreferences("orders").then((remote) => {
       if (remote) {
-        if (Array.isArray(remote.columnOrder)) {
+        const remoteLayoutV = Number((remote as { ordersTableLayoutVersion?: unknown }).ordersTableLayoutVersion ?? 0);
+        const layoutOk = Number.isFinite(remoteLayoutV) && remoteLayoutV >= ORDERS_TABLE_LAYOUT_VERSION;
+        if (Array.isArray(remote.columnOrder) && layoutOk) {
           const allKeys = COLUMN_META.map((c) => c.key);
           const valid = (remote.columnOrder as ColumnKey[]).filter((k) => allKeys.includes(k));
           const missing = allKeys.filter((k) => !valid.includes(k));
           setColumnOrder([...valid, ...missing]);
         }
-        if (remote.visibleCols && typeof remote.visibleCols === "object") setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        if (remote.visibleCols && typeof remote.visibleCols === "object" && layoutOk) {
+          setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
+        }
         if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
         if (urlStatus === undefined && typeof remote.statusFilter === "string") setStatusFilter(remote.statusFilter);
         if (urlPay === undefined && typeof remote.paymentFilter === "string") setPaymentFilter(remote.paymentFilter);
@@ -1218,7 +1279,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
             )
           ) : (
             <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !loading && orders.length > 0 && "opacity-70")}>
-              <Table>
+              <Table className="[&_td]:px-1.5 [&_td]:py-1.5 [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-2">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-8 pl-3 pr-0">
@@ -1260,16 +1321,12 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                           className={cn(
                             "cursor-move select-none",
                             dragKey === c.key && "opacity-50",
-                            c.key === "order_number" && "whitespace-nowrap w-[8rem]",
-                            c.key === "status" && "whitespace-nowrap w-[9rem]",
-                            c.key === "phone" && "whitespace-nowrap max-w-[15ch]",
-                            c.key === "payment" && "whitespace-nowrap w-[11rem]",
-                            c.key === "date_created" && "whitespace-nowrap min-w-[13rem]",
-                            c.key === "items" && "w-12 max-w-[3.5rem] text-right",
+                            ordersColumnHeadClass(c.key),
+                            c.key === "items" && "text-right",
                           )}
                           {...dragProps}
                         >
-                          <span className={cn("inline-flex items-center gap-1.5 min-w-0", c.key === "items" && "justify-end w-full")}>
+                          <span className={cn("inline-flex items-center gap-1 min-w-0", c.key === "items" && "justify-end w-full")}>
                             <span className="text-xs font-medium truncate">{c.label}</span>
                             {isSortable ? (
                               <button
@@ -1301,7 +1358,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                     const pending = isPending(o);
                     return (
                       <React.Fragment key={o.id}>
-                        <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_52px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(o); return; } setExpandedRowId((cur) => (cur === o.id ? null : o.id)); }}>
+                        <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(o); return; } setExpandedRowId((cur) => (cur === o.id ? null : o.id)); }}>
                           <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
                             <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (locked || pending) return; toggleSelect(o.id); }} />
                           </TableCell>
@@ -1311,8 +1368,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                             }
                             if (c.key === "order_number") {
                               return (
-                                <TableCell key={c.key} className="font-mono font-medium whitespace-nowrap">
-                                  <span className="inline-flex items-center gap-1.5">
+                                <TableCell key={c.key} className={cn("font-mono font-medium whitespace-nowrap", ordersColumnHeadClass("order_number"))}>
+                                  <span className="inline-flex items-center gap-1 min-w-0">
                                     #{o.order_number || o.woo_id}
                                     <SyncPill entityType="order" entityId={o.id} />
                                   </span>
@@ -1327,8 +1384,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               const SIcon = s.Icon;
                               const label = o.status ? orderStatusDisplayLabel(t, o.status) : "—";
                               return (
-                                <TableCell key={c.key}>
-                                  <span className={`inline-flex items-center gap-1 min-h-6 max-w-[9.25rem] px-1.5 rounded-full text-[11px] font-medium ring-1 ring-inset ${s.wrap}`}>
+                                <TableCell key={c.key} className={ordersColumnHeadClass("status")}>
+                                  <span className={`inline-flex items-center gap-0.5 min-h-5 max-w-[7.35rem] px-1 rounded-full text-[11px] font-medium ring-1 ring-inset ${s.wrap}`}>
                                     <SIcon className="h-3 w-3 shrink-0" />
                                     <span className="truncate min-w-0" title={o.status || undefined}>{label}</span>
                                   </span>
@@ -1336,21 +1393,25 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               );
                             }
                             if (c.key === "customer") {
-                              return <TableCell key={c.key} className="max-w-[170px] truncate">{getCustomerName(o.billing)}</TableCell>;
+                              return (
+                                <TableCell key={c.key} className={cn("truncate", ordersColumnHeadClass("customer"))} title={getCustomerName(o.billing) || undefined}>
+                                  {getCustomerName(o.billing)}
+                                </TableCell>
+                              );
                             }
                             if (c.key === "first_name") {
-                              return <TableCell key={c.key} className="max-w-[140px] truncate">{getBillingFirstName(o.billing) || "—"}</TableCell>;
+                              return <TableCell key={c.key} className={cn("truncate", ordersColumnHeadClass("first_name"))}>{getBillingFirstName(o.billing) || "—"}</TableCell>;
                             }
                             if (c.key === "last_name") {
-                              return <TableCell key={c.key} className="max-w-[140px] truncate">{getBillingLastName(o.billing) || "—"}</TableCell>;
+                              return <TableCell key={c.key} className={cn("truncate", ordersColumnHeadClass("last_name"))}>{getBillingLastName(o.billing) || "—"}</TableCell>;
                             }
                             if (c.key === "email") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[200px] truncate">{getCustomerEmail(o.billing) || "—"}</TableCell>;
+                              return <TableCell key={c.key} className={cn("text-xs text-muted-foreground truncate", ordersColumnHeadClass("email"))}>{getCustomerEmail(o.billing) || "—"}</TableCell>;
                             }
                             if (c.key === "phone") {
                               const phone = getCustomerPhone(o.billing);
                               return (
-                                <TableCell key={c.key} className="font-mono text-xs whitespace-nowrap max-w-[15ch]">
+                                <TableCell key={c.key} className={cn("font-mono text-xs whitespace-nowrap", ordersColumnHeadClass("phone"))}>
                                   <span className="block truncate" title={phone || undefined}>{phone || "—"}</span>
                                 </TableCell>
                               );
@@ -1359,13 +1420,17 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               return <TableCell key={c.key} className="font-mono text-xs text-muted-foreground text-right">{o.customer_id ?? "—"}</TableCell>;
                             }
                             if (c.key === "items") {
-                              return <TableCell key={c.key} className="text-sm text-right w-12 max-w-[3.5rem] tabular-nums">{getItemCount(o.line_items)}</TableCell>;
+                              return <TableCell key={c.key} className={cn("text-sm text-right tabular-nums", ordersColumnHeadClass("items"))}>{getItemCount(o.line_items)}</TableCell>;
                             }
                             if (c.key === "line_items_summary") {
-                              return <TableCell key={c.key} className="text-xs text-muted-foreground max-w-[280px] truncate" title={getLineItemsSummary(o.line_items)}>{getLineItemsSummary(o.line_items) || "—"}</TableCell>;
+                              return (
+                                <TableCell key={c.key} className={cn("text-xs text-muted-foreground truncate", ordersColumnHeadClass("line_items_summary"))} title={getLineItemsSummary(o.line_items)}>
+                                  {getLineItemsSummary(o.line_items) || "—"}
+                                </TableCell>
+                              );
                             }
                             if (c.key === "total") {
-                              return <TableCell key={c.key} className="font-mono text-sm font-semibold text-right">{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
+                              return <TableCell key={c.key} className={cn("font-mono text-sm font-semibold text-right whitespace-nowrap", ordersColumnHeadClass("total"))}>{o.currency ? `${o.currency} ` : ""}{o.total || "—"}</TableCell>;
                             }
                             if (c.key === "subtotal") {
                               return <TableCell key={c.key} className="font-mono text-sm text-right">{o.subtotal || "—"}</TableCell>;
@@ -1386,13 +1451,13 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                               const pm = o.payment_method ? pmRegistry[o.payment_method] : null;
                               const display = pm?.label || o.payment_method_title || o.payment_method || "";
                               return (
-                                <TableCell key={c.key} className="max-w-[11rem] w-[11rem]">
-                                  <div className="flex items-center gap-1.5 min-w-0">
+                                <TableCell key={c.key} className={ordersColumnHeadClass("payment")}>
+                                  <div className="flex items-center gap-1 min-w-0">
                                     {pm?.icon_url && (
                                       // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={pm.icon_url} alt="" className="h-4 w-4 rounded object-contain bg-white flex-shrink-0" />
+                                      <img src={pm.icon_url} alt="" className="h-3.5 w-3.5 rounded object-contain bg-white shrink-0" />
                                     )}
-                                    <span className="block truncate whitespace-nowrap text-xs text-muted-foreground" title={display || undefined}>{display || "—"}</span>
+                                    <span className="block min-w-0 truncate whitespace-nowrap text-xs text-muted-foreground" title={display || undefined}>{display || "—"}</span>
                                   </div>
                                 </TableCell>
                               );
@@ -1421,7 +1486,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                             }
                             if (c.key === "date_created") {
                               return (
-                                <TableCell key={c.key} className="text-xs text-muted-foreground whitespace-nowrap min-w-[13rem]">
+                                <TableCell key={c.key} className={cn("text-xs text-muted-foreground whitespace-nowrap", ordersColumnHeadClass("date_created"))}>
                                   {o.date_created ? formatStoreDateTime(o.date_created, storeTz) : "—"}
                                 </TableCell>
                               );
