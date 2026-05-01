@@ -157,7 +157,7 @@ export function blankInvoiceHtml(): string {
     --bg: #f8fafc;
     --thumb-bg: #f5f5f4;
   }
-  @page { size: A4; margin: 10mm 10mm 10mm 10mm; }
+  @page { size: A4; margin: 9mm 9mm 9mm 9mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { height: 100%; }
   body {
@@ -203,7 +203,7 @@ export function blankInvoiceHtml(): string {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     gap: 12px;
   }
   .beam-brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -240,7 +240,7 @@ export function blankInvoiceHtml(): string {
     margin: 0;
   }
   .beam-title {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     letter-spacing: -0.02em;
     text-transform: uppercase;
@@ -250,23 +250,23 @@ export function blankInvoiceHtml(): string {
   .beam-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px 18px;
-    margin-bottom: 14px;
+    gap: 10px 14px;
+    margin-bottom: 10px;
   }
   .beam-section-head {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    margin-bottom: 7px;
+    margin-bottom: 5px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--ink);
   }
   .beam-info {
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     display: flex;
     gap: 6px;
     align-items: baseline;
-    line-height: 1.25;
+    line-height: 1.15;
   }
   .beam-info:last-child { margin-bottom: 0; }
   .beam-info-label {
@@ -299,7 +299,7 @@ export function blankInvoiceHtml(): string {
   table.beam-items thead th.col-qty { text-align: center; width: 88px; }
   table.beam-items thead th.col-price { text-align: right; width: 120px; }
   table.beam-items tbody td {
-    padding: 8px 0;
+    padding: 7px 0;
     border-bottom: 1px solid var(--line-soft);
     vertical-align: middle;
     font-size: 14px;
@@ -354,7 +354,7 @@ export function blankInvoiceHtml(): string {
   .beam-totals-wrap {
     display: flex;
     justify-content: flex-end;
-    margin-top: 6px;
+    margin-top: 4px;
     page-break-inside: avoid;
   }
   .beam-totals {
@@ -391,7 +391,7 @@ export function blankInvoiceHtml(): string {
   .beam-footer {
     margin-top: auto;
     flex-shrink: 0;
-    padding-top: 10px;
+    padding-top: 8px;
     border-top: 1px solid var(--line);
     text-align: right;
     font-size: 12px;
@@ -427,7 +427,7 @@ export function blankInvoiceHtml(): string {
     }
   }
   @media (max-width: 640px) {
-    .beam-card { padding: 16px 14px; min-height: auto; }
+    .beam-card { padding: 14px 12px; min-height: auto; }
     .beam-details { grid-template-columns: 1fr; gap: 20px; }
     .beam-title { font-size: 22px; }
     .beam-totals { max-width: 100%; }
