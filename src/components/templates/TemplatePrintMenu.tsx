@@ -8,6 +8,7 @@ import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import type { TemplateType } from "@/lib/templates/document";
+import { buildOrderTemplatePdfUrl } from "@/lib/templates/order-template-pdf-url";
 import Link from "next/link";
 
 interface Props {
@@ -53,7 +54,7 @@ export function TemplatePrintMenu({ storeId, orderId, type, variant = "outline",
   });
 
   const print = (id: string) => {
-    const url = `/api/templates/${id}/render?format=pdf&store_id=${storeId}&order_id=${orderId}`;
+    const url = buildOrderTemplatePdfUrl(id, storeId, orderId);
     window.open(url, "_blank", "noopener");
     setOpen(false);
   };

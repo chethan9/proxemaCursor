@@ -51,5 +51,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: "Could not sign download URL" });
   }
 
+  res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.redirect(307, signed.signedUrl);
 }

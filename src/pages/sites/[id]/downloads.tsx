@@ -130,6 +130,7 @@ function DownloadsInner() {
       const res = await fetch(file.download_url, {
         headers: { Authorization: `Bearer ${token}` },
         redirect: "follow",
+        cache: "no-store",
       });
       if (res.status === 410) {
         const j = await res.json().catch(() => ({}));

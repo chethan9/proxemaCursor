@@ -47,6 +47,7 @@ export function BulkJobsToast() {
       const res = await fetch(`/api/bulk-jobs/${jobId}/download`, {
         headers: { Authorization: `Bearer ${token}` },
         redirect: "follow",
+        cache: "no-store",
       });
       if (res.status === 410) {
         const j = await res.json().catch(() => ({}));

@@ -35,6 +35,7 @@ import { useOrderDistinctStatuses } from "@/hooks/queries/useOrderDistinctStatus
 import { orderStatusDisplayLabel } from "@/lib/order-status-ui";
 import { listTemplates } from "@/services/templateService";
 import { resolveDefaultTemplateForPrint } from "@/lib/template-resolve-default";
+import { buildOrderTemplatePdfUrl } from "@/lib/templates/order-template-pdf-url";
 import { useAuth } from "@/contexts/AuthProvider";
 import { updateOrderStatus } from "@/services/orderService";
 import { DateRangeFilter } from "./DateRangeFilter";
@@ -341,7 +342,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       });
       return;
     }
-    const url = `/api/templates/${templateId}/render?format=pdf&store_id=${storeId}&order_id=${orderId}`;
+    const url = buildOrderTemplatePdfUrl(templateId, storeId, orderId);
     window.open(url, "_blank", "noopener,noreferrer");
   }, [storeId, toast]);
 

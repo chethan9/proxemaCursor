@@ -58,6 +58,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!context) return res.status(400).json({ error: "Unable to build template context" });
 
+    // Prevent CDN/browser caching of live invoices/reports — identical URLs would otherwise show stale PDFs.
+    if (!sampleParam) {
+      res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+
     let rendered: string;
     try {
       rendered = await renderTemplateHtml(html, context as unknown as Record<string, unknown>);
