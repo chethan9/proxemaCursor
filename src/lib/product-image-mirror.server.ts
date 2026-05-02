@@ -13,7 +13,12 @@ import {
   type ProductMirrorUrlsEntry,
 } from "@/lib/product-image-urls";
 
-const MIRROR_CONCURRENCY = 3;
+const rawMirrorConcurrency = Number(process.env.CF_MIRROR_IMAGE_CONCURRENCY || 6);
+const MIRROR_CONCURRENCY = Number.isFinite(rawMirrorConcurrency) ? Math.min(12, Math.max(1, rawMirrorConcurrency)) : 6;
+const rawBackfillProductConcurrency = Number(process.env.CF_BACKFILL_PRODUCT_CONCURRENCY || 4);
+const BACKFILL_PRODUCT_CONCURRENCY = Number.isFinite(rawBackfillProductConcurrency)
+  ? Math.min(12, Math.max(1, rawBackfillProductConcurrency))
+  : 4;
 
 function logCfMirrorMetric(cfg: ResolvedCloudflareConfig | null, payload: Record<string, unknown>) {
   const on = cfg?.metricsEnabled || process.env.CLOUDFLARE_IMAGE_MIRROR_METRICS === "true";
@@ -285,7 +290,7 @@ export type MirrorBackfillBatchResult = {
   hasMore: boolean;
 };
 
-const BACKFILL_MAX_PRODUCTS = 80;
+const BACKFILL_MAX_PRODUCTS = 100;
 
 /**
  * Walks products in id order and mirrors any HTTPS gallery URLs that are not already `ready` in product_image_mirrors.
@@ -369,10 +374,8 @@ export async function runMirrorBackfillBatch(opts: {
     readyByProduct.set(m.product_id, set);
   }
 
-  let touched = 0;
+  const rowsToMirror: typeof rows = [];
   let skipped = 0;
-  let errors = 0;
-
   for (const p of rows) {
     const imgs = p.images as { src?: string }[];
     const neededKeys = new Set<string>();
@@ -398,6 +401,12 @@ export async function runMirrorBackfillBatch(opts: {
       skipped++;
       continue;
     }
+    rowsToMirror.push(p);
+  }
+
+  let touched = 0;
+  let errors = 0;
+  await mapPool(rowsToMirror, BACKFILL_PRODUCT_CONCURRENCY, async (p) => {
     try {
       await mirrorImagesForProductRow(p.store_id, p.id, p.images, "repair");
       touched++;
@@ -405,7 +414,7 @@ export async function runMirrorBackfillBatch(opts: {
       console.warn("[product-image-mirror] backfill product", p.id, e);
       errors++;
     }
-  }
+  });
 
   return {
     ok: true,
@@ -442,7 +451,7 @@ export async function runMirrorProductImagesPipeline(opts?: {
 
   const rawBf = process.env.CF_BACKFILL_PRODUCT_BATCH;
   const parsedBf = rawBf ? Number(rawBf) : 30;
-  const defaultBf = Number.isFinite(parsedBf) ? Math.min(80, Math.max(1, parsedBf)) : 30;
+  const defaultBf = Number.isFinite(parsedBf) ? Math.min(BACKFILL_MAX_PRODUCTS, Math.max(1, parsedBf)) : 30;
   const productLimit = opts?.productLimit ?? defaultBf;
 
   const persist = opts?.persistBackfillCursor !== false;

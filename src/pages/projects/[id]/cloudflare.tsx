@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { setCfDebugBadge, useCfDebugBadge } from "@/hooks/useCfDebugBadge";
 import type { StoreCloudflareStats } from "@/pages/api/stores/[storeId]/cloudflare/stats";
-import { Loader2, RefreshCw, Cloud, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, Cloud, AlertTriangle, Zap } from "lucide-react";
 import { formatDateTime } from "@/lib/format-number";
 import { useTranslation } from "next-i18next";
 
@@ -60,6 +60,9 @@ function Inner() {
   >([]);
   const [rowsLoading, setRowsLoading] = useState(true);
   const [retrying, setRetrying] = useState<string | null>(null);
+  /** Cursor for store-scoped mirror backfill; null = from first product. */
+  const [mirrorAfterId, setMirrorAfterId] = useState<string | null>(null);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   const loadStats = async () => {
     if (!storeId) return;
@@ -122,6 +125,59 @@ function Inner() {
   const totalTracked = ready + pending + failed + (stats?.mirrorRows.deleting ?? 0);
   const slots = stats?.gallerySlots ?? 0;
   const coverage = slots > 0 ? Math.round((ready / slots) * 100) : 0;
+
+  const runMirrorBatch = async () => {
+    if (!storeId) return;
+    setSyncLoading(true);
+    try {
+      const res = await authFetch(`/api/stores/${storeId}/cloudflare/force-sync`, {
+        method: "POST",
+        body: JSON.stringify({
+          afterId: mirrorAfterId,
+          rounds: 8,
+          productLimit: 80,
+        }),
+      });
+      const j = (await res.json()) as {
+        error?: string;
+        integrationEnabled?: boolean;
+        touched?: number;
+        scanned?: number;
+        errors?: number;
+        hasMore?: boolean;
+        nextAfterId?: string | null;
+        roundsRun?: number;
+      };
+      if (!res.ok) throw new Error(j.error || `Sync ${res.status}`);
+      if (j.integrationEnabled === false) {
+        toast({
+          title: "Cloudflare mirroring is off",
+          description: "Server-side Cloudflare Images is not configured or disabled.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const hasMore = Boolean(j.hasMore && j.nextAfterId);
+      setMirrorAfterId(hasMore ? (j.nextAfterId ?? null) : null);
+      const touched = j.touched ?? 0;
+      const scanned = j.scanned ?? 0;
+      const errors = j.errors ?? 0;
+      const rounds = j.roundsRun ?? 1;
+      toast({
+        title: hasMore ? "Batch finished — more products remain" : "Mirror batch finished",
+        description: `Ran ${rounds} round(s). Touched ${touched} product(s), scanned ${scanned} in batch window. Errors: ${errors}.`,
+      });
+      await loadStats();
+    } catch (e) {
+      toast({
+        title: "Mirror batch failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const retry = async (mirrorId: string) => {
     setRetrying(mirrorId);
@@ -195,10 +251,37 @@ function Inner() {
                 <CardTitle className="text-base">Coverage</CardTitle>
                 <CardDescription>Woo gallery slots vs mirrored-ready assets.</CardDescription>
               </div>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void loadStats()} disabled={statsLoading}>
-                <RefreshCw className={`h-3.5 w-3.5 ${statsLoading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
+              <div className="flex flex-wrap items-center gap-2 justify-end">
+                {mirrorAfterId != null && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => setMirrorAfterId(null)}
+                    disabled={syncLoading || statsLoading}
+                  >
+                    Start scan over
+                  </Button>
+                )}
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void runMirrorBatch()}
+                  disabled={syncLoading || statsLoading || stats?.configResolved === false}
+                >
+                  {syncLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="h-3.5 w-3.5" />
+                  )}
+                  {mirrorAfterId == null ? "Run mirror batch" : "Continue mirror batch"}
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void loadStats()} disabled={statsLoading}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${statsLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {statsLoading && !stats ? (
@@ -262,6 +345,11 @@ function Inner() {
                   )}
                   <p className="text-xs text-muted-foreground">
                     Tracked mirror rows: {totalTracked} (includes deleting state).
+                  </p>
+                  <p className="text-xs text-muted-foreground border-t pt-3 mt-1">
+                    <span className="font-medium text-foreground">Run mirror batch</span> processes several waves of
+                    products per click (uploads missing images to Cloudflare). Repeat until coverage catches up or the
+                    toast says there is nothing left to scan.
                   </p>
                 </>
               ) : null}
