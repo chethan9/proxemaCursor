@@ -14,19 +14,22 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Trash2, AlertCircle, X, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, AlertCircle, X, ExternalLink, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
 import { useBlockingEffect } from "@/contexts/LoadingProvider";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 type ProductRow = Record<string, unknown>;
 
 function Inner() {
   const router = useRouter();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const { id: storeId, store, loading: storeLoading } = useSiteFromRoute();
   const productId = typeof router.query.productId === "string" ? router.query.productId : "";
   const { locked: syncLocked, ready: syncReady } = useSyncLocked(storeId);
@@ -48,6 +51,8 @@ function Inner() {
   const [wooId, setWooId] = useState<number | null>(null);
   const [baselineForm, setBaselineForm] = useState<ProductFormState | null>(null);
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!storeId || !productId) return;
@@ -159,7 +164,7 @@ function Inner() {
       }
     })();
     return () => { cancelled = true; };
-  }, [storeId, productId, toast]);
+  }, [storeId, productId, toast, reloadTick]);
 
   useEffect(() => {
     const slug = (form?.slug ?? "").trim();
@@ -224,6 +229,34 @@ function Inner() {
     setServerErrors([]);
     save.mutate();
   }, [form, save]);
+
+  const refreshFromStore = useCallback(async () => {
+    if (!storeId || !productId) return;
+    setRefreshing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/stores/${storeId}/products/${productId}/refresh`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || `Refresh failed (${res.status})`);
+      }
+      toast({ title: "Refreshed from WooCommerce" });
+      void qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
+      void qc.invalidateQueries({ queryKey: ["product", productId] });
+      setReloadTick((n) => n + 1);
+    } catch (e) {
+      toast({
+        title: "Refresh failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [storeId, productId, toast, qc]);
 
   const canAdvance = (tab: AdvancedTabKey) => {
     if (!form) return false;
@@ -297,11 +330,24 @@ function Inner() {
               </a>
             </Button>
           )}
+          {wooId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5"
+              onClick={() => void refreshFromStore()}
+              disabled={refreshing}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", refreshing && "animate-spin")} />
+              Refresh
+            </Button>
+          )}
           <div className="flex items-center gap-0 rounded-full bg-muted/60 p-1">
             <button onClick={() => setMode("basic")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "basic" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Basic</button>
-            <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Advanced</button>
+            <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Variations</button>
           </div>
-          <ActivityHistoryDrawer entityType="product" entityId={productId} />
+          <ActivityHistoryDrawer entityType="product" entityId={productId} storeId={storeId} />
           <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
             <Trash2 className="h-4 w-4 mr-1.5" />Delete
           </Button>

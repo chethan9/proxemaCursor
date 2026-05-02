@@ -6,7 +6,7 @@ import { ProductFormState } from "@/services/productEditService";
 import { validateProductForm } from "@/services/productValidation";
 import { LivePreviewCard } from "@/components/product-edit/LivePreviewCard";
 import { isTabDirty } from "@/lib/product-edit/tab-slices";
-import { ArrowLeft, ArrowRight, Loader2, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 export type AdvancedTabKey = "basic" | "pricing" | "inventory" | "variants";
 
@@ -74,12 +74,11 @@ export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiv
       <Card>
         <CardContent className="p-0">
           {/* Tabs */}
-          <div className="flex items-center gap-4 sm:gap-6 px-6 border-b border-border overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1 px-4 sm:px-5 border-b border-border overflow-x-auto scrollbar-none">
             {steps.map((step) => {
               const isActive = step.key === activeTab;
               const dirty = baselineForm ? isTabDirty(baselineForm, form, step.key) : false;
               const complete = canAdvance(step.key);
-              const done = dirty && complete;
               const incomplete = dirty && !complete;
 
               return (
@@ -89,33 +88,26 @@ export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiv
                   onClick={() => { setErrors(null); setActiveTab(step.key); }}
                   aria-current={isActive ? "step" : undefined}
                   aria-label={
-                    !dirty
-                      ? `${step.label}, unchanged`
-                      : incomplete
-                        ? `${step.label}, edited — required fields incomplete`
-                        : `${step.label}, edited — complete`
+                    incomplete
+                      ? `${step.label}, required fields incomplete`
+                      : step.label
                   }
                   className={cn(
-                    "relative flex items-center gap-1.5 py-3.5 pr-1 text-sm font-medium transition-all whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md",
-                    !dirty && !isActive && "text-muted-foreground hover:text-foreground",
-                    !dirty && isActive && "text-foreground",
-                    incomplete && !isActive && "text-destructive bg-destructive/[0.07] px-2 -mx-1 ring-1 ring-destructive/25",
-                    incomplete && isActive && "text-destructive",
-                    done && !isActive && "text-emerald-700/90 dark:text-emerald-400/95 bg-emerald-500/[0.09] px-2 -mx-1 ring-1 ring-emerald-500/20",
-                    done && isActive && "text-emerald-800 dark:text-emerald-300",
+                    "relative flex items-center gap-1.5 px-3 py-3.5 text-sm font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm",
+                    isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <span>{step.label}</span>
-                  {done && (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600/85 dark:text-emerald-400/90" strokeWidth={2.75} aria-hidden />
+                  {incomplete && (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0"
+                      aria-hidden
+                    />
                   )}
                   <span
                     className={cn(
-                      "absolute inset-x-0 -bottom-px h-0.5 transition-all rounded-full",
-                      isActive && !dirty && "bg-foreground",
-                      isActive && incomplete && "bg-destructive",
-                      isActive && done && "bg-emerald-600/70 dark:bg-emerald-500/80",
-                      !isActive && "bg-transparent",
+                      "absolute inset-x-3 -bottom-px h-0.5 transition-all rounded-full",
+                      isActive ? "bg-foreground" : "bg-transparent",
                     )}
                   />
                 </button>

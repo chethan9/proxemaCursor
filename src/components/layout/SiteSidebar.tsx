@@ -180,8 +180,11 @@ export function SiteSidebar({ siteId }: Props) {
 
   const switchToSite = (newId: string) => {
     if (newId === siteId) { setOpen(false); return; }
-    const sub = getCurrentSubPath();
-    const next = `/sites/${newId}${sub}`;
+    const pathOnly = router.asPath.split("?")[0].split("#")[0];
+    const next =
+      pathOnly.startsWith(`/projects/${siteId}/cloudflare`)
+        ? `/projects/${newId}/cloudflare`
+        : `/sites/${newId}${getCurrentSubPath()}`;
     beginSiteNavigation(next);
     router.push(next);
     setOpen(false);
@@ -249,8 +252,9 @@ export function SiteSidebar({ siteId }: Props) {
     const showRecent = isBulkJobs && bulkJobsCounts.recent > 0;
     const showDownloadsUnseen = isDownloads && unseenDownloads > 0;
     // Map href section → nav.<key>; falls back to stored label so user customizations win.
+    const projectsCf = node.href.match(/^\/projects\/[^/]+\/(cloudflare)$/);
     const sectionMatch = node.href.match(/\/sites\/[^/]+\/?([^/?#]*)/);
-    const section = sectionMatch ? sectionMatch[1] : "";
+    const section = projectsCf ? projectsCf[1] : (sectionMatch ? sectionMatch[1] : "");
     const navKey =
       section === "" ? "home" :
       section === "bulk-jobs" ? "bulkJobs" :

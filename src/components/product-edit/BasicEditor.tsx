@@ -160,7 +160,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
           <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium">Basic Mode</div>
-            <div className="text-xs text-muted-foreground">Essential product details only. Switch to Advanced for taxes, variants, shipping rules & more.</div>
+            <div className="text-xs text-muted-foreground">Essential product details only. Switch to Variations for variants and advanced fields.</div>
           </div>
           <button onClick={dismissBanner} className="text-muted-foreground hover:text-foreground shrink-0">
             <X className="h-4 w-4" />

@@ -178,7 +178,11 @@ export function resolveForSiteSidebar(
       if (n.type === "item") {
         const r = reg.get(n.id); if (!r) continue;
         if (r.permission && !can(r.permission)) continue;
-        out.push({ id: n.id, type: "item", label: n.label, icon: n.icon, iconColor: n.iconColor, href: `/sites/${siteId}${r.path}`, permission: r.permission });
+        const href =
+          n.id === "site-cloudflare"
+            ? `/projects/${siteId}/cloudflare`
+            : `/sites/${siteId}${r.path}`;
+        out.push({ id: n.id, type: "item", label: n.label, icon: n.icon, iconColor: n.iconColor, href, permission: r.permission });
       } else {
         const children = depth < 1 ? resolve(n.children || [], depth + 1) : [];
         if (children.length === 0) continue;

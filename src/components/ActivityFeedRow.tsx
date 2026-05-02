@@ -3,11 +3,13 @@ import { ChevronDown, ChevronUp, ArrowRight, User, Shield, Cpu, Key } from "luci
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { PlatformGlyph, WordPressGlyph } from "@/components/history/SourceGlyph";
 import {
   type ActivityLogEntry,
   formatActionLabel,
   summarizeDiff,
 } from "@/services/activityLogService";
+import type { ProductHistoryEntry } from "@/types/product-history";
 import { useTranslation } from "next-i18next";
 import { formatDate, formatDateTime } from "@/lib/format-number";
 
@@ -91,7 +93,7 @@ export function ActivityFeedRow({
   entry,
   onOpenDetail,
 }: {
-  entry: ActivityLogEntry;
+  entry: ActivityLogEntry & Partial<Pick<ProductHistoryEntry, "history_source" | "display_actor" | "history_source_kind">>;
   onOpenDetail?: (id: string) => void;
 }) {
   const { i18n } = useTranslation();
@@ -100,7 +102,12 @@ export function ActivityFeedRow({
   const actorKey =
     actorTypeStr && actorTypeStr in actorIcon ? (actorTypeStr as keyof typeof actorIcon) : "user";
   const ActorIcon = actorIcon[actorKey] ?? User;
-  const initials = (entry.actor_email || "?").slice(0, 2).toUpperCase();
+  const historySource = entry.history_source;
+  const headline =
+    (entry.display_actor && String(entry.display_actor)) ||
+    entry.actor_email ||
+    (historySource === "wordpress" ? "WordPress" : "System");
+  const initials = (headline === "System" || headline === "WordPress" ? "?" : headline).slice(0, 2).toUpperCase();
   const diffRows = getDiffRows(entry.diff);
   const canExpand = diffRows.length > 0;
 
@@ -127,13 +134,23 @@ export function ActivityFeedRow({
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap text-sm">
-              <span className="font-medium truncate">
-                {entry.actor_email || "System"}
-              </span>
-              <Badge variant="outline" className="h-5 text-[10px] gap-1 capitalize">
-                <ActorIcon className="h-3 w-3" />
-                {actorTypeStr || "—"}
-              </Badge>
+              <span className="font-medium truncate">{headline}</span>
+              {historySource === "wordpress" ? (
+                <Badge variant="outline" className="h-5 text-[10px] gap-1 border-[#21759b]/30 bg-[#21759b]/5">
+                  <WordPressGlyph />
+                  WordPress
+                </Badge>
+              ) : historySource === "platform" ? (
+                <Badge variant="outline" className="h-5 text-[10px] gap-1 border-emerald-500/25 bg-emerald-500/5">
+                  <PlatformGlyph />
+                  Platform
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="h-5 text-[10px] gap-1 capitalize">
+                  <ActorIcon className="h-3 w-3" />
+                  {actorTypeStr || "—"}
+                </Badge>
+              )}
               <span className="text-muted-foreground">
                 {formatActionLabel(entry.action ?? "").toLowerCase()}
               </span>

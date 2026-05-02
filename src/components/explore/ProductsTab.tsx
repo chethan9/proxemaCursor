@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
-import { Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, Layers, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX } from "lucide-react";
+import { Columns3, ArrowUpDown, ArrowUp, ArrowDown, Download, Package, Layers, ImageIcon, LayoutGrid, List, Grid3x3, ChevronDown, GripVertical, Search, Pencil, Plus, FilterX, Cloud } from "lucide-react";
 import {
   getProductThumbnail,
   getCategoryNames,
@@ -65,6 +65,8 @@ import {
   stripHtmlForTablePreview,
 } from "@/lib/product-catalog-cell-display";
 import { supabase } from "@/integrations/supabase/client";
+import { isCloudflareDeliveryUrl } from "@/lib/product-image-urls";
+import { useCfDebugBadge } from "@/hooks/useCfDebugBadge";
 
 const PRODUCTS_TABLE_LAYOUT_VERSION = 1;
 
@@ -143,6 +145,7 @@ function ProductCatalogStringCell({ columnKey, raw }: { columnKey: ColumnKey; ra
 }
 
 export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
+  const cfDebugBadge = useCfDebugBadge();
   const { t, i18n } = useTranslation("site");
   const queryClient = useQueryClient();
   const { locked } = useSyncLocked(storeId);
@@ -1128,6 +1131,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               ) : (
                                 <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                               )}
+                              {cfDebugBadge && thumb && isCloudflareDeliveryUrl(thumb) && (
+                                <div
+                                  className="absolute bottom-1.5 right-1.5 z-[15] flex h-5 w-5 items-center justify-center rounded-md bg-background/95 border border-border shadow-sm"
+                                  title="Cloudflare Image Delivery"
+                                >
+                                  <Cloud className="h-3 w-3 text-sky-500" aria-hidden />
+                                </div>
+                              )}
                               {isVariable && (
                                 <div className="absolute bottom-1.5 left-1.5 h-5 w-5 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1195,6 +1206,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" loading="lazy" />
                             ) : (
                               <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                            )}
+                            {cfDebugBadge && thumb && isCloudflareDeliveryUrl(thumb) && (
+                              <div
+                                className="absolute top-11 right-2.5 z-[12] flex h-6 w-6 items-center justify-center rounded-md bg-background/95 border border-border shadow-sm"
+                                title="Cloudflare Image Delivery"
+                              >
+                                <Cloud className="h-3.5 w-3.5 text-sky-500" aria-hidden />
+                              </div>
                             )}
                             {isVariable && (
                               <div className="absolute bottom-2.5 left-2.5 h-8 w-8 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
@@ -1419,14 +1438,24 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (c.key === "image") {
                                 return (
                                   <TableCell key={c.key}>
-                                    {thumb ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={thumb} alt="" className="h-9 w-9 rounded object-cover border border-border" loading="lazy" />
-                                    ) : (
-                                      <div className="h-9 w-9 rounded bg-muted flex items-center justify-center border border-border">
-                                        <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
-                                      </div>
-                                    )}
+                                    <div className="relative h-9 w-9 shrink-0">
+                                      {thumb ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={thumb} alt="" className="h-9 w-9 rounded object-cover border border-border" loading="lazy" />
+                                      ) : (
+                                        <div className="h-9 w-9 rounded bg-muted flex items-center justify-center border border-border">
+                                          <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+                                        </div>
+                                      )}
+                                      {cfDebugBadge && thumb && isCloudflareDeliveryUrl(thumb) && (
+                                        <div
+                                          className="absolute -bottom-0.5 -right-0.5 z-10 flex h-4 w-4 items-center justify-center rounded bg-background/95 border border-border shadow-sm"
+                                          title="Cloudflare Image Delivery"
+                                        >
+                                          <Cloud className="h-2.5 w-2.5 text-sky-500" aria-hidden />
+                                        </div>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 );
                               }

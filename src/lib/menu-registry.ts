@@ -100,7 +100,8 @@ export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-brands", defaultLabel: "Brands", defaultIcon: "Award", path: "/brands", defaultGroup: "Main", defaultOrder: 6 },
   { id: "site-downloads", defaultLabel: "Downloads", defaultIcon: "Download", path: "/downloads", defaultGroup: "Main", defaultOrder: 7 },
   { id: "site-bulk-jobs", defaultLabel: "Bulk Jobs", defaultIcon: "Layers", path: "/bulk-jobs", defaultGroup: "Manage", defaultOrder: 0 },
-  { id: "site-settings", defaultLabel: "Configuration", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 1 },
+  { id: "site-cloudflare", defaultLabel: "Cloudflare", defaultIcon: "Cloud", path: "/cloudflare", defaultGroup: "Manage", defaultOrder: 2 },
+  { id: "site-settings", defaultLabel: "Configuration", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 3 },
 ];
 
 export const SITE_MENU_DEFAULT_GROUPS = ["Main", "Manage"];

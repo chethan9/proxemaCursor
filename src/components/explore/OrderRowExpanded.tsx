@@ -133,6 +133,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
     try {
       const updated = await updateOrderStatus(orderFull.id, newStatus);
       queryClient.setQueryData(queryKeys.orderDetail(orderFull.store_id, orderFull.id), updated);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orders(orderFull.store_id) });
       onSaved(updated);
       markSaved("order", orderFull.id);
       toast({ title: "Status updated", description: `Order #${orderFull.order_number || orderFull.woo_id} → ${newStatus}` });

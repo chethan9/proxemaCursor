@@ -80,3 +80,13 @@ export function getProductThumbnailWithMirrors(
 export function isCloudflareProductImagesClientEnabled(): boolean {
   return typeof process !== "undefined" && process.env.NEXT_PUBLIC_CLOUDFLARE_PRODUCT_IMAGES === "true";
 }
+
+/** True when the resolved thumbnail URL is served from Cloudflare Images (Image Delivery). */
+export function isCloudflareDeliveryUrl(u: string | null | undefined): boolean {
+  if (!u || !/^https?:\/\//i.test(u)) return false;
+  try {
+    return /(?:^|\.)imagedelivery\.net$/i.test(new URL(u).hostname);
+  } catch {
+    return false;
+  }
+}

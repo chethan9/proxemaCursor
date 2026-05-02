@@ -449,7 +449,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     try {
       await updateOrderStatus(orderId, "completed");
       toast({ title: t("orders.toast.markedComplete") });
-      await queryClient.invalidateQueries({ queryKey: ["orders", storeId] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orders(storeId) });
     } catch (err) {
       toast({ title: t("orders.toast.updateFailed"), description: err instanceof Error ? err.message : t("orders.toast.unknownError"), variant: "destructive" });
     } finally {
