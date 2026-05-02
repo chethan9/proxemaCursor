@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { wooRequest, getStoreCreds } from "@/lib/woo-client";
 import type { Database } from "@/integrations/supabase/helpers";
 import { auditSitesMutation } from "@/lib/audit/log";
+import { authorizeCronOrStoreMember } from "@/lib/authorize-cron-or-store.server";
 
 type Json = Database["public"]["Tables"]["categories"]["Row"]["raw_data"];
 
@@ -22,6 +23,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq("store_id", storeId)
     .single();
   if (fetchErr || !category) return res.status(404).json({ error: "Category not found" });
+
+  if (req.method === "PUT" || req.method === "DELETE") {
+    const gate = await authorizeCronOrStoreMember(req, storeId);
+    if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
+  }
 
   if (req.method === "PUT") {
     const updates = req.body as Record<string, unknown>;

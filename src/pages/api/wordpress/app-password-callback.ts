@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { verifyIntegrationToken } from "@/lib/integration-state.server";
+import { cronHeaders } from "@/lib/authorize-cron-or-store.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { site_url, user_login, password, state, rejected } = req.query;
@@ -23,13 +25,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.redirect(302, `${baseUrl}/projects?error=missing_state`);
   }
 
-  const [storeId, encodedReturnTo] = rawState.split("|");
+  let signed = verifyIntegrationToken(rawState);
+  if (!signed) {
+    try {
+      signed = verifyIntegrationToken(decodeURIComponent(rawState));
+    } catch {
+      signed = null;
+    }
+  }
+  let storeId: string;
   let returnTo: string | null = null;
-  if (encodedReturnTo) {
-    try { returnTo = decodeURIComponent(encodedReturnTo); } catch { returnTo = null; }
+
+  if (signed) {
+    storeId = signed.storeId;
+    returnTo = signed.returnTo;
+  } else {
+    const [legacyStoreId, encodedReturnTo] = rawState.split("|");
+    storeId = legacyStoreId || "";
+    if (encodedReturnTo) {
+      try { returnTo = decodeURIComponent(encodedReturnTo); } catch { returnTo = null; }
+    }
+    console.warn("[wp-callback] legacy unsigned state — migrate clients to signed state from /api/integrations/wp-callback-state");
   }
 
-  console.log("[wp-callback] parsed state:", { storeId, returnTo });
+  console.log("[wp-callback] parsed state:", { storeId, returnTo, signed: !!signed });
 
   const buildRedirect = (status: string) => {
     if (returnTo && returnTo.startsWith("/")) {
@@ -86,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const base = `${protocol}://${host}`;
     fetch(`${base}/api/stores/${storeId}/sync-start`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: cronHeaders(),
       body: JSON.stringify({ is_initial: false }),
     }).catch((e) => console.error("[wp-callback] eager sync trigger failed:", e));
   }

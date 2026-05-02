@@ -2,11 +2,15 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
 import { waitUntil } from "@vercel/functions";
+import { authorizeCronOrStoreMember, cronHeaders } from "@/lib/authorize-cron-or-store.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const { storeId } = req.query;
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
+
+  const gate = await authorizeCronOrStoreMember(req, storeId);
+  if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
 
   const { is_initial = false } = req.body || {};
 
@@ -52,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const base = getAppUrl(req);
   const syncPromise = fetch(`${base}/api/stores/${storeId}/sync`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: cronHeaders(),
     body: JSON.stringify({}),
   }).catch((e) => console.error("[sync-start] bg trigger:", e));
   waitUntil(syncPromise);

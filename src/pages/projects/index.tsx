@@ -23,6 +23,7 @@ import { CompactSiteRow } from "@/components/project/CompactSiteRow";
 import { GridSiteCard } from "@/components/project/GridSiteCard";
 import { BulkActionBar } from "@/components/project/BulkActionBar";
 import { useSitesUptime } from "@/hooks/queries/useSitesUptime";
+import { supabase } from "@/integrations/supabase/client";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 const PAGE_SIZE = 50;
@@ -168,9 +169,14 @@ export default function SitesPage() {
     const ids = Array.from(selected);
     let ok = 0;
     let fail = 0;
+    const { data: { session } } = await supabase.auth.getSession();
+    const authHeaders: HeadersInit = {};
+    if (session?.access_token) {
+      authHeaders.Authorization = `Bearer ${session.access_token}`;
+    }
     await Promise.all(ids.map(async (id) => {
       try {
-        const res = await fetch(`/api/stores/${id}/sync-start`, { method: "POST" });
+        const res = await fetch(`/api/stores/${id}/sync-start`, { method: "POST", headers: authHeaders });
         if (res.ok) ok++; else fail++;
       } catch {
         fail++;

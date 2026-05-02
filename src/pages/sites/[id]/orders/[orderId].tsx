@@ -11,14 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   User,
-  Mail,
   MapPin,
   Package,
   Truck,
   Check,
   Loader2,
   ExternalLink,
-  Send,
   Tag,
   FileText,
   ImageIcon,
@@ -445,9 +443,6 @@ export default function OrderDetailsPage() {
                       <TemplatePrintMenu storeId={storeId} orderId={orderId} type="pickslip" className="w-full" />
                     </div>
                     <div className="space-y-1.5">
-                      <button disabled title={t("orderDetail.actions.emailInvoiceUnavailable")} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-                        <Mail className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.emailInvoice")}</span><span className="ml-auto">→</span>
-                      </button>
                       {linkedCustomer?.id ? (
                         <Link href={`/sites/${storeId}/customers/${linkedCustomer.id}`} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
                           <User className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.viewCustomer")}</span><span className="ml-auto text-muted-foreground">→</span>
@@ -457,9 +452,6 @@ export default function OrderDetailsPage() {
                           <User className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.viewCustomerShort")}</span><span className="ml-auto">→</span>
                         </button>
                       )}
-                      <button disabled className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border text-muted-foreground opacity-60 cursor-not-allowed">
-                        <Send className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.resendNotification")}</span><span className="ml-auto">→</span>
-                      </button>
                       {store?.url && (
                         <a href={`${store.url.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${order.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-md text-xs border border-border bg-background hover:bg-muted transition-colors">
                           <ExternalLink className="h-3.5 w-3.5" /><span>{t("orderDetail.actions.openInWp")}</span><span className="ml-auto text-muted-foreground">→</span>

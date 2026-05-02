@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { assertStoreAccess } from "@/lib/assert-store-access";
+import { isAdminRole, resolveUserFromRequest } from "@/lib/server-auth";
 import { renderTemplateHtml } from "@/lib/templates/render-html";
 import { renderHtmlToPdf } from "@/lib/templates/render-pdf";
 import { resolveOrderContext, getSampleContext } from "@/lib/templates/resolve-order";
@@ -24,11 +26,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { data: tpl, error: tplErr } = await supabaseAdmin
       .from("templates")
-      .select("id, name, type, is_sample, current_version_id")
+      .select("id, name, type, is_sample, current_version_id, client_id")
       .eq("id", templateId)
       .maybeSingle();
     if (tplErr || !tpl) return res.status(404).json({ error: "Template not found" });
     if (!tpl.current_version_id) return res.status(400).json({ error: "Template has no published version" });
+
+    const tplTypeEarly = tpl.type as string;
+    const needsRealDataAuth =
+      !sampleParam &&
+      ((!!storeId && !!orderId) || (tplTypeEarly === "report" && !!storeId));
+
+    if (needsRealDataAuth) {
+      const user = await resolveUserFromRequest(req);
+      if (!user?.userId) return res.status(401).json({ error: "Unauthorized" });
+      const admin = isAdminRole(user.role);
+      if (!admin) {
+        const cid = tpl.client_id as string | null;
+        if (!cid || cid !== user.clientId) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+      }
+      if (storeId) {
+        const gate = await assertStoreAccess(user.userId, storeId);
+        if (gate.allowed === false) return res.status(gate.status).json({ error: gate.message });
+      }
+    }
 
     const { data: ver, error: verErr } = await supabaseAdmin
       .from("template_versions")

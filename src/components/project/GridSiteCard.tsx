@@ -13,6 +13,7 @@ import type { UptimePoint } from "@/hooks/queries/useSitesUptime";
 import { useSiteScreenshot } from "@/hooks/queries/useSiteScreenshot";
 import { useTranslation } from "next-i18next";
 import { formatDate } from "@/lib/format-number";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   store: StoreWithClient;
@@ -120,7 +121,12 @@ export function GridSiteCard({ store, clientName, selected, onToggleSelect, onEd
     if (isIncomplete || syncing) return;
     setSyncing(true);
     try {
-      const res = await fetch(`/api/stores/${store.id}/sync-start`, { method: "POST" });
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch(`/api/stores/${store.id}/sync-start`, { method: "POST", headers });
       if (!res.ok) throw new Error();
       toast({ title: "Sync started", description: store.name });
       qc.invalidateQueries({ queryKey: queryKeys.stores });

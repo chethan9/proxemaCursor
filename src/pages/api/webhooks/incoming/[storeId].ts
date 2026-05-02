@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders } from "http";
+import crypto from "crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { Json } from "@/integrations/supabase/database.types";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
@@ -174,6 +175,35 @@ function toJson(obj: unknown) {
   return JSON.parse(JSON.stringify(obj ?? null));
 }
 
+function readRawBody(req: NextApiRequest): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+function verifyWooWebhookSignature(raw: Buffer, secret: string, signatureHeader: string): boolean {
+  const expected = crypto.createHmac("sha256", secret).update(raw).digest("base64");
+  const a = Buffer.from(signatureHeader.trim(), "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+function parseBodyForWebhook(rawBuf: Buffer): unknown {
+  const txt = rawBuf.toString("utf8");
+  if (!txt.trim()) return {};
+  try {
+    return JSON.parse(txt) as unknown;
+  } catch {
+    return txt;
+  }
+}
+
 function buildProductRow(storeId: string, p: Record<string, unknown>) {
   const now = new Date().toISOString();
   return {
@@ -342,8 +372,54 @@ export default async function handler(
     return res.status(400).json({ error: "Store ID required" });
   }
 
+  let rawBuf: Buffer;
   try {
-    const topic = await resolveTopicForStore(storeId, req.headers, req.body);
+    rawBuf = await readRawBody(req);
+  } catch (e) {
+    console.error("[Webhook] read body:", e);
+    return res.status(400).json({ error: "Invalid body" });
+  }
+
+  const sigHeader = firstHeader(req.headers, "x-wc-webhook-signature");
+  if (!sigHeader) {
+    console.warn("[Webhook] missing X-WC-Webhook-Signature", { storeId });
+    return res.status(401).json({ error: "Missing signature" });
+  }
+
+  const parsedOnce = parseBodyForWebhook(rawBuf);
+  const payloadProbe = normalizePayload(parsedOnce);
+
+  const headerWid = firstHeader(req.headers, "x-wc-webhook-id");
+  let wooWebhookNumeric = headerWid ? parseInt(headerWid, 10) : NaN;
+  if (!Number.isFinite(wooWebhookNumeric)) {
+    const w = payloadProbe.webhook_id;
+    if (w != null) {
+      wooWebhookNumeric = typeof w === "number" ? w : parseInt(String(w), 10);
+    }
+  }
+  if (!Number.isFinite(wooWebhookNumeric) || wooWebhookNumeric <= 0) {
+    console.warn("[Webhook] could not resolve Woo webhook id", { storeId });
+    return res.status(401).json({ error: "Invalid webhook id" });
+  }
+
+  const { data: whRow } = await supabase
+    .from("webhooks")
+    .select("secret")
+    .eq("store_id", storeId)
+    .eq("woo_webhook_id", wooWebhookNumeric)
+    .maybeSingle();
+
+  if (!whRow?.secret) {
+    return res.status(401).json({ error: "Webhook secret not found" });
+  }
+
+  if (!verifyWooWebhookSignature(rawBuf, whRow.secret, sigHeader)) {
+    console.warn("[Webhook] signature mismatch", { storeId, wooWebhookNumeric });
+    return res.status(401).json({ error: "Invalid signature" });
+  }
+
+  try {
+    const topic = await resolveTopicForStore(storeId, req.headers, parsedOnce);
 
     const { data: store } = await supabase
       .from("stores")
@@ -355,7 +431,7 @@ export default async function handler(
       return res.status(404).json({ error: "Store not found" });
     }
 
-    const payloadForStore = normalizePayload(req.body);
+    const payloadForStore = normalizePayload(parsedOnce);
 
     const { data: event, error: eventError } = await supabase
       .from("webhook_events")
@@ -483,6 +559,6 @@ export default async function handler(
 
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: false,
   },
 };

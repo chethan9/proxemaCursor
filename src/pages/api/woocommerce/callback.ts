@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
+import { cronHeaders } from "@/lib/authorize-cron-or-store.server";
 
 // WooCommerce sends credentials via POST to this callback
 export default async function handler(
@@ -74,7 +75,7 @@ export default async function handler(
       const base = `${protocol}://${host}`;
       fetch(`${base}/api/stores/${storeId}/sync-start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: cronHeaders(),
         body: JSON.stringify({ is_initial: false }),
       }).catch((e) => console.error("[callback] eager sync trigger failed:", e));
     }

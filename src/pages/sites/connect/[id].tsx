@@ -83,10 +83,34 @@ export default function ConnectSuccessPage() {
   };
 
   const siteId = typeof id === "string" ? id : null;
+  const [signedWpState, setSignedWpState] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!siteId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: HeadersInit = {};
+        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+        const r = await fetch(`/api/integrations/wp-callback-state?storeId=${encodeURIComponent(siteId)}`, { headers });
+        if (!r.ok || cancelled) return;
+        const j = (await r.json()) as { state?: string };
+        if (j.state && !cancelled) setSignedWpState(j.state);
+      } catch {
+        /* non-fatal — falls back to legacy state format */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [siteId]);
+
   const baseCallback = useMemo(() => {
     if (typeof window === "undefined" || !siteId) return "";
+    if (signedWpState) {
+      return `${window.location.origin}/api/wordpress/app-password-callback?state=${encodeURIComponent(signedWpState)}`;
+    }
     return `${window.location.origin}/api/wordpress/app-password-callback?state=${siteId}`;
-  }, [siteId]);
+  }, [siteId, signedWpState]);
   const authorizeUrl = useMemo(() => {
     if (!storeUrl || !siteId) return "";
     const clean = storeUrl.replace(/\/$/, "");

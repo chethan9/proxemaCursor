@@ -1,9 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { getWooUserAgent } from "@/lib/brand-name-server";
+import { resolveUserFromRequest } from "@/lib/server-auth";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  const cronOk = !!cronSecret && req.headers.authorization === `Bearer ${cronSecret}`;
+  const user = cronOk ? null : await resolveUserFromRequest(req);
+  const superOk = user?.role === "super_admin";
+
+  if (!cronOk && !superOk) {
+    if (process.env.NODE_ENV === "production" && !cronSecret) {
+      return res.status(503).json({ error: "CRON_SECRET not configured" });
+    }
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   try {
     const { data: stores } = await supabase

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText, Hourglass, PauseCircle, AlertCircle, CircleDashed, CheckCircle2, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
+import { Phone, User, ExternalLink, Loader2, Package, MapPin, Truck, Tag, ImageIcon, FileText, Hourglass, PauseCircle, AlertCircle, CircleDashed, CheckCircle2, XCircle, RotateCcw, type LucideIcon } from "lucide-react";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, fetchOrderById, type OrderRow } from "@/services/orderService";
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
@@ -256,11 +256,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
           </div>
           <div className="space-y-1.5">
             <div className="text-sm font-medium">{custName}</div>
-            {custEmail && (
-              <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary break-all">
-                <Mail className="h-3 w-3 shrink-0" />{custEmail}
-              </a>
-            )}
+            {custEmail && <div className="text-xs text-muted-foreground break-all">{custEmail}</div>}
             {billing.phone && (
               <a href={`tel:${billing.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary">
                 <Phone className="h-3 w-3" />{billing.phone}
@@ -343,13 +339,6 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
               <span>Print invoice</span>
               <span className="ml-auto text-muted-foreground">→</span>
             </button>
-            {custEmail && (
-              <a href={`mailto:${custEmail}`} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
-                <Mail className="h-2.5 w-2.5" />
-                <span>Email</span>
-                <span className="ml-auto text-muted-foreground">→</span>
-              </a>
-            )}
             {storeUrl && (
               <a href={`${storeUrl.replace(/\/$/, "")}/wp-admin/admin.php?page=wc-orders&action=edit&id=${orderFull.woo_id}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors">
                 <ExternalLink className="h-2.5 w-2.5" />

@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/database.types";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
 import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
+import { authorizeCronOrStoreMember } from "@/lib/authorize-cron-or-store.server";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -43,6 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!store) return res.status(400).json({ error: "Store not connected" });
 
   if (req.method === "PUT") {
+    const gate = await authorizeCronOrStoreMember(req, storeId);
+    if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
     const patch = req.body as {
       first_name?: string;
       last_name?: string;

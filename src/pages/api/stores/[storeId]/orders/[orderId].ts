@@ -6,6 +6,7 @@ import { logActivity } from "@/lib/activity-log";
 import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 import { refreshCustomerForOrder } from "@/lib/customer-refresh";
 import { refreshOrderFromWoo } from "@/lib/order-refresh";
+import { authorizeCronOrStoreMember } from "@/lib/authorize-cron-or-store.server";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -54,6 +55,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (typeof storeId !== "string" || typeof orderId !== "string") {
     return res.status(400).json({ error: "storeId and orderId required" });
   }
+
+  const gate = await authorizeCronOrStoreMember(req, storeId);
+  if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
 
   const { data: localOrder } = await supabaseAdmin
     .from("orders")

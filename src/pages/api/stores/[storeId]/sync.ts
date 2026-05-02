@@ -15,6 +15,7 @@ import { waitUntil } from "@vercel/functions";
 import { getEffectiveHistoryFrom } from "@/lib/history-window";
 import { normalizeWooDate } from "@/lib/woo-date";
 import { scheduleDashboardSummaryRefresh } from "@/lib/dashboard-summary.server";
+import { authorizeCronOrStoreMember, cronHeaders } from "@/lib/authorize-cron-or-store.server";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -531,12 +532,29 @@ async function maybeFireCelebrationAndVariations(
   }
   // Variations sync
   const variationsPromise = fetch(`${baseUrl}/api/stores/${storeId}/sync-variations`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+    method: "POST",
+    headers: cronHeaders(),
+    body: "{}",
   }).catch((e) => console.error("[Sync] variations trigger:", e));
   waitUntil(variationsPromise);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { storeId: qStoreId } = req.query;
+  if (
+    (req.method === "PATCH" || req.method === "POST") &&
+    (!qStoreId || typeof qStoreId !== "string")
+  ) {
+    return res.status(400).json({ error: "Store ID required" });
+  }
+  if (
+    (req.method === "PATCH" || req.method === "POST") &&
+    typeof qStoreId === "string"
+  ) {
+    const gate = await authorizeCronOrStoreMember(req, qStoreId);
+    if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
+  }
+
   // PATCH = manual cancel
   if (req.method === "PATCH") {
     const { storeId } = req.query;

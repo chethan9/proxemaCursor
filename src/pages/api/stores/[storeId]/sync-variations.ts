@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
+import { authorizeCronOrStoreMember } from "@/lib/authorize-cron-or-store.server";
 import type { Json } from "@/integrations/supabase/database.types";
 import { fetchPagesConcurrent, basicAuth } from "@/lib/sync-engine";
 
@@ -62,6 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const { storeId } = req.query;
   if (!storeId || typeof storeId !== "string") return res.status(400).json({ error: "Store ID required" });
+
+  const gate = await authorizeCronOrStoreMember(req, storeId);
+  if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
 
   const { data: store, error: storeError } = await supabase
     .from("stores")

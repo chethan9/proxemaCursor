@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import { authorizeCronOrStoreMember } from "@/lib/authorize-cron-or-store.server";
 
 interface WooOrderNote {
   id: number;
@@ -41,6 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === "POST") {
+      const gate = await authorizeCronOrStoreMember(req, storeId);
+      if (gate.ok === false) return res.status(gate.status).json({ error: gate.message });
+
       const { note, customer_note } = (req.body || {}) as { note?: string; customer_note?: boolean };
       if (!note?.trim()) return res.status(400).json({ error: "note required" });
       const created = await wooRequest<WooOrderNote>(

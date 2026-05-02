@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
+import { cronHeaders } from "@/lib/authorize-cron-or-store.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization;
@@ -40,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
       fetch(`${baseUrl}/api/stores/${run.store_id}/sync-start?aspect=${run.aspect}&runId=${run.id}`, {
         method: "POST",
-        headers: { "X-Retry-Attempt": String(run.attempt + 1) },
+        headers: { ...cronHeaders(), "X-Retry-Attempt": String(run.attempt + 1) },
       }).catch(() => {});
       results.push({ id: run.id, store_id: run.store_id, aspect: run.aspect, attempt: run.attempt + 1 });
     } catch (err) {
