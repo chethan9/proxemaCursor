@@ -428,6 +428,102 @@ export async function runMirrorBackfillBatch(opts: {
   };
 }
 
+export type MirrorBackfillTimeboxedResult = {
+  completed: boolean;
+  integrationEnabled: boolean;
+  rounds: number;
+  totalTouched: number;
+  totalScanned: number;
+  totalSkipped: number;
+  totalErrors: number;
+  nextAfterId: string | null;
+  elapsedMs: number;
+};
+
+/**
+ * Runs many backfill batches in one invocation until the catalog is done or `maxMs` elapses.
+ * Use for on-demand "sync all images" and post–product-sync catch-up (never persist global backfill cursor).
+ */
+export async function runMirrorBackfillStoreTimeboxed(
+  storeId: string,
+  maxMs: number,
+  opts?: { afterId?: string | null; productLimit?: number },
+): Promise<MirrorBackfillTimeboxedResult> {
+  const productLimit = opts?.productLimit ?? 100;
+  const capMs = Math.max(5_000, maxMs);
+  const start = Date.now();
+  let afterId: string | null = opts?.afterId ?? null;
+  let rounds = 0;
+  let totalTouched = 0;
+  let totalScanned = 0;
+  let totalSkipped = 0;
+  let totalErrors = 0;
+  let lastIntegration = true;
+
+  while (Date.now() - start < capMs) {
+    const b = await runMirrorBackfillBatch({ storeId, afterId, productLimit });
+    lastIntegration = b.integrationEnabled;
+    rounds++;
+    totalTouched += b.touched;
+    totalScanned += b.scanned;
+    totalSkipped += b.skipped;
+    totalErrors += b.errors;
+
+    if (!b.integrationEnabled) {
+      return {
+        completed: false,
+        integrationEnabled: false,
+        rounds,
+        totalTouched,
+        totalScanned,
+        totalSkipped,
+        totalErrors,
+        nextAfterId: afterId,
+        elapsedMs: Date.now() - start,
+      };
+    }
+    if (!b.ok) {
+      return {
+        completed: false,
+        integrationEnabled: b.integrationEnabled,
+        rounds,
+        totalTouched,
+        totalScanned,
+        totalSkipped,
+        totalErrors,
+        nextAfterId: afterId,
+        elapsedMs: Date.now() - start,
+      };
+    }
+    if (!b.hasMore) {
+      return {
+        completed: true,
+        integrationEnabled: true,
+        rounds,
+        totalTouched,
+        totalScanned,
+        totalSkipped,
+        totalErrors,
+        nextAfterId: null,
+        elapsedMs: Date.now() - start,
+      };
+    }
+    afterId = b.nextAfterId;
+  }
+
+  return {
+    completed: false,
+    integrationEnabled: lastIntegration,
+    rounds,
+    totalTouched,
+    totalScanned,
+    totalSkipped,
+    totalErrors,
+    nextAfterId: afterId,
+    elapsedMs: Date.now() - start,
+  };
+}
+
 export type MirrorProductImagesPipelineResult = {
   repair: { attempted: number; ok: number; failed: number };
   backfill: MirrorBackfillBatchResult;

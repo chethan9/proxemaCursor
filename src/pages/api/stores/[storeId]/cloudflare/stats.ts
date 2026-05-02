@@ -2,9 +2,15 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
 import { getResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
+import { normalizeProductImageSrc, productImageStorageKey } from "@/lib/product-image-urls";
 
 export type StoreCloudflareStats = {
+  /** Total gallery entries (including non-HTTP). */
   gallerySlots: number;
+  /** HTTPS gallery URLs (same basis as the mirror backfill). */
+  httpsImageSlots: number;
+  /** Of `httpsImageSlots`, how many have a `ready` mirror row for that image key. */
+  slotsWithReadyMirror: number;
   mirrorRows: { pending: number; ready: number; failed: number; deleting: number };
   lastMirrorActivityAt: string | null;
   configResolved: boolean;
@@ -28,16 +34,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const cfg = await getResolvedCloudflareConfig().catch(() => null);
 
-  const { data: products } = await supabaseAdmin.from("products").select("images").eq("store_id", storeId);
+  const { data: products } = await supabaseAdmin.from("products").select("id, images").eq("store_id", storeId);
   let gallerySlots = 0;
+  let httpsImageSlots = 0;
   for (const p of products || []) {
     if (Array.isArray(p.images)) gallerySlots += p.images.length;
   }
 
   const { data: mirrors } = await supabaseAdmin
     .from("product_image_mirrors")
-    .select("status, updated_at")
+    .select("product_id, storage_key, status, updated_at")
     .eq("store_id", storeId);
+
+  const readyKeysByProduct = new Map<string, Set<string>>();
+  for (const m of mirrors || []) {
+    if (m.status !== "ready") continue;
+    const set = readyKeysByProduct.get(m.product_id as string) ?? new Set();
+    set.add(m.storage_key as string);
+    readyKeysByProduct.set(m.product_id as string, set);
+  }
+
+  let slotsWithReadyMirror = 0;
+  for (const p of products || []) {
+    const imgs = p.images as { src?: string }[] | null;
+    if (!Array.isArray(imgs)) continue;
+    const readySet = readyKeysByProduct.get(p.id as string) ?? new Set();
+    for (const im of imgs) {
+      const src = im?.src;
+      if (!src || !/^https?:\/\//i.test(src)) continue;
+      httpsImageSlots++;
+      const key = productImageStorageKey(normalizeProductImageSrc(src));
+      if (readySet.has(key)) slotsWithReadyMirror++;
+    }
+  }
 
   const mirrorRows = { pending: 0, ready: 0, failed: 0, deleting: 0 };
   let lastMirrorActivityAt: string | null = null;
@@ -53,6 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const body: StoreCloudflareStats = {
     gallerySlots,
+    httpsImageSlots,
+    slotsWithReadyMirror,
     mirrorRows,
     lastMirrorActivityAt,
     configResolved: cfg != null,

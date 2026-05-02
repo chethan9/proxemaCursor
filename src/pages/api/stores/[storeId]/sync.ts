@@ -434,6 +434,28 @@ async function runAspectChunk(
         duration_seconds: duration,
         is_initial: isInitial,
       });
+      if (aspectName === "products") {
+        waitUntil(
+          (async () => {
+            try {
+              const { runMirrorBackfillStoreTimeboxed } = await import("@/lib/product-image-mirror.server");
+              const r = await runMirrorBackfillStoreTimeboxed(store.id, 240_000);
+              console.log(
+                "[Sync] post-products CF mirror catch-up",
+                store.id,
+                "completed=",
+                r.completed,
+                "rounds=",
+                r.rounds,
+                "touched=",
+                r.totalTouched,
+              );
+            } catch (e) {
+              console.warn("[Sync] post-products CF mirror catch-up failed:", e);
+            }
+          })(),
+        );
+      }
       return { ...counters, hasMore: false, runId: run.id, aspect: aspectName };
     }
   } catch (err) {
