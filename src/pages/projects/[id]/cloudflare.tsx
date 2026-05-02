@@ -2,7 +2,7 @@
  * Cloudflare Images mirror status for a store (same store id as Projects workspace `/projects/[id]`).
  * Lives under `/projects/...` so it sits next to the technical project/workspace tooling.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,9 +60,19 @@ function Inner() {
   >([]);
   const [rowsLoading, setRowsLoading] = useState(true);
   const [retrying, setRetrying] = useState<string | null>(null);
-  /** Cursor for store-scoped mirror backfill; null = from first product. */
-  const [mirrorAfterId, setMirrorAfterId] = useState<string | null>(null);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [mirrorAfterId, setMirrorAfterId] = useState<string | null>(null);
+  const stopRequestedRef = useRef(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    calls: number;
+    rounds: number;
+    scanned: number;
+    touched: number;
+    errors: number;
+    readyStart: number;
+    done: boolean;
+    stopped: boolean;
+  } | null>(null);
 
   const loadStats = async () => {
     if (!storeId) return;
@@ -126,55 +136,113 @@ function Inner() {
   const slots = stats?.gallerySlots ?? 0;
   const coverage = slots > 0 ? Math.round((ready / slots) * 100) : 0;
 
-  const runMirrorBatch = async () => {
+  const stopForceSync = () => {
+    stopRequestedRef.current = true;
+  };
+
+  const runForceSync = async () => {
     if (!storeId) return;
+    stopRequestedRef.current = false;
     setSyncLoading(true);
+    const readyStart = stats?.mirrorRows.ready ?? 0;
+    setSyncProgress({
+      calls: 0,
+      rounds: 0,
+      scanned: 0,
+      touched: 0,
+      errors: 0,
+      readyStart,
+      done: false,
+      stopped: false,
+    });
+
+    let afterId: string | null = mirrorAfterId;
+    let calls = 0;
+    let rounds = 0;
+    let scanned = 0;
+    let touched = 0;
+    let errors = 0;
+    let hasMore = true;
+
     try {
-      const res = await authFetch(`/api/stores/${storeId}/cloudflare/force-sync`, {
-        method: "POST",
-        body: JSON.stringify({
-          afterId: mirrorAfterId,
-          rounds: 8,
-          productLimit: 80,
-        }),
-      });
-      const j = (await res.json()) as {
-        error?: string;
-        integrationEnabled?: boolean;
-        touched?: number;
-        scanned?: number;
-        errors?: number;
-        hasMore?: boolean;
-        nextAfterId?: string | null;
-        roundsRun?: number;
-      };
-      if (!res.ok) throw new Error(j.error || `Sync ${res.status}`);
-      if (j.integrationEnabled === false) {
-        toast({
-          title: "Cloudflare mirroring is off",
-          description: "Server-side Cloudflare Images is not configured or disabled.",
-          variant: "destructive",
+      while (hasMore && !stopRequestedRef.current && calls < 150) {
+        const res = await authFetch(`/api/stores/${storeId}/cloudflare/force-sync`, {
+          method: "POST",
+          body: JSON.stringify({
+            afterId,
+            rounds: 8,
+            productLimit: 80,
+          }),
         });
-        return;
+        const j = (await res.json()) as {
+          error?: string;
+          integrationEnabled?: boolean;
+          touched?: number;
+          scanned?: number;
+          errors?: number;
+          hasMore?: boolean;
+          nextAfterId?: string | null;
+          roundsRun?: number;
+        };
+        if (!res.ok) throw new Error(j.error || `Sync ${res.status}`);
+        if (j.integrationEnabled === false) {
+          toast({
+            title: "Cloudflare mirroring is off",
+            description: "Server-side Cloudflare Images is not configured or disabled.",
+            variant: "destructive",
+          });
+          break;
+        }
+
+        calls += 1;
+        rounds += j.roundsRun ?? 0;
+        touched += j.touched ?? 0;
+        scanned += j.scanned ?? 0;
+        errors += j.errors ?? 0;
+
+        hasMore = Boolean(j.hasMore && j.nextAfterId);
+        afterId = hasMore ? (j.nextAfterId ?? null) : null;
+        setMirrorAfterId(afterId);
+        setSyncProgress({
+          calls,
+          rounds,
+          scanned,
+          touched,
+          errors,
+          readyStart,
+          done: !hasMore,
+          stopped: false,
+        });
+        await loadStats();
       }
-      const hasMore = Boolean(j.hasMore && j.nextAfterId);
-      setMirrorAfterId(hasMore ? (j.nextAfterId ?? null) : null);
-      const touched = j.touched ?? 0;
-      const scanned = j.scanned ?? 0;
-      const errors = j.errors ?? 0;
-      const rounds = j.roundsRun ?? 1;
-      toast({
-        title: hasMore ? "Batch finished — more products remain" : "Mirror batch finished",
-        description: `Ran ${rounds} round(s). Touched ${touched} product(s), scanned ${scanned} in batch window. Errors: ${errors}.`,
-      });
-      await loadStats();
+
+      if (stopRequestedRef.current) {
+        setSyncProgress((prev) => (prev ? { ...prev, done: true, stopped: true } : prev));
+        toast({
+          title: "Force sync paused",
+          description: "You can click Force sync all again to resume from where it stopped.",
+        });
+      } else if (!hasMore) {
+        setMirrorAfterId(null);
+        toast({
+          title: "Force sync completed",
+          description: `Calls ${calls}, rounds ${rounds}, touched ${touched} products, scanned ${scanned}, errors ${errors}.`,
+        });
+      } else {
+        toast({
+          title: "Force sync paused for safety",
+          description: `Processed ${calls} API calls. Click again to continue syncing remaining products.`,
+        });
+      }
     } catch (e) {
+      setSyncProgress((prev) => (prev ? { ...prev, done: true } : prev));
       toast({
         title: "Mirror batch failed",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
     } finally {
+      await loadStats();
       setSyncLoading(false);
     }
   };
@@ -252,22 +320,11 @@ function Inner() {
                 <CardDescription>Woo gallery slots vs mirrored-ready assets.</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2 justify-end">
-                {mirrorAfterId != null && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground"
-                    onClick={() => setMirrorAfterId(null)}
-                    disabled={syncLoading || statsLoading}
-                  >
-                    Start scan over
-                  </Button>
-                )}
                 <Button
                   variant="default"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => void runMirrorBatch()}
+                  onClick={() => void runForceSync()}
                   disabled={syncLoading || statsLoading || stats?.configResolved === false}
                 >
                   {syncLoading ? (
@@ -275,8 +332,13 @@ function Inner() {
                   ) : (
                     <Zap className="h-3.5 w-3.5" />
                   )}
-                  {mirrorAfterId == null ? "Run mirror batch" : "Continue mirror batch"}
+                  {syncLoading ? "Syncing..." : mirrorAfterId ? "Continue unsynced sync" : "Force sync all"}
                 </Button>
+                {syncLoading && (
+                  <Button variant="outline" size="sm" onClick={stopForceSync}>
+                    Stop
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void loadStats()} disabled={statsLoading}>
                   <RefreshCw className={`h-3.5 w-3.5 ${statsLoading ? "animate-spin" : ""}`} />
                   Refresh
@@ -346,10 +408,31 @@ function Inner() {
                   <p className="text-xs text-muted-foreground">
                     Tracked mirror rows: {totalTracked} (includes deleting state).
                   </p>
+                  {syncProgress && (
+                    <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                      <div className="font-medium text-foreground">
+                        {syncLoading
+                          ? "Force sync in progress"
+                          : syncProgress.stopped
+                            ? "Force sync paused"
+                            : syncProgress.done
+                              ? "Force sync complete"
+                              : "Force sync status"}
+                      </div>
+                      <p>
+                        API calls: {syncProgress.calls} | Rounds: {syncProgress.rounds} | Scanned: {syncProgress.scanned}{" "}
+                        | Touched: {syncProgress.touched} | Errors: {syncProgress.errors}
+                      </p>
+                      <p>
+                        Ready increased by {Math.max(0, ready - syncProgress.readyStart)} ({syncProgress.readyStart} →{" "}
+                        {ready})
+                      </p>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground border-t pt-3 mt-1">
-                    <span className="font-medium text-foreground">Run mirror batch</span> processes several waves of
-                    products per click (uploads missing images to Cloudflare). Repeat until coverage catches up or the
-                    toast says there is nothing left to scan.
+                    <span className="font-medium text-foreground">Force sync all</span> starts from the first product
+                    once, then continues from the last cursor so only remaining unsynced products are processed on next
+                    click. Live progress updates while the job runs.
                   </p>
                 </>
               ) : null}
