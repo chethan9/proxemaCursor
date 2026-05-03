@@ -1,0 +1,23 @@
+name: "proxema_analytics"
+version: "1.0.0"
+config-version: 2
+
+profile: "proxema_analytics"
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+analysis-paths: ["analysis"]
+
+vars:
+  # Set per session when validating tenant-scoped compiles, e.g.:
+  # dbt run --vars '{"store_id": "uuid-here"}'
+  store_id: null
+
+models:
+  proxema_analytics:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: view

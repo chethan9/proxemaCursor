@@ -1,0 +1,130 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: >
+      Order-level facts (one row per order). Tenant column: store_id.
+      Metrics here aggregate at order grain — suitable for revenue and order counts.
+    meta:
+      label: Orders
+    columns:
+      - name: order_id
+        description: Primary key for this mart (application order id).
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+          metrics:
+            order_count:
+              type: count_distinct
+              label: Order count
+              description: Distinct orders in the result set.
+
+      - name: store_id
+        description: Tenant scope — filter in Lightdash via user attribute or dashboard filter.
+        tests:
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: woo_id
+        meta:
+          dimension:
+            type: number
+
+      - name: order_number
+        meta:
+          dimension:
+            type: string
+
+      - name: order_created_at
+        description: When the order was created (business timestamp for time series).
+        tests:
+          - not_null
+        meta:
+          dimension:
+            type: timestamp
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+
+      - name: order_modified_at
+        meta:
+          dimension:
+            type: timestamp
+
+      - name: status
+        meta:
+          dimension:
+            type: string
+
+      - name: currency
+        meta:
+          dimension:
+            type: string
+
+      - name: payment_method
+        meta:
+          dimension:
+            type: string
+
+      - name: order_total
+        description: Order total (from WooCommerce sync).
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_revenue:
+              type: sum
+              label: Total revenue
+              description: Sum of order totals (respect current filters).
+              round: 2
+            avg_order_value:
+              type: average
+              label: Avg order total
+              round: 2
+
+      - name: order_subtotal
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_subtotal:
+              type: sum
+              label: Total subtotal
+              round: 2
+
+      - name: order_tax
+        meta:
+          metrics:
+            total_tax:
+              type: sum
+              label: Total tax
+              round: 2
+
+      - name: discount_total
+        meta:
+          metrics:
+            total_discounts:
+              type: sum
+              label: Total discounts
+              round: 2
+
+      - name: shipping_total
+        meta:
+          metrics:
+            total_shipping:
+              type: sum
+              label: Total shipping
+              round: 2
+
+      - name: customer_id
+        meta:
+          dimension:
+            type: number
+
+      - name: payment_method_title
+        meta:
+          dimension:
+            type: string

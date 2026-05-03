@@ -1,0 +1,16 @@
+# Copy to profiles.yml (gitignored) or use DBT_PROFILES_DIR + env vars.
+# Connection targets Supabase Postgres (direct or pooler). Prefer read replica for heavy BI.
+
+proxema_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_PG_HOST') }}"
+      user: "{{ env_var('DBT_PG_USER') }}"
+      password: "{{ env_var('DBT_PG_PASSWORD') }}"
+      port: "{{ env_var('DBT_PG_PORT') | int }}"
+      dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+      schema: "{{ env_var('DBT_PG_SCHEMA', 'dbt_analytics') }}"
+      threads: 4
+      sslmode: require

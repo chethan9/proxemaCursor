@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: proxema
+    description: "Application tables (Supabase public schema). Uses the target database; override schema if needed."
+    schema: "{{ env_var('DBT_SOURCE_SCHEMA', 'public') }}"
+    tables:
+      - name: orders
+        identifier: orders
+        description: "Synced WooCommerce orders (one row per order)."

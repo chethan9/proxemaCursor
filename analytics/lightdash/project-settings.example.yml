@@ -1,0 +1,8 @@
+# Reference only — Lightdash UI stores live project settings.
+# Point your Lightdash deployment at this repo with subdirectory `analytics`.
+#
+# Checklist:
+# - Warehouse: same Postgres as dbt profiles (read replica recommended).
+# - Git sync: branch main (or your release branch); subdirectory analytics.
+# - Explores: expose marts (e.g. fct_orders); hide staging from viewers if your plan supports it.
+# - User attributes: configure store_id for tenant filtering (see ../docs/TENANT_ISOLATION.md).
