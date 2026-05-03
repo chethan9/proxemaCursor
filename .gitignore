@@ -43,3 +43,13 @@ firebase-service-account.json
 
 # cursor agent local state (debug logs, plans)
 .cursor/
+
+# local Python venv (e.g. dbt)
+.venv-dbt/
+analytics/.venv-dbt311/
+
+# dbt local credentials / artifacts
+analytics/profiles.yml
+analytics/logs/
+analytics/target/
+analytics/dbt_packages/

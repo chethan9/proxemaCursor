@@ -498,7 +498,7 @@ export async function resolveOrderContext(
       const productId = it.product_id ? Number(it.product_id) : null;
       const mirroredImage =
         cloudflareEnabled && baseImage && productId
-          ? resolveMirroredProductImageUrl(baseImage, mirrorByWooId.get(productId), "thumb", true) || baseImage
+          ? resolveMirroredProductImageUrl(baseImage, mirrorByWooId.get(productId), "thumb") || baseImage
           : baseImage;
       return {
         name: String(it.name || ""),

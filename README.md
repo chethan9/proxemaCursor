@@ -18,7 +18,7 @@ Super admins can manage integration settings (encrypted API token, account IDs, 
 
 ## Deploy refresh
 
-Each production bundle includes `NEXT_PUBLIC_APP_BUILD_ID` (typically `VERCEL_GIT_COMMIT_SHA`). The app compares it to `localStorage` and reloads once when a new deploy is detected, so users are not asked to hard-refresh after releases. Long-lived tabs poll `GET /api/build-info` every five minutes.
+Each production bundle includes `NEXT_PUBLIC_APP_BUILD_ID` from `resolve-app-build-id.mjs`. **Vercel deployment id is preferred over git SHA** so redeploys of the same commit still register as a new build (otherwise long-lived tabs would never prompt). The client compares this id to `GET /api/build-info` (same resolver); long-lived tabs poll every five minutes and on window focus / visibility.
 
 ## Navigation (menu editor)
 

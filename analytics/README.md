@@ -1,11 +1,11 @@
-# Proxema analytics (dbt + Lightdash)
+# Proxema analytics (dbt + Metabase)
 
-This folder is a **dbt project** that builds tenant-safe views over Supabase Postgres for **Lightdash** explores (metrics and dimensions only in the UI).
+This folder is a **dbt project** that builds tenant-safe views over Supabase Postgres. **Metabase** (or any HTTPS link) is used for BI; the Proxema app embeds Metabase dashboards via **Admin → Standard reports** (signed JWT) on each store’s **Reports** page.
 
 ## Prerequisites
 
-- Python 3.10+
-- `pip install dbt-postgres` (or use `pip install dbt-core dbt-postgres`)
+- Python **3.11 or 3.12** recommended for local `dbt` (3.14+ may crash on import; CI uses 3.11).
+- `pip install dbt-postgres` (or `pip install dbt-core dbt-postgres`)
 
 ## Setup
 
@@ -36,24 +36,26 @@ Optional single-store compile:
 dbt run --vars '{"store_id":"YOUR-STORE-UUID"}'
 ```
 
-## Lightdash
+## Metabase
 
-1. Create a Lightdash project connected to **this Git repository** and set the **dbt project subdirectory** to `analytics` (or run `dbt` in CI and point Lightdash at artifacts — follow Lightdash docs for your edition).
-2. Use the same Postgres connection as dbt (read replica recommended for production).
-3. Configure **row-level access** using `store_id` — see [`docs/TENANT_ISOLATION.md`](docs/TENANT_ISOLATION.md).
-4. After dashboards exist, super admins register URLs in **Admin → Standard reports** in the web app (`LIGHTDASH_ALLOWED_HOSTS` must include your Lightdash host).
+1. Run Metabase (e.g. [Deploy Metabase on Render](https://render.com/docs/deploy-metabase)) with its **own** small Postgres for Metabase app data (`MB_DB_CONNECTION_URI`).
+2. In Metabase **Admin**, add a database connection to the **same** Supabase / Postgres used by dbt (read-capable role; pooler/replica OK). Prefer schema **`dbt_analytics`** or expose those views.
+3. Enable **Static embedding** in Metabase and copy the **embedding secret**. Put the **same secret** in the Proxema app as **`METABASE_EMBEDDING_SECRET`** (Vercel).
+4. Build dashboards/questions with a **locked parameter** for tenant scope (default slug **`store_id`**, Overridable via **`METABASE_STORE_PARAM_SLUG`** on the app). Full Woo-style report list + Metabase clicks: [`docs/METABASE_WOO_REPORTS_PLAYBOOK.md`](docs/METABASE_WOO_REPORTS_PLAYBOOK.md). Optional native SQL: [`metabase/sql/`](metabase/sql/).
+5. Register reports in Proxema **Admin → Standard reports** (Metabase site URL, resource type + id). See [`docs/METABASE_STANDARD_REPORTS.md`](docs/METABASE_STANDARD_REPORTS.md).
+6. On **Vercel**, set **`ALLOWED_STANDARD_REPORT_HOSTS`** (comma-separated **hostnames only**, no `https://`) so saved Metabase URLs pass validation. Optional alias: **`METABASE_ALLOWED_HOSTS`** if unset.
 
-### Deploy Lightdash on Render (Blueprint)
-
-Host Lightdash **outside** this repo using Lightdash’s official Render stack (Docker + a **small Postgres for Lightdash’s own metadata** — users, saved charts). Your **warehouse** for metrics remains **Supabase** (same DB dbt uses).
-
-1. Open **[lightdash/lightdash-deploy-render](https://github.com/lightdash/lightdash-deploy-render)** and deploy with Render **Blueprint** (“Deploy to Render” / New Blueprint from that repo).
-2. Choose workspace (e.g. **proxema**) and region close to Supabase.
-3. When `lightdash-server` is healthy, set **`SITE_URL`** on the web service to your public URL (`https://….onrender.com` or your custom domain).
-4. In Lightdash: add **warehouse** credentials → Supabase Postgres (read-capable role; pooler/replica OK). Add **Git** → this repository, subdirectory **`analytics`**, branch **`main`**.
-5. Enforce multi-store access with **`store_id`** — see [`docs/TENANT_ISOLATION.md`](docs/TENANT_ISOLATION.md).
-6. In **Vercel** (Proxema app): set **`LIGHTDASH_ALLOWED_HOSTS`** to your Lightdash hostname (e.g. `your-service.onrender.com`). Then **Admin → Standard reports** can save dashboard links.
+Warehouse views live in schema **`dbt_analytics`**. Use local **`dbt build`** or apply the Supabase migration that defines the same views (see repo `supabase/migrations/*dbt_analytics_views*`).
 
 ## Grain
 
 See [`docs/GRAIN.md`](docs/GRAIN.md).
+
+## Report catalog (Woo-style)
+
+See [`docs/REPORTS_CATALOG.md`](docs/REPORTS_CATALOG.md) for mapping reports to `fct_*` models and suggested Metabase visualizations.
+
+## Standard reports (app integration)
+
+- Operator guide: [`docs/METABASE_STANDARD_REPORTS.md`](docs/METABASE_STANDARD_REPORTS.md)
+- SQL template for bulk inserts: [`docs/standard-reports-insert-template.sql`](docs/standard-reports-insert-template.sql)

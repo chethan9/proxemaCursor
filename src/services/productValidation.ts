@@ -134,22 +134,17 @@ export function validateVariation(
   if (v.manage_stock && v.stock_quantity != null && v.stock_quantity < 0) {
     errs.push({ field: `variation:${v.key}:stock_quantity`, message: "Stock quantity cannot be negative" });
   }
-  const reg = parseFloat(v.regular_price || "0");
-  const sale = parseFloat(v.sale_price || "0");
-  if (reg > 0 && sale > 0 && sale >= reg) {
-    errs.push({ field: `variation:${v.key}:sale_price`, message: "Sale price must be less than regular price" });
-  }
   return errs;
 }
 
 export function validateProductForm(form: ProductFormState): ValidationResult {
   const errors: ValidationError[] = [];
   const name = trim(form.name);
-  if (!name) errors.push({ field: "name", message: "Product name is required" });
-
-  if (!form.type) errors.push({ field: "type", message: "Product type is required" });
-
   const publishing = form.status === "publish";
+
+  if (publishing && !name) errors.push({ field: "name", message: "Product name is required to publish" });
+
+  if (publishing && !form.type) errors.push({ field: "type", message: "Product type is required to publish" });
 
   if (form.type === "simple") {
     if (publishing && !isPositivePriceString(form.regular_price)) {
@@ -157,54 +152,68 @@ export function validateProductForm(form: ProductFormState): ValidationResult {
     }
     const regS = parseFloat(form.regular_price || "0");
     const saleS = parseFloat(form.sale_price || "0");
-    if (publishing && regS > 0 && saleS > 0 && saleS >= regS) {
+    if (regS > 0 && saleS > 0 && saleS >= regS) {
       errors.push({ field: "sale_price", message: "Sale price must be less than regular price" });
     }
-    if (form.manage_stock) {
+    if (publishing && form.manage_stock) {
       if (form.stock_quantity == null) {
         errors.push({ field: "stock_quantity", message: "Stock quantity is required when tracking stock" });
       } else if (form.stock_quantity < 0) {
         errors.push({ field: "stock_quantity", message: "Stock quantity cannot be negative" });
       }
     }
+    if (!publishing && form.manage_stock && form.stock_quantity != null && form.stock_quantity < 0) {
+      errors.push({ field: "stock_quantity", message: "Stock quantity cannot be negative" });
+    }
   } else if (form.type === "variable") {
     const variationAttrs = form.attributes.filter((a) => a.variation && a.options.length > 0);
-    if (variationAttrs.length === 0) {
+    if (publishing && variationAttrs.length === 0) {
       errors.push({ field: "attributes", message: "Variable products need at least one attribute marked for variations" });
     }
-    if (!form.variations || form.variations.length === 0) {
-      errors.push({ field: "variations", message: "At least one variation is required" });
-    } else {
-      // duplicate combo detection
-      const seen = new Map<string, number>();
-      form.variations.forEach((v, idx) => {
-        if (v.enabled === false) return;
-        const key = compositeVariationKey(
-          [...v.attributes].sort((a, b) => a.name.localeCompare(b.name))
-        ).toLowerCase();
-        if (seen.has(key)) {
-          const prevIdx = seen.get(key) ?? 0;
-          errors.push({
-            field: `variation:${v.key}:duplicate`,
-            message: `Duplicate attribute combination (also at row ${prevIdx + 1})`,
-          });
-        } else {
-          seen.set(key, idx);
-        }
-      });
-      // per-variation errors (only when publishing)
+    if (publishing && (!form.variations || form.variations.length === 0)) {
+      errors.push({ field: "variations", message: "At least one variation is required to publish" });
+    } else if (form.variations && form.variations.length > 0) {
+      // duplicate combo detection (only enforced when publishing — drafts may be mid-edit)
+      if (publishing) {
+        const seen = new Map<string, number>();
+        form.variations.forEach((v, idx) => {
+          if (v.enabled === false) return;
+          const key = compositeVariationKey(
+            [...v.attributes].sort((a, b) => a.name.localeCompare(b.name))
+          ).toLowerCase();
+          if (seen.has(key)) {
+            const prevIdx = seen.get(key) ?? 0;
+            errors.push({
+              field: `variation:${v.key}:duplicate`,
+              message: `Duplicate attribute combination (also at row ${prevIdx + 1})`,
+            });
+          } else {
+            seen.set(key, idx);
+          }
+        });
+      }
       if (publishing) {
         for (const v of form.variations) {
           errors.push(...validateVariation(v, form.attributes));
         }
       }
+      for (const v of form.variations) {
+        if (v.enabled === false) continue;
+        const reg = parseFloat(v.regular_price || "0");
+        const sale = parseFloat(v.sale_price || "0");
+        if (reg > 0 && sale > 0 && sale >= reg) {
+          errors.push({ field: `variation:${v.key}:sale_price`, message: "Sale price must be less than regular price" });
+        }
+      }
     }
   }
 
-  for (const img of form.images) {
-    if (!img.id && !trim(img.src)) {
-      errors.push({ field: "images", message: "Image requires either a media ID or valid src URL" });
-      break;
+  if (publishing) {
+    for (const img of form.images) {
+      if (!img.id && !trim(img.src)) {
+        errors.push({ field: "images", message: "Image requires either a media ID or valid src URL" });
+        break;
+      }
     }
   }
 
@@ -264,8 +273,9 @@ function priceStr(s: string | undefined | null): string {
 export function buildWooPayload(formRaw: ProductFormState): Record<string, unknown> {
   const form = normalizeProductForm(formRaw);
 
+  const safeName = trim(form.name) || (form.status !== "publish" ? "Draft" : "");
   const payload: Record<string, unknown> = {
-    name: form.name,
+    name: safeName,
     type: form.type,
     status: form.status,
     description: form.description,
@@ -278,7 +288,9 @@ export function buildWooPayload(formRaw: ProductFormState): Record<string, unkno
     tax_class: form.tax_class || "",
     categories: form.categories.map((c) => ({ id: c.id })),
     tags: form.tags.map((t) => (t.id ? { id: t.id } : { name: t.name })),
-    images: form.images.map((img) => (img.id ? { id: img.id } : { src: img.src, alt: img.alt || "" })),
+    images: form.images
+      .filter((img) => !!(img.id || trim(img.src)))
+      .map((img) => (img.id ? { id: img.id } : { src: img.src, alt: img.alt || "" })),
     attributes: form.attributes.map((a) => {
       const base: Record<string, unknown> = {
         name: a.name,

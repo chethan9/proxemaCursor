@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "next-i18next";
 import { clearPersistedCache } from "@/lib/query-persistence";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -31,6 +31,8 @@ export function DeploymentVersionGate() {
   const [gateOpen, setGateOpen] = useState(false);
   const [pendingServerId, setPendingServerId] = useState<string | null>(null);
   const [reloadBlocked, setReloadBlocked] = useState(false);
+  /** Sync ref so Refresh always has the target id even if state batching / re-renders race */
+  const pendingServerIdRef = useRef<string | null>(null);
 
   const checkServer = useCallback(async () => {
     const current = getClientBuildId();
@@ -41,6 +43,7 @@ export function DeploymentVersionGate() {
       const data = (await res.json()) as { buildId?: string };
       const serverId = data.buildId?.trim();
       if (!serverId || serverId === current) return;
+      pendingServerIdRef.current = serverId;
       setPendingServerId(serverId);
       setGateOpen(true);
     } catch {
@@ -84,7 +87,7 @@ export function DeploymentVersionGate() {
   }, [checkServer]);
 
   const onRefresh = () => {
-    const id = pendingServerId;
+    const id = pendingServerIdRef.current ?? pendingServerId;
     if (!id) return;
     if (!bumpReloadGuard()) {
       setReloadBlocked(true);
@@ -104,7 +107,8 @@ export function DeploymentVersionGate() {
     >
       <DialogContent
         showClose={false}
-        className="z-[110] max-w-md gap-3"
+        overlayClassName="z-[200]"
+        className="z-[210] max-w-md gap-3"
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}

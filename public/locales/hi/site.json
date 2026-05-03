@@ -198,6 +198,7 @@
         "categoriesField": "Categories",
         "noCategoriesAvailable": "No categories available",
         "categoryNote": "Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.",
+        "removeExistingCategories": "पहले मौजूदा श्रेणियाँ हटाएँ",
         "ops": {
           "set": "Set regular price to",
           "setSale": "Set sale price to",
@@ -751,6 +752,8 @@
     "subtitle": "Background jobs for {{name}}",
     "viewDownloads": "View downloads",
     "refresh": "Refresh",
+    "clearSidebarBadge": "Clear sidebar badge",
+    "clearSidebarBadgeHint": "Hide the green completed-job counter next to Bulk jobs in the sidebar until another job finishes.",
     "stats": {
       "total": "Total Jobs",
       "active": "Active",

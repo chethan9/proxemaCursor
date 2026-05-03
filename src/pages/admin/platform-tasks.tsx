@@ -67,7 +67,7 @@ function SummaryStat({
   variant = "default",
 }: {
   label: string;
-  value: number;
+  value: number | string;
   sub?: string;
   variant?: "default" | "warn" | "danger";
 }) {
@@ -94,6 +94,12 @@ function StatusGlyph({ status }: { status: string | null | undefined }) {
   if (s === "failed") return <XCircle className="h-4 w-4 text-red-500" aria-hidden />;
   if (s === "completed") return <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden />;
   return <Clock className="h-4 w-4 text-muted-foreground" aria-hidden />;
+}
+
+function HealthBadge({ status }: { status: "healthy" | "degraded" | "down" }) {
+  if (status === "healthy") return <Badge className="bg-emerald-600 hover:bg-emerald-600">Healthy</Badge>;
+  if (status === "degraded") return <Badge className="bg-amber-600 hover:bg-amber-600">Degraded</Badge>;
+  return <Badge variant="destructive">Down</Badge>;
 }
 
 export default function AdminPlatformTasksPage() {
@@ -228,6 +234,56 @@ export default function AdminPlatformTasksPage() {
               variant={data.summary.bulkFailed24h > 0 ? "danger" : "default"}
             />
           </div>
+        )}
+
+        {data?.health && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">System health</CardTitle>
+              <CardDescription>
+                Runtime and API health checks for critical services.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <SummaryStat label="Server uptime" value={Math.floor(data.health.server.uptime_sec / 60)} sub="minutes" />
+                <SummaryStat label="Node runtime" value={data.health.server.node_version} />
+                <SummaryStat label="Heap used" value={Math.round(data.health.server.memory_used_mb)} sub="MB" />
+                <SummaryStat label="RSS memory" value={Math.round(data.health.server.memory_rss_mb)} sub="MB" />
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Check</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Latency</TableHead>
+                      <TableHead>Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.health.checks.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.label}</TableCell>
+                        <TableCell><HealthBadge status={c.status} /></TableCell>
+                        <TableCell className="tabular-nums">{c.latency_ms == null ? "—" : `${c.latency_ms}ms`}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{c.detail}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Last checked: {new Intl.DateTimeFormat(i18n.language || "en", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                }).format(new Date(data.health.checked_at))}
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         {isLoading && !data ? (

@@ -2618,6 +2618,60 @@ export type Database = {
         }
         Relationships: []
       }
+      standard_reports: {
+        Row: {
+          created_at: string
+          dashboard_url: string | null
+          description: string | null
+          embed_resource_id: number | null
+          embed_resource_type: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          locked_params: Json
+          metabase_site_url: string | null
+          provider: string
+          report_group: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_url?: string | null
+          description?: string | null
+          embed_resource_id?: number | null
+          embed_resource_type?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          locked_params?: Json
+          metabase_site_url?: string | null
+          provider?: string
+          report_group?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_url?: string | null
+          description?: string | null
+          embed_resource_id?: number | null
+          embed_resource_type?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          locked_params?: Json
+          metabase_site_url?: string | null
+          provider?: string
+          report_group?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_aspect_sync_state: {
         Row: {
           aspect: string
@@ -3631,6 +3685,10 @@ export type Database = {
       recompute_referral_balance: {
         Args: { p_client_id: string; p_currency: string }
         Returns: undefined
+      }
+      store_reports_kpis: {
+        Args: { p_days?: number; p_store_id: string }
+        Returns: Json
       }
       set_global_theme_preset: { Args: { p_theme: string }; Returns: undefined }
       user_can_access_store: { Args: { p_store_id: string }; Returns: boolean }

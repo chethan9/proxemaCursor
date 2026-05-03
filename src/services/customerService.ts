@@ -28,6 +28,8 @@ export interface FetchCustomersOptions {
 const CUSTOMER_LIST_SELECT =
   "id,store_id,woo_id,email,first_name,last_name,username,role,billing,shipping,avatar_url,orders_count,total_spent,date_created,synced_at,created_at";
 
+const inFlightCustomerRequests = new Map<string, Promise<{ data: CustomerRow[]; count: number; live?: boolean }>>();
+
 function wooCustomerToRow(c: Record<string, unknown>, storeId: string): CustomerRow {
   return {
     id: `live-${c.id}`,
@@ -54,7 +56,27 @@ function wooCustomerToRow(c: Record<string, unknown>, storeId: string): Customer
 
 export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ data: CustomerRow[]; count: number; live?: boolean }> {
   const { storeId, page, pageSize = 100, search, sortField = "date_created", sortDirection = "desc", country, city, state, minOrders, minSpent, roleFilter, useLive } = opts;
+  const requestKey = JSON.stringify({
+    storeId,
+    page,
+    pageSize,
+    search: search?.trim() ?? "",
+    sortField,
+    sortDirection,
+    country: country ?? "",
+    city: city ?? "",
+    state: state ?? "",
+    minOrders: minOrders ?? null,
+    minSpent: minSpent ?? null,
+    roleFilter: roleFilter ?? "all",
+    useLive: !!useLive,
+  });
+  const existing = inFlightCustomerRequests.get(requestKey);
+  if (existing) {
+    return existing;
+  }
 
+  const requestPromise = (async () => {
   if (useLive) {
     const qs = new URLSearchParams();
     qs.set("page", String(page + 1));
@@ -71,27 +93,38 @@ export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ dat
     return { data: (json.data as Record<string, unknown>[]).map((c) => wooCustomerToRow(c, storeId)), count: json.count, live: true };
   }
 
-  let q = supabase.from("customers").select(CUSTOMER_LIST_SELECT, { count: "exact" }).eq("store_id", storeId);
-  if (search && search.trim()) {
-    const raw = search.trim();
-    const s = raw.startsWith("@") ? raw.slice(1) : raw;
-    q = q.or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,username.ilike.%${s}%,billing->>phone.ilike.%${s}%,billing->>city.ilike.%${s}%`);
-  }
-  if (roleFilter && roleFilter !== "all") {
-    if (roleFilter === "guest") q = q.is("woo_id", null);
-    else q = q.eq("role", roleFilter);
-  }
-  if (country && country !== "all") q = q.eq("billing->>country", country);
-  if (city) q = q.ilike("billing->>city", `%${city}%`);
-  if (state) q = q.ilike("billing->>state", `%${state}%`);
-  if (minOrders !== undefined && minOrders > 0) q = q.gte("orders_count", minOrders);
-  if (minSpent !== undefined && minSpent > 0) q = q.gte("total_spent", minSpent);
-  const dbSortField = sortField === "name" ? "first_name" : sortField;
-  q = q.order(dbSortField, { ascending: sortDirection === "asc", nullsFirst: false });
-  q = q.range(page * pageSize, (page + 1) * pageSize - 1);
-  const { data, count, error } = await q;
-  if (error) throw error;
+  const includeCount = page === 0;
+  const qs = new URLSearchParams();
+  qs.set("page", String(page));
+  qs.set("pageSize", String(pageSize));
+  qs.set("includeCount", includeCount ? "true" : "false");
+  qs.set("sortField", sortField);
+  qs.set("sortDirection", sortDirection);
+  if (search?.trim()) qs.set("search", search.trim());
+  if (country) qs.set("country", country);
+  if (city) qs.set("city", city);
+  if (state) qs.set("state", state);
+  if (roleFilter) qs.set("roleFilter", roleFilter);
+  if (minOrders !== undefined) qs.set("minOrders", String(minOrders));
+  if (minSpent !== undefined) qs.set("minSpent", String(minSpent));
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+  const res = await fetch(`/api/stores/${storeId}/db/customers?${qs.toString()}`, { headers });
+  if (!res.ok) throw new Error(`DB fetch failed (${res.status})`);
+  const json = await res.json();
+  const data = (json.data || []) as CustomerRow[];
+  const count = Number(json.count || 0);
   return { data: ((data || []) as unknown as CustomerRow[]), count: count || 0 };
+  })();
+
+  inFlightCustomerRequests.set(requestKey, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    if (inFlightCustomerRequests.get(requestKey) === requestPromise) {
+      inFlightCustomerRequests.delete(requestKey);
+    }
+  }
 }
 
 export async function fetchCustomerById(id: string): Promise<CustomerRow | null> {

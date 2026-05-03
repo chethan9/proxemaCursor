@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProductFormState } from "@/services/productEditService";
 
 type Props = {
@@ -15,10 +16,12 @@ function clampNonNegative(v: string): string {
 }
 
 export function PricingTaxTab({ form, setForm }: Props) {
-  const hasOffer = form.sale_price && Number(form.sale_price) > 0;
-  const invalidOffer = hasOffer && Number(form.sale_price) >= Number(form.regular_price || 0);
+  const reg = parseFloat(String(form.regular_price ?? "").trim() || "0");
+  const sale = parseFloat(String(form.sale_price ?? "").trim() || "0");
+  const invalidOffer = reg > 0 && sale > 0 && sale >= reg;
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-5">
       <div>
         <div className="text-sm font-medium text-primary mb-2">Price</div>
@@ -32,12 +35,31 @@ export function PricingTaxTab({ form, setForm }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Offer Price</Label>
-            <Input type="number" min="0" step="0.01" value={form.sale_price} onChange={(e) => setForm((p) => ({ ...p, sale_price: clampNonNegative(e.target.value) }))} />
-            {invalidOffer && <div className="text-[11px] text-destructive">Offer must be less than regular price.</div>}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.sale_price}
+                  onChange={(e) => setForm((p) => ({ ...p, sale_price: clampNonNegative(e.target.value) }))}
+                  aria-invalid={invalidOffer}
+                  title={invalidOffer ? "Sale price must be lower than regular price." : undefined}
+                  className={invalidOffer ? "border-destructive ring-1 ring-destructive/30" : ""}
+                />
+              </TooltipTrigger>
+              {invalidOffer && (
+                <TooltipContent side="top" className="max-w-[260px]">
+                  Sale price must be lower than regular price.
+                </TooltipContent>
+              )}
+            </Tooltip>
+            {invalidOffer && <div className="text-[11px] text-destructive">Sale price must be lower than regular price.</div>}
           </div>
         </div>
         <p className="text-[11px] text-muted-foreground mt-2">Tax settings have moved to the Inventory & Shipping step.</p>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

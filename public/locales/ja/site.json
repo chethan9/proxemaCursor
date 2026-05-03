@@ -198,6 +198,7 @@
         "categoriesField": "Categories",
         "noCategoriesAvailable": "No categories available",
         "categoryNote": "Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.",
+        "removeExistingCategories": "既存のカテゴリを先に外してから適用",
         "ops": {
           "set": "Set regular price to",
           "setSale": "Set sale price to",
@@ -751,6 +752,8 @@
     "subtitle": "Background jobs for {{name}}",
     "viewDownloads": "View downloads",
     "refresh": "Refresh",
+    "clearSidebarBadge": "サイドバーのバッジを消す",
+    "clearSidebarBadgeHint": "別のジョブが完了するまで、サイドバーの Bulk jobs 横の緑の完了カウンターを非表示にします。",
     "stats": {
       "total": "Total Jobs",
       "active": "Active",

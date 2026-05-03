@@ -72,18 +72,12 @@ export function RecentOrdersCard({ orders, storeId, currency, storeTimezone, loa
                   <div className="hidden sm:flex items-center -space-x-2">
                     {items.slice(0, 3).map((li, i) => {
                       const img = (li.image as { src?: string } | undefined)?.src;
-                      const qty = (li.quantity as number) || 0;
                       return (
                         <div key={i} className="relative h-9 w-9 rounded-md border bg-muted overflow-hidden ring-2 ring-background">
                           {img ? (
                             <Image src={img} alt="" fill sizes="36px" className="object-cover" />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">—</div>
-                          )}
-                          {qty > 1 && (
-                            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
-                              {qty}
-                            </span>
                           )}
                         </div>
                       );

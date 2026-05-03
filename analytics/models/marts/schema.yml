@@ -23,7 +23,7 @@ models:
               description: Distinct orders in the result set.
 
       - name: store_id
-        description: Tenant scope — filter in Lightdash via user attribute or dashboard filter.
+        description: Tenant scope — filter in Metabase (locked store_id) or any BI tool.
         tests:
           - not_null
         meta:

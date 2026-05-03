@@ -1,11 +1,28 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, Plus, Loader2, ChevronsUpDown, Sparkles, Search } from "lucide-react";
+import { Trash2, Plus, Loader2, ChevronsUpDown, Sparkles, Search, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { ProductFormState } from "@/services/productEditService";
 import {
@@ -182,6 +199,7 @@ function OptionRow({
   onChange,
   onRemove,
   termNames,
+  dragHandle,
 }: {
   storeId: string;
   attributeId?: number;
@@ -189,11 +207,13 @@ function OptionRow({
   onChange: (v: string) => void;
   onRemove: () => void;
   termNames: Set<string>;
+  dragHandle?: ReactNode;
 }) {
   const isNew = !!attributeId && attributeId > 0 && value.trim() && !termNames.has(value.toLowerCase().trim());
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative flex-1">
+    <div className="flex items-center gap-2 min-w-0 flex-1">
+      {dragHandle}
+      <div className="relative flex-1 min-w-0">
         <Input value={value} onChange={(e) => onChange(e.target.value)} className="pr-14" />
         {isNew && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded px-1.5 py-0.5">new</span>
@@ -202,10 +222,59 @@ function OptionRow({
       <button
         type="button"
         onClick={onRemove}
-        className="h-9 w-9 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-destructive"
+        className="h-9 w-9 shrink-0 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-destructive"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
+    </div>
+  );
+}
+
+function SortableOptionRow({
+  id,
+  storeId,
+  attributeId,
+  value,
+  onChange,
+  onRemove,
+  termNames,
+}: {
+  id: string;
+  storeId: string;
+  attributeId?: number;
+  value: string;
+  onChange: (v: string) => void;
+  onRemove: () => void;
+  termNames: Set<string>;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.92 : undefined,
+  };
+  const handle = (
+    <button
+      type="button"
+      className="h-9 w-9 shrink-0 rounded-md border border-transparent flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+      aria-label="Reorder value"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+  return (
+    <div ref={setNodeRef} style={style} className="w-full">
+      <OptionRow
+        storeId={storeId}
+        attributeId={attributeId}
+        value={value}
+        onChange={onChange}
+        onRemove={onRemove}
+        termNames={termNames}
+        dragHandle={handle}
+      />
     </div>
   );
 }
@@ -273,6 +342,17 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
     });
   };
 
+  const reorderValuesAt = (attrIdx: number, from: number, to: number) => {
+    setForm((p) => {
+      const attrs = [...p.attributes];
+      attrs[attrIdx] = {
+        ...attrs[attrIdx],
+        options: arrayMove(attrs[attrIdx].options, from, to),
+      };
+      return { ...p, attributes: attrs };
+    });
+  };
+
   const deleteAttribute = (i: number) => {
     setForm((p) => ({ ...p, attributes: p.attributes.filter((_, idx) => idx !== i) }));
     setEditingAttr(null);
@@ -306,6 +386,9 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Values</Label>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Drag the grip to change order on the product page. WooCommerce uses this list order when the attribute is set to sort by custom ordering (menu order).
+                    </p>
                     <AttrValuesEditor
                       storeId={storeId}
                       attribute={attr}
@@ -319,11 +402,25 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                         })
                       }
                       onRemoveOption={(optIdx) => removeValueAt(idx, optIdx)}
+                      onReorderOptions={(from, to) => reorderValuesAt(idx, from, to)}
                       onAddOption={(v) => addValue(idx, v)}
                       newInputValue={newValueInput[idx] || ""}
                       onNewInputChange={(v) => setNewValueInput((s) => ({ ...s, [idx]: v }))}
                     />
                   </div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={attr.visible}
+                      onCheckedChange={(v) =>
+                        setForm((p) => {
+                          const a = [...p.attributes];
+                          a[idx] = { ...a[idx], visible: !!v };
+                          return { ...p, attributes: a };
+                        })
+                      }
+                    />
+                    Visible on product page
+                  </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <Checkbox
                       checked={attr.variation}
@@ -366,17 +463,7 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
               ) : (
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                      <Checkbox
-                        checked={attr.visible}
-                        onCheckedChange={(v) =>
-                          setForm((p) => {
-                            const a = [...p.attributes];
-                            a[idx] = { ...a[idx], visible: !!v };
-                            return { ...p, attributes: a };
-                          })
-                        }
-                      />
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="font-medium text-sm">{attr.name}</span>
                       {!!attr.id && attr.id > 0 && (
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5">global</span>
@@ -384,7 +471,10 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       {attr.variation && (
                         <span className="text-[10px] uppercase tracking-wide text-primary bg-primary/10 rounded px-1.5 py-0.5">variation</span>
                       )}
-                    </label>
+                      {!attr.visible && (
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1.5 py-0.5">hidden</span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
                       {attr.options.map((opt) => (
                         <div
@@ -422,6 +512,7 @@ function AttrValuesEditor({
   attribute,
   onChangeOption,
   onRemoveOption,
+  onReorderOptions,
   onAddOption,
   newInputValue,
   onNewInputChange,
@@ -430,6 +521,7 @@ function AttrValuesEditor({
   attribute: ProductFormState["attributes"][number];
   onChangeOption: (optIdx: number, v: string) => void;
   onRemoveOption: (optIdx: number) => void;
+  onReorderOptions: (from: number, to: number) => void;
   onAddOption: (v: string) => void;
   newInputValue: string;
   onNewInputChange: (v: string) => void;
@@ -438,19 +530,60 @@ function AttrValuesEditor({
   const { data: terms = [] } = useWooAttributeTerms(storeId, isGlobal ? attribute.id! : null);
   const termNames = new Set(terms.map((t) => t.name.toLowerCase().trim()));
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const sortableIds = attribute.options.map((_, i) => String(i));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = Number(active.id);
+    const newIndex = Number(over.id);
+    if (!Number.isInteger(oldIndex) || !Number.isInteger(newIndex)) return;
+    if (oldIndex < 0 || newIndex < 0 || oldIndex >= attribute.options.length || newIndex >= attribute.options.length) return;
+    onReorderOptions(oldIndex, newIndex);
+  };
+
+  const optionRows =
+    attribute.options.length <= 1
+      ? attribute.options.map((opt, optIdx) => (
+          <OptionRow
+            key={`${optIdx}-${opt}`}
+            storeId={storeId}
+            attributeId={attribute.id}
+            value={opt}
+            onChange={(v) => onChangeOption(optIdx, v)}
+            onRemove={() => onRemoveOption(optIdx)}
+            termNames={termNames}
+          />
+        ))
+      : attribute.options.map((opt, optIdx) => (
+          <SortableOptionRow
+            key={`${optIdx}-${opt}`}
+            id={String(optIdx)}
+            storeId={storeId}
+            attributeId={attribute.id}
+            value={opt}
+            onChange={(v) => onChangeOption(optIdx, v)}
+            onRemove={() => onRemoveOption(optIdx)}
+            termNames={termNames}
+          />
+        ));
+
   return (
     <div className="space-y-1.5">
-      {attribute.options.map((opt, optIdx) => (
-        <OptionRow
-          key={`${optIdx}-${opt}`}
-          storeId={storeId}
-          attributeId={attribute.id}
-          value={opt}
-          onChange={(v) => onChangeOption(optIdx, v)}
-          onRemove={() => onRemoveOption(optIdx)}
-          termNames={termNames}
-        />
-      ))}
+      {attribute.options.length <= 1 ? (
+        optionRows
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            {optionRows}
+          </SortableContext>
+        </DndContext>
+      )}
       <div className="flex items-center gap-2">
         <Input
           placeholder="Add new option"

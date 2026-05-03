@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Edit2, MoreVertical, ChevronDown, ChevronRight, Trash2, Wand2, Star } from "lucide-react";
+import { Edit2, MoreVertical, Trash2, Wand2, Star } from "lucide-react";
+import type { ProductAttribute } from "@/services/productEditService";
 import { Variation, variationMatchesDefault } from "@/services/productEditService";
 import { variationLabel } from "./utils";
 import { NumberInput } from "@/components/ui/number-input";
@@ -13,6 +14,8 @@ type Props = {
   parentSku?: string;
   parentName?: string;
   defaultAttrs?: { name: string; option: string }[];
+  /** Parent variable attributes — required for correct default-variation matching when Woo uses pa_* / ids. */
+  parentAttributes?: ProductAttribute[];
   onSetDefault?: (idx: number) => void;
   onEdit: (idx: number) => void;
   onUpdate: (idx: number, patch: Partial<Variation>) => void;
@@ -32,12 +35,10 @@ function slugify(input: string): string {
     .slice(0, 24);
 }
 
-export function VariationsTable({ variations, parentSku, parentName, defaultAttrs, onSetDefault, onEdit, onUpdate, onBulk, onBulkDelete, duplicateRowCount = 0 }: Props) {
+export function VariationsTable({ variations, parentSku, parentName, defaultAttrs, parentAttributes, onSetDefault, onEdit, onUpdate, onBulk, onBulkDelete, duplicateRowCount = 0 }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkValue, setBulkValue] = useState("");
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
-  const [groupBy, setGroupBy] = useState<string>("");
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [bulkError, setBulkError] = useState<string>("");
   const emptySkuCount = variations.filter((v) => !v.sku?.trim()).length;
 
@@ -102,44 +103,6 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
     setSelected(new Set());
   };
 
-  const attrNames = useMemo(() => {
-    const names = new Set<string>();
-    variations.forEach((v) => v.attributes?.forEach((a) => names.add(a.name)));
-    return Array.from(names);
-  }, [variations]);
-
-  const groups = useMemo(() => {
-    if (!groupBy) return null;
-    const map = new Map<string, { rows: { v: Variation; idx: number }[]; label: string }>();
-    variations.forEach((v, idx) => {
-      const attr = v.attributes?.find((a) => a.name.toLowerCase() === groupBy.toLowerCase());
-      const label = attr?.option || "—";
-      if (!map.has(label)) map.set(label, { rows: [], label });
-      map.get(label)!.rows.push({ v, idx });
-    });
-    return Array.from(map.values());
-  }, [variations, groupBy]);
-
-  const toggleGroup = (label: string) => {
-    setCollapsedGroups((s) => {
-      const n = new Set(s);
-      if (n.has(label)) n.delete(label);
-      else n.add(label);
-      return n;
-    });
-  };
-
-  const toggleGroupSelect = (rows: { v: Variation; idx: number }[]) => {
-    const keys = rows.map((r) => r.v.key);
-    const allSelected = keys.every((k) => selected.has(k));
-    setSelected((s) => {
-      const n = new Set(s);
-      if (allSelected) keys.forEach((k) => n.delete(k));
-      else keys.forEach((k) => n.add(k));
-      return n;
-    });
-  };
-
   const cellInput = "h-9 border-0 bg-muted/40 rounded-md text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background placeholder:text-muted-foreground/50";
 
   const autoFillSkus = () => {
@@ -194,16 +157,7 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
             <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
           </>
         )}
-        {attrNames.length > 1 && (
-          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Group by</span>
-            <select className="h-9 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
-              <option value="">None</option>
-              {attrNames.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-        )}
-        <div className={attrNames.length > 1 ? "" : "ml-auto"}>
+        <div className="ml-auto">
           <Button
             type="button"
             variant="outline"
@@ -242,7 +196,7 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
         {variations.map((v, i) => {
           const isDisabled = v.enabled === false;
           const priceMissing = v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0);
-          const isDefault = variationMatchesDefault(v, defaultAttrs);
+          const isDefault = variationMatchesDefault(v, defaultAttrs, parentAttributes);
           return (
             <div key={v.key} className={`grid grid-cols-[32px_28px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""} ${isDefault ? "border-l-4 border-l-primary bg-primary/5" : ""}`}>
               <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} />

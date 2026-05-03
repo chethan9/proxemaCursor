@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Ban, Briefcase, Clock, Search, Filter, RefreshCw, RotateCcw, Download } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Ban, Briefcase, Clock, Search, Filter, RefreshCw, RotateCcw, Download, BellOff } from "lucide-react";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
+import { computeBulkJobSidebarBadgeCounts, useBulkJobNotificationDismiss } from "@/hooks/useBulkJobNotificationDismiss";
 import { cancelBulkJob, retryFailedBulkJobItems, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ function BulkJobsInner() {
   const { id, store, loading } = useSiteFromRoute();
   const { t, i18n } = useTranslation("site");
   const { data: jobs = [], isLoading, isFetching } = useStoreBulkJobs(id, 200);
+  const { dismiss: dismissBulkJobSidebarBadge, dismissedAt: bulkJobsDismissedAt } = useBulkJobNotificationDismiss(id);
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -64,6 +66,11 @@ function BulkJobsInner() {
     const set = new Set(jobs.map((j) => j.job_type));
     return Array.from(set);
   }, [jobs]);
+
+  const sidebarBadgeCounts = useMemo(
+    () => computeBulkJobSidebarBadgeCounts(jobs, bulkJobsDismissedAt),
+    [jobs, bulkJobsDismissedAt],
+  );
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((j) => {
@@ -121,6 +128,16 @@ function BulkJobsInner() {
               <Download className="h-4 w-4 mr-2" />
               {t("bulkJobs.viewDownloads")}
             </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => dismissBulkJobSidebarBadge()}
+            disabled={sidebarBadgeCounts.recent === 0}
+            title={t("bulkJobs.clearSidebarBadgeHint")}
+          >
+            <BellOff className="h-4 w-4 mr-2" />
+            {t("bulkJobs.clearSidebarBadge")}
           </Button>
           <Button
             variant="outline"

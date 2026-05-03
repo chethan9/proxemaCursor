@@ -35,12 +35,12 @@ export function useCustomers(opts: UseCustomersOptions) {
           return fetchCustomers({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
         }
       }
-      return fetchCustomers({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
+      return await fetchCustomers({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const loaded = allPages.reduce((acc, p) => acc + p.data.length, 0);
-      const total = lastPage.count ?? 0;
+      const total = allPages[0]?.count ?? lastPage.count ?? 0;
       if (lastPage.data.length === 0) return undefined;
       if (loaded >= total) return undefined;
       return allPages.length;
@@ -51,7 +51,7 @@ export function useCustomers(opts: UseCustomersOptions) {
     staleTime: anySyncRunning ? 10_000 : 120_000,
     gcTime: 10 * 60_000,
     refetchOnMount: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     refetchInterval: anySyncRunning ? 8000 : false,
     retry: 1,
   });

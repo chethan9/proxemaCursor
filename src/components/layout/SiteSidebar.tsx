@@ -20,6 +20,7 @@ import { getStore } from "@/services/storeService";
 import { queryKeys } from "@/lib/query-client";
 import { warmSiteExplorerPrefetch } from "@/lib/prefetch-site-explorer";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
+import { computeBulkJobSidebarBadgeCounts, useBulkJobNotificationDismiss } from "@/hooks/useBulkJobNotificationDismiss";
 import { useUnseenDownloadCount } from "@/hooks/useUnseenDownloadCount";
 import { useTranslation } from "next-i18next";
 
@@ -76,17 +77,12 @@ export function SiteSidebar({ siteId }: Props) {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
 
   const { data: bulkJobs = [] } = useStoreBulkJobs(siteId, 50);
+  const { dismissedAt: bulkJobsDismissedAt } = useBulkJobNotificationDismiss(siteId);
   const unseenDownloads = useUnseenDownloadCount(siteId);
-  const bulkJobsCounts = useMemo(() => {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    let pending = 0;
-    let recent = 0;
-    for (const j of bulkJobs) {
-      if (j.status === "pending" || j.status === "running") pending++;
-      else if (j.status === "completed" && j.completed_at && new Date(j.completed_at).getTime() > oneHourAgo) recent++;
-    }
-    return { pending, recent };
-  }, [bulkJobs]);
+  const bulkJobsCounts = useMemo(
+    () => computeBulkJobSidebarBadgeCounts(bulkJobs, bulkJobsDismissedAt),
+    [bulkJobs, bulkJobsDismissedAt],
+  );
 
   const currentSite = useMemo(() => sites.find((s) => s.id === siteId), [sites, siteId]);
 

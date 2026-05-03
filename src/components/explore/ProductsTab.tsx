@@ -70,6 +70,26 @@ import { useCfDebugBadge } from "@/hooks/useCfDebugBadge";
 
 const PRODUCTS_TABLE_LAYOUT_VERSION = 1;
 
+function getFirstImageSrc(images: unknown): string | null {
+  if (!Array.isArray(images) || images.length === 0) return null;
+  const first = images[0] as { src?: string } | null;
+  return typeof first?.src === "string" && first.src.trim() !== "" ? first.src : null;
+}
+
+function handleThumbErrorWithFallback(
+  e: React.SyntheticEvent<HTMLImageElement>,
+  fallbackSrc: string | null,
+  _source: string,
+): void {
+  const img = e.currentTarget;
+  const failing = img.currentSrc || img.src || null;
+  if (!fallbackSrc || !/^https?:\/\//i.test(fallbackSrc)) return;
+  if (img.dataset.fallbackApplied === "1") return;
+  if (failing === fallbackSrc) return;
+  img.dataset.fallbackApplied = "1";
+  img.src = fallbackSrc;
+}
+
 function migrateProductsTableLayoutPrefs(): void {
   if (typeof window === "undefined") return;
   try {
@@ -169,6 +189,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [newProductStatus, setNewProductStatus] = useState<"publish" | "draft" | "pending" | "private">("publish");
   const [categoryMode, setCategoryMode] = useState<"add" | "remove" | "replace">("add");
+  /** When mode is Add, checking this sends Woo `replace` (clear then set selected only). */
+  const [categoryRemoveExisting, setCategoryRemoveExisting] = useState(false);
   const [bulkCategoryIds, setBulkCategoryIds] = useState<Set<number>>(new Set());
   const [tagMode, setTagMode] = useState<"add" | "remove" | "replace">("add");
   const [bulkTagIds, setBulkTagIds] = useState<Set<number>>(new Set());
@@ -346,7 +368,19 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         await createBulkJob({ store_id: storeId, job_type: "update_product_status", total: wooIds.length, payload: { type: "update_product_status", product_ids: wooIds, new_status: newProductStatus } });
       } else if (bulkDialog === "category") {
         if (bulkCategoryIds.size === 0) { setBulkSubmitting(false); return; }
-        await createBulkJob({ store_id: storeId, job_type: "assign_product_categories", total: wooIds.length, payload: { type: "assign_product_categories", product_ids: wooIds, mode: categoryMode, category_ids: Array.from(bulkCategoryIds) } });
+        const effectiveCategoryMode =
+          categoryMode === "add" && categoryRemoveExisting ? "replace" : categoryMode;
+        await createBulkJob({
+          store_id: storeId,
+          job_type: "assign_product_categories",
+          total: wooIds.length,
+          payload: {
+            type: "assign_product_categories",
+            product_ids: wooIds,
+            mode: effectiveCategoryMode,
+            category_ids: Array.from(bulkCategoryIds),
+          },
+        });
       } else if (bulkDialog === "tag") {
         if (bulkTagIds.size === 0) { setBulkSubmitting(false); return; }
         await createBulkJob({ store_id: storeId, job_type: "assign_product_tags", total: wooIds.length, payload: { type: "assign_product_tags", product_ids: wooIds, mode: tagMode, tag_ids: Array.from(bulkTagIds) } });
@@ -385,6 +419,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       await queryClient.invalidateQueries({ queryKey: queryKeys.products(storeId) });
       setSelectedIds(new Set());
       setBulkDialog(null);
+      setCategoryRemoveExisting(false);
       setBulkCategoryIds(new Set());
       setBulkTagIds(new Set());
       setBulkBrandIds(new Set());
@@ -401,6 +436,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     storeId,
     newProductStatus,
     categoryMode,
+    categoryRemoveExisting,
     bulkCategoryIds,
     tagMode,
     bulkTagIds,
@@ -1071,7 +1107,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 return (
                   <div className={gridCls}>
                     {products.map((p) => {
-                      const thumb = getProductThumbnail(p.images, p.image_mirror_urls);
+                      const thumb = getProductThumbnail(p.images, p.image_mirror_urls, isCompact ? "thumb" : "card");
+                      const fallbackThumb = getFirstImageSrc(p.images);
                       const cats = getCategoryNames(p.categories);
                       const brandList = Array.isArray(p.brands) ? (p.brands as { name?: string }[]).map((b) => b.name).filter(Boolean) : [];
                       const stockLow = p.stock_quantity != null && p.stock_quantity > 0 && p.stock_quantity < 5;
@@ -1127,7 +1164,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                               {thumb ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                                <img
+                                  src={thumb}
+                                  alt=""
+                                  className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
+                                  loading="lazy"
+                                  onError={(e) => handleThumbErrorWithFallback(e, fallbackThumb, "compact-card")}
+                                />
                               ) : (
                                 <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                               )}
@@ -1140,7 +1183,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 </div>
                               )}
                               {isVariable && (
-                                <div className="absolute bottom-1.5 left-1.5 h-5 w-5 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
+                                <div
+                                  className="absolute bottom-1.5 left-1.5 h-5 w-5 rounded-full bg-background shadow-sm border border-border/60 dark:bg-white dark:border-white/50 flex items-center justify-center"
+                                  title="Has variations"
+                                >
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img src="/variation.png" alt="Variable" className="h-3 w-3 object-contain" />
                                 </div>
@@ -1203,7 +1249,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             </div>
                             {thumb ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={thumb} alt="" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" loading="lazy" />
+                              <img
+                                src={thumb}
+                                alt=""
+                                className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+                                loading="lazy"
+                                onError={(e) => handleThumbErrorWithFallback(e, fallbackThumb, "card")}
+                              />
                             ) : (
                               <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
                             )}
@@ -1216,7 +1268,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               </div>
                             )}
                             {isVariable && (
-                              <div className="absolute bottom-2.5 left-2.5 h-8 w-8 rounded-full bg-background shadow-sm border border-border/60 flex items-center justify-center" title="Has variations">
+                              <div
+                                className="absolute bottom-2.5 left-2.5 h-8 w-8 rounded-full bg-background shadow-sm border border-border/60 dark:bg-white dark:border-white/50 flex items-center justify-center"
+                                title="Has variations"
+                              >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src="/variation.png" alt="Variable" className="h-5 w-5 object-contain" />
                               </div>
@@ -1409,7 +1464,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                     </TableRow>
                   ) : (
                     products.map((p) => {
-                      const thumb = getProductThumbnail(p.images, p.image_mirror_urls);
+                      const thumb = getProductThumbnail(p.images, p.image_mirror_urls, "thumb");
+                      const fallbackThumb = getFirstImageSrc(p.images);
                       const isSelected = selectedIds.has(p.id);
                       const priceHtml = (p.raw_data?.price_html as string) || "";
                       const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
@@ -1441,7 +1497,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                     <div className="relative h-9 w-9 shrink-0">
                                       {thumb ? (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={thumb} alt="" className="h-9 w-9 rounded object-cover border border-border" loading="lazy" />
+                                        <img
+                                          src={thumb}
+                                          alt=""
+                                          className="h-9 w-9 rounded object-cover border border-border"
+                                          loading="lazy"
+                                          onError={(e) => handleThumbErrorWithFallback(e, fallbackThumb, "table")}
+                                        />
                                       ) : (
                                         <div className="h-9 w-9 rounded bg-muted flex items-center justify-center border border-border">
                                           <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
@@ -1630,6 +1692,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               onLoadMore={handleLoadMore}
               loaded={products.length}
               total={productCount}
+              scrollDepthThreshold={0.5}
+              rootMargin="900px"
             />
           )}
         </CardContent>
@@ -1651,7 +1715,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
         siteName={storeName}
       />
 
-      <Dialog open={!!bulkDialog} onOpenChange={(o) => { if (!o) setBulkDialog(null); }}>
+      <Dialog
+        open={!!bulkDialog}
+        onOpenChange={(o) => {
+          if (!o) {
+            setBulkDialog(null);
+            setCategoryRemoveExisting(false);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1687,7 +1759,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">{t("products.bulk.dialog.mode")}</Label>
-                <Select value={categoryMode} onValueChange={(v) => setCategoryMode(v as typeof categoryMode)}>
+                <Select
+                  value={categoryMode}
+                  onValueChange={(v) => {
+                    const next = v as typeof categoryMode;
+                    setCategoryMode(next);
+                    if (next !== "add") setCategoryRemoveExisting(false);
+                  }}
+                >
                   <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="add">{t("products.bulk.dialog.ops.addCats")}</SelectItem>
@@ -1696,6 +1775,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   </SelectContent>
                 </Select>
               </div>
+              {categoryMode === "add" && (
+                <label className="flex items-start gap-2 rounded-md border border-border p-2">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={categoryRemoveExisting}
+                    onCheckedChange={(v) => setCategoryRemoveExisting(v === true)}
+                  />
+                  <span className="text-xs leading-snug">{t("products.bulk.dialog.removeExistingCategories")}</span>
+                </label>
+              )}
               <div>
                 <Label className="text-xs">{t("products.bulk.dialog.categoriesField")}</Label>
                 <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border p-2 space-y-1">

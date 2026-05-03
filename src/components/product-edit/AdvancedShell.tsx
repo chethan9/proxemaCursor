@@ -44,8 +44,8 @@ export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiv
   const [errors, setErrors] = useState<string | null>(null);
 
   const validation = useMemo(() => validateProductForm(form), [form]);
+  const saveBlocked = !validation.ok;
   const publishing = form.status === "publish";
-  const publishBlocked = publishing && !validation.ok;
 
   const steps = ALL_STEPS;
 
@@ -132,10 +132,14 @@ export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiv
                   </Button>
                 ) : (
                   <div className="flex flex-col items-end gap-1">
-                    <Button onClick={onPublish} disabled={saving || !form.name.trim() || publishBlocked} className="rounded-full bg-foreground text-background hover:bg-foreground/90">
+                    <Button
+                      onClick={onPublish}
+                      disabled={saving || saveBlocked || (publishing && !form.name.trim())}
+                      className="rounded-full bg-foreground text-background hover:bg-foreground/90"
+                    >
                       {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save Changes" : "Publish Product")}
                     </Button>
-                    {publishBlocked && validation.errors[0] && (
+                    {saveBlocked && validation.errors[0] && (
                       <span className="text-xs text-destructive max-w-[280px] text-right">{validation.errors[0].message}</span>
                     )}
                   </div>

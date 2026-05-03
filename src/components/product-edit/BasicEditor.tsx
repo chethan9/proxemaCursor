@@ -65,10 +65,11 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
   const regularNum = parseFloat(form.regular_price) || 0;
   const saleNum = parseFloat(form.sale_price) || 0;
+  const saleVersusRegularInvalid = regularNum > 0 && saleNum > 0 && saleNum >= regularNum;
   const discountPct = regularNum > 0 && saleNum > 0 && saleNum < regularNum ? Math.round(((regularNum - saleNum) / regularNum) * 100) : 0;
   const publishing = form.status === "publish";
   const validation = useMemo(() => validateProductForm(form), [form]);
-  const publishBlocked = publishing && !validation.ok;
+  const saveBlocked = !validation.ok;
   /** Highlight simple product price field when publish requires a positive regular price */
   const priceInvalid = publishing && form.type === "simple" && regularNum <= 0;
   /** Parent SKU is optional for variable products (SKUs live on variations). */
@@ -327,9 +328,12 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
                   value={form.sale_price || ""}
                   onChange={(e) => setForm((p) => ({ ...p, sale_price: clampNonNegative(e.target.value) }))}
                   placeholder="Optional"
+                  aria-invalid={saleVersusRegularInvalid}
+                  title={saleVersusRegularInvalid ? "Sale price must be lower than regular price." : undefined}
+                  className={saleVersusRegularInvalid ? "border-destructive ring-1 ring-destructive/30" : ""}
                 />
-                {saleNum > 0 && regularNum > 0 && saleNum >= regularNum && (
-                  <p className="text-[10px] text-destructive">Sale price should be lower than regular price</p>
+                {saleVersusRegularInvalid && (
+                  <p className="text-[10px] text-destructive">Sale price must be lower than regular price.</p>
                 )}
               </div>
             </CardContent>
@@ -425,7 +429,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
           <LivePreviewCard storeId={storeId} productId={productId} form={form} setForm={setForm} />
 
-          {publishBlocked && validation.errors.length > 0 && (
+          {saveBlocked && validation.errors.length > 0 && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
               <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
               <ul className="text-foreground/80 space-y-1 list-disc pl-4">
@@ -438,7 +442,11 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
           <div className="flex gap-2 sticky bottom-4">
             <Button variant="outline" className="flex-1" onClick={onCancel} disabled={saving}>Cancel</Button>
-            <Button className="flex-1" onClick={onPublish} disabled={saving || !form.name.trim() || publishBlocked}>
+            <Button
+              className="flex-1"
+              onClick={onPublish}
+              disabled={saving || saveBlocked || (publishing && !form.name.trim())}
+            >
               {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save changes" : (form.status === "publish" ? "Publish" : "Save"))}
             </Button>
           </div>

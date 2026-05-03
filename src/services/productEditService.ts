@@ -90,12 +90,62 @@ export function emptyProductForm(): ProductFormState {
   };
 }
 
+/**
+ * Match a Woo variation/default attribute row to the parent attribute definition.
+ * Woo often sends global attrs as `pa_*` slugs or uses attribute id while the editor stores human-readable names.
+ */
+export function resolveAttrRowToParent(
+  row: { id?: number; name: string },
+  parentAttributes: ProductAttribute[],
+): ProductAttribute | undefined {
+  const varDims = parentAttributes.filter((a) => a.variation);
+  if (typeof row.id === "number" && row.id > 0) {
+    const byId = varDims.find((p) => p.id === row.id);
+    if (byId) return byId;
+  }
+  const rn = row.name.trim().toLowerCase();
+  const exact = varDims.find((p) => p.name.trim().toLowerCase() === rn);
+  if (exact) return exact;
+  const slug = rn.startsWith("pa_") ? rn.slice(3) : rn;
+  return varDims.find((p) => {
+    const pn = p.name.trim().toLowerCase().replace(/\s+/g, "-");
+    const ps = (p.slug || "").trim().toLowerCase();
+    return pn === slug || ps === rn || ps.replace(/^pa_/, "") === slug || pn.replace(/^pa_/, "") === slug;
+  });
+}
+
+function defaultAttributeTuplesEqual(
+  a: { id?: number; name: string; option: string }[],
+  b: { id?: number; name: string; option: string }[],
+  parents: ProductAttribute[],
+): boolean {
+  if (a.length === 0 || b.length === 0 || a.length !== b.length) return false;
+  const key = (d: { id?: number; name: string; option: string }) => {
+    const pa = resolveAttrRowToParent(d, parents);
+    const pk = pa ? `p:${String(pa.id ?? pa.name).toLowerCase()}` : `n:${d.name.trim().toLowerCase()}`;
+    return `${pk}=${d.option.trim().toLowerCase()}`;
+  };
+  const sa = new Set(a.map(key));
+  const sb = new Set(b.map(key));
+  if (sa.size !== sb.size) return false;
+  for (const x of sa) if (!sb.has(x)) return false;
+  return true;
+}
+
 export function variationMatchesDefault(
   variation: Variation,
   defaultAttrs: { name: string; option: string }[] | undefined,
+  parentAttributes?: ProductAttribute[],
 ): boolean {
   if (!defaultAttrs || defaultAttrs.length === 0) return false;
   if (variation.attributes.length === 0) return false;
+
+  const varDims = parentAttributes?.filter((a) => a.variation && (a.options?.length ?? 0) > 0) ?? [];
+  if (parentAttributes && varDims.length > 0) {
+    const expected = defaultAttributesFromVariation(variation, parentAttributes);
+    return defaultAttributeTuplesEqual(expected, defaultAttrs, parentAttributes);
+  }
+
   return defaultAttrs.every((d) =>
     variation.attributes.some(
       (va) =>
@@ -109,6 +159,25 @@ export function defaultAttributesFromVariation(
   v: Variation,
   parentAttributes: ProductAttribute[],
 ): { id?: number; name: string; option: string }[] {
+  const varDims = parentAttributes.filter((a) => a.variation && (a.options?.length ?? 0) > 0);
+  if (varDims.length > 0) {
+    const out: { id?: number; name: string; option: string }[] = [];
+    for (const pa of varDims) {
+      const va = v.attributes.find((attr) => {
+        const resolved = resolveAttrRowToParent(attr, parentAttributes);
+        return resolved?.name === pa.name;
+      });
+      if (va) {
+        out.push({
+          ...(typeof pa.id === "number" && pa.id > 0 ? { id: pa.id } : {}),
+          name: pa.name,
+          option: va.option,
+        });
+      }
+    }
+    return out;
+  }
+
   const variableNames = new Set(parentAttributes.filter((a) => a.variation).map((a) => a.name.toLowerCase()));
   const nameToId = new Map<string, number | undefined>();
   parentAttributes.forEach((a) => nameToId.set(a.name.toLowerCase(), a.id));

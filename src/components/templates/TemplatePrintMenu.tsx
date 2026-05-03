@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import type { TemplateType } from "@/lib/templates/document";
 import { buildOrderTemplatePdfUrl } from "@/lib/templates/order-template-pdf-url";
+import { supabase } from "@/integrations/supabase/client";
 import Link from "next/link";
 
 interface Props {
@@ -53,14 +54,15 @@ export function TemplatePrintMenu({ storeId, orderId, type, variant = "outline",
     onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
 
-  const print = (id: string) => {
-    const url = buildOrderTemplatePdfUrl(id, storeId, orderId);
+  const print = async (id: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = buildOrderTemplatePdfUrl(id, storeId, orderId, session?.access_token);
     window.open(url, "_blank", "noopener");
     setOpen(false);
   };
 
   const printDefault = () => {
-    if (defaultTpl) print(defaultTpl.id);
+    if (defaultTpl) void print(defaultTpl.id);
     else toast({ title: "No template available", description: `Create a ${meta.label.toLowerCase()} template first`, variant: "destructive" });
   };
 
@@ -86,7 +88,7 @@ export function TemplatePrintMenu({ storeId, orderId, type, variant = "outline",
           {!isLoading && customs.length > 0 && (
             <>
               {customs.map((t) => (
-                <DropdownMenuItem key={t.id} onClick={() => print(t.id)} className="gap-2">
+                <DropdownMenuItem key={t.id} onClick={() => { void print(t.id); }} className="gap-2">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="flex-1 truncate">{t.name}</span>
                   {t.is_default_for_type && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
@@ -99,7 +101,7 @@ export function TemplatePrintMenu({ storeId, orderId, type, variant = "outline",
             <>
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Samples</DropdownMenuLabel>
               {samples.map((t) => (
-                <DropdownMenuItem key={t.id} onClick={() => print(t.id)} className="gap-2">
+                <DropdownMenuItem key={t.id} onClick={() => { void print(t.id); }} className="gap-2">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="flex-1 truncate">{t.name}</span>
                 </DropdownMenuItem>

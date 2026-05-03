@@ -115,12 +115,18 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
     () => resolveDefaultTemplateForPrint(invoiceTemplates, "invoice", clientId),
     [invoiceTemplates, clientId],
   );
-  const handleQuickInvoicePrint = () => {
+  const handleQuickInvoicePrint = async () => {
     if (!defaultInvoiceTemplate) {
       toast({ title: "No invoice template", description: "Create or publish an invoice template first.", variant: "destructive" });
       return;
     }
-    const url = buildOrderTemplatePdfUrl(defaultInvoiceTemplate.id, orderFull.store_id, orderFull.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = buildOrderTemplatePdfUrl(
+      defaultInvoiceTemplate.id,
+      orderFull.store_id,
+      orderFull.id,
+      session?.access_token
+    );
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -333,7 +339,7 @@ export function OrderRowExpanded({ order, storeUrl, returnTo, onSaved }: Props) 
             </Link>
             <button
               type="button"
-              onClick={handleQuickInvoicePrint}
+              onClick={() => { void handleQuickInvoicePrint(); }}
               className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] border border-border bg-background hover:bg-muted transition-colors"
             >
               <FileText className="h-2.5 w-2.5" />

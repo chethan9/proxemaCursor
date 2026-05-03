@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const SITE_SCROLL_ROOT_ID = "site-scroll-root";
 
-function getScrollableAncestor(el: HTMLElement | null): HTMLElement | Window | null {
+function getScrollableAncestor(el: HTMLElement | null): HTMLElement | null {
   if (!el) return null;
   let parent: HTMLElement | null = el.parentElement;
   while (parent) {
@@ -18,6 +18,18 @@ function getScrollableAncestor(el: HTMLElement | null): HTMLElement | Window | n
   return null;
 }
 
+function collectScrollRoots(el: HTMLElement | null): (HTMLElement | Window)[] {
+  const roots: (HTMLElement | Window)[] = [];
+  if (typeof document !== "undefined") {
+    const byId = document.getElementById(SITE_SCROLL_ROOT_ID);
+    if (byId) roots.push(byId);
+  }
+  const ancestor = getScrollableAncestor(el);
+  if (ancestor && !roots.includes(ancestor)) roots.push(ancestor);
+  if (roots.length === 0) roots.push(window);
+  return roots;
+}
+
 function scrollDepthRatio(root: HTMLElement | Window): number {
   if (root instanceof Window) {
     const scrollTop = window.scrollY ?? document.documentElement.scrollTop;
@@ -29,6 +41,13 @@ function scrollDepthRatio(root: HTMLElement | Window): number {
   const { scrollTop, scrollHeight, clientHeight } = root;
   const maxScroll = Math.max(0, scrollHeight - clientHeight);
   return maxScroll <= 0 ? 1 : scrollTop / maxScroll;
+}
+
+function scrollTopOf(root: HTMLElement | Window): number {
+  if (root instanceof Window) {
+    return window.scrollY ?? document.documentElement.scrollTop ?? 0;
+  }
+  return root.scrollTop;
 }
 
 interface InfiniteScrollSentinelProps {
@@ -64,6 +83,8 @@ export function InfiniteScrollSentinel({
 }: InfiniteScrollSentinelProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const onLoadMoreRef = useRef(onLoadMore);
+  const lastTriggerScrollTopRef = useRef(0);
+  const waitForFurtherScrollRef = useRef(false);
   onLoadMoreRef.current = onLoadMore;
 
   const tryLoad = useCallback(() => {
@@ -75,21 +96,24 @@ export function InfiniteScrollSentinel({
   useEffect(() => {
     if (!hasMore || isLoading) return;
 
-    const pickRoot = (): HTMLElement | Window => {
-      const byId = typeof document !== "undefined" ? document.getElementById(SITE_SCROLL_ROOT_ID) : null;
-      if (byId) return byId;
-      const ancestor = getScrollableAncestor(ref.current);
-      if (ancestor) return ancestor;
-      return window;
-    };
-
-    const root = pickRoot();
+    const roots = collectScrollRoots(ref.current);
+    const primaryRoot = roots[0];
     let raf = 0;
 
     const check = () => {
       if (!hasMore || isLoading) return;
-      const ratio = scrollDepthRatio(root);
+      const ratio = scrollDepthRatio(primaryRoot);
+      const scrollTop = scrollTopOf(primaryRoot);
+      // Prevent chain-loading: require additional user scroll after each auto-trigger.
+      if (waitForFurtherScrollRef.current) {
+        if (scrollTop <= lastTriggerScrollTopRef.current + 80) return;
+        waitForFurtherScrollRef.current = false;
+      }
       if (ratio >= scrollDepthThreshold) tryLoad();
+      if (ratio >= scrollDepthThreshold) {
+        lastTriggerScrollTopRef.current = scrollTop;
+        waitForFurtherScrollRef.current = true;
+      }
     };
 
     const onScroll = () => {
@@ -97,32 +121,43 @@ export function InfiniteScrollSentinel({
       raf = requestAnimationFrame(check);
     };
 
-    root.addEventListener("scroll", onScroll, { passive: true });
+    primaryRoot.addEventListener("scroll", onScroll, { passive: true });
     // Short content: no scroll bar yet — still try once layout settles
     check();
+    const observed = primaryRoot instanceof HTMLElement ? [primaryRoot] : [];
     const ro =
-      typeof ResizeObserver !== "undefined" && root instanceof HTMLElement
+      typeof ResizeObserver !== "undefined" && observed.length > 0
         ? new ResizeObserver(() => check())
         : null;
-    if (ro && root instanceof HTMLElement) ro.observe(root);
+    if (ro) {
+      for (const root of observed) ro.observe(root);
+    }
 
     return () => {
       cancelAnimationFrame(raf);
-      root.removeEventListener("scroll", onScroll);
+      primaryRoot.removeEventListener("scroll", onScroll);
       ro?.disconnect();
     };
-  }, [hasMore, isLoading, scrollDepthThreshold, tryLoad, loaded, total]);
+  }, [hasMore, isLoading, scrollDepthThreshold, tryLoad]);
 
   // Fallback: sentinel intersecting viewport (or rootMargin area)
   useEffect(() => {
     if (!hasMore || isLoading) return;
     const node = ref.current;
     if (!node || typeof IntersectionObserver === "undefined") return;
+    const roots = collectScrollRoots(node);
+    const primaryRoot = roots[0];
     const obs = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) tryLoad();
+        if (entries.some((e) => e.isIntersecting)) {
+          const scrollTop = scrollTopOf(primaryRoot);
+          if (waitForFurtherScrollRef.current && scrollTop <= lastTriggerScrollTopRef.current + 80) return;
+          tryLoad();
+          lastTriggerScrollTopRef.current = scrollTop;
+          waitForFurtherScrollRef.current = true;
+        }
       },
-      { rootMargin },
+      { root: primaryRoot instanceof HTMLElement ? primaryRoot : null, rootMargin },
     );
     obs.observe(node);
     return () => obs.disconnect();

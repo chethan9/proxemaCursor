@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
 import { runMirrorBackfillStoreTimeboxed, type MirrorBackfillTimeboxedResult } from "@/lib/product-image-mirror.server";
+import { ensureConfiguredVariants } from "@/lib/cloudflare-images.server";
+import { getResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -47,6 +49,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   const rawLimit = body.productLimit ?? Number(process.env.CF_FORCE_SYNC_PRODUCT_LIMIT || 100);
   const productLimit = Number.isFinite(rawLimit) ? Math.min(100, Math.max(1, rawLimit)) : 100;
+
+  const cfg = await getResolvedCloudflareConfig().catch(() => null);
+  if (cfg) {
+    await ensureConfiguredVariants(cfg).catch((e) => {
+      console.warn("[sync-all-images] ensure variants warning", e);
+    });
+  }
 
   const result = await runMirrorBackfillStoreTimeboxed(storeId, maxMs, { afterId, productLimit });
 

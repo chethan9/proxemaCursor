@@ -68,6 +68,7 @@ import { SyncPill } from "@/components/ui/sync-pill";
 import { EmptyState } from "@/components/EmptyState";
 import { NoOrdersIllustration, NoSearchResultsIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { exportCsv, type CsvColumn } from "@/lib/exportCsv";
+import { supabase } from "@/integrations/supabase/client";
 import { logClientAuditEvent } from "@/lib/audit/client-log";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
@@ -457,7 +458,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
     }
   }, [queryClient, storeId, toast, t]);
 
-  const handlePrintTemplate = useCallback((templateId: string | undefined, orderId: string, type: "invoice" | "pickslip") => {
+  const handlePrintTemplate = useCallback(async (templateId: string | undefined, orderId: string, type: "invoice" | "pickslip") => {
     if (!templateId) {
       toast({
         title: `No ${type} template`,
@@ -466,7 +467,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
       });
       return;
     }
-    const url = buildOrderTemplatePdfUrl(templateId, storeId, orderId);
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = buildOrderTemplatePdfUrl(templateId, storeId, orderId, session?.access_token);
     window.open(url, "_blank", "noopener,noreferrer");
   }, [storeId, toast]);
 
@@ -1553,7 +1555,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                           <button
                                             type="button"
                                             disabled={!defaultInvoice}
-                                            onClick={() => handlePrintTemplate(defaultInvoice?.id, o.id, "invoice")}
+                                            onClick={() => { void handlePrintTemplate(defaultInvoice?.id, o.id, "invoice"); }}
                                             className="inline-flex items-center justify-center h-7 w-7 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                           >
                                             <Receipt className="h-3.5 w-3.5" />
@@ -1566,7 +1568,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                                           <button
                                             type="button"
                                             disabled={!defaultPickslip}
-                                            onClick={() => handlePrintTemplate(defaultPickslip?.id, o.id, "pickslip")}
+                                            onClick={() => { void handlePrintTemplate(defaultPickslip?.id, o.id, "pickslip"); }}
                                             className="inline-flex items-center justify-center h-7 w-7 rounded border border-border bg-background hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                           >
                                             <ClipboardList className="h-3.5 w-3.5" />
@@ -1607,6 +1609,8 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                 onLoadMore={handleLoadMore}
                 loaded={orders.length}
                 total={orderCount}
+                scrollDepthThreshold={0.5}
+                rootMargin="900px"
               />
             </div>
           )}

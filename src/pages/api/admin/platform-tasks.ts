@@ -13,6 +13,22 @@ export type PlatformTasksResponse = {
     cronFailed24h: number;
     bulkFailed24h: number;
   };
+  health: {
+    checked_at: string;
+    server: {
+      uptime_sec: number;
+      memory_used_mb: number;
+      memory_rss_mb: number;
+      node_version: string;
+    };
+    checks: Array<{
+      id: string;
+      label: string;
+      status: "healthy" | "degraded" | "down";
+      latency_ms: number | null;
+      detail: string;
+    }>;
+  };
   syncRuns: Array<{
     id: string;
     store_id: string;
@@ -51,6 +67,14 @@ export type PlatformTasksResponse = {
 
 const LIMIT = 150;
 const SINCE_24H_MS = 24 * 60 * 60 * 1000;
+
+type HealthCheckResult = {
+  id: string;
+  label: string;
+  status: "healthy" | "degraded" | "down";
+  latency_ms: number | null;
+  detail: string;
+};
 
 function buildSyncRunsQuery(
   filter: PlatformTaskStatusFilter,
@@ -110,6 +134,83 @@ function buildBulkJobsQuery(filter: PlatformTaskStatusFilter, storeId: string | 
     q = q.eq("status", "completed");
   }
   return q;
+}
+
+function requestOrigin(req: NextApiRequest): string | null {
+  const hostHeader = req.headers["x-forwarded-host"] || req.headers.host;
+  const host = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader;
+  if (!host) return null;
+  const protoHeader = req.headers["x-forwarded-proto"];
+  const protoRaw = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  const proto = protoRaw?.split(",")[0]?.trim() || "http";
+  return `${proto}://${host}`;
+}
+
+async function runHttpCheck(
+  id: string,
+  label: string,
+  url: string,
+  authHeader: string | undefined,
+  timeoutMs = 4500,
+  init?: RequestInit,
+  parse?: (body: unknown, elapsedMs: number) => Omit<HealthCheckResult, "id" | "label" | "latency_ms">
+): Promise<HealthCheckResult> {
+  const started = Date.now();
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(url, {
+      ...init,
+      headers: {
+        ...(authHeader ? { Authorization: authHeader } : {}),
+        ...(init?.headers || {}),
+      },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    const elapsed = Date.now() - started;
+    if (!res.ok) {
+      return {
+        id,
+        label,
+        status: "down",
+        latency_ms: elapsed,
+        detail: `HTTP ${res.status}`,
+      };
+    }
+    if (parse) {
+      let body: unknown = null;
+      try {
+        body = await res.json();
+      } catch {
+        body = null;
+      }
+      const parsed = parse(body, elapsed);
+      return {
+        id,
+        label,
+        status: parsed.status,
+        latency_ms: elapsed,
+        detail: parsed.detail,
+      };
+    }
+    return {
+      id,
+      label,
+      status: elapsed > 2500 ? "degraded" : "healthy",
+      latency_ms: elapsed,
+      detail: elapsed > 2500 ? "Slow response" : "OK",
+    };
+  } catch (err) {
+    const elapsed = Date.now() - started;
+    return {
+      id,
+      label,
+      status: "down",
+      latency_ms: elapsed,
+      detail: err instanceof Error ? err.message : "Request failed",
+    };
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<PlatformTasksResponse | { error: string }>) {
@@ -254,10 +355,123 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       cronFailed24h: cronFailCount.count ?? 0,
       bulkFailed24h: bulkFailCount.count ?? 0,
     },
+    health: {
+      checked_at: new Date().toISOString(),
+      server: {
+        uptime_sec: Math.floor(process.uptime()),
+        memory_used_mb: Math.round((process.memoryUsage().heapUsed / (1024 * 1024)) * 10) / 10,
+        memory_rss_mb: Math.round((process.memoryUsage().rss / (1024 * 1024)) * 10) / 10,
+        node_version: process.version,
+      },
+      checks: [],
+    },
     syncRuns,
     cronLogs,
     bulkJobs,
   };
+
+  const healthChecks: HealthCheckResult[] = [];
+  const dbCheckStart = Date.now();
+  const { error: dbHealthErr } = await supabaseAdmin.from("stores").select("id").limit(1);
+  const dbElapsed = Date.now() - dbCheckStart;
+  healthChecks.push({
+    id: "db",
+    label: "Database read",
+    status: dbHealthErr ? "down" : dbElapsed > 1200 ? "degraded" : "healthy",
+    latency_ms: dbElapsed,
+    detail: dbHealthErr ? dbHealthErr.message : dbElapsed > 1200 ? "Slow query" : "OK",
+  });
+
+  const syncFailures = (srFailCount.count ?? 0) + (cronFailCount.count ?? 0) + (bulkFailCount.count ?? 0);
+  healthChecks.push({
+    id: "task-failures-24h",
+    label: "Task failures (24h)",
+    status: syncFailures > 15 ? "down" : syncFailures > 0 ? "degraded" : "healthy",
+    latency_ms: null,
+    detail: `${syncFailures} failed tasks in last 24h`,
+  });
+
+  const origin = requestOrigin(req);
+  const authHeader = typeof req.headers.authorization === "string" ? req.headers.authorization : undefined;
+  if (origin && storeId && authHeader) {
+    const apiChecks = await Promise.all([
+      runHttpCheck(
+        "api-ai-openai-models",
+        "AI provider (OpenAI image)",
+        `${origin}/api/admin/ai-provider-models?provider=openai_image`,
+        authHeader,
+        4500,
+        undefined,
+        (body) => {
+          const b = body as { models?: Array<{ id: string }>; error?: string } | null;
+          if (b?.error) return { status: "down", detail: b.error };
+          const count = b?.models?.length ?? 0;
+          return count > 0
+            ? { status: "healthy", detail: `${count} models listed` }
+            : { status: "degraded", detail: "No models returned" };
+        }
+      ),
+      runHttpCheck(
+        "api-ai-gemini-models",
+        "AI provider (Google Gemini)",
+        `${origin}/api/admin/ai-provider-models?provider=google_gemini`,
+        authHeader,
+        4500,
+        undefined,
+        (body) => {
+          const b = body as { models?: Array<{ id: string }>; error?: string } | null;
+          if (b?.error) return { status: "down", detail: b.error };
+          const count = b?.models?.length ?? 0;
+          return count > 0
+            ? { status: "healthy", detail: `${count} models listed` }
+            : { status: "degraded", detail: "No models returned" };
+        }
+      ),
+      runHttpCheck(
+        "api-cloudflare-images",
+        "Cloudflare Images connection",
+        `${origin}/api/admin/cloudflare-images-settings`,
+        authHeader,
+        6500,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "test" }),
+        },
+        (body) => {
+          const b = body as { ok?: boolean; error?: string } | null;
+          if (b?.ok) return { status: "healthy", detail: "Credentials validated" };
+          return { status: "down", detail: b?.error || "Connection test failed" };
+        }
+      ),
+      runHttpCheck(
+        "api-site-thumbnail",
+        "Site thumbnail API",
+        `${origin}/api/stores/${storeId}/screenshot`,
+        authHeader,
+        10_000,
+        undefined,
+        (body) => {
+          const b = body as { url?: string; error?: string; stale?: boolean } | null;
+          if (b?.error) return { status: "down", detail: b.error };
+          if (!b?.url) return { status: "degraded", detail: "No thumbnail URL returned" };
+          if (b?.stale) return { status: "degraded", detail: "Serving stale cached screenshot" };
+          return { status: "healthy", detail: "Thumbnail endpoint operational" };
+        }
+      ),
+    ]);
+    healthChecks.push(...apiChecks);
+  } else {
+    healthChecks.push({
+      id: "api-integration-checks",
+      label: "Integration checks",
+      status: "degraded",
+      latency_ms: null,
+      detail: "Select a store to run AI/Cloudflare/thumbnail checks",
+    });
+  }
+
+  body.health.checks = healthChecks;
 
   return res.status(200).json(body);
 }

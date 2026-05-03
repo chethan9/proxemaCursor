@@ -74,6 +74,56 @@ async function cfFetch(cfg: ResolvedCloudflareConfig, path: string, init: Reques
   return { status: res.status, json };
 }
 
+let variantsEnsureAt = 0;
+const VARIANTS_ENSURE_TTL_MS = 5 * 60_000;
+
+export async function ensureConfiguredVariants(cfg: ResolvedCloudflareConfig): Promise<void> {
+  const now = Date.now();
+  if (now - variantsEnsureAt < VARIANTS_ENSURE_TTL_MS) return;
+
+  const desired = [cfg.variants.thumb, cfg.variants.card, cfg.variants.edit, cfg.variants.zoom]
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .filter((v) => v.toLowerCase() !== "public");
+  const uniqueDesired = [...new Set(desired)];
+  if (uniqueDesired.length === 0) {
+    variantsEnsureAt = now;
+    return;
+  }
+
+  const defaults: Record<string, { fit: string; width: number; height: number }> = {
+    thumb: { fit: "cover", width: 384, height: 384 },
+    card: { fit: "cover", width: 768, height: 768 },
+    edit: { fit: "contain", width: 1400, height: 1400 },
+    zoom: { fit: "contain", width: 2200, height: 2200 },
+  };
+
+  for (const id of uniqueDesired) {
+    const d = defaults[id.toLowerCase()] ?? { fit: "contain", width: 1200, height: 1200 };
+    const { status, json } = await cfFetch(cfg, "/images/v1/variants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        options: {
+          fit: d.fit,
+          width: d.width,
+          height: d.height,
+          metadata: "none",
+        },
+        neverRequireSignedURLs: true,
+      }),
+    });
+    const msg = json.errors?.map((e) => e.message).join("; ") || "";
+    const alreadyExists = /already exists/i.test(msg);
+    if (!json.success && !alreadyExists) {
+      console.warn("[cloudflare-images] ensure variant failed", id, status, msg);
+    }
+  }
+
+  variantsEnsureAt = now;
+}
+
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -112,6 +162,9 @@ export async function uploadImageFromUrl(remoteUrl: string): Promise<{ ok: true;
   if (!cfg || !cfg.enabled) {
     return { ok: false, error: "Cloudflare Images not configured" };
   }
+  await ensureConfiguredVariants(cfg).catch((e) => {
+    console.warn("[cloudflare-images] ensure variants warning", e);
+  });
   return uploadImageByRemoteUrlForm(cfg, remoteUrl);
 }
 

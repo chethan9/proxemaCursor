@@ -5,7 +5,7 @@ import {
   applyProductCatalogOrder,
   getCategoryFilterMeta,
 } from "@/lib/products-list-query";
-import { getProductThumbnailWithMirrors } from "@/lib/product-image-urls";
+import { getProductThumbnailWithMirrors, type ImageVariantName } from "@/lib/product-image-urls";
 
 export interface ProductRow {
   id: string;
@@ -152,10 +152,12 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
   return { data: (data || []) as unknown as ProductRow[], count: count || 0 };
 }
 
-export function getProductThumbnail(images: unknown, imageMirrorUrls?: unknown): string | null {
-  const enabled =
-    typeof process !== "undefined" && process.env.NEXT_PUBLIC_CLOUDFLARE_PRODUCT_IMAGES === "true";
-  return getProductThumbnailWithMirrors(images, imageMirrorUrls, enabled);
+export function getProductThumbnail(
+  images: unknown,
+  imageMirrorUrls?: unknown,
+  preferred: Extract<ImageVariantName, "thumb" | "card"> = "thumb",
+): string | null {
+  return getProductThumbnailWithMirrors(images, imageMirrorUrls, preferred);
 }
 
 export function getCategoryNames(categories: unknown): string {

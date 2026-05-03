@@ -2,7 +2,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import { fetchOrders } from "@/services/orderService";
 import { fetchProducts } from "@/services/productService";
-import { fetchCustomers } from "@/services/customerService";
 import { fetchCategories, fetchTags, fetchBrands } from "@/services/taxonomyService";
 import { fetchStoreSyncStatus } from "@/hooks/queries/useStoreSyncStatus";
 
@@ -106,29 +105,7 @@ export async function warmSiteExplorerPrefetch(queryClient: QueryClient, storeId
   }
 
   if (section === "customers") {
-    const fetchOpts = {
-      storeId,
-      search: "",
-      sortField: "date_created" as const,
-      sortDirection: "desc" as const,
-    };
-    const pageSize = DEFAULT_PAGE_SIZE;
-    const keyFilter = { ...fetchOpts, pageSize };
-    await queryClient.prefetchInfiniteQuery({
-      queryKey: ["customers", storeId, keyFilter as Record<string, unknown>, mode, "infinite"] as const,
-      initialPageParam: 0,
-      queryFn: async ({ pageParam }: { pageParam: number }) => {
-        if (mode === "live") {
-          try {
-            return await fetchCustomers({ ...fetchOpts, pageSize, page: pageParam, useLive: true });
-          } catch {
-            return fetchCustomers({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
-          }
-        }
-        return fetchCustomers({ ...fetchOpts, pageSize, page: pageParam, useLive: false });
-      },
-      getNextPageParam: listInfiniteNextPageParam,
-    });
+    // Customers can be very large; avoid duplicate heavy query when user already navigates there.
     return;
   }
 

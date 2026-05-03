@@ -47,33 +47,39 @@ export function resolveMirroredProductImageUrl(
   rawSrc: string | undefined | null,
   mirrorUrls: unknown,
   variant: ImageVariantName,
-  enabled: boolean
 ): string | null {
-  if (!rawSrc || !enabled) return rawSrc || null;
+  if (!rawSrc) return null;
   const normalized = normalizeProductImageSrc(rawSrc);
   if (!normalized) return rawSrc;
   const key = productImageStorageKey(normalized);
   const map = mirrorUrls as ProductImageMirrorUrlsMap | null | undefined;
   const entry = map?.[key];
   const v = entry?.[variant];
-  return v || rawSrc;
+  if (v) return v;
+  return rawSrc;
 }
 
 export function getProductThumbnailWithMirrors(
   images: unknown,
   mirrorUrls: unknown,
-  enabled: boolean
+  preferred: "thumb" | "card" = "thumb",
 ): string | null {
   if (!Array.isArray(images) || images.length === 0) return null;
   const first = images[0] as { src?: string };
   const src = first?.src;
   if (!src) return null;
-  if (!enabled) return src;
   const normalized = normalizeProductImageSrc(src);
+  if (!normalized) return src;
   const key = productImageStorageKey(normalized);
   const map = mirrorUrls as ProductImageMirrorUrlsMap | null | undefined;
   const entry = map?.[key];
-  return entry?.thumb || entry?.card || src;
+  const mirrored =
+    preferred === "card"
+      ? entry?.card || entry?.thumb
+      : entry?.thumb || entry?.card;
+  const chosen = mirrored || src;
+
+  return chosen;
 }
 
 /** Client-side: enable Cloudflare variant URLs when NEXT_PUBLIC flag is set. */

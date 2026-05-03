@@ -83,14 +83,25 @@ async function validateUpdatePayload(
   storeId: string,
   productId: string,
   payload: Record<string, unknown>,
-  variations: Array<Record<string, unknown>> | undefined
+  variations: Array<Record<string, unknown>> | undefined,
+  /** When the client omits `type` (partial PATCH-style bodies), use the stored product type so variable products are not validated as simple. */
+  existingProduct?: { type?: string | null; status?: string | null } | null
 ): Promise<{ errors: ValidationIssue[] }> {
   const errors: ValidationIssue[] = [];
-  const type = trimStr(payload.type) || "simple";
+  const type = trimStr(payload.type) || trimStr(existingProduct?.type) || "simple";
   payload.type = type;
   if (payload.name !== undefined) payload.name = trimStr(payload.name);
   if (payload.sku !== undefined) payload.sku = trimStr(payload.sku);
-  const publishing = payload.status === undefined || payload.status === "publish";
+  const existingStatus = trimStr(existingProduct?.status);
+  const nextStatus =
+    payload.status !== undefined && payload.status !== null && String(payload.status).length > 0
+      ? trimStr(payload.status as string)
+      : existingStatus;
+  const publishing = nextStatus === "publish";
+
+  if (publishing && payload.name !== undefined && !trimStr(payload.name)) {
+    errors.push({ field: "name", message: "Product name is required to publish" });
+  }
 
   if (type === "simple") {
     if (publishing && payload.regular_price !== undefined && !pricePositive(payload.regular_price)) {
@@ -116,25 +127,28 @@ async function validateUpdatePayload(
       const comboSeen = new Map<string, number>();
       variations.forEach((v, idx) => {
         const enabled = v.enabled !== false;
-        if (enabled && v.regular_price !== undefined && !pricePositive(v.regular_price)) {
-          errors.push({ field: `variation[${idx}].regular_price`, message: `Variation ${idx + 1}: price required (> 0)` });
-        }
-        const vAttrs = Array.isArray(v.attributes) ? (v.attributes as Record<string, string>[]) : [];
-        if (enabled && vAttrs.length === 0) {
-          errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: must have at least one attribute` });
-        }
-        for (const va of vAttrs) {
-          const name = trimStr(va.name);
-          if (parentNames.size && !parentNames.has(name.toLowerCase())) {
-            errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: attribute "${name}" not defined on parent` });
+        if (publishing) {
+          if (enabled && v.regular_price !== undefined && !pricePositive(v.regular_price)) {
+            errors.push({ field: `variation[${idx}].regular_price`, message: `Variation ${idx + 1}: price required (> 0)` });
           }
-        }
-        if (vAttrs.length) {
-          const key = [...vAttrs].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${trimStr(a.name).toLowerCase()}:${trimStr(a.option).toLowerCase()}`).join("|");
-          if (comboSeen.has(key)) {
-            errors.push({ field: `variation[${idx}]`, message: `Variation ${idx + 1}: duplicate combination with variation ${comboSeen.get(key)! + 1}` });
-          } else {
-            comboSeen.set(key, idx);
+          const vAttrs = Array.isArray(v.attributes) ? (v.attributes as Record<string, string>[]) : [];
+          if (enabled && vAttrs.length === 0) {
+            errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: must have at least one attribute` });
+          }
+          for (const va of vAttrs) {
+            const name = trimStr(va.name);
+            if (parentNames.size && !parentNames.has(name.toLowerCase())) {
+              errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: attribute "${name}" not defined on parent` });
+            }
+          }
+          const vAttrsForDup = Array.isArray(v.attributes) ? (v.attributes as Record<string, string>[]) : [];
+          if (vAttrsForDup.length) {
+            const key = [...vAttrsForDup].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${trimStr(a.name).toLowerCase()}:${trimStr(a.option).toLowerCase()}`).join("|");
+            if (comboSeen.has(key)) {
+              errors.push({ field: `variation[${idx}]`, message: `Variation ${idx + 1}: duplicate combination with variation ${comboSeen.get(key)! + 1}` });
+            } else {
+              comboSeen.set(key, idx);
+            }
           }
         }
         if (v.manage_stock && typeof v.stock_quantity === "number" && (v.stock_quantity as number) < 0) {
@@ -154,7 +168,7 @@ async function validateUpdatePayload(
     }
   }
 
-  if (Array.isArray(payload.images)) {
+  if (publishing && Array.isArray(payload.images)) {
     for (const img of payload.images as Record<string, unknown>[]) {
       if (!img.id && !trimStr(img.src)) {
         errors.push({ field: "images", message: "Image requires a media ID or valid src URL" });
@@ -326,7 +340,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const store = await getStoreCreds(storeId);
     if (!store) throw new Error("Store not connected");
 
-    const validation = await validateUpdatePayload(storeId, productId, wooPayload, variations);
+    const validation = await validateUpdatePayload(storeId, productId, wooPayload, variations, localProduct);
     if (validation.errors.length > 0) {
       return res.status(400).json({ error: "Validation failed", errors: validation.errors });
     }

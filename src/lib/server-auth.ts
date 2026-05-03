@@ -10,8 +10,11 @@ export interface ResolvedUser {
 
 export async function resolveUserFromRequest(req: NextApiRequest): Promise<ResolvedUser | null> {
   const auth = req.headers.authorization;
-  if (!auth?.startsWith("Bearer ")) return null;
-  const token = auth.slice(7);
+  const tokenFromHeader = auth?.startsWith("Bearer ") ? auth.slice(7) : "";
+  const tokenFromQuery =
+    typeof req.query.access_token === "string" ? req.query.access_token.trim() : "";
+  const token = tokenFromHeader || tokenFromQuery;
+  if (!token) return null;
   const { data, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !data.user) return null;
 

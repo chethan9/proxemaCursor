@@ -198,6 +198,7 @@
         "categoriesField": "Categories",
         "noCategoriesAvailable": "No categories available",
         "categoryNote": "Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.",
+        "removeExistingCategories": "Retirer d'abord les catégories existantes",
         "ops": {
           "set": "Set regular price to",
           "setSale": "Set sale price to",
@@ -751,6 +752,8 @@
     "subtitle": "Background jobs for {{name}}",
     "viewDownloads": "View downloads",
     "refresh": "Refresh",
+    "clearSidebarBadge": "Effacer le badge du menu",
+    "clearSidebarBadgeHint": "Masque le compteur vert des tâches terminées à côté de Bulk jobs jusqu’à la fin d’une nouvelle tâche.",
     "stats": {
       "total": "Total Jobs",
       "active": "Active",

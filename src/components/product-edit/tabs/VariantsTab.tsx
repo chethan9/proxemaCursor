@@ -83,7 +83,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     setForm((p) => {
       const v = p.variations[idx];
       const deleted = v.id ? [...(p.deletedVariationIds || []), v.id] : (p.deletedVariationIds || []);
-      const wasDefault = variationMatchesDefault(v, p.default_attributes);
+      const wasDefault = variationMatchesDefault(v, p.default_attributes, p.attributes);
       return {
         ...p,
         variations: p.variations.filter((_, i) => i !== idx),
@@ -105,7 +105,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     setForm((p) => {
       const removedIds = p.variations.filter((v) => keys.has(v.key) && v.id).map((v) => v.id!) as number[];
       const removed = p.variations.filter((v) => keys.has(v.key));
-      const stillDefault = removed.every((v) => !variationMatchesDefault(v, p.default_attributes));
+      const stillDefault = removed.every((v) => !variationMatchesDefault(v, p.default_attributes, p.attributes));
       return {
         ...p,
         variations: p.variations.filter((v) => !keys.has(v.key)),
@@ -119,7 +119,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     setForm((p) => {
       const v = p.variations[idx];
       if (!v) return p;
-      const isAlready = variationMatchesDefault(v, p.default_attributes);
+      const isAlready = variationMatchesDefault(v, p.default_attributes, p.attributes);
       if (isAlready) return { ...p, default_attributes: [] };
       return { ...p, default_attributes: defaultAttributesFromVariation(v, p.attributes) };
     });
@@ -244,6 +244,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
               parentSku={form.sku}
               parentName={form.name}
               defaultAttrs={form.default_attributes}
+              parentAttributes={form.attributes}
               onSetDefault={setDefaultVariation}
               onEdit={setEditIdx}
               onUpdate={updateVariation}
@@ -265,7 +266,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
           onSaveAndNext={() => setEditIdx((i) => (i !== null && i < form.variations.length - 1 ? i + 1 : null))}
           onUpdate={(patch) => updateVariation(editIdx, patch)}
           onRemove={() => removeVariation(editIdx)}
-          isDefault={variationMatchesDefault(form.variations[editIdx], form.default_attributes)}
+          isDefault={variationMatchesDefault(form.variations[editIdx], form.default_attributes, form.attributes)}
           onToggleDefault={() => setDefaultVariation(editIdx)}
         />
       )}

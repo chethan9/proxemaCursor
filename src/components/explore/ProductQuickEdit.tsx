@@ -118,20 +118,22 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
   };
 
   function handleSave() {
-    const regNum = parseFloat(regular);
-    if (!regular || Number.isNaN(regNum) || regNum <= 0) {
-      toast({ title: "Invalid price", description: "Regular price must be greater than 0.", variant: "destructive" });
-      return;
-    }
-    if (sale) {
-      const saleNum = parseFloat(sale);
-      if (Number.isNaN(saleNum) || saleNum <= 0) {
-        toast({ title: "Invalid sale price", description: "Sale price must be greater than 0.", variant: "destructive" });
+    if (!isVariable) {
+      const regNum = parseFloat(regular);
+      if (!regular || Number.isNaN(regNum) || regNum <= 0) {
+        toast({ title: "Invalid price", description: "Regular price must be greater than 0.", variant: "destructive" });
         return;
       }
-      if (saleNum >= regNum) {
-        toast({ title: "Invalid sale price", description: "Sale price must be less than regular price.", variant: "destructive" });
-        return;
+      if (sale) {
+        const saleNum = parseFloat(sale);
+        if (Number.isNaN(saleNum) || saleNum <= 0) {
+          toast({ title: "Invalid sale price", description: "Sale price must be greater than 0.", variant: "destructive" });
+          return;
+        }
+        if (saleNum >= regNum) {
+          toast({ title: "Invalid sale price", description: "Sale price must be less than regular price.", variant: "destructive" });
+          return;
+        }
       }
     }
     if (manageStock && stockQty !== "") {
@@ -144,12 +146,15 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
     const patch: Record<string, unknown> = {
       name,
       sku,
-      regular_price: regular,
-      sale_price: sale,
       status,
       stock_status: stockStatus,
       manage_stock: manageStock,
     };
+    if (product.type) patch.type = product.type;
+    if (!isVariable) {
+      patch.regular_price = regular;
+      patch.sale_price = sale;
+    }
     if (manageStock) patch.stock_quantity = stockQty === "" ? null : Number(stockQty);
     mutation.mutate(patch);
   }
@@ -167,10 +172,10 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-white p-5 gap-3">
+      <DialogContent className="sm:max-w-md border-border bg-background p-5 gap-3 text-foreground shadow-lg">
         <DialogHeader className="space-y-0.5">
-          <DialogTitle className="text-base">Quick edit</DialogTitle>
-          <DialogDescription className="text-xs">Syncs to WooCommerce immediately.</DialogDescription>
+          <DialogTitle className="text-base text-foreground">Quick edit</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">Syncs to WooCommerce immediately.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
@@ -185,7 +190,9 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
             <div className="space-y-1">
               <Label className="text-[11px] text-muted-foreground">Status</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 bg-card text-sm text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="publish">Published</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
@@ -228,16 +235,18 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
               This is a variable product — set prices per variation in the full editor.
             </p>
           )}
-          <div className="space-y-2 rounded-md border bg-muted/30 p-2.5 mt-1 border-t-2 border-t-border/60">
+          <div className="space-y-2 rounded-md border border-border bg-muted/40 p-2.5 mt-1 border-t-2 border-t-border/80">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">Manage stock</Label>
+              <Label className="text-xs font-medium text-foreground">Manage stock</Label>
               <Switch checked={manageStock} onCheckedChange={setManageStock} />
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">Stock status</Label>
                 <Select value={stockStatus} onValueChange={setStockStatus}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 bg-card text-sm text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="instock">In stock</SelectItem>
                     <SelectItem value="outofstock">Out of stock</SelectItem>
@@ -258,7 +267,7 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
             <span>{product.synced_at ? formatDate(product.synced_at, i18n.language) : "—"}</span>
           </div>
         </div>
-        <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 pt-2 border-t mt-1">
+        <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 border-t border-border pt-2 mt-1">
           <Button
             asChild
             variant="outline"

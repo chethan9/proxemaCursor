@@ -47,7 +47,6 @@ import {
   type CustomerSortField,
   type SortDirection,
 } from "@/services/customerService";
-import { fetchPreferences, savePreferences } from "@/services/viewPreferencesService";
 import { InfiniteScrollSentinel } from "@/components/explore/InfiniteScrollSentinel";
 import { useToast } from "@/hooks/use-toast";
 import { SyncPill } from "@/components/ui/sync-pill";
@@ -99,22 +98,6 @@ const SORT_OPTIONS: { field: CustomerSortField; direction: SortDirection; key: s
 ];
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
-
-const CUSTOMERS_TABLE_LAYOUT_VERSION = 1;
-
-function migrateCustomersTableLayoutPrefs(): void {
-  if (typeof window === "undefined") return;
-  try {
-    const raw = localStorage.getItem("customers-layout-version");
-    const stored = raw ? Number.parseInt(raw, 10) : 0;
-    if (Number.isFinite(stored) && stored >= CUSTOMERS_TABLE_LAYOUT_VERSION) return;
-    localStorage.removeItem("customers-col-order");
-    localStorage.removeItem("customers-visible-cols");
-    localStorage.setItem("customers-layout-version", String(CUSTOMERS_TABLE_LAYOUT_VERSION));
-  } catch {
-    /* ignore */
-  }
-}
 
 function customersColumnHeadClass(key: ColumnKey): string {
   switch (key) {
@@ -235,16 +218,9 @@ function CustomersInner() {
 
   const [search, setSearch] = useState(() => getQueryString(router.query, "q") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => getQueryString(router.query, "q") ?? "");
-  const [pageSize, setPageSize] = useState<number>(() => {
-    if (typeof window === "undefined") return 50;
-    const v = parseInt(localStorage.getItem("customers-page-size") || "50", 10);
-    return PAGE_SIZE_OPTIONS.includes(v) ? v : 50;
-  });
+  const [pageSize, setPageSize] = useState<number>(100);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const prefsLoaded = useRef(false);
-  const prefsLoading = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useLayoutEffect(() => {
     if (!router.isReady) return;
@@ -260,90 +236,14 @@ function CustomersInner() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("customers-page-size", String(pageSize));
-  }, [pageSize]);
-
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>(() => {
-    const defaults: Record<ColumnKey, boolean> = {
+    return {
       name: true, username: true, email: true, phone: true, orders: true,
       spent: true, aov: true, city: true, country: true, registered: false, last_active: false,
     };
-    if (typeof window !== "undefined") {
-      migrateCustomersTableLayoutPrefs();
-      try {
-        const saved = localStorage.getItem("customers-visible-cols");
-        if (saved) return { ...defaults, ...JSON.parse(saved) };
-      } catch { /* ignore */ }
-    }
-    return defaults;
   });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("customers-visible-cols", JSON.stringify(visibleCols));
-  }, [visibleCols]);
-
-  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
-    if (typeof window !== "undefined") {
-      migrateCustomersTableLayoutPrefs();
-      try {
-        const saved = localStorage.getItem("customers-col-order");
-        if (saved) {
-          const parsed = JSON.parse(saved) as ColumnKey[];
-          const allKeys = COLUMNS.map((c) => c.key);
-          const valid = parsed.filter((k) => allKeys.includes(k));
-          const missing = allKeys.filter((k) => !valid.includes(k));
-          return [...valid, ...missing];
-        }
-      } catch { /* ignore */ }
-    }
-    return COLUMNS.map((c) => c.key);
-  });
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("customers-col-order", JSON.stringify(columnOrder));
-  }, [columnOrder]);
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => COLUMNS.map((c) => c.key));
   const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (prefsLoaded.current || prefsLoading.current) return;
-    prefsLoading.current = true;
-    fetchPreferences("customers").then((remote) => {
-      if (remote) {
-        const remoteLayoutV = Number((remote as { customersTableLayoutVersion?: unknown }).customersTableLayoutVersion ?? 0);
-        const layoutOk = Number.isFinite(remoteLayoutV) && remoteLayoutV >= CUSTOMERS_TABLE_LAYOUT_VERSION;
-        if (Array.isArray(remote.columnOrder) && layoutOk) {
-          const allKeys = COLUMNS.map((c) => c.key);
-          const valid = (remote.columnOrder as ColumnKey[]).filter((k) => allKeys.includes(k));
-          const missing = allKeys.filter((k) => !valid.includes(k));
-          setColumnOrder([...valid, ...missing]);
-        }
-        if (remote.visibleCols && typeof remote.visibleCols === "object" && layoutOk) {
-          setVisibleCols((cur) => ({ ...cur, ...(remote.visibleCols as Record<ColumnKey, boolean>) }));
-        }
-        if (typeof remote.pageSize === "number") setPageSize(remote.pageSize);
-        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
-      }
-      prefsLoaded.current = true;
-    }).catch(() => {
-      prefsLoaded.current = true;
-    });
-  }, [router.isReady]);
-
-  useEffect(() => {
-    if (!prefsLoaded.current) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      savePreferences("customers", {
-        columnOrder,
-        visibleCols,
-        pageSize,
-        sort,
-        customersTableLayoutVersion: CUSTOMERS_TABLE_LAYOUT_VERSION,
-      }).catch(() => {});
-    }, 800);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [columnOrder, visibleCols, pageSize, sort]);
 
   const visibleColList = useMemo(
     () => columnOrder
@@ -684,6 +584,8 @@ function CustomersInner() {
                 onLoadMore={handleLoadMore}
                 loaded={customers.length}
                 total={count}
+                scrollDepthThreshold={0.5}
+                rootMargin="900px"
               />
             )}
           </div>

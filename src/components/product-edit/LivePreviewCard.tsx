@@ -3,11 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProductFormState, ProductAttribute } from "@/services/productEditService";
-import {
-  isCloudflareProductImagesClientEnabled,
-  resolveMirroredProductImageUrl,
-  type ImageVariantName,
-} from "@/lib/product-image-urls";
+import { resolveMirroredProductImageUrl, type ImageVariantName } from "@/lib/product-image-urls";
 import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
 
 const MAX_PREVIEW_ATTRS = 4;
@@ -20,10 +16,9 @@ export type LivePreviewCardProps = {
 };
 
 export function LivePreviewCard({ form, storeId, productId, setForm }: LivePreviewCardProps) {
-  const cfImgEnabled = isCloudflareProductImagesClientEnabled();
   const mirrorMap = form.image_mirror_urls;
   const previewSrc = (rawSrc: string, variant: ImageVariantName) =>
-    resolveMirroredProductImageUrl(rawSrc, mirrorMap, variant, cfImgEnabled) || rawSrc;
+    resolveMirroredProductImageUrl(rawSrc, mirrorMap, variant) || rawSrc;
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);

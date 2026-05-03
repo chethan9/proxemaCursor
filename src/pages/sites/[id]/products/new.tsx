@@ -110,6 +110,7 @@ function Inner() {
   }
 
   const canAdvance = (tab: AdvancedTabKey) => {
+    if (form.status !== "publish") return true;
     if (tab === "basic") return form.name.trim().length > 0;
     if (tab === "inventory") {
       if (form.type === "variable") return true;

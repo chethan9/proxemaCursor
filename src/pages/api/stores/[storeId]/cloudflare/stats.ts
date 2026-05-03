@@ -4,6 +4,49 @@ import { assertStoreAccess } from "@/lib/assert-store-access";
 import { getResolvedCloudflareConfig } from "@/lib/cloudflare-images-config.server";
 import { normalizeProductImageSrc, productImageStorageKey } from "@/lib/product-image-urls";
 
+/** PostgREST default max rows per request is 1000 — must page or coverage stats are wrong for large stores. */
+const PAGE_SIZE = 1000;
+
+async function fetchAllStoreProducts(storeId: string): Promise<{ id: string; images: unknown }[]> {
+  const out: { id: string; images: unknown }[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .select("id, images")
+      .eq("store_id", storeId)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const chunk = data || [];
+    out.push(...chunk);
+    if (chunk.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return out;
+}
+
+async function fetchAllStoreMirrors(
+  storeId: string,
+): Promise<Array<{ product_id: string; storage_key: string; status: string; updated_at: string | null }>> {
+  const out: Array<{ product_id: string; storage_key: string; status: string; updated_at: string | null }> = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabaseAdmin
+      .from("product_image_mirrors")
+      .select("product_id, storage_key, status, updated_at")
+      .eq("store_id", storeId)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const chunk = data || [];
+    out.push(...(chunk as typeof out));
+    if (chunk.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return out;
+}
+
 export type StoreCloudflareStats = {
   /** Total gallery entries (including non-HTTP). */
   gallerySlots: number;
@@ -34,20 +77,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const cfg = await getResolvedCloudflareConfig().catch(() => null);
 
-  const { data: products } = await supabaseAdmin.from("products").select("id, images").eq("store_id", storeId);
+  const products = await fetchAllStoreProducts(storeId);
   let gallerySlots = 0;
   let httpsImageSlots = 0;
-  for (const p of products || []) {
+  for (const p of products) {
     if (Array.isArray(p.images)) gallerySlots += p.images.length;
   }
 
-  const { data: mirrors } = await supabaseAdmin
-    .from("product_image_mirrors")
-    .select("product_id, storage_key, status, updated_at")
-    .eq("store_id", storeId);
+  const mirrors = await fetchAllStoreMirrors(storeId);
 
   const readyKeysByProduct = new Map<string, Set<string>>();
-  for (const m of mirrors || []) {
+  for (const m of mirrors) {
     if (m.status !== "ready") continue;
     const set = readyKeysByProduct.get(m.product_id as string) ?? new Set();
     set.add(m.storage_key as string);
@@ -55,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   let slotsWithReadyMirror = 0;
-  for (const p of products || []) {
+  for (const p of products) {
     const imgs = p.images as { src?: string }[] | null;
     if (!Array.isArray(imgs)) continue;
     const readySet = readyKeysByProduct.get(p.id as string) ?? new Set();
@@ -70,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const mirrorRows = { pending: 0, ready: 0, failed: 0, deleting: 0 };
   let lastMirrorActivityAt: string | null = null;
-  for (const m of mirrors || []) {
+  for (const m of mirrors) {
     const s = (m.status as string) || "";
     if (s === "pending") mirrorRows.pending++;
     else if (s === "ready") mirrorRows.ready++;

@@ -97,11 +97,10 @@ async function validateCreatePayload(
   payload.type = type;
 
   payload.name = trim(payload.name);
-  if (!payload.name) errors.push({ field: "name", message: "Product name is required" });
+  const publishing = trim(payload.status as string) === "publish";
+  if (!payload.name && publishing) errors.push({ field: "name", message: "Product name is required" });
 
   payload.sku = trim(payload.sku);
-
-  const publishing = (payload.status as string) === "publish" || !payload.status;
 
   if (type === "simple") {
     if (publishing && !priceIsPositive(payload.regular_price)) {
@@ -122,33 +121,37 @@ async function validateCreatePayload(
     delete payload.stock_quantity;
     const parentAttrs = Array.isArray(payload.attributes) ? payload.attributes as Record<string, unknown>[] : [];
     const variationAttrs = parentAttrs.filter((a) => a.variation === true && Array.isArray(a.options) && (a.options as unknown[]).length > 0);
-    if (variationAttrs.length === 0) {
+    if (publishing && variationAttrs.length === 0) {
       errors.push({ field: "attributes", message: "Variable product needs at least one attribute marked for variations" });
     }
-    if (variations.length === 0) {
+    if (publishing && variations.length === 0) {
       errors.push({ field: "variations", message: "Variable product needs at least one variation" });
     }
     const parentNames = new Set(variationAttrs.map((a) => trim(a.name).toLowerCase()));
     const comboSeen = new Map<string, number>();
     variations.forEach((v, idx) => {
-      if (!priceIsPositive(v.regular_price)) {
-        errors.push({ field: `variation[${idx}].regular_price`, message: `Variation ${idx + 1}: price required (> 0)` });
-      }
-      if (!v.attributes || v.attributes.length === 0) {
-        errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: must have at least one attribute` });
-      } else {
-        v.attributes = v.attributes.map((va) => ({ name: trim(va.name), option: trim(va.option) }));
-        for (const va of v.attributes) {
-          if (!parentNames.has(va.name.toLowerCase())) {
-            errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: attribute "${va.name}" not defined on parent` });
+      if (publishing) {
+        if (!priceIsPositive(v.regular_price)) {
+          errors.push({ field: `variation[${idx}].regular_price`, message: `Variation ${idx + 1}: price required (> 0)` });
+        }
+        if (!v.attributes || v.attributes.length === 0) {
+          errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: must have at least one attribute` });
+        } else {
+          v.attributes = v.attributes.map((va) => ({ name: trim(va.name), option: trim(va.option) }));
+          for (const va of v.attributes) {
+            if (!parentNames.has(va.name.toLowerCase())) {
+              errors.push({ field: `variation[${idx}].attributes`, message: `Variation ${idx + 1}: attribute "${va.name}" not defined on parent` });
+            }
+          }
+          const key = [...v.attributes].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${a.name.toLowerCase()}:${a.option.toLowerCase()}`).join("|");
+          if (comboSeen.has(key)) {
+            errors.push({ field: `variation[${idx}]`, message: `Variation ${idx + 1}: duplicate attribute combination with variation ${comboSeen.get(key)! + 1}` });
+          } else {
+            comboSeen.set(key, idx);
           }
         }
-        const key = [...v.attributes].sort((a, b) => a.name.localeCompare(b.name)).map((a) => `${a.name.toLowerCase()}:${a.option.toLowerCase()}`).join("|");
-        if (comboSeen.has(key)) {
-          errors.push({ field: `variation[${idx}]`, message: `Variation ${idx + 1}: duplicate attribute combination with variation ${comboSeen.get(key)! + 1}` });
-        } else {
-          comboSeen.set(key, idx);
-        }
+      } else if (v.attributes && v.attributes.length > 0) {
+        v.attributes = v.attributes.map((va) => ({ name: trim(va.name), option: trim(va.option) }));
       }
       if (v.manage_stock && v.stock_quantity != null && v.stock_quantity < 0) {
         errors.push({ field: `variation[${idx}].stock_quantity`, message: `Variation ${idx + 1}: stock cannot be negative` });
@@ -168,7 +171,7 @@ async function validateCreatePayload(
     errors.push({ field: "type", message: `Unsupported product type: ${type}` });
   }
 
-  if (Array.isArray(payload.images)) {
+  if (publishing && Array.isArray(payload.images)) {
     for (const img of payload.images as Record<string, unknown>[]) {
       if (!img.id && !trim(img.src)) {
         errors.push({ field: "images", message: "Image requires a media ID or valid src URL" });

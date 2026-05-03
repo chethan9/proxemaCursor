@@ -276,11 +276,12 @@ export default function OrderDetailsPage() {
       .join(" / ");
   };
 
-  const handleQuickInvoicePrint = () => {
+  const handleQuickInvoicePrint = async () => {
     if (!defaultInvoiceTemplate) {
       return;
     }
-    const url = buildOrderTemplatePdfUrl(defaultInvoiceTemplate.id, storeId, orderId);
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = buildOrderTemplatePdfUrl(defaultInvoiceTemplate.id, storeId, orderId, session?.access_token);
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -432,7 +433,7 @@ export default function OrderDetailsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={handleQuickInvoicePrint}
+                        onClick={() => { void handleQuickInvoicePrint(); }}
                         className="w-full"
                         disabled={!defaultInvoiceTemplate}
                         title={defaultInvoiceTemplate ? "Print invoice" : "No invoice template"}

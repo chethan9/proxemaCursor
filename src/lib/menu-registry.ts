@@ -4,7 +4,7 @@ import {
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
   Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles,
-  Download, Award, Cloud, Brain, Languages,
+  Download, Award, Cloud, Brain, Languages, Workflow, LineChart, PieChart,
   type LucideIcon,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
@@ -36,7 +36,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   FolderTree, BarChart3, Database, Bell, CreditCard, Palette, User, FileText,
   Globe, Lock, Mail, Search, Filter, Calendar, Clock, Home, Folder, Ticket,
   Layers, Code2, Terminal, Wrench, Receipt, DollarSign, Sparkles,
-  Download, Award, Cloud, Brain, Languages,
+  Download, Award, Cloud, Brain, Languages, Workflow, LineChart, PieChart,
 };
 
 export function resolveIcon(name: string): LucideIcon {
@@ -81,10 +81,12 @@ export const MENU_REGISTRY: MenuRegistryItem[] = [
   { id: "admin-payment-logs", defaultLabel: "Payment Logs", defaultIcon: "Receipt", href: "/admin/payment-logs", defaultGroup: "Administration", defaultOrder: 4, superAdminOnly: true },
   { id: "admin-referrals", defaultLabel: "Referrals", defaultIcon: "Award", href: "/admin/referrals", defaultGroup: "Administration", defaultOrder: 5, superAdminOnly: true },
   { id: "admin-activity", defaultLabel: "Activity Log", defaultIcon: "Activity", href: "/admin/activity", defaultGroup: "Administration", defaultOrder: 6, superAdminOnly: true },
-  { id: "admin-cloudflare-images", defaultLabel: "Cloudflare Images", defaultIcon: "Cloud", href: "/admin/cloudflare-images", defaultGroup: "Administration", defaultOrder: 7, superAdminOnly: true },
-  { id: "admin-ai-features", defaultLabel: "AI features", defaultIcon: "Sparkles", href: "/admin/ai-features", defaultGroup: "Administration", defaultOrder: 8, superAdminOnly: true },
-  { id: "admin-ai-settings", defaultLabel: "AI providers", defaultIcon: "Brain", href: "/admin/ai-settings", defaultGroup: "Administration", defaultOrder: 9, superAdminOnly: true },
-  { id: "admin-languages", defaultLabel: "Languages", defaultIcon: "Languages", href: "/admin/languages", defaultGroup: "Administration", defaultOrder: 10, permission: PERMISSIONS.USERS_VIEW },
+  { id: "admin-platform-tasks", defaultLabel: "Platform Tasks", defaultIcon: "Workflow", href: "/admin/platform-tasks", defaultGroup: "Administration", defaultOrder: 7, superAdminOnly: true },
+  { id: "admin-standard-reports", defaultLabel: "Standard reports", defaultIcon: "BarChart3", href: "/admin/standard-reports", defaultGroup: "Administration", defaultOrder: 8, superAdminOnly: true },
+  { id: "admin-cloudflare-images", defaultLabel: "Cloudflare Images", defaultIcon: "Cloud", href: "/admin/cloudflare-images", defaultGroup: "Administration", defaultOrder: 9, superAdminOnly: true },
+  { id: "admin-ai-features", defaultLabel: "AI features", defaultIcon: "Sparkles", href: "/admin/ai-features", defaultGroup: "Administration", defaultOrder: 10, superAdminOnly: true },
+  { id: "admin-ai-settings", defaultLabel: "AI providers", defaultIcon: "Brain", href: "/admin/ai-settings", defaultGroup: "Administration", defaultOrder: 11, superAdminOnly: true },
+  { id: "admin-languages", defaultLabel: "Languages", defaultIcon: "Languages", href: "/admin/languages", defaultGroup: "Administration", defaultOrder: 12, permission: PERMISSIONS.USERS_VIEW },
   { id: "settings", defaultLabel: "Settings", defaultIcon: "Settings", href: "/settings/profile", defaultGroup: "System", defaultOrder: 0 },
 ];
 
@@ -95,10 +97,11 @@ export const SITE_MENU_REGISTRY: SiteMenuRegistryItem[] = [
   { id: "site-orders", defaultLabel: "Orders", defaultIcon: "ShoppingCart", path: "/orders", defaultGroup: "Main", defaultOrder: 1 },
   { id: "site-products", defaultLabel: "Products", defaultIcon: "Package", path: "/products", defaultGroup: "Main", defaultOrder: 2 },
   { id: "site-customers", defaultLabel: "Customers", defaultIcon: "Users", path: "/customers", defaultGroup: "Main", defaultOrder: 3 },
-  { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 4 },
-  { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 5 },
-  { id: "site-brands", defaultLabel: "Brands", defaultIcon: "Award", path: "/brands", defaultGroup: "Main", defaultOrder: 6 },
-  { id: "site-downloads", defaultLabel: "Downloads", defaultIcon: "Download", path: "/downloads", defaultGroup: "Main", defaultOrder: 7 },
+  { id: "site-reports", defaultLabel: "Reports", defaultIcon: "BarChart3", path: "/reports", defaultGroup: "Main", defaultOrder: 4 },
+  { id: "site-categories", defaultLabel: "Categories", defaultIcon: "FolderTree", path: "/categories", defaultGroup: "Main", defaultOrder: 5 },
+  { id: "site-tags", defaultLabel: "Tags", defaultIcon: "Tag", path: "/tags", defaultGroup: "Main", defaultOrder: 6 },
+  { id: "site-brands", defaultLabel: "Brands", defaultIcon: "Award", path: "/brands", defaultGroup: "Main", defaultOrder: 7 },
+  { id: "site-downloads", defaultLabel: "Downloads", defaultIcon: "Download", path: "/downloads", defaultGroup: "Main", defaultOrder: 8 },
   { id: "site-bulk-jobs", defaultLabel: "Bulk Jobs", defaultIcon: "Layers", path: "/bulk-jobs", defaultGroup: "Manage", defaultOrder: 0 },
   { id: "site-cloudflare", defaultLabel: "Cloudflare", defaultIcon: "Cloud", path: "/cloudflare", defaultGroup: "Manage", defaultOrder: 2 },
   { id: "site-settings", defaultLabel: "Configuration", defaultIcon: "Settings", path: "/settings", defaultGroup: "Manage", defaultOrder: 3 },
