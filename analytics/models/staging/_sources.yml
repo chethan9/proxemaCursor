@@ -8,3 +8,9 @@ sources:
       - name: orders
         identifier: orders
         description: "Synced WooCommerce orders (one row per order)."
+      - name: products
+        identifier: products
+        description: "Synced WooCommerce products (catalog)."
+      - name: customers
+        identifier: customers
+        description: "Synced WooCommerce customers."

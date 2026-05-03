@@ -128,3 +128,256 @@ models:
         meta:
           dimension:
             type: string
+
+      - name: billing_country
+        description: Billing address country (from WooCommerce billing JSON).
+        meta:
+          dimension:
+            type: string
+
+      - name: billing_state
+        description: Billing region / state.
+        meta:
+          dimension:
+            type: string
+
+      - name: billing_city
+        description: Billing city.
+        meta:
+          dimension:
+            type: string
+
+      - name: order_hour_utc
+        description: Hour of day (0–23) in UTC for peak-time / heatmap charts.
+        meta:
+          dimension:
+            type: number
+
+      - name: order_dow_utc
+        description: Day of week (0=Sun … 6=Sat) in UTC, for heatmaps with hour.
+        meta:
+          dimension:
+            type: number
+
+      - name: order_weekday_label
+        meta:
+          dimension:
+            type: string
+
+      - name: customer_email
+        description: Joined from customers when customer_id matches Woo customer.
+        meta:
+          dimension:
+            type: string
+
+      - name: customer_display_name
+        meta:
+          dimension:
+            type: string
+
+  - name: fct_order_lines
+    description: >
+      Line-item grain from WooCommerce line_items JSON, enriched with product/category from catalog when product_id matches.
+      Use for product, variant, and category sales. Do not sum line revenue and order revenue in one chart.
+    meta:
+      label: Order lines
+    columns:
+      - name: order_line_id
+        description: Surrogate key for a line on an order.
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: order_id
+        tests:
+          - not_null
+        meta:
+          dimension:
+            type: string
+          metrics:
+            order_count:
+              type: count_distinct
+              label: Order count
+              description: Distinct orders (for line-level explores).
+
+      - name: store_id
+        tests:
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: order_created_at
+        meta:
+          dimension:
+            type: timestamp
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+
+      - name: order_status
+        meta:
+          dimension:
+            type: string
+
+      - name: currency
+        meta:
+          dimension:
+            type: string
+
+      - name: product_name
+        meta:
+          dimension:
+            type: string
+
+      - name: product_sku
+        meta:
+          dimension:
+            type: string
+
+      - name: primary_category_name
+        meta:
+          dimension:
+            type: string
+
+      - name: variant_label
+        description: Line item display name (includes variation text from Woo).
+        meta:
+          dimension:
+            type: string
+
+      - name: is_variation
+        meta:
+          dimension:
+            type: boolean
+
+      - name: quantity
+        meta:
+          dimension:
+            type: number
+          metrics:
+            units_sold:
+              type: sum
+              label: Units sold
+              round: 2
+
+      - name: line_subtotal
+        description: Line subtotal before tax (Woo line field).
+        meta:
+          dimension:
+            type: number
+          metrics:
+            gross_line_sales:
+              type: sum
+              label: Gross line sales
+              description: Sum of line subtotals.
+              round: 2
+
+      - name: line_total
+        description: Line total after line-level adjustments (Woo line field).
+        meta:
+          dimension:
+            type: number
+          metrics:
+            line_net_sales:
+              type: sum
+              label: Line net sales
+              description: Sum of line totals.
+              round: 2
+
+  - name: fct_coupon_lines
+    description: One row per coupon application on an order (from coupon_lines JSON).
+    meta:
+      label: Coupon lines
+    columns:
+      - name: coupon_line_id
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: store_id
+        tests:
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: order_id
+        meta:
+          dimension:
+            type: string
+          metrics:
+            orders_with_coupon:
+              type: count_distinct
+              label: Orders (with coupon line)
+
+      - name: order_created_at
+        meta:
+          dimension:
+            type: timestamp
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+
+      - name: coupon_code
+        meta:
+          dimension:
+            type: string
+
+      - name: coupon_discount_total
+        meta:
+          metrics:
+            total_coupon_discount:
+              type: sum
+              label: Total coupon discount
+              round: 2
+
+  - name: fct_shipping_lines
+    description: One row per shipping method line on an order.
+    meta:
+      label: Shipping lines
+    columns:
+      - name: shipping_line_id
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: store_id
+        tests:
+          - not_null
+        meta:
+          dimension:
+            type: string
+
+      - name: order_id
+        meta:
+          dimension:
+            type: string
+          metrics:
+            order_count:
+              type: count_distinct
+              label: Order count
+
+      - name: order_created_at
+        meta:
+          dimension:
+            type: timestamp
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+
+      - name: shipping_method_title
+        meta:
+          dimension:
+            type: string
+
+      - name: shipping_line_total
+        meta:
+          metrics:
+            total_shipping_charged:
+              type: sum
+              label: Shipping revenue
+              round: 2

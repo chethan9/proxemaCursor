@@ -18,5 +18,8 @@ select
   coalesce(discount_total, 0)::numeric(18, 4) as discount_total,
   customer_id,
   payment_method,
-  payment_method_title
+  payment_method_title,
+  nullif(trim(billing::jsonb->>'country'), '') as billing_country,
+  nullif(trim(billing::jsonb->>'state'), '') as billing_state,
+  nullif(trim(billing::jsonb->>'city'), '') as billing_city
 from src
