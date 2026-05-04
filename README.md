@@ -6,6 +6,10 @@ Source repository: **https://github.com/chethan9/proxemaCursor**
 
 - [Deployment Guide](./docs/DEPLOYMENT.md) — safe-deploy workflow, migration runner, rollback procedures
 
+### Analytics env cleanup (ops)
+
+The embedded Metabase / standard reports product was removed. You can delete unused secrets such as `METABASE_EMBEDDING_SECRET`, other `METABASE_*` variables, and `ALLOWED_STANDARD_REPORT_HOSTS` from hosting providers after deploy.
+
 ## Cloudflare Images (optional acceleration)
 
 Server (upload/delete/repair): set `CLOUDFLARE_PRODUCT_IMAGES_ENABLED=true`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_IMAGES_ACCOUNT_HASH`. Optional variants: `CLOUDFLARE_IMAGES_VARIANT_THUMB`, `_CARD`, `_EDIT`, `_ZOOM`.

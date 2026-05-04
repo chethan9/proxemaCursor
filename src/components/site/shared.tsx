@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import type { ReactNode } from "react";
 import { SiteLayout } from "@/components/layout/SiteLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import type { Database } from "@/integrations/supabase/helpers";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
-export function SitePageShell({ children }: { children: React.ReactNode }) {
+export function SitePageShell({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
       <SiteLayout>{children}</SiteLayout>

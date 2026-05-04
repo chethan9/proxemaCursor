@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
 import { formatDateTime, formatNumber } from "@/lib/format-number";
@@ -28,7 +29,7 @@ const ITEMS_PER_ROW_LG = 7;
 const INITIAL_VISIBLE_ROWS = 3;
 const LOAD_MORE_ROWS = 1;
 
-const TYPE_BADGE: Record<DownloadFile["type"], { icon: React.ComponentType<{ className?: string }>; badge: string; tile: string }> = {
+const TYPE_BADGE: Record<DownloadFile["type"], { icon: ComponentType<{ className?: string }>; badge: string; tile: string }> = {
   invoice: {
     icon: FileText,
     badge: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900",

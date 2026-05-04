@@ -42,7 +42,7 @@ function buildInitialValues(
 
 export function SitePreferencesOnboardingDialog({ store }: { store: Store | null }) {
   const { t, i18n } = useTranslation("site");
-  const { user, profile, refresh: refreshAuth } = useAuth();
+  const { user, profile, refresh: refreshAuth, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const { data: storesList, isFetched: storesFetched } = useStores();
   const { enabledLocales } = useBranding();
@@ -54,11 +54,15 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
   const showLanguage =
     storesFetched && typeof storeCount === "number" ? storeCount <= 1 : true;
 
-  const blocking = !!(
+  /** Wizard only for the store creator (or legacy rows before `created_by`: any non–super-admin with access). */
+  const needsPrefs = !!(
     store?.onboarding_completed_at &&
     !store.site_preferences_completed_at &&
-    store.id
+    store?.id
   );
+  const creatorMatches = store?.created_by != null && user?.id === store.created_by;
+  const legacyNonSuperAdmin = store?.created_by == null && !isSuperAdmin;
+  const blocking = needsPrefs && (creatorMatches || legacyNonSuperAdmin);
 
   useEffect(() => {
     if (!store?.id) return;

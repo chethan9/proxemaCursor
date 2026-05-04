@@ -1,12 +1,13 @@
 /**
  * HTTPS URL allowlist for Standard Reports (Metabase site URLs and legacy external links).
- * Prefer ALLOWED_STANDARD_REPORT_HOSTS; METABASE_ALLOWED_HOSTS is an optional alias.
+ * Prefer ALLOWED_STANDARD_REPORT_HOSTS; legacy LIGHTDASH_ALLOWED_HOSTS still supported.
  */
 
 export function parseAllowedStandardReportHosts(): string[] {
   const raw =
     process.env.ALLOWED_STANDARD_REPORT_HOSTS?.trim() ||
-    process.env.METABASE_ALLOWED_HOSTS?.trim();
+    process.env.METABASE_ALLOWED_HOSTS?.trim() ||
+    process.env.LIGHTDASH_ALLOWED_HOSTS?.trim();
   if (!raw) return [];
   return raw
     .split(",")

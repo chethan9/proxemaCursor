@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { SiteSidebar } from "./SiteSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/hooks/queries/useStores";
@@ -8,7 +9,7 @@ import { InitialSyncBanner } from "@/components/site/InitialSyncBanner";
 import { useSyncCompletionInvalidation } from "@/hooks/queries/useSyncCompletionInvalidation";
 import { useTranslation } from "next-i18next";
 
-type Props = { children: React.ReactNode };
+type Props = { children: ReactNode };
 
 export function SiteLayout({ children }: Props) {
   const router = useRouter();

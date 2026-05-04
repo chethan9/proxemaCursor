@@ -2,13 +2,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, ImageIcon, Loader2, GripVertical } from "lucide-react";
+import { Plus, X, ImageIcon, Loader2, GripVertical, SquarePen } from "lucide-react";
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useTranslation } from "next-i18next";
 import { ProductFormState } from "@/services/productEditService";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
+const ProductImageEditorDialog = dynamic(
+  () =>
+    import("@/components/product-edit/image-editor/ProductImageEditorDialog").then((m) => ({
+      default: m.ProductImageEditorDialog,
+    })),
+  { ssr: false },
+);
 type Props = {
   storeId: string;
   productId?: string | null;
@@ -17,7 +26,10 @@ type Props = {
 };
 
 export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: Props) {
+  const { t } = useTranslation("site");
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageEditorIdx, setImageEditorIdx] = useState(0);
   const [catInput, setCatInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [brandInput, setBrandInput] = useState("");
@@ -96,17 +108,36 @@ export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: 
       <div className="flex items-start gap-4">
         <div className="space-y-1.5">
           <Label className="text-xs">Product Image</Label>
-          <button type="button" onClick={() => setImageOpen("main")} className="h-28 w-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden">
-            {mainImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                <ImageIcon className="h-5 w-5" />
-                <span className="text-[10px]">Add image</span>
-              </div>
-            )}
-          </button>
+          <div className="relative h-28 w-28">
+            <button type="button" onClick={() => setImageOpen("main")} className="h-28 w-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden">
+              {mainImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                  <ImageIcon className="h-5 w-5" />
+                  <span className="text-[10px]">Add image</span>
+                </div>
+              )}
+            </button>
+            {mainImage?.src ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="absolute bottom-0.5 right-0.5 h-6 w-6 shadow-sm"
+                title={t("products.edit.imageEditor.title")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setImageEditorIdx(0);
+                  setImageEditorOpen(true);
+                }}
+              >
+                <SquarePen className="h-3 w-3" />
+              </Button>
+            ) : null}
+          </div>
         </div>
         <div className="flex-1 space-y-1.5">
           <Label className="text-xs">Gallery</Label>
@@ -132,6 +163,21 @@ export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: 
                 <div className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background/90 opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm">
                   <GripVertical className="h-3 w-3 text-muted-foreground" />
                 </div>
+                {img.src ? (
+                  <button
+                    type="button"
+                    title={t("products.edit.imageEditor.title")}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setImageEditorIdx(i + 1);
+                      setImageEditorOpen(true);
+                    }}
+                    className="absolute bottom-0.5 left-0.5 h-5 w-5 rounded-full bg-background/95 border border-border shadow-sm opacity-0 group-hover:opacity-100 flex items-center justify-center hover:bg-muted z-[1]"
+                  >
+                    <SquarePen className="h-2.5 w-2.5 text-muted-foreground" />
+                  </button>
+                ) : null}
                 <button type="button" onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i + 1) }))} className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive/90 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center">
                   <X className="h-3 w-3" />
                 </button>
@@ -190,6 +236,22 @@ export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: 
           onChange={(tags) => setForm((p) => ({ ...p, tags }))}
         />
       </div>
+
+      <ProductImageEditorDialog
+        open={imageEditorOpen}
+        onOpenChange={setImageEditorOpen}
+        storeId={storeId}
+        src={form.images[imageEditorIdx]?.src ?? ""}
+        alt={form.images[imageEditorIdx]?.alt ?? ""}
+        onApply={(next) => {
+          setForm((p) => {
+            const images = [...p.images];
+            if (!images[imageEditorIdx]) return p;
+            images[imageEditorIdx] = { id: next.id, src: next.src, alt: next.alt };
+            return { ...p, images };
+          });
+        }}
+      />
 
       {imageOpen && (
         <ImagePickerDialog

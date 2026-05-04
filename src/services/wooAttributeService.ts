@@ -1,3 +1,5 @@
+import { authorizedFetch } from "@/lib/api-client";
+
 export type WooAttribute = {
   id: number;
   name: string;
@@ -25,7 +27,7 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export async function listAttributes(storeId: string): Promise<WooAttribute[]> {
-  const res = await fetch(`/api/stores/${storeId}/wc/attributes`);
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/attributes`);
   return handle<WooAttribute[]>(res);
 }
 
@@ -33,7 +35,7 @@ export async function createAttribute(
   storeId: string,
   payload: { name: string; slug?: string; type?: string; order_by?: string; has_archives?: boolean }
 ): Promise<WooAttribute> {
-  const res = await fetch(`/api/stores/${storeId}/wc/attributes`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/attributes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -44,7 +46,7 @@ export async function createAttribute(
 }
 
 export async function listAttributeTerms(storeId: string, attributeId: number): Promise<WooAttributeTerm[]> {
-  const res = await fetch(`/api/stores/${storeId}/wc/attributes/${attributeId}/terms`);
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/attributes/${attributeId}/terms`);
   return handle<WooAttributeTerm[]>(res);
 }
 
@@ -53,7 +55,7 @@ export async function createAttributeTerm(
   attributeId: number,
   payload: { name: string; slug?: string; description?: string }
 ): Promise<WooAttributeTerm> {
-  const res = await fetch(`/api/stores/${storeId}/wc/attributes/${attributeId}/terms`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/attributes/${attributeId}/terms`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -64,7 +66,7 @@ export async function createAttributeTerm(
 }
 
 export async function deleteAttributeTerm(storeId: string, attributeId: number, termId: number): Promise<void> {
-  const res = await fetch(`/api/stores/${storeId}/wc/attributes/${attributeId}/terms`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/attributes/${attributeId}/terms`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ termId }),

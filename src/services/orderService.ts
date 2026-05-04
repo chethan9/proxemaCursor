@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { authorizedFetch, getBearerAuthHeaders } from "@/lib/api-client";
 import type { Database } from "@/integrations/supabase/helpers";
 import { normalizeSelectFilter, normalizeSearch } from "@/lib/normalize-explorer-filters";
 import { normalizeWooDate } from "@/lib/woo-date";
@@ -114,8 +115,7 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
     };
     qs.set("orderby", orderMap[effectiveSortField] || "date");
     qs.set("order", sortDirection);
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const headers = await getBearerAuthHeaders();
     const res = await fetch(`/api/stores/${storeId}/live/orders?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
@@ -223,7 +223,7 @@ export function getItemCount(lineItems: unknown): number {
 export async function updateOrderStatus(id: string, status: string): Promise<OrderRow> {
   const { data: order, error: fetchErr } = await supabase.from("orders").select("store_id").eq("id", id).single();
   if (fetchErr || !order) throw fetchErr || new Error("Order not found");
-  const res = await fetch(`/api/stores/${order.store_id}/orders/${id}`, {
+  const res = await authorizedFetch(`/api/stores/${order.store_id}/orders/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),

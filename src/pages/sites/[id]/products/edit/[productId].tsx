@@ -14,15 +14,29 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Trash2, AlertCircle, X, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Trash2,
+  AlertCircle,
+  X,
+  ExternalLink,
+  RefreshCw,
+  Eye,
+  Pencil,
+  Layers,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
+import { ProductStatusDropdown } from "@/components/product-edit/ProductStatusDropdown";
+import { Separator } from "@/components/ui/separator";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
 import { useBlockingEffect } from "@/contexts/LoadingProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { authorizedFetch } from "@/lib/api-client";
 
 type ProductRow = Record<string, unknown>;
 
@@ -199,7 +213,7 @@ function Inner() {
 
   const remove = useSiteMutation<unknown, void>({
     mutationFn: async () => {
-      const res = await fetch(`/api/stores/${storeId}/products/${productId}`, { method: "DELETE" });
+      const res = await authorizedFetch(`/api/stores/${storeId}/products/${productId}`, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || err.error || `Delete failed (${res.status})`);
@@ -284,8 +298,8 @@ function Inner() {
   if (!store || !form) return <div className="p-6">Product not found</div>;
   if (syncReady && syncLocked) {
     return (
-      <div className="p-6 max-w-[1400px] mx-auto">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
         </div>
         <div className="rounded-xl border border-warning/30 bg-warning/5 p-8 text-center max-w-2xl mx-auto">
@@ -304,53 +318,116 @@ function Inner() {
   }
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
-          <h1 className="text-xl font-semibold">Edit product</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {storefrontUrl && (
-            <Button variant="outline" size="sm" className="h-9 gap-1.5" asChild>
-              <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                View in store
-              </a>
-            </Button>
-          )}
-          {wooId && store?.url && (
-            <Button variant="outline" size="sm" className="h-9 gap-1.5" asChild>
-              <a
-                href={`${(store.url as string).replace(/\/$/, "")}/wp-admin/post.php?post=${wooId}&action=edit`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                Edit in WordPress
-              </a>
-            </Button>
-          )}
-          {wooId && (
-            <Button
+    <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+      <h1 className="sr-only">Edit product</h1>
+      <div
+        role="toolbar"
+        aria-label="Product editor"
+        className="flex flex-wrap items-center gap-x-1 gap-y-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm"
+      >
+        <Button variant="ghost" size="sm" className="h-8 shrink-0 gap-1 px-2 text-xs" asChild>
+          <Link href={returnTo}>
+            <ArrowLeft className="size-3.5 shrink-0" />
+            Back
+          </Link>
+        </Button>
+
+        {(storefrontUrl || (wooId && store?.url) || wooId) ? (
+          <>
+            <Separator orientation="vertical" className="hidden h-7 sm:block" />
+            <div className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-border/80 bg-muted/40 p-0.5">
+              {storefrontUrl && (
+                <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" asChild>
+                  <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
+                    <Eye className="size-3.5 shrink-0 text-emerald-600" />
+                    <span className="hidden md:inline">View in store</span>
+                  </a>
+                </Button>
+              )}
+              {wooId && store?.url && (
+                <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" asChild>
+                  <a
+                    href={`${(store.url as string).replace(/\/$/, "")}/wp-admin/post.php?post=${wooId}&action=edit`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="size-3.5 shrink-0 text-blue-600" />
+                    <span className="hidden lg:inline">WordPress</span>
+                  </a>
+                </Button>
+              )}
+              {wooId && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
+                  onClick={() => void refreshFromStore()}
+                  disabled={refreshing}
+                >
+                  <RefreshCw className={cn("size-3.5 shrink-0 text-muted-foreground", refreshing && "animate-spin text-primary")} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
+              )}
+            </div>
+          </>
+        ) : null}
+
+        <Separator orientation="vertical" className="hidden h-7 sm:block" />
+
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1 rounded-md bg-muted/70 p-1">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1.5"
-              onClick={() => void refreshFromStore()}
-              disabled={refreshing}
+              onClick={() => setMode("basic")}
+              className={cn(
+                "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
+                mode === "basic"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
             >
-              <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", refreshing && "animate-spin")} />
-              Refresh
-            </Button>
-          )}
-          <div className="flex items-center gap-0 rounded-full bg-muted/60 p-1">
-            <button onClick={() => setMode("basic")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "basic" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Basic</button>
-            <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Variations</button>
+              <Pencil className="size-3.5 shrink-0" />
+              Basic
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("advanced")}
+              className={cn(
+                "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
+                mode === "advanced"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
+            >
+              <Layers className="size-3.5 shrink-0" />
+              Variations
+            </button>
+            <Separator orientation="vertical" className="mx-0.5 h-6" />
+            <ProductStatusDropdown
+              value={form.status}
+              onChange={(status) => setForm((p) => (p ? { ...p, status } : p))}
+              disabled={save.isPending}
+              className="h-8 rounded-md border-0 bg-background px-2 text-xs shadow-none hover:bg-muted/80"
+            />
           </div>
-          <ActivityHistoryDrawer entityType="product" entityId={productId} storeId={storeId} />
-          <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
-            <Trash2 className="h-4 w-4 mr-1.5" />Delete
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <ActivityHistoryDrawer
+            entityType="product"
+            entityId={productId}
+            storeId={storeId}
+            className="h-8 gap-1 px-2 text-xs"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+            className="h-8 gap-1 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/25"
+          >
+            <Trash2 className="size-3.5 shrink-0" />
+            Delete
           </Button>
         </div>
       </div>
@@ -423,17 +500,15 @@ export default function EditProductPage() {
 
 function ProductEditSkeleton() {
   return (
-    <div className="p-6 space-y-4 max-w-[1400px] mx-auto animate-in fade-in duration-200">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-7 w-32" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-44 rounded-full" />
-          <Skeleton className="h-9 w-9" />
-          <Skeleton className="h-9 w-24" />
-        </div>
+    <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto animate-in fade-in duration-200">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
+        <Skeleton className="h-8 w-14 shrink-0" />
+        <Skeleton className="hidden h-7 w-px shrink-0 sm:block" />
+        <Skeleton className="h-8 w-40 shrink-0 rounded-md" />
+        <Skeleton className="hidden h-7 w-px shrink-0 sm:block" />
+        <Skeleton className="h-8 min-w-[200px] flex-1 rounded-md sm:max-w-[320px]" />
+        <Skeleton className="ml-auto h-8 w-20 shrink-0" />
+        <Skeleton className="h-8 w-16 shrink-0" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">

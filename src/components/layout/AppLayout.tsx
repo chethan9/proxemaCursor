@@ -1,4 +1,5 @@
 import Head from "next/head";
+import type { ReactNode } from "react";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { AuthGuard } from "@/components/AuthGuard";
 import { BillingGate } from "@/components/billing/BillingGate";
@@ -7,7 +8,7 @@ import { BillingDevModeBanner } from "@/components/billing/BillingDevModeBanner"
 import type { Permission } from "@/lib/permissions";
 
 interface AppLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   requirePermission?: Permission;
   requireSuperAdmin?: boolean;

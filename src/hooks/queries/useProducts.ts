@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { fetchProducts, type FetchProductsOptions, type ProductRow } from "@/services/productService";
 import { fetchAllBrands, fetchAllCategories, fetchAllTags } from "@/services/taxonomyService";
+import { listTaxonomy } from "@/services/wooTaxonomyService";
 import { queryKeys } from "@/lib/query-client";
 import { useStoreSyncStatus } from "./useStoreSyncStatus";
 
@@ -88,11 +89,20 @@ export function useProductCategoryOptions(storeId: string) {
   return useQuery({
     queryKey: queryKeys.productCategoryOptions(storeId),
     queryFn: async () => {
-      const rows = await fetchAllCategories(storeId);
-      return rows
-        .filter((r) => r.name?.trim())
-        .map((r) => ({ woo_id: r.woo_id, name: r.name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const [rows, live] = await Promise.all([
+        fetchAllCategories(storeId).catch(() => []),
+        listTaxonomy(storeId, "categories").catch(() => []),
+      ]);
+      const byWoo = new Map<number, { woo_id: number; name: string }>();
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        byWoo.set(r.woo_id, { woo_id: r.woo_id, name: r.name });
+      }
+      for (const r of live) {
+        if (!r.name?.trim()) continue;
+        if (!byWoo.has(r.id)) byWoo.set(r.id, { woo_id: r.id, name: r.name });
+      }
+      return [...byWoo.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled: !!storeId,
     staleTime: 60_000,

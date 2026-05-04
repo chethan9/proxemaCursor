@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 type LoadingContextValue = {
@@ -15,7 +16,7 @@ type LoadingContextValue = {
 
 const LoadingContext = createContext<LoadingContextValue | null>(null);
 
-export function LoadingProvider({ children }: { children: React.ReactNode }) {
+export function LoadingProvider({ children }: { children: ReactNode }) {
   const [count, setCount] = useState(0);
   const [slotEl, setSlotEl] = useState<HTMLElement | null>(null);
   const [blockingCount, setBlockingCount] = useState(0);

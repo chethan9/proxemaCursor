@@ -10,10 +10,12 @@ import { InventoryShippingTab } from "@/components/product-edit/tabs/InventorySh
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
 import { emptyProductForm, createProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, AlertCircle, Layers, Pencil, X } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
+import { ProductStatusDropdown } from "@/components/product-edit/ProductStatusDropdown";
+import { Separator } from "@/components/ui/separator";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
 import { useBlockingEffect } from "@/contexts/LoadingProvider";
@@ -90,8 +92,8 @@ function Inner() {
   if (!store) return <div className="p-6">Store not found</div>;
   if (syncReady && syncLocked) {
     return (
-      <div className="p-6 max-w-[1400px] mx-auto">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
         </div>
         <div className="rounded-xl border border-warning/30 bg-warning/5 p-8 text-center max-w-2xl mx-auto">
@@ -133,15 +135,54 @@ function Inner() {
   const submit = () => { setServerErrors([]); create.mutate(); };
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
-          <h1 className="text-xl font-semibold">Add new product</h1>
-        </div>
-        <div className="flex items-center gap-0 rounded-full bg-muted/60 p-1">
-          <button onClick={() => setMode("basic")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "basic" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Basic</button>
-          <button onClick={() => setMode("advanced")} className={cn("px-5 py-1.5 text-sm rounded-full transition-colors", mode === "advanced" ? "bg-foreground text-background font-medium" : "text-muted-foreground")}>Variations</button>
+    <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+      <h1 className="sr-only">Add new product</h1>
+      <div
+        role="toolbar"
+        aria-label="New product"
+        className="flex flex-wrap items-center gap-x-1 gap-y-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm"
+      >
+        <Button variant="ghost" size="sm" className="h-8 shrink-0 gap-1 px-2 text-xs" asChild>
+          <Link href={returnTo}>
+            <ArrowLeft className="size-3.5 shrink-0" />
+            Back
+          </Link>
+        </Button>
+        <Separator orientation="vertical" className="hidden h-7 sm:block" />
+        <div className="flex min-w-0 items-center gap-1 rounded-md bg-muted/70 p-1">
+          <button
+            type="button"
+            onClick={() => setMode("basic")}
+            className={cn(
+              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
+              mode === "basic"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+            )}
+          >
+            <Pencil className="size-3.5 shrink-0" />
+            Basic
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("advanced")}
+            className={cn(
+              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
+              mode === "advanced"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+            )}
+          >
+            <Layers className="size-3.5 shrink-0" />
+            Variations
+          </button>
+          <Separator orientation="vertical" className="mx-0.5 h-6" />
+          <ProductStatusDropdown
+            value={form.status}
+            onChange={(status) => setForm((p) => ({ ...p, status }))}
+            disabled={create.isPending}
+            className="h-8 rounded-md border-0 bg-background px-2 text-xs shadow-none hover:bg-muted/80"
+          />
         </div>
       </div>
 

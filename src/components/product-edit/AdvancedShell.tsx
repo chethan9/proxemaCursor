@@ -16,13 +16,6 @@ const ALL_STEPS: { key: AdvancedTabKey; label: string }[] = [
   { key: "variants", label: "Variants" },
 ];
 
-const STATUS_OPTIONS: { value: ProductFormState["status"]; label: string; dot: string }[] = [
-  { value: "publish", label: "Active", dot: "bg-success" },
-  { value: "draft", label: "Draft", dot: "bg-muted-foreground" },
-  { value: "pending", label: "Pending", dot: "bg-warning" },
-  { value: "private", label: "Private", dot: "bg-foreground/60" },
-];
-
 type Props = {
   form: ProductFormState;
   /** Snapshot when the editor opened (or last explicit reset). Tab chrome stays neutral until a tab differs from this. */
@@ -151,33 +144,6 @@ export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiv
       </Card>
 
       <div className="lg:sticky lg:top-4 h-fit space-y-3">
-        {setForm && (
-          <Card>
-            <CardContent className="p-4 space-y-2.5">
-              <div className="text-xs font-medium text-muted-foreground">Status</div>
-              <div className="grid grid-cols-4 gap-1">
-                {STATUS_OPTIONS.map((s) => {
-                  const selected = form.status === s.value;
-                  return (
-                    <button
-                      key={s.value}
-                      type="button"
-                      onClick={() => setForm((p) => ({ ...p, status: s.value }))}
-                      className={cn(
-                        "px-2 py-1.5 text-[11px] rounded-full border font-medium transition-all whitespace-nowrap",
-                        selected
-                          ? "bg-foreground text-background border-foreground shadow-sm"
-                          : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
         <LivePreviewCard form={form} storeId={storeId} productId={productId} setForm={setForm} />
       </div>
     </div>

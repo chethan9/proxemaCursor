@@ -13,9 +13,10 @@ import { queryKeys } from "@/lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "next-i18next";
 import { formatDate } from "@/lib/format-number";
+import { authorizedFetch } from "@/lib/api-client";
 
 async function patchProduct(storeId: string, productId: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/products/${productId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),

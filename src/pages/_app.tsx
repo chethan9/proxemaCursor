@@ -1,10 +1,13 @@
 import "@/styles/globals.css";
+import "tippy.js/dist/tippy.css";
+import "tippy.js/animations/scale.css";
 import "grapesjs/dist/css/grapes.min.css";
 import "@/components/templates/builder/builder-canvas.css";
 import "@/components/templates/builder/builder-palette.css";
 import "@/components/templates/builder/builder-right-panel.css";
 import type { AppProps } from "next/app";
 import { useEffect, useState, useRef } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -134,7 +137,7 @@ function GlobalScrollButton() {
   return <ScrollToEdgeButton />;
 }
 
-function ShellMain({ children }: { children: React.ReactNode }) {
+function ShellMain({ children }: { children: ReactNode }) {
   return (
     <main id="main-content" className="flex-1 overflow-auto">
       {children}
@@ -142,7 +145,7 @@ function ShellMain({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const noShellRoute =
@@ -173,7 +176,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Providers({ children }: { children: React.ReactNode }) {
+function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider
       attribute="class"
@@ -241,7 +244,7 @@ function App({ Component, pageProps }: AppProps) {
   );
 }
 
-function I18nReadyGate({ children }: { children: React.ReactNode }) {
+function I18nReadyGate({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
   const [ready, setReady] = useState(false);
   const mergedLanguagesRef = useRef<Set<string>>(new Set());

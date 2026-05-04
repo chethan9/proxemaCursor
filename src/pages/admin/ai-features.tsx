@@ -5,12 +5,13 @@ import { useTranslation } from "next-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { AiFeaturePreviewArt } from "@/components/admin/AiFeaturePreviewArt";
 import {
   Dialog,
   DialogContent,
@@ -207,14 +208,20 @@ function Inner() {
   const features = data ?? [];
 
   return (
-    <div className="p-6 max-w-6xl space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-6 max-w-5xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{t("ai.featuresTitle")}</h1>
           <p className="text-muted-foreground text-sm">{t("ai.featuresSubtitle")}</p>
         </div>
-        <Button onClick={openCreate}>{t("ai.addFeature")}</Button>
+        <Button onClick={openCreate} className="shrink-0">
+          {t("ai.addFeature")}
+        </Button>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Illustrations are stylized hints (not real model output). Slug must stay stable for stored generations.
+      </p>
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">
@@ -222,54 +229,66 @@ function Inner() {
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Features</CardTitle>
-          <CardDescription>Slug must stay stable for stored generations.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("ai.slug")}</TableHead>
-                  <TableHead>{t("ai.name")}</TableHead>
-                  <TableHead>{t("ai.provider")}</TableHead>
-                  <TableHead>{t("ai.model")}</TableHead>
-                  <TableHead>{t("ai.credits")}</TableHead>
-                  <TableHead>Src image</TableHead>
-                  <TableHead>{t("ai.active")}</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {features.map((f) => (
-                  <TableRow key={f.id}>
-                    <TableCell className="font-mono text-xs">{f.slug}</TableCell>
-                    <TableCell>{f.name}</TableCell>
-                    <TableCell>{f.provider}</TableCell>
-                    <TableCell className="max-w-[140px] truncate text-xs">{f.model}</TableCell>
-                    <TableCell>{f.credit_cost_per_output}</TableCell>
-                    <TableCell>{(f as { requires_source_image?: boolean }).requires_source_image !== false ? "Yes" : "No"}</TableCell>
-                    <TableCell>{f.is_active ? "Yes" : "No"}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="outline" size="sm" onClick={() => testFeature.mutate(f.id)} disabled={testFeature.isPending}>
-                        <FlaskConical className="h-3.5 w-3.5 mr-1" /> {t("ai.test")}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => openEdit(f)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => del.mutate(f.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {!isLoading && features.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">No features yet. Add one to get started.</CardContent>
+        </Card>
+      )}
+
+      <div className="flex flex-col gap-6">
+        {features.map((f) => {
+          const requiresSrc = (f as { requires_source_image?: boolean }).requires_source_image !== false;
+          return (
+            <article
+              key={f.id}
+              className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex flex-col md:flex-row">
+                <div className="relative shrink-0 border-b bg-gradient-to-br from-muted/40 to-muted/15 p-4 md:w-[min(100%,400px)] md:border-b-0 md:border-r">
+                  <AiFeaturePreviewArt slug={f.slug} />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-3 p-5 md:py-6">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <h2 className="text-lg font-semibold tracking-tight">{f.name}</h2>
+                      <p className="font-mono text-xs text-muted-foreground break-all">{f.slug}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={f.is_active ? "success" : "secondary"}>{f.is_active ? "Active" : "Inactive"}</Badge>
+                      <Badge variant="outline">
+                        {f.credit_cost_per_output} {t("ai.credits")}
+                      </Badge>
+                      <Badge variant={requiresSrc ? "info" : "outline"}>{requiresSrc ? "Needs image" : "Image optional"}</Badge>
+                    </div>
+                  </div>
+                  {f.description ? <p className="text-sm leading-relaxed text-muted-foreground">{f.description}</p> : null}
+                  <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("ai.provider")}</dt>
+                      <dd className="mt-0.5 font-mono text-xs">{f.provider}</dd>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("ai.model")}</dt>
+                      <dd className="mt-0.5 break-all font-mono text-xs leading-snug">{f.model}</dd>
+                    </div>
+                  </dl>
+                  <div className="flex flex-wrap gap-2 border-t pt-4 mt-auto">
+                    <Button variant="outline" size="sm" onClick={() => testFeature.mutate(f.id)} disabled={testFeature.isPending}>
+                      <FlaskConical className="mr-1.5 h-3.5 w-3.5" /> {t("ai.test")}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => openEdit(f)}>
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => del.mutate(f.id)}>
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

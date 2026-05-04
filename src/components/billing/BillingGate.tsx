@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useSubscription } from "@/hooks/queries/useSubscription";
@@ -22,7 +23,7 @@ function isAllowedWhenLocked(path: string): boolean {
 }
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function BillingGate({ children }: Props) {

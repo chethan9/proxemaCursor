@@ -6,6 +6,11 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* Filerobot Image Editor default UI fonts (Roboto 400/500); theme typography references Roboto. */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
         <SEOElements />
         {/* No-flash theme preset: must run before paint. Reads cached preset and applies it to <html> so CSS variables are correct on first paint. */}
         <script

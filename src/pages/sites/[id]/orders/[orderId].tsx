@@ -37,6 +37,7 @@ import { getStore } from "@/services/storeService";
 import { updateOrderStatus, getCustomerName, getCustomerEmail, type OrderRow } from "@/services/orderService";
 import { queryKeys } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
+import { authorizedFetch } from "@/lib/api-client";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -237,7 +238,7 @@ export default function OrderDetailsPage() {
 
   const addNoteMutation = useSiteMutation<unknown, void>({
     mutationFn: async () => {
-      const res = await fetch(`/api/stores/${storeId}/orders/${orderId}/notes`, {
+      const res = await authorizedFetch(`/api/stores/${storeId}/orders/${orderId}/notes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note: noteText.trim(), customer_note: noteIsCustomer }),

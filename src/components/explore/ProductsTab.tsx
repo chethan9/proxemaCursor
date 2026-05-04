@@ -118,17 +118,21 @@ function pendingLabel(action?: string | null) {
   return PENDING_LABELS[action] || `Scheduled: ${action}`;
 }
 
-const SORT_OPTIONS: { field: ProductSortField; direction: SortDirection; label: string }[] = [
-  { field: "woo_date_created", direction: "desc", label: "Newest first" },
-  { field: "woo_date_created", direction: "asc", label: "Oldest first" },
-  { field: "name", direction: "asc", label: "Name A-Z" },
-  { field: "name", direction: "desc", label: "Name Z-A" },
-  { field: "price", direction: "desc", label: "Price high to low" },
-  { field: "price", direction: "asc", label: "Price low to high" },
-  { field: "stock_quantity", direction: "desc", label: "Stock high to low" },
-  { field: "stock_quantity", direction: "asc", label: "Stock low to high" },
-  { field: "synced_at", direction: "desc", label: "Recently synced" },
+const SORT_PRESETS: { field: ProductSortField; direction: SortDirection; labelKey: string }[] = [
+  { field: "woo_date_created", direction: "desc", labelKey: "newestFirst" },
+  { field: "woo_date_created", direction: "asc", labelKey: "oldestFirst" },
+  { field: "name", direction: "asc", labelKey: "nameAz" },
+  { field: "name", direction: "desc", labelKey: "nameZa" },
+  { field: "price", direction: "desc", labelKey: "priceHigh" },
+  { field: "price", direction: "asc", labelKey: "priceLow" },
+  { field: "stock_quantity", direction: "desc", labelKey: "stockHigh" },
+  { field: "stock_quantity", direction: "asc", labelKey: "stockLow" },
+  { field: "synced_at", direction: "desc", labelKey: "recentSync" },
 ];
+
+function sortSame(a: { field: ProductSortField; direction: SortDirection }, b: { field: ProductSortField; direction: SortDirection }) {
+  return a.field === b.field && a.direction === b.direction;
+}
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 1000];
 
@@ -261,8 +265,36 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
   const [priceMax, setPriceMax] = useState(() => getQueryString(router.query, "pmax") ?? "");
   const [filterSimple, setFilterSimple] = useState(true);
   const [filterVariable, setFilterVariable] = useState(true);
-  const [sort, setSort] = useState(SORT_OPTIONS[0]);
+  const [sort, setSort] = useState<{ field: ProductSortField; direction: SortDirection }>(() => ({
+    field: SORT_PRESETS[0].field,
+    direction: SORT_PRESETS[0].direction,
+  }));
   const [isHydrated, setIsHydrated] = useState(false);
+
+  const colLabel = useCallback((k: ColumnKey) => t(`products.catalog.columns.${k}`), [t]);
+
+  const sortDisplayLabel = useMemo(() => {
+    const preset = SORT_PRESETS.find((p) => sortSame(p, sort));
+    if (preset) return t(`products.sort.${preset.labelKey}`);
+    const col = COLUMNS.find((c) => c.sortable === sort.field);
+    if (col) return `${t(`products.catalog.columns.${col.key}`)} ${sort.direction === "desc" ? "↓" : "↑"}`;
+    return t("products.sort.recentSync");
+  }, [sort, t]);
+
+  const sortPresetOptions = useMemo(
+    () => SORT_PRESETS.map((p) => ({ ...p, label: t(`products.sort.${p.labelKey}`) })),
+    [t],
+  );
+
+  const columnGroupTitle = useCallback((logicalGroup: string) => {
+    const map: Record<string, "product" | "pricingInventory" | "contentDates" | "other"> = {
+      Product: "product",
+      "Pricing & Inventory": "pricingInventory",
+      "Content & Dates": "contentDates",
+    };
+    const k = map[logicalGroup];
+    return k ? t(`products.columnGroups.${k}`) : logicalGroup;
+  }, [t]);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("explore-col-order", JSON.stringify(columnOrder));
@@ -366,8 +398,13 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
     try {
       if (bulkDialog === "status") {
         await createBulkJob({ store_id: storeId, job_type: "update_product_status", total: wooIds.length, payload: { type: "update_product_status", product_ids: wooIds, new_status: newProductStatus } });
+        toast({ title: t("products.bulk.jobQueued"), description: t("products.bulk.jobQueuedDesc", { count: wooIds.length }) });
       } else if (bulkDialog === "category") {
-        if (bulkCategoryIds.size === 0) { setBulkSubmitting(false); return; }
+        if (bulkCategoryIds.size === 0) {
+          toast({ title: t("products.bulk.jobFailed"), description: t("products.bulk.selectCategories"), variant: "destructive" });
+          setBulkSubmitting(false);
+          return;
+        }
         const effectiveCategoryMode =
           categoryMode === "add" && categoryRemoveExisting ? "replace" : categoryMode;
         await createBulkJob({
@@ -381,14 +418,26 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             category_ids: Array.from(bulkCategoryIds),
           },
         });
+        toast({ title: t("products.bulk.jobQueued"), description: t("products.bulk.jobQueuedDesc", { count: wooIds.length }) });
       } else if (bulkDialog === "tag") {
-        if (bulkTagIds.size === 0) { setBulkSubmitting(false); return; }
+        if (bulkTagIds.size === 0) {
+          toast({ title: t("products.bulk.jobFailed"), description: t("products.bulk.selectTags"), variant: "destructive" });
+          setBulkSubmitting(false);
+          return;
+        }
         await createBulkJob({ store_id: storeId, job_type: "assign_product_tags", total: wooIds.length, payload: { type: "assign_product_tags", product_ids: wooIds, mode: tagMode, tag_ids: Array.from(bulkTagIds) } });
+        toast({ title: t("products.bulk.jobQueued"), description: t("products.bulk.jobQueuedDesc", { count: wooIds.length }) });
       } else if (bulkDialog === "brand") {
-        if (bulkBrandIds.size === 0) { setBulkSubmitting(false); return; }
+        if (bulkBrandIds.size === 0) {
+          toast({ title: t("products.bulk.jobFailed"), description: t("products.bulk.selectBrands"), variant: "destructive" });
+          setBulkSubmitting(false);
+          return;
+        }
         await createBulkJob({ store_id: storeId, job_type: "assign_product_brands", total: wooIds.length, payload: { type: "assign_product_brands", product_ids: wooIds, mode: brandMode, brand_ids: Array.from(bulkBrandIds) } });
+        toast({ title: t("products.bulk.jobQueued"), description: t("products.bulk.jobQueuedDesc", { count: wooIds.length }) });
       } else if (bulkDialog === "delete") {
         await createBulkJob({ store_id: storeId, job_type: "delete_products", total: wooIds.length, payload: { type: "delete_products", product_ids: wooIds, force: false } });
+        toast({ title: t("products.bulk.jobQueued"), description: t("products.bulk.jobQueuedDesc", { count: wooIds.length }) });
         const deleteSet = new Set(wooIds);
         queryClient.setQueriesData({ queryKey: queryKeys.products(storeId) }, (prev: unknown) => {
           if (!prev || typeof prev !== "object") return prev;
@@ -425,6 +474,11 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
       setBulkBrandIds(new Set());
     } catch (err) {
       console.error("[bulk]", err);
+      toast({
+        title: t("products.bulk.jobFailed"),
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
     } finally {
       setBulkSubmitting(false);
     }
@@ -631,7 +685,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             }
           }
         }
-        if (remote.sort && typeof remote.sort === "object") setSort(remote.sort as typeof SORT_OPTIONS[number]);
+        if (remote.sort && typeof remote.sort === "object") {
+          const rs = remote.sort as { field?: ProductSortField; direction?: SortDirection };
+          if (rs.field && rs.direction) setSort({ field: rs.field, direction: rs.direction });
+        }
       }
       prefsLoaded.current = true;
     }).catch(() => {
@@ -698,7 +755,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           <div className="flex items-center gap-2 flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("products.toolbar.sort")}: ${sort.label}`}>
+                <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("products.toolbar.sort")}: ${sortDisplayLabel}`}>
                   <ArrowUpDown className="h-3.5 w-3.5" />
                   <span className="text-xs">{t("products.toolbar.sort")}</span>
                 </Button>
@@ -706,8 +763,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{t("products.toolbar.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {SORT_OPTIONS.map((opt, i) => (
-                  <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
+                {sortPresetOptions.map((opt, i) => (
+                  <DropdownMenuItem key={i} onClick={() => setSort({ field: opt.field, direction: opt.direction })} className={sortSame(sort, opt) ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -738,7 +795,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       });
                       return Object.entries(grouped).map(([group, cols]) => (
                         <div key={group}>
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{columnGroupTitle(group)}</div>
                           <div className="flex flex-col gap-0.5">
                             {cols.map((c) => (
                               <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
@@ -746,7 +803,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                   checked={visibleCols[c.key]}
                                   onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
                                 />
-                                <span className="truncate">{c.label}</span>
+                                <span className="truncate">{colLabel(c.key)}</span>
                               </label>
                             ))}
                           </div>
@@ -794,9 +851,9 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-0.5 rounded-md border border-border bg-background px-1 h-9">
                 {[
-                  { value: "all", label: "All stock" },
-                  { value: "instock", label: "In stock" },
-                  { value: "outofstock", label: "Out of stock" },
+                  { value: "all", label: t("products.filters.allStock") },
+                  { value: "instock", label: t("products.filters.inStock") },
+                  { value: "outofstock", label: t("products.filters.outOfStock") },
                 ].map((opt) => (
                   <Button
                     key={opt.value}
@@ -811,14 +868,14 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter} disabled={locked}>
                 <SelectTrigger className="h-9 w-[140px] text-xs">
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t("products.filters.allStatuses")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="publish">Published</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="all">{t("products.filters.allStatuses")}</SelectItem>
+                  <SelectItem value="publish">{t("products.statuses.publish")}</SelectItem>
+                  <SelectItem value="draft">{t("products.statuses.draft")}</SelectItem>
+                  <SelectItem value="pending">{t("products.statuses.pending")}</SelectItem>
+                  <SelectItem value="private">{t("products.statuses.private")}</SelectItem>
                 </SelectContent>
               </Select>
               <div
@@ -889,10 +946,10 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               {!embedHeader && (
                 <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={locked}>
                   <SelectTrigger className="h-9 w-[180px] text-xs">
-                    <SelectValue placeholder="All categories" />
+                    <SelectValue placeholder={t("products.filters.allCategories")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All categories</SelectItem>
+                    <SelectItem value="all">{t("products.filters.allCategories")}</SelectItem>
                     {categoryOptions.map((c) => (
                       <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
                     ))}
@@ -906,7 +963,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   setFilterSimple(true); setFilterVariable(true);
                 }}>
                   <FilterX className="h-3.5 w-3.5" />
-                  Clear
+                  {t("products.filters.clear")}
                 </Button>
               )}
               <div className="flex-1" />
@@ -914,36 +971,36 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                 {!embedHeader && (
                   <>
                     <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 h-9">
-                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("table")} title="Table view"><List className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "grid" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("grid")} title="Grid view"><LayoutGrid className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "compact" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("compact")} title="Compact grid"><Grid3x3 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "table" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("table")} title={t("products.view.table")}><List className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "grid" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("grid")} title={t("products.view.grid")}><LayoutGrid className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 px-2 ${viewMode === "compact" ? "bg-foreground/10 hover:bg-foreground/15" : ""}`} onClick={() => setViewMode("compact")} title={t("products.view.compact")}><Grid3x3 className="h-3.5 w-3.5" /></Button>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`Sort: ${sort.label}`}>
+                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" title={`${t("products.toolbar.sort")}: ${sortDisplayLabel}`}>
                           <ArrowUpDown className="h-3.5 w-3.5" />
-                          <span className="text-xs">Sort</span>
+                          <span className="text-xs">{t("products.toolbar.sort")}</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                        <DropdownMenuLabel>{t("products.toolbar.sortBy")}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {SORT_OPTIONS.map((opt, i) => (
-                          <DropdownMenuItem key={i} onClick={() => setSort(opt)} className={sort === opt ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
+                        {sortPresetOptions.map((opt, i) => (
+                          <DropdownMenuItem key={i} onClick={() => setSort({ field: opt.field, direction: opt.direction })} className={sortSame(sort, opt) ? "bg-foreground/10" : ""}>{opt.label}</DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? "Available after initial sync completes" : "Customize columns"}>
+                        <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5" disabled={locked} title={locked ? t("products.toolbar.lockedHint") : t("products.toolbar.customizeColumns")}>
                           <Columns3 className="h-3.5 w-3.5" />
-                          <span className="text-xs">Columns</span>
+                          <span className="text-xs">{t("products.toolbar.columns")}</span>
                           <span className="text-[10px] text-muted-foreground font-mono">{Object.values(visibleCols).filter(Boolean).length}</span>
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-[560px] p-0" sideOffset={6}>
                         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                          <div className="text-sm font-medium">Customize columns</div>
+                          <div className="text-sm font-medium">{t("products.toolbar.customizeColumns")}</div>
                         </div>
                         <div className="max-h-[420px] overflow-y-auto p-4">
                           <div className="grid grid-cols-3 gap-x-6 gap-y-4">
@@ -960,7 +1017,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               });
                               return Object.entries(grouped).map(([group, cols]) => (
                                 <div key={group}>
-                                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{group}</div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b border-border">{columnGroupTitle(group)}</div>
                                   <div className="flex flex-col gap-0.5">
                                     {cols.map((c) => (
                                       <label key={c.key} className="flex items-center gap-2 px-1.5 py-1.5 rounded-md hover:bg-muted cursor-pointer text-[13px]">
@@ -968,7 +1025,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                           checked={visibleCols[c.key]}
                                           onCheckedChange={(v) => setVisibleCols((prev) => ({ ...prev, [c.key]: !!v }))}
                                         />
-                                        <span className="truncate">{c.label}</span>
+                                        <span className="truncate">{colLabel(c.key)}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -1154,7 +1211,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             <div
                               onClick={(e) => { e.stopPropagation(); if (!locked && !pending) toggleSelect(p.id); }}
                               className={cn(
-                                "absolute top-1.5 left-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity",
+                                "absolute top-1.5 start-1.5 z-10 h-5 w-5 rounded bg-background/95 backdrop-blur shadow-sm border border-border/60 flex items-center justify-center transition-opacity",
                                 showCardChrome ? "opacity-100" : "opacity-0 group-hover:opacity-100",
                                 selectedIds.has(p.id) && "ring-2 ring-primary/40",
                               )}
@@ -1184,7 +1241,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               )}
                               {isVariable && (
                                 <div
-                                  className="absolute bottom-1.5 left-1.5 h-5 w-5 rounded-full bg-background shadow-sm border border-border/60 dark:bg-white dark:border-white/50 flex items-center justify-center"
+                                  className="absolute bottom-1.5 start-1.5 h-5 w-5 rounded-full bg-background shadow-sm border border-border/60 dark:bg-white dark:border-white/50 flex items-center justify-center"
                                   title="Has variations"
                                 >
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1229,7 +1286,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                           <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                             <div
                               className={cn(
-                                "absolute top-2.5 left-2.5 z-10 flex items-center gap-1 transition-opacity pointer-events-none",
+                                "absolute top-2.5 start-2.5 z-10 flex items-center gap-1 transition-opacity pointer-events-none",
                                 showCardChrome ? "opacity-100" : "opacity-0 group-hover:opacity-100",
                               )}
                             >
@@ -1269,7 +1326,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                             )}
                             {isVariable && (
                               <div
-                                className="absolute bottom-2.5 left-2.5 h-8 w-8 rounded-full bg-background shadow-sm border border-border/60 dark:bg-white dark:border-white/50 flex items-center justify-center"
+                                className="absolute bottom-2.5 start-2.5 h-8 w-8 rounded-full bg-background shadow-sm border border-border/60 dark:bg-white dark:border-white/50 flex items-center justify-center"
                                 title="Has variations"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1360,7 +1417,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Table className="[&_td]:px-1.5 [&_td]:py-1.5 [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-2">
                 <TableHeader>
                   <TableRow className="bg-muted/30">
-                    <TableHead className="w-8 pl-3 pr-0">
+                    <TableHead className="w-8 min-w-8 ps-3 pe-2">
                       <Checkbox
                         checked={!locked && products.length > 0 && products.every((p) => selectedIds.has(p.id))}
                         disabled={locked}
@@ -1415,15 +1472,15 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   const nextDir: SortDirection = isActive && sort.direction === "desc" ? "asc" : "desc";
-                                  setSort({ field: c.sortable!, direction: nextDir, label: `${c.label} ${nextDir === "desc" ? "↓" : "↑"}` });
+                                  setSort({ field: c.sortable!, direction: nextDir });
                                 }}
                                 className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${isActive ? "text-foreground font-medium" : ""}`}
                               >
-                                {c.label}
+                                {colLabel(c.key)}
                                 <SortIcon className="h-3 w-3" />
                               </button>
                             ) : (
-                              c.label
+                              colLabel(c.key)
                             )}
                             <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                           </span>
@@ -1436,7 +1493,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                   {showInitialLoading ? (
                     Array.from({ length: 10 }).map((_, i) => (
                       <TableRow key={`sk-${i}`}>
-                        <TableCell className="w-8 pl-3 pr-0"><Checkbox disabled /></TableCell>
+                        <TableCell className="w-8 min-w-8 ps-3 pe-2"><Checkbox disabled /></TableCell>
                         {visibleColList.map((c) => (
                           <TableCell key={c.key}>
                             {c.key === "image" ? <Skeleton className="h-9 w-9 rounded" /> : <Skeleton className="h-4 w-24" />}
@@ -1487,7 +1544,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                               if (!locked) setQuickEditProduct(p);
                             }}
                           >
-                            <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
+                            <TableCell className="w-8 min-w-8 ps-3 pe-2" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (!locked && !pending) toggleSelect(p.id); }} />
                             </TableCell>
                             {visibleColList.map((c) => {

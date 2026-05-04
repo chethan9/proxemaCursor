@@ -37,6 +37,9 @@ function getTurboRules() {
 
 const nextConfig = {
   reactStrictMode: true,
+  compiler: {
+    styledComponents: true,
+  },
   env: {
     NEXT_PUBLIC_APP_BUILD_ID: resolveAppBuildIdFromEnv(process.env),
   },
@@ -55,6 +58,21 @@ const nextConfig = {
     ],
   },
   allowedDevOrigins: ["*.daytona.work", "*.softgen.dev"],
+  /**
+   * react-filerobot-image-editor / @scaleflex/ui ship chunks that reference `React`
+   * without importing it (legacy JSX). Production webpack does not define that global,
+   * which causes ReferenceError: React is not defined when opening the editor.
+   */
+  webpack: (config, { webpack: webpackInstance, isServer }) => {
+    if (!isServer) {
+      config.plugins.push(
+        new webpackInstance.ProvidePlugin({
+          React: "react",
+        }),
+      );
+    }
+    return config;
+  },
 };
 
 export default withBundleAnalyzer(nextConfig);

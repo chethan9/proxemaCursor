@@ -408,9 +408,10 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       onNewInputChange={(v) => setNewValueInput((s) => ({ ...s, [idx]: v }))}
                     />
                   </div>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <label className={cn("flex items-center gap-2 text-sm", attr.variation ? "cursor-not-allowed opacity-60" : "cursor-pointer")}>
                     <Checkbox
                       checked={attr.visible}
+                      disabled={attr.variation}
                       onCheckedChange={(v) =>
                         setForm((p) => {
                           const a = [...p.attributes];
@@ -428,7 +429,11 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                         const checked = !!v;
                         setForm((p) => {
                           const a = [...p.attributes];
-                          a[idx] = { ...a[idx], variation: checked };
+                          a[idx] = {
+                            ...a[idx],
+                            variation: checked,
+                            visible: checked ? false : a[idx].visible,
+                          };
                           const anyVariation = a.some((x) => x.variation);
                           const nextType = anyVariation
                             ? "variable"

@@ -10,6 +10,7 @@ import { JsonTableView } from "@/components/JsonTableView";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "next-i18next";
 import { formatNumber, formatDateTime } from "@/lib/format-number";
+import { authorizedFetch } from "@/lib/api-client";
 import {
   ArrowRight,
   ChevronDown,
@@ -176,7 +177,7 @@ export function EntityHistory({
     e.stopPropagation();
     setRetryingId(change.id);
     try {
-      const res = await fetch(`/api/stores/${change.store_id}/retry-change/${change.id}`, {
+      const res = await authorizedFetch(`/api/stores/${change.store_id}/retry-change/${change.id}`, {
         method: "POST",
       });
       const body = await res.json();

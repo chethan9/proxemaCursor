@@ -48,6 +48,7 @@ import { SYNC_INTERVALS } from "@/components/project/constants";
 import { useSiteLiveCounts } from "@/hooks/queries/useSiteLiveCounts";
 import { useTranslation } from "next-i18next";
 import { formatNumber } from "@/lib/format-number";
+import { authorizedFetch } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 interface SyncProgress { current: number; total: number; aspect: string; }
@@ -203,7 +204,7 @@ export default function SiteWorkspacePage() {
     setSyncProgress({ current: 0, total: 6, aspect: "Starting sync..." });
     syncAbortRef.current = false;
     try {
-      const res = await fetch(`/api/stores/${store.id}/sync`, { method: "POST", headers: { "Content-Type": "application/json" } });
+      const res = await authorizedFetch(`/api/stores/${store.id}/sync`, { method: "POST", headers: { "Content-Type": "application/json" } });
       if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Sync failed"); }
       const r = await res.json();
       setSyncProgress({
@@ -221,7 +222,7 @@ export default function SiteWorkspacePage() {
   const handleCancelSync = async () => {
     if (!store) return;
     syncAbortRef.current = true;
-    try { await fetch(`/api/stores/${store.id}/sync`, { method: "PATCH" }); await loadData(); }
+    try { await authorizedFetch(`/api/stores/${store.id}/sync`, { method: "PATCH" }); await loadData(); }
     catch (error) { console.error("Cancel error:", error); }
     finally { setSyncing(false); setSyncProgress(null); }
   };
@@ -231,7 +232,7 @@ export default function SiteWorkspacePage() {
     setSyncing(true);
     setSyncProgress({ current: 0, total: 1, aspect: `Syncing ${aspect}...` });
     try {
-      const res = await fetch(`/api/stores/${store.id}/sync`, {
+      const res = await authorizedFetch(`/api/stores/${store.id}/sync`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aspect }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Sync failed"); }
@@ -249,7 +250,7 @@ export default function SiteWorkspacePage() {
   const handleRegisterWebhooks = async () => {
     if (!store) return;
     try {
-      const res = await fetch(`/api/stores/${store.id}/register-webhooks`, { method: "POST" });
+      const res = await authorizedFetch(`/api/stores/${store.id}/register-webhooks`, { method: "POST" });
       const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string; success?: boolean };
       if (!res.ok) {
         toast({

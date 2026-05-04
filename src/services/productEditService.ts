@@ -1,4 +1,5 @@
 import type { ProductImageMirrorUrlsMap } from "@/lib/product-image-urls";
+import { authorizedFetch } from "@/lib/api-client";
 
 export type ProductAttribute = {
   id?: number;
@@ -273,7 +274,7 @@ export function formToWooPayload(form: ProductFormState): Record<string, unknown
 }
 
 export async function fetchProductVariations(storeId: string, productId: string): Promise<Variation[]> {
-  const res = await fetch(`/api/stores/${storeId}/products/${productId}/variations`);
+  const res = await authorizedFetch(`/api/stores/${storeId}/products/${productId}/variations`);
   if (!res.ok) throw new Error(`Failed to load variations (${res.status})`);
   return res.json();
 }
@@ -286,7 +287,7 @@ export async function createProduct(storeId: string, form: ProductFormState) {
     e.validationErrors = validation.errors.map(({ field, message }) => ({ field, message }));
     throw e;
   }
-  const res = await fetch(`/api/stores/${storeId}/products/create`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/products/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(buildWooPayload(form)),
@@ -307,7 +308,7 @@ export async function updateProduct(storeId: string, productId: string, form: Pr
     e.validationErrors = validation.errors.map(({ field, message }) => ({ field, message }));
     throw e;
   }
-  const res = await fetch(`/api/stores/${storeId}/products/${productId}`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/products/${productId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(buildWooPayload(form)),

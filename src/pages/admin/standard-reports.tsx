@@ -28,7 +28,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Plus, Pencil, Trash2, BarChart3, ExternalLink } from "lucide-react";
-import type { StandardReportRow } from "@/pages/api/admin/standard-reports";
+
+/** Row shape returned by GET /api/admin/standard-reports (typed locally; API module may be absent in some branches). */
+export type StandardReportRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  provider: string;
+  dashboard_url: string | null;
+  metabase_site_url: string | null;
+  embed_resource_type: "dashboard" | "question" | null;
+  embed_resource_id: number | null;
+  locked_params: Record<string, unknown> | null;
+  sort_order: number;
+  is_active: boolean;
+  report_group: string | null;
+  icon: string | null;
+};
 
 async function fetchReports(): Promise<StandardReportRow[]> {
   const {

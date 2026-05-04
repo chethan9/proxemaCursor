@@ -72,6 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       consumer_secret: consumer_secret || null,
       client_id: finalClientId,
       status: status || "pending",
+      created_by: user.id,
     })
     .select()
     .single();

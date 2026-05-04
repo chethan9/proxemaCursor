@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { authorizedFetch } from "@/lib/api-client";
 import type { Database } from "@/integrations/supabase/helpers";
 
 type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
@@ -99,7 +100,7 @@ export async function fetchBrands(
 }
 
 export async function createCategory(storeId: string, payload: { name: string; slug?: string; description?: string; parent?: number }): Promise<void> {
-  const res = await fetch(`/api/stores/${storeId}/categories/create`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/categories/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -111,7 +112,7 @@ export async function createCategory(storeId: string, payload: { name: string; s
 }
 
 export async function createTag(storeId: string, payload: { name: string; slug?: string; description?: string }): Promise<void> {
-  const res = await fetch(`/api/stores/${storeId}/tags/create`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/tags/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -123,7 +124,7 @@ export async function createTag(storeId: string, payload: { name: string; slug?:
 }
 
 export async function createBrand(storeId: string, payload: { name: string; slug?: string; description?: string }): Promise<void> {
-  const res = await fetch(`/api/stores/${storeId}/brands/create`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/brands/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -135,7 +136,7 @@ export async function createBrand(storeId: string, payload: { name: string; slug
 }
 
 export async function updateCategory(storeId: string, categoryId: string, patch: { name?: string; slug?: string; description?: string }) {
-  const res = await fetch(`/api/stores/${storeId}/categories/${categoryId}`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/categories/${categoryId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -148,7 +149,7 @@ export async function updateCategory(storeId: string, categoryId: string, patch:
 }
 
 export async function deleteCategory(storeId: string, categoryId: string) {
-  const res = await fetch(`/api/stores/${storeId}/categories/${categoryId}`, { method: "DELETE" });
+  const res = await authorizedFetch(`/api/stores/${storeId}/categories/${categoryId}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Delete failed" }));
     throw new Error(err.message || err.error || "Delete failed");
@@ -156,7 +157,7 @@ export async function deleteCategory(storeId: string, categoryId: string) {
 }
 
 export async function updateTag(storeId: string, tagId: string, patch: { name?: string; slug?: string; description?: string }) {
-  const res = await fetch(`/api/stores/${storeId}/tags/${tagId}`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/tags/${tagId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -169,7 +170,7 @@ export async function updateTag(storeId: string, tagId: string, patch: { name?: 
 }
 
 export async function deleteTag(storeId: string, tagId: string) {
-  const res = await fetch(`/api/stores/${storeId}/tags/${tagId}`, { method: "DELETE" });
+  const res = await authorizedFetch(`/api/stores/${storeId}/tags/${tagId}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Delete failed" }));
     throw new Error(err.message || err.error || "Delete failed");
@@ -177,7 +178,7 @@ export async function deleteTag(storeId: string, tagId: string) {
 }
 
 export async function updateBrand(storeId: string, brandId: string, patch: { name?: string; slug?: string; description?: string }) {
-  const res = await fetch(`/api/stores/${storeId}/brands/${brandId}`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/brands/${brandId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -190,7 +191,7 @@ export async function updateBrand(storeId: string, brandId: string, patch: { nam
 }
 
 export async function deleteBrand(storeId: string, brandId: string) {
-  const res = await fetch(`/api/stores/${storeId}/brands/${brandId}`, { method: "DELETE" });
+  const res = await authorizedFetch(`/api/stores/${storeId}/brands/${brandId}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Delete failed" }));
     throw new Error(err.message || err.error || "Delete failed");

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/helpers";
+import { authorizedFetch, getBearerAuthHeaders } from "@/lib/api-client";
 
 export type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 
@@ -85,8 +86,7 @@ export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ dat
     const orderMap: Record<string, string> = { date_created: "registered_date", name: "name", first_name: "name", email: "email", orders_count: "id", total_spent: "id", synced_at: "registered_date" };
     qs.set("orderby", orderMap[sortField] || "registered_date");
     qs.set("order", sortDirection);
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const headers = await getBearerAuthHeaders();
     const res = await fetch(`/api/stores/${storeId}/live/customers?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
@@ -107,8 +107,7 @@ export async function fetchCustomers(opts: FetchCustomersOptions): Promise<{ dat
   if (roleFilter) qs.set("roleFilter", roleFilter);
   if (minOrders !== undefined) qs.set("minOrders", String(minOrders));
   if (minSpent !== undefined) qs.set("minSpent", String(minSpent));
-  const { data: { session } } = await supabase.auth.getSession();
-  const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+  const headers = await getBearerAuthHeaders();
   const res = await fetch(`/api/stores/${storeId}/db/customers?${qs.toString()}`, { headers });
   if (!res.ok) throw new Error(`DB fetch failed (${res.status})`);
   const json = await res.json();
@@ -197,7 +196,7 @@ export async function updateCustomer(id: string, patch: {
 }): Promise<CustomerRow> {
   const { data: cust, error: e0 } = await supabase.from("customers").select("store_id,woo_id").eq("id", id).single();
   if (e0 || !cust) throw e0 || new Error("Customer not found");
-  const res = await fetch(`/api/stores/${cust.store_id}/customers/${id}`, {
+  const res = await authorizedFetch(`/api/stores/${cust.store_id}/customers/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -214,7 +213,7 @@ export async function updateCustomer(id: string, patch: {
 }
 
 export async function deleteCustomer(storeId: string, id: string): Promise<void> {
-  const res = await fetch(`/api/stores/${storeId}/customers/${id}`, { method: "DELETE" });
+  const res = await authorizedFetch(`/api/stores/${storeId}/customers/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || err.error || `Delete failed (${res.status})`);
@@ -230,7 +229,7 @@ export async function createCustomer(storeId: string, payload: {
   billing?: Record<string, string>;
   shipping?: Record<string, string>;
 }): Promise<CustomerRow> {
-  const res = await fetch(`/api/stores/${storeId}/customers/create`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/customers/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

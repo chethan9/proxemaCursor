@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -172,6 +172,50 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   const missingPriceCount = productMode === "variable"
     ? form.variations.filter((v) => v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0)).length
     : 0;
+
+  const variationAttrSig = useMemo(
+    () =>
+      JSON.stringify(
+        form.attributes.map((a) => ({
+          name: a.name,
+          slug: a.slug,
+          options: a.options,
+          variation: a.variation,
+        })),
+      ),
+    [form.attributes],
+  );
+
+  const prevVariationAttrSig = useRef<string | null>(null);
+  useEffect(() => {
+    if (productMode !== "variable") {
+      prevVariationAttrSig.current = null;
+    }
+  }, [productMode]);
+
+  useEffect(() => {
+    if (productMode !== "variable") return;
+    if (prevVariationAttrSig.current === null) {
+      prevVariationAttrSig.current = variationAttrSig;
+      return;
+    }
+    if (prevVariationAttrSig.current === variationAttrSig) return;
+    prevVariationAttrSig.current = variationAttrSig;
+    const tid = window.setTimeout(() => {
+      setForm((p) => {
+        const fresh = generateMatrix(p.attributes);
+        const merged = mergeVariations(fresh, p.variations);
+        const freshKeys = new Set(fresh.map((v) => v.key));
+        const orphanedIds = p.variations.filter((v) => v.id && !freshKeys.has(v.key)).map((v) => v.id!) as number[];
+        return {
+          ...p,
+          variations: merged,
+          deletedVariationIds: [...(p.deletedVariationIds || []), ...orphanedIds],
+        };
+      });
+    }, 400);
+    return () => window.clearTimeout(tid);
+  }, [variationAttrSig, productMode, setForm]);
 
   return (
     <div className="space-y-5">

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { authorizedFetch, getBearerAuthHeaders } from "@/lib/api-client";
 import { normalizeSelectFilter } from "@/lib/normalize-explorer-filters";
 import {
   applyProductCatalogFilters,
@@ -113,8 +114,7 @@ export async function fetchProducts(opts: FetchProductsOptions): Promise<{ data:
     const orderMap: Record<string, string> = { name: "title", price: "price", woo_date_created: "date", created_at: "date", updated_at: "modified" };
     qs.set("orderby", orderMap[sortField] || "date");
     qs.set("order", sortDirection);
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: HeadersInit = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    const headers = await getBearerAuthHeaders();
     const res = await fetch(`/api/stores/${storeId}/live/products?${qs.toString()}`, { headers });
     if (!res.ok) throw new Error(`Live fetch failed (${res.status})`);
     const json = await res.json();
@@ -168,7 +168,7 @@ export function getCategoryNames(categories: unknown): string {
 export async function updateProduct(id: string, updates: Record<string, unknown>): Promise<ProductRow> {
   const { data: product, error: fetchErr } = await supabase.from("products").select("store_id").eq("id", id).single();
   if (fetchErr || !product) throw fetchErr || new Error("Product not found");
-  const res = await fetch(`/api/stores/${product.store_id}/products/${id}`, {
+  const res = await authorizedFetch(`/api/stores/${product.store_id}/products/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),

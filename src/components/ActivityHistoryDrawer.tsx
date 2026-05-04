@@ -6,6 +6,7 @@ import { ActivityFeedRow } from "@/components/ActivityFeedRow";
 import { listEntityActivity, type ActivityLogEntry } from "@/services/activityLogService";
 import { fetchProductMergedHistory } from "@/services/productHistoryService";
 import type { ProductHistoryEntry } from "@/types/product-history";
+import { cn } from "@/lib/utils";
 
 interface ActivityHistoryDrawerProps {
   entityType: string;
@@ -15,6 +16,7 @@ interface ActivityHistoryDrawerProps {
   label?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
   size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
 }
 
 export function ActivityHistoryDrawer({
@@ -24,6 +26,7 @@ export function ActivityHistoryDrawer({
   label = "History",
   variant = "outline",
   size = "sm",
+  className,
 }: ActivityHistoryDrawerProps) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<(ActivityLogEntry | ProductHistoryEntry)[]>([]);
@@ -64,8 +67,8 @@ export function ActivityHistoryDrawer({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant={variant} size={size} className="gap-1.5">
-          <History className="h-3.5 w-3.5" />
+        <Button variant={variant} size={size} className={cn("gap-1.5", className)}>
+          <History className="h-3.5 w-3.5 text-muted-foreground" />
           {label}
         </Button>
       </SheetTrigger>

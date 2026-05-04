@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { useTranslation } from "next-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +8,28 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, X, ImageIcon, Loader2, Info, Search, GripVertical, AlertCircle, Sparkles } from "lucide-react";
+import {
+  Plus,
+  X,
+  ImageIcon,
+  Loader2,
+  Info,
+  Search,
+  GripVertical,
+  AlertCircle,
+  Sparkles,
+  SquarePen,
+  PackageCheck,
+  PackageX,
+  Hourglass,
+  Tag,
+  CircleDollarSign,
+  Boxes,
+  Truck,
+  FolderTree,
+  Save,
+  Images,
+} from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { validateProductForm } from "@/services/productValidation";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
@@ -15,6 +38,14 @@ import { TagPicker } from "@/components/product-edit/TagPicker";
 import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
 import { cn } from "@/lib/utils";
 import { LivePreviewCard } from "@/components/product-edit/LivePreviewCard";
+
+const ProductImageEditorDialog = dynamic(
+  () =>
+    import("@/components/product-edit/image-editor/ProductImageEditorDialog").then((m) => ({
+      default: m.ProductImageEditorDialog,
+    })),
+  { ssr: false },
+);
 
 interface Props {
   storeId: string;
@@ -31,7 +62,10 @@ interface Props {
 const BANNER_KEY = "product-basic-banner-dismissed";
 
 export function BasicEditor({ storeId, productId, form, setForm, saving, onCancel, onPublish, isEdit }: Props) {
+  const { t } = useTranslation("site");
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageEditorIdx, setImageEditorIdx] = useState(0);
   const [tagInput, setTagInput] = useState("");
   const [catSearch, setCatSearch] = useState("");
   const [catOpen, setCatOpen] = useState(false);
@@ -141,17 +175,34 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
     setForm((p) => ({ ...p, sku }));
   };
 
-  const statusOptions: { value: ProductFormState["status"]; label: string }[] = [
-    { value: "publish", label: "Active" },
-    { value: "draft", label: "Draft" },
-    { value: "pending", label: "Pending" },
-    { value: "private", label: "Private" },
-  ];
-
-  const stockPills: { value: ProductFormState["stock_status"]; label: string }[] = [
-    { value: "instock", label: "In Stock" },
-    { value: "outofstock", label: "Out of Stock" },
-    { value: "onbackorder", label: "On Backorder" },
+  const stockPills: {
+    value: ProductFormState["stock_status"];
+    label: string;
+    Icon: typeof PackageCheck;
+    activeClass: string;
+    iconClass: string;
+  }[] = [
+    {
+      value: "instock",
+      label: "In Stock",
+      Icon: PackageCheck,
+      activeClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 font-medium",
+      iconClass: "text-emerald-600",
+    },
+    {
+      value: "outofstock",
+      label: "Out of Stock",
+      Icon: PackageX,
+      activeClass: "border-rose-500/40 bg-rose-500/10 text-rose-700 font-medium",
+      iconClass: "text-rose-600",
+    },
+    {
+      value: "onbackorder",
+      label: "On Backorder",
+      Icon: Hourglass,
+      activeClass: "border-amber-500/40 bg-amber-500/10 text-amber-700 font-medium",
+      iconClass: "text-amber-600",
+    },
   ];
 
   return (
@@ -188,21 +239,40 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Product image</Label>
-                  <button type="button" onClick={() => setImageOpen("main")} className="h-[140px] w-[140px] rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden relative">
-                    {mainImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                        <ImageIcon className="h-5 w-5" />
-                        <span className="text-[10px]">Add image</span>
-                      </div>
-                    )}
-                  </button>
+                  <Label className="text-xs inline-flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />Product image</Label>
+                  <div className="relative h-[140px] w-[140px]">
+                    <button type="button" onClick={() => setImageOpen("main")} className="h-[140px] w-[140px] rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden relative">
+                      {mainImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                          <ImageIcon className="h-5 w-5" />
+                          <span className="text-[10px]">Add image</span>
+                        </div>
+                      )}
+                    </button>
+                    {mainImage?.src ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        className="absolute bottom-1 right-1 h-7 w-7 shadow-sm"
+                        title={t("products.edit.imageEditor.title")}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setImageEditorIdx(0);
+                          setImageEditorOpen(true);
+                        }}
+                      >
+                        <SquarePen className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0 space-y-1.5">
-                  <Label className="text-xs">Gallery</Label>
+                  <Label className="text-xs inline-flex items-center gap-1.5"><Images className="h-3.5 w-3.5 text-muted-foreground" />Gallery</Label>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {galleryImages.map((img, i) => (
                       <div
@@ -229,6 +299,21 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
                         <div className="absolute top-1 left-1 h-5 w-5 rounded-full bg-background/90 opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm">
                           <GripVertical className="h-3 w-3 text-muted-foreground" />
                         </div>
+                        {img.src ? (
+                          <button
+                            type="button"
+                            title={t("products.edit.imageEditor.title")}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setImageEditorIdx(i + 1);
+                              setImageEditorOpen(true);
+                            }}
+                            className="absolute bottom-1 left-1 h-5 w-5 rounded-full bg-background/95 border border-border shadow-sm opacity-0 group-hover:opacity-100 flex items-center justify-center hover:bg-muted z-[1]"
+                          >
+                            <SquarePen className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        ) : null}
                         <button type="button" onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i + 1) }))} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive/90 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center">
                           <X className="h-3 w-3" />
                         </button>
@@ -246,7 +331,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
           <Card>
             <CardContent className="p-4 space-y-4">
               <div className="space-y-1.5">
-                <Label>Categories</Label>
+                <Label className="inline-flex items-center gap-1.5"><FolderTree className="h-3.5 w-3.5 text-muted-foreground" />Categories</Label>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {form.categories.map((c) => (
                     <Badge key={c.id} variant="secondary" className="gap-1.5 py-1">
@@ -289,7 +374,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Tags</Label>
+                <Label className="inline-flex items-center gap-1.5"><Tag className="h-3.5 w-3.5 text-muted-foreground" />Tags</Label>
                 <TagPicker
                   storeId={storeId}
                   selected={form.tags}
@@ -302,9 +387,14 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
           <Card>
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">Pricing</div>
+                <div className="inline-flex items-center gap-2 text-sm font-medium">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600">
+                    <CircleDollarSign className="h-3.5 w-3.5" />
+                  </span>
+                  Pricing
+                </div>
                 {discountPct > 0 && (
-                  <Badge variant="secondary" className="text-[10px] h-5">-{discountPct}%</Badge>
+                  <Badge variant="secondary" className="text-[10px] h-5 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">-{discountPct}%</Badge>
                 )}
               </div>
               <div className="space-y-1">
@@ -341,7 +431,12 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
           <Card>
             <CardContent className="p-4 space-y-3">
-              <div className="text-sm font-medium">Inventory</div>
+              <div className="inline-flex items-center gap-2 text-sm font-medium">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Boxes className="h-3.5 w-3.5" />
+                </span>
+                Inventory
+              </div>
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox checked={form.manage_stock} onCheckedChange={(v) => setForm((p) => ({ ...p, manage_stock: !!v }))} />
                 Track stock
@@ -354,20 +449,25 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
               )}
               <div className="space-y-1.5">
                 <Label className="text-[11px] text-muted-foreground">Stock status</Label>
-                <div className="grid grid-cols-3 gap-1">
-                  {stockPills.map((s) => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      onClick={() => setForm((p) => ({ ...p, stock_status: s.value }))}
-                      className={cn(
-                        "px-2 py-1.5 text-[11px] rounded-md border transition-colors",
-                        form.stock_status === s.value ? "border-primary bg-primary/10 text-primary font-medium" : "border-border hover:bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {stockPills.map((s) => {
+                    const SIcon = s.Icon;
+                    const active = form.stock_status === s.value;
+                    return (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => setForm((p) => ({ ...p, stock_status: s.value }))}
+                        className={cn(
+                          "inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] rounded-md border transition-colors",
+                          active ? s.activeClass : "border-border bg-background hover:bg-muted text-muted-foreground"
+                        )}
+                      >
+                        <SIcon className={cn("h-3.5 w-3.5 shrink-0", active ? s.iconClass : "")} />
+                        <span className="truncate">{s.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="space-y-1">
@@ -396,7 +496,12 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
           <Card>
             <CardContent className="p-4 space-y-2">
-              <div className="text-sm font-medium">Shipping</div>
+              <div className="inline-flex items-center gap-2 text-sm font-medium">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-600">
+                  <Truck className="h-3.5 w-3.5" />
+                </span>
+                Shipping
+              </div>
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">Weight (kg)</Label>
                 <Input type="number" min="0" step="0.01" value={form.weight || ""} onChange={(e) => setForm((p) => ({ ...p, weight: clampNonNegative(e.target.value) }))} placeholder="0.00" />
@@ -406,27 +511,6 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-4 lg:h-fit">
-          <Card>
-            <CardContent className="p-4 space-y-2">
-              <Label className="text-xs text-muted-foreground">Status</Label>
-              <div className="grid grid-cols-4 gap-1">
-                {statusOptions.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setForm((p) => ({ ...p, status: s.value }))}
-                    className={cn(
-                      "px-2 py-1.5 text-xs rounded-md border transition-colors",
-                      form.status === s.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted"
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           <LivePreviewCard storeId={storeId} productId={productId} form={form} setForm={setForm} />
 
           {saveBlocked && validation.errors.length > 0 && (
@@ -441,17 +525,46 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
           )}
 
           <div className="flex gap-2 sticky bottom-4">
-            <Button variant="outline" className="flex-1" onClick={onCancel} disabled={saving}>Cancel</Button>
+            <Button variant="outline" className="flex-1 gap-1.5" onClick={onCancel} disabled={saving}>
+              <X className="shrink-0 text-muted-foreground" />
+              Cancel
+            </Button>
             <Button
-              className="flex-1"
+              className="flex-1 gap-1.5"
               onClick={onPublish}
               disabled={saving || saveBlocked || (publishing && !form.name.trim())}
             >
-              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save changes" : (form.status === "publish" ? "Publish" : "Save"))}
+              {saving ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  {isEdit ? "Saving…" : "Publishing…"}
+                </>
+              ) : (
+                <>
+                  <Save className="shrink-0" />
+                  {isEdit ? "Save changes" : (form.status === "publish" ? "Publish" : "Save")}
+                </>
+              )}
             </Button>
           </div>
         </div>
       </div>
+
+      <ProductImageEditorDialog
+        open={imageEditorOpen}
+        onOpenChange={setImageEditorOpen}
+        storeId={storeId}
+        src={form.images[imageEditorIdx]?.src ?? ""}
+        alt={form.images[imageEditorIdx]?.alt ?? ""}
+        onApply={(next) => {
+          setForm((p) => {
+            const images = [...p.images];
+            if (!images[imageEditorIdx]) return p;
+            images[imageEditorIdx] = { id: next.id, src: next.src, alt: next.alt };
+            return { ...p, images };
+          });
+        }}
+      />
 
       {imageOpen && (
         <ImagePickerDialog

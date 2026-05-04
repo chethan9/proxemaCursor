@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
 import { formatDateTime, formatNumber } from "@/lib/format-number";
@@ -19,7 +20,7 @@ import { cancelBulkJob, retryFailedBulkJobItems, JOB_TYPE_LABEL, type BulkJob } 
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-const STATUS_META: Record<string, { icon: React.ComponentType<{ className?: string }>; cls: string; badge: string }> = {
+const STATUS_META: Record<string, { icon: ComponentType<{ className?: string }>; cls: string; badge: string }> = {
   pending: { icon: Clock, cls: "text-muted-foreground", badge: "bg-muted text-muted-foreground" },
   running: { icon: Loader2, cls: "text-primary animate-spin", badge: "bg-primary/10 text-primary border-primary/20" },
   completed: { icon: CheckCircle2, cls: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },

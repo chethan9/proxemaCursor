@@ -18,6 +18,9 @@ import { normalizeProductImageSrc } from "@/lib/product-image-urls";
 import { ImagePickerDialog, type SelectedImage } from "@/components/product-edit/ImagePickerDialog";
 import { cn } from "@/lib/utils";
 
+type SwatchOption = { value: string; label?: string; hex?: string };
+type FieldOption = string | SwatchOption;
+
 type AIFeature = {
   id: string;
   slug: string;
@@ -27,8 +30,18 @@ type AIFeature = {
   default_output_count: number;
   credit_cost_per_output: number;
   requires_source_image?: boolean;
-  user_input_schema: { fields?: Array<{ key: string; label: string; type: string; options?: string[] }> };
+  user_input_schema: {
+    fields?: Array<{ key: string; label: string; type: string; options?: FieldOption[]; placeholder?: string }>;
+  };
 };
+
+function optionValue(o: FieldOption): string {
+  return typeof o === "string" ? o : o.value;
+}
+function optionLabel(o: FieldOption): string {
+  if (typeof o === "string") return o;
+  return o.label ?? o.value;
+}
 
 type GenOutput = { path: string; signedUrl: string; index: number };
 
@@ -114,7 +127,12 @@ export function AIProductImageAssistant({
     setOutCount(selected.default_output_count || 1);
     const next: Record<string, string> = {};
     (selected.user_input_schema?.fields || []).forEach((f) => {
-      next[f.key] = f.options?.[0] ?? "";
+      if (f.type === "textarea") {
+        next[f.key] = "";
+        return;
+      }
+      const first = f.options?.[0];
+      next[f.key] = first === undefined ? "" : optionValue(first);
     });
     setUserValues(next);
   }, [selected?.slug, open]);
@@ -154,6 +172,10 @@ export function AIProductImageAssistant({
       return;
     }
     if (!featureSlug) return;
+    if (featureSlug === "custom_prompt" && !userValues.prompt?.trim()) {
+      toast({ title: t("products.ai.customPromptRequired"), variant: "destructive" });
+      return;
+    }
     setGenerating(true);
     setOutputs([]);
     setGenerationId(null);
@@ -495,19 +517,59 @@ export function AIProductImageAssistant({
                       {(selected.user_input_schema?.fields || []).map((f) => (
                         <div key={f.key} className="space-y-0.5">
                           <Label className="text-[11px] font-medium text-muted-foreground">{f.label}</Label>
-                          {f.type === "select" && f.options ? (
+                          {f.type === "color_swatch" && f.options ? (
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                              {f.options.map((o) => {
+                                const value = optionValue(o);
+                                const label = optionLabel(o);
+                                const hex = typeof o === "string" ? undefined : o.hex;
+                                const active = (userValues[f.key] ?? "") === value;
+                                return (
+                                  <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => setUserValues((p) => ({ ...p, [f.key]: value }))}
+                                    title={label}
+                                    aria-label={label}
+                                    aria-pressed={active}
+                                    className={cn(
+                                      "group relative h-7 w-7 shrink-0 rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-ring",
+                                      active
+                                        ? "border-foreground ring-2 ring-ring ring-offset-1 ring-offset-background"
+                                        : "border-border hover:border-muted-foreground/60"
+                                    )}
+                                    style={hex ? { backgroundColor: hex } : undefined}
+                                  >
+                                    <span className="sr-only">{label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : f.type === "select" && f.options ? (
                             <Select value={userValues[f.key] ?? ""} onValueChange={(v) => setUserValues((p) => ({ ...p, [f.key]: v }))}>
                               <SelectTrigger className="h-8 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {f.options.map((o) => (
-                                  <SelectItem key={o} value={o} className="text-xs">
-                                    {o}
-                                  </SelectItem>
-                                ))}
+                                {f.options.map((o) => {
+                                  const value = optionValue(o);
+                                  const label = optionLabel(o);
+                                  return (
+                                    <SelectItem key={value} value={value} className="text-xs">
+                                      {label}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
+                          ) : f.type === "textarea" ? (
+                            <Textarea
+                              value={userValues[f.key] ?? ""}
+                              onChange={(e) => setUserValues((p) => ({ ...p, [f.key]: e.target.value }))}
+                              placeholder={f.placeholder}
+                              rows={4}
+                              className="min-h-[4.5rem] resize-y text-xs leading-snug"
+                            />
                           ) : (
                             <Input className="h-8 text-xs" value={userValues[f.key] ?? ""} onChange={(e) => setUserValues((p) => ({ ...p, [f.key]: e.target.value }))} />
                           )}

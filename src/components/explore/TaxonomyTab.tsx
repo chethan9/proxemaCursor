@@ -23,6 +23,7 @@ import { TaxonomyRowExpanded } from "./TaxonomyRowExpanded";
 import { TaxonomyDialog } from "./TaxonomyDialog";
 import { InfiniteScrollSentinel } from "./InfiniteScrollSentinel";
 import { TableLoadingOverlay } from "@/components/ui/table-loading-overlay";
+import { authorizedFetch } from "@/lib/api-client";
 import { ProgressSlot } from "@/contexts/LoadingProvider";
 import { useExplorerKeyboard } from "@/hooks/useExplorerKeyboard";
 import { cn } from "@/lib/utils";
@@ -115,7 +116,7 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const res = await fetch(`/api/stores/${storeId}/wc/sync-taxonomy`, {
+      const res = await authorizedFetch(`/api/stores/${storeId}/wc/sync-taxonomy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind: mode }),

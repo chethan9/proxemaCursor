@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import type { WafFix } from "@/lib/waf-fixes";
 import type { BlockingService } from "@/lib/sync-error";
+import { authorizedFetch } from "@/lib/api-client";
 
 interface ProbeResult {
   name: string;
@@ -45,7 +46,7 @@ export function ConnectionDiagnostic({ storeId, autoRun = false, onResolved }: P
   const runDiagnostic = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/stores/${storeId}/diagnose`, { method: "POST" });
+      const res = await authorizedFetch(`/api/stores/${storeId}/diagnose`, { method: "POST" });
       if (res.status === 429) {
         const body = await res.json();
         toast({ title: "Too fast", description: body.error, variant: "destructive" });

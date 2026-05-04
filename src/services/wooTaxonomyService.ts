@@ -8,6 +8,8 @@ export type WooTerm = {
   image?: { id: number; src: string } | null;
 };
 
+import { authorizedFetch } from "@/lib/api-client";
+
 export type TaxonomyKind = "categories" | "tags" | "brands";
 
 async function handle<T>(res: Response): Promise<T> {
@@ -21,7 +23,7 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export async function listTaxonomy(storeId: string, kind: TaxonomyKind): Promise<WooTerm[]> {
-  const res = await fetch(`/api/stores/${storeId}/wc/taxonomy?kind=${kind}`);
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/taxonomy?kind=${kind}`);
   return handle<WooTerm[]>(res);
 }
 
@@ -30,7 +32,7 @@ export async function createTaxonomy(
   kind: TaxonomyKind,
   payload: { name: string; slug?: string; parent?: number; description?: string }
 ): Promise<WooTerm> {
-  const res = await fetch(`/api/stores/${storeId}/wc/taxonomy?kind=${kind}`, {
+  const res = await authorizedFetch(`/api/stores/${storeId}/wc/taxonomy?kind=${kind}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
