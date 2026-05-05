@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, Plus, Loader2, ChevronsUpDown, Sparkles, Search, GripVertical } from "lucide-react";
+import { Trash2, Plus, Loader2, ChevronsUpDown, Sparkles, Search, GripVertical, ChevronRight } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -359,16 +359,16 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {form.attributes.map((attr, idx) => {
-        const isEditing = editingAttr === idx;
+        const expanded = editingAttr === idx;
         return (
           <Card key={idx} className="border-l-4 border-l-primary/60">
-            <CardContent className="p-4">
-              {isEditing ? (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Attribute name</Label>
+            <CardContent className="p-3 sm:p-4">
+              {expanded ? (
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Attribute name</Label>
                     <Input
                       value={attr.name}
                       onChange={(e) =>
@@ -384,9 +384,9 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       <p className="text-[11px] text-muted-foreground">Linked to global attribute — name controlled by store taxonomy.</p>
                     )}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Values</Label>
-                    <p className="text-[11px] text-muted-foreground leading-snug">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Values</Label>
+                    <p className="text-[10px] text-muted-foreground leading-snug">
                       Drag the grip to change order on the product page. WooCommerce uses this list order when the attribute is set to sort by custom ordering (menu order).
                     </p>
                     <AttrValuesEditor
@@ -461,15 +461,18 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       onClick={() => setEditingAttr(null)}
                       className="bg-foreground text-background hover:bg-foreground/90"
                     >
-                      Save Attribute
+                      Done
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <span className="font-medium text-sm">{attr.name}</span>
+                      <span className="text-[10px] tabular-nums text-muted-foreground bg-muted/80 rounded px-1.5 py-0.5">
+                        {attr.options.length} option{attr.options.length === 1 ? "" : "s"}
+                      </span>
                       {!!attr.id && attr.id > 0 && (
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5">global</span>
                       )}
@@ -480,19 +483,30 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1.5 py-0.5">hidden</span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {attr.options.map((opt) => (
-                        <div
-                          key={opt}
-                          className="text-xs px-2.5 py-1 rounded border border-border"
-                        >
-                          {opt}
-                        </div>
-                      ))}
+                    <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pr-1">
+                      {attr.options.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">No values yet</span>
+                      ) : (
+                        attr.options.slice(0, 12).map((opt) => (
+                          <span key={opt} className="text-[11px] px-2 py-0.5 rounded-md border border-border/80 bg-muted/30 truncate max-w-[140px]">
+                            {opt}
+                          </span>
+                        ))
+                      )}
+                      {attr.options.length > 12 && (
+                        <span className="text-[10px] text-muted-foreground self-center">+{attr.options.length - 12} more</span>
+                      )}
                     </div>
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingAttr(idx)}>
-                    Edit
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1"
+                    onClick={() => setEditingAttr(idx)}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                    Edit values
                   </Button>
                 </div>
               )}
@@ -531,6 +545,7 @@ function AttrValuesEditor({
   newInputValue: string;
   onNewInputChange: (v: string) => void;
 }) {
+  const [quickBulk, setQuickBulk] = useState("");
   const isGlobal = !!attribute.id && attribute.id > 0;
   const { data: terms = [] } = useWooAttributeTerms(storeId, isGlobal ? attribute.id! : null);
   const termNames = new Set(terms.map((t) => t.name.toLowerCase().trim()));
@@ -578,6 +593,12 @@ function AttrValuesEditor({
           />
         ));
 
+  const applyQuickBulk = () => {
+    const parts = quickBulk.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+    parts.forEach((p) => onAddOption(p));
+    setQuickBulk("");
+  };
+
   return (
     <div className="space-y-1.5">
       {attribute.options.length <= 1 ? (
@@ -589,8 +610,29 @@ function AttrValuesEditor({
           </SortableContext>
         </DndContext>
       )}
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-2 py-2 space-y-1.5">
+        <Label className="text-[10px] text-muted-foreground">Quick add (comma-separated)</Label>
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+          <Input
+            className="h-8 text-sm"
+            placeholder="e.g. Red, Blue, Green"
+            value={quickBulk}
+            onChange={(e) => setQuickBulk(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                applyQuickBulk();
+              }
+            }}
+          />
+          <Button type="button" variant="secondary" size="sm" className="shrink-0" onClick={applyQuickBulk}>
+            Add all
+          </Button>
+        </div>
+      </div>
       <div className="flex items-center gap-2">
         <Input
+          className="h-9"
           placeholder="Add new option"
           value={newInputValue}
           onChange={(e) => onNewInputChange(e.target.value)}
@@ -601,7 +643,7 @@ function AttrValuesEditor({
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={() => onAddOption(newInputValue)}>
+        <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => onAddOption(newInputValue)}>
           Add
         </Button>
       </div>

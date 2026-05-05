@@ -13,7 +13,9 @@ import { Input } from "@/components/ui/input";
 import { ChevronDown, Search, Check } from "lucide-react";
 import type { RoleKey } from "@/services/menuConfigService";
 import { useQueryClient } from "@tanstack/react-query";
-import { fetchSiteHomeStats } from "@/services/siteStatsService";
+import { fetchSiteHomeStats, type SiteHomeStatsQuery } from "@/services/siteStatsService";
+
+const DEFAULT_HOME_STATS_QUERY: SiteHomeStatsQuery = { range: "30d", combineAll: false };
 import { listSiteDownloads } from "@/services/downloadsService";
 import { listBulkJobs } from "@/services/bulkJobService";
 import { getStore } from "@/services/storeService";
@@ -215,8 +217,8 @@ export function SiteSidebar({ siteId }: Props) {
       }
       if (section === "home") {
         queryClient.prefetchQuery({
-          queryKey: ["site-home-stats", sid, null, null],
-          queryFn: () => fetchSiteHomeStats(sid, undefined, undefined),
+          queryKey: ["site-home-stats", sid, null, null, "30d", "", "", false],
+          queryFn: () => fetchSiteHomeStats(sid, undefined, undefined, DEFAULT_HOME_STATS_QUERY),
         });
       } else if (section === "downloads") {
         queryClient.prefetchQuery({

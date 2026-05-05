@@ -12,6 +12,18 @@
     "settings": "Settings"
   },
   "home": {
+    "combineAll": "Combine all currencies",
+    "combineHint": "Show revenue in the store default currency (ECB rates).",
+    "fxFallback": "ECB rates are not loaded yet; combined amounts may be approximate until the next dashboard refresh.",
+    "range": {
+      "last7d": "Last 7 days (store time)",
+      "last30d": "Last 30 days (store time)",
+      "last90d": "Last 90 days (store time)",
+      "today": "Today (store time)",
+      "yesterday": "Yesterday (store time)",
+      "all": "All time (store time)",
+      "selected": "Selected range (store time)"
+    },
     "refresh": "Refresh",
     "errorTitle": "Couldn't load dashboard",
     "errorBody": "Something went wrong fetching stats. Please try again.",
@@ -29,27 +41,32 @@
       "todaySales": "Today's sales",
       "weeklySales": "Weekly sales",
       "monthlySales": "Monthly sales",
-      "avgOrder": "Avg order"
+      "avgOrder": "Avg order",
+      "ordersInPeriod": "Orders in range",
+      "salesInRange": "Sales in range"
     },
     "spark": {
       "sales": "Sales",
       "ordersInCurrency": "Orders in {{currency}}",
       "ordersLast30d": "Orders last 30d",
+      "ordersInRange": "Orders in selected range",
       "revenue": "Revenue",
+      "revenueInRange": "Revenue in selected range",
       "vsPrev30d": "vs prev 30d",
+      "vsPrevPeriod": "vs prior period",
       "last30d": "Last 30d"
     },
     "cards": {
       "salesTrend": {
-        "title": "Sales Trend (30d)",
+        "title": "Sales trend",
         "subtitle": "Daily revenue and order count",
         "revenue": "Revenue",
         "orders": "Orders"
       },
       "orderStatus": {
-        "title": "Order Status (30d)",
+        "title": "Order status",
         "subtitle": "Breakdown by order status",
-        "empty": "No orders in last 30 days",
+        "empty": "No orders in this range",
         "total": "Total"
       },
       "recentOrders": {
@@ -58,9 +75,9 @@
         "empty": "No orders yet"
       },
       "topProducts": {
-        "title": "Top Products",
-        "subtitle": "Best sellers (30d)",
-        "empty": "No sales in last 30 days",
+        "title": "Top products",
+        "subtitle": "Best sellers in selected range",
+        "empty": "No sales in this range",
         "unitsSold": "{{count}} units sold"
       },
       "currencyTooltip": "{{count}} order(s) in {{code}} (last 30d)"

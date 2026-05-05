@@ -206,7 +206,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       {!bannerDismissed && (
         <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
           <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -514,7 +514,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
           <LivePreviewCard storeId={storeId} productId={productId} form={form} setForm={setForm} />
 
           {saveBlocked && validation.errors.length > 0 && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
+            <div className="hidden lg:flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
               <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
               <ul className="text-foreground/80 space-y-1 list-disc pl-4">
                 {validation.errors.slice(0, 8).map((err, i) => (
@@ -523,31 +523,36 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
               </ul>
             </div>
           )}
-
-          <div className="flex gap-2 sticky bottom-4">
-            <Button variant="outline" className="flex-1 gap-1.5" onClick={onCancel} disabled={saving}>
-              <X className="shrink-0 text-muted-foreground" />
-              Cancel
-            </Button>
-            <Button
-              className="flex-1 gap-1.5"
-              onClick={onPublish}
-              disabled={saving || saveBlocked || (publishing && !form.name.trim())}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  {isEdit ? "Saving…" : "Publishing…"}
-                </>
-              ) : (
-                <>
-                  <Save className="shrink-0" />
-                  {isEdit ? "Save changes" : (form.status === "publish" ? "Publish" : "Save")}
-                </>
-              )}
-            </Button>
-          </div>
         </div>
+      </div>
+
+      <div className="fixed bottom-4 right-4 z-[90] flex flex-col items-end gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-border bg-background/95 p-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={onCancel} disabled={saving}>
+            <X className="shrink-0 text-muted-foreground h-4 w-4" />
+            Cancel
+          </Button>
+          <Button
+            className="rounded-full bg-foreground text-background hover:bg-foreground/90 gap-1.5 px-5 h-10"
+            onClick={onPublish}
+            disabled={saving || saveBlocked || (publishing && !form.name.trim())}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="animate-spin h-4 w-4" />
+                {isEdit ? "Saving…" : "Publishing…"}
+              </>
+            ) : (
+              <>
+                <Save className="shrink-0 h-4 w-4" />
+                {isEdit ? "Save changes" : form.status === "publish" ? "Publish" : "Save"}
+              </>
+            )}
+          </Button>
+        </div>
+        {saveBlocked && validation.errors[0] && (
+          <p className="pointer-events-none text-xs text-destructive max-w-[260px] text-right px-1 lg:hidden">{validation.errors[0].message}</p>
+        )}
       </div>
 
       <ProductImageEditorDialog

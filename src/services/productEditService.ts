@@ -191,8 +191,12 @@ export function defaultAttributesFromVariation(
     }));
 }
 
+/** Canonical key for matching variations regardless of WooCommerce attribute row order. */
 export function compositeVariationKey(attrs: { name: string; option: string }[]): string {
-  return attrs.map((a) => `${a.name}=${a.option}`).join("|");
+  const sorted = [...attrs].sort((a, b) =>
+    a.name.trim().toLowerCase().localeCompare(b.name.trim().toLowerCase()),
+  );
+  return sorted.map((a) => `${a.name.trim()}=${a.option.trim()}`).join("|");
 }
 
 function floorNumStr(v: string | undefined | null): string {

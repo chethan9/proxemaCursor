@@ -5,6 +5,9 @@ import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
 import { buildFieldDiffs, capFieldDiffs } from "@/lib/audit/diff-engine";
 import { authorizeCronOrStoreMember } from "@/lib/authorize-cron-or-store.server";
+import { normalizeCustomerWooPatch } from "@/lib/customer-woo-patch";
+import { isValidEmail } from "@/lib/email-validation";
+import { WooApiError } from "@/lib/sync-error";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -55,8 +58,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       shipping?: Record<string, unknown>;
     };
     if (!cust.woo_id) return res.status(400).json({ error: "Customer has no Woo ID" });
+    if (patch.email != null && patch.email.trim() !== "" && !isValidEmail(patch.email)) {
+      return res.status(400).json({ error: "Invalid email address", message: "Account email is not valid." });
+    }
+    const wooPatch = normalizeCustomerWooPatch(patch);
     try {
-      const wooData = await wooRequest<WooCustomer>(store, "PUT", `customers/${cust.woo_id}`, patch);
+      const wooData = await wooRequest<WooCustomer>(store, "PUT", `customers/${cust.woo_id}`, wooPatch);
       const dbPatch = {
         first_name: wooData.first_name ?? patch.first_name ?? cust.first_name,
         last_name: wooData.last_name ?? patch.last_name ?? cust.last_name,
@@ -88,6 +95,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       return res.status(200).json(updated);
     } catch (e) {
+      if (e instanceof WooApiError && e.context.status === 400) {
+        return res.status(400).json({ error: "WooCommerce rejected the update", message: e.message });
+      }
       const err = e as { message?: string };
       return res.status(502).json({ error: "Woo update failed", message: err.message });
     }

@@ -1,8 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import type { Json } from "@/integrations/supabase/database.types";
+import { normalizeCustomerWooPatch } from "@/lib/customer-woo-patch";
+import { isValidEmail } from "@/lib/email-validation";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { logActivity } from "@/lib/activity-log";
+import { WooApiError } from "@/lib/sync-error";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -39,9 +42,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     shipping?: Record<string, unknown>;
   };
   if (!payload.email) return res.status(400).json({ error: "email required" });
+  if (!isValidEmail(payload.email)) {
+    return res.status(400).json({ error: "Invalid email address", message: "Account email is not valid." });
+  }
 
   try {
-    const wooData = await wooRequest<WooCustomer>(store, "POST", "customers", payload);
+    const wooPayload = normalizeCustomerWooPatch(payload);
+    const wooData = await wooRequest<WooCustomer>(store, "POST", "customers", wooPayload);
     const insert = {
       store_id: storeId,
       woo_id: wooData.id,
@@ -72,6 +79,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     return res.status(200).json(data);
   } catch (e) {
+    if (e instanceof WooApiError && e.context.status === 400) {
+      return res.status(400).json({ error: "WooCommerce rejected the customer", message: e.message });
+    }
     const err = e as { message?: string };
     return res.status(502).json({ error: "Woo create failed", message: err.message });
   }

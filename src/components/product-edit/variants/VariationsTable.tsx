@@ -1,13 +1,25 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Edit2, MoreVertical, Trash2, Wand2, Star } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Edit2, MoreVertical, Trash2, Wand2 } from "lucide-react";
 import type { ProductAttribute } from "@/services/productEditService";
 import { Variation, variationMatchesDefault } from "@/services/productEditService";
 import { variationLabel } from "./utils";
 import { NumberInput } from "@/components/ui/number-input";
+import { cn } from "@/lib/utils";
 
 type Props = {
   variations: Variation[];
@@ -16,13 +28,18 @@ type Props = {
   defaultAttrs?: { name: string; option: string }[];
   /** Parent variable attributes — required for correct default-variation matching when Woo uses pa_* / ids. */
   parentAttributes?: ProductAttribute[];
-  onSetDefault?: (idx: number) => void;
+  /** Woo-style default variation — controlled by dropdown above the table. */
+  defaultKey?: string | null;
+  onDefaultKeyChange?: (key: string | null) => void;
   onEdit: (idx: number) => void;
   onUpdate: (idx: number, patch: Partial<Variation>) => void;
   onBulk: (patch: Partial<Variation>, onlySelected: boolean, selectedIds: Set<string>) => void;
   onBulkDelete?: (keys: Set<string>) => void;
+  /** Single-row delete from Actions column */
+  onDeleteRow?: (idx: number) => void;
   /** When &gt; 0, auto-fill SKUs is disabled until duplicates are removed (see Variants tab warning). */
   duplicateRowCount?: number;
+  className?: string;
 };
 
 function slugify(input: string): string {
@@ -35,8 +52,24 @@ function slugify(input: string): string {
     .slice(0, 24);
 }
 
-export function VariationsTable({ variations, parentSku, parentName, defaultAttrs, parentAttributes, onSetDefault, onEdit, onUpdate, onBulk, onBulkDelete, duplicateRowCount = 0 }: Props) {
+export function VariationsTable({
+  variations,
+  parentSku,
+  parentName,
+  defaultAttrs,
+  parentAttributes,
+  defaultKey,
+  onDefaultKeyChange,
+  onEdit,
+  onUpdate,
+  onBulk,
+  onBulkDelete,
+  onDeleteRow,
+  duplicateRowCount = 0,
+  className,
+}: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteIdx, setDeleteIdx] = useState<number | null>(null);
   const [bulkValue, setBulkValue] = useState("");
   const [bulkMode, setBulkMode] = useState<null | "regular_price" | "sale_price" | "stock_quantity">(null);
   const [bulkError, setBulkError] = useState<string>("");
@@ -124,9 +157,51 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
     });
   };
 
+  /** Row index as value — Radix Select requires unique values; duplicate variation keys would crash. */
+  const defaultSelectValue = useMemo(() => {
+    if (!defaultKey) return "__none__";
+    const idx = variations.findIndex((v) => v.key === defaultKey);
+    return idx >= 0 ? `idx:${idx}` : "__none__";
+  }, [defaultKey, variations]);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 flex-wrap">
+    <div className={cn("space-y-3", className)}>
+      {variations.length > 0 && onDefaultKeyChange && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 rounded-md border border-border/80 bg-muted/30 px-3 py-2">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground shrink-0">Default variation</span>
+          <Select
+            value={defaultSelectValue}
+            onValueChange={(v) => {
+              if (v === "__none__") {
+                onDefaultKeyChange(null);
+                return;
+              }
+              const m = /^idx:(\d+)$/.exec(v);
+              const i = m ? Number.parseInt(m[1], 10) : NaN;
+              const row = Number.isFinite(i) ? variations[i] : undefined;
+              onDefaultKeyChange(row?.key ?? null);
+            }}
+          >
+            <SelectTrigger className="h-9 w-full sm:max-w-xl lg:max-w-2xl text-left font-normal">
+              <SelectValue placeholder="No default" />
+            </SelectTrigger>
+            <SelectContent position="popper" className="max-h-[320px]">
+              <SelectItem value="__none__">No default</SelectItem>
+              {variations.map((v, i) => (
+                <SelectItem key={`def-opt-${i}-${v.key}`} value={`idx:${i}`} className="whitespace-normal">
+                  {variationLabel(v)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div
+        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/80 bg-muted/20 px-2 py-1.5"
+        role="toolbar"
+        aria-label="Variation bulk actions"
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" size="sm" disabled={selected.size === 0} className="rounded-full" title={selected.size === 0 ? "Select at least one variation" : undefined}>
@@ -182,34 +257,26 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{bulkError}</div>
       )}
 
-      <div className="rounded-xl border border-border overflow-hidden bg-background">
-        <div className="grid grid-cols-[32px_28px_2fr_1.2fr_90px_90px_80px_32px] gap-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
+      <div className="rounded-xl border border-border overflow-x-auto bg-background">
+        <div className="min-w-[720px]">
+        <div className="grid grid-cols-[32px_minmax(140px,minmax(0,3fr))_minmax(88px,1.4fr)_92px_92px_80px_minmax(72px,88px)] gap-x-2 gap-y-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
           <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} />
-          <div></div>
-          <div>Options</div>
+          <div className="min-w-0 max-w-[min(100%,36rem)]">Options</div>
           <div>SKU</div>
           <div>Price <span className="text-destructive">*</span></div>
-          <div>Sale Price</div>
+          <div>Sale</div>
           <div>Stock</div>
-          <div></div>
+          <div className="text-center">Actions</div>
         </div>
         {variations.map((v, i) => {
           const isDisabled = v.enabled === false;
           const priceMissing = v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0);
           const isDefault = variationMatchesDefault(v, defaultAttrs, parentAttributes);
           return (
-            <div key={v.key} className={`grid grid-cols-[32px_28px_2fr_1.2fr_90px_90px_80px_32px] gap-3 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""} ${isDefault ? "border-l-4 border-l-primary bg-primary/5" : ""}`}>
+            <div key={`var-row-${i}-${v.key}`} className={`group grid grid-cols-[32px_minmax(140px,minmax(0,3fr))_minmax(88px,1.4fr)_92px_92px_80px_minmax(72px,88px)] gap-x-2 gap-y-1 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""} ${isDefault ? "border-l-[3px] border-l-primary bg-primary/[0.06]" : ""}`}>
               <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} />
-              <button
-                type="button"
-                onClick={() => onSetDefault?.(i)}
-                title={isDefault ? "Default variation (click to clear)" : "Set as default variation"}
-                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors ${isDefault ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground/40 hover:text-amber-500 hover:bg-muted"}`}
-              >
-                <Star className={`h-4 w-4 ${isDefault ? "fill-amber-500" : ""}`} />
-              </button>
-              <div className="truncate flex items-center gap-2 font-medium">
-                <span className="truncate">{variationLabel(v)}</span>
+              <div className="min-w-0 max-w-[min(100%,36rem)] flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                <span className="min-w-0 break-words leading-snug text-[13px]">{variationLabel(v)}</span>
                 {isDefault && <span className="text-[9px] uppercase bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium shrink-0">Default</span>}
                 {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal shrink-0">off</span>}
                 {priceMissing && <span className="text-[9px] uppercase bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-medium shrink-0">no price</span>}
@@ -249,13 +316,62 @@ export function VariationsTable({ variations, parentSku, parentName, defaultAttr
                 }}
                 placeholder="—"
               />
-              <button type="button" onClick={() => onEdit(i)} className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
-                <Edit2 className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center justify-end gap-0.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                  onClick={() => onEdit(i)}
+                  aria-label="Edit variation"
+                  title="Edit variation"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </Button>
+                {onDeleteRow && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteIdx(i)}
+                    aria-label="Delete variation"
+                    title="Delete variation"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
+        </div>
       </div>
+
+      <AlertDialog open={deleteIdx !== null} onOpenChange={(o) => { if (!o) setDeleteIdx(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this variation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the variation from the list. If it already exists in WooCommerce, it will be deleted when you save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteIdx !== null && onDeleteRow) {
+                  onDeleteRow(deleteIdx);
+                }
+                setDeleteIdx(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

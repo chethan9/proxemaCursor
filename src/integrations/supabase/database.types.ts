@@ -827,24 +827,48 @@ export type Database = {
           },
         ]
       }
+      global_fx_rates: {
+        Row: {
+          id: number
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dashboard_summary: {
         Row: {
+          combine_all: boolean
           currency_key: string
           payload: Json
+          period_key: string
           store_id: string
           tz: string
           updated_at: string
         }
         Insert: {
+          combine_all?: boolean
           currency_key?: string
           payload: Json
+          period_key?: string
           store_id: string
           tz: string
           updated_at?: string
         }
         Update: {
+          combine_all?: boolean
           currency_key?: string
           payload?: Json
+          period_key?: string
           store_id?: string
           tz?: string
           updated_at?: string
@@ -3606,11 +3630,25 @@ export type Database = {
       generate_referral_code: { Args: { p_seed?: string }; Returns: string }
       get_product_image_mirror_dashboard_stats: { Args: never; Returns: Json }
       compute_site_home_stats: {
-        Args: { p_currency?: string; p_store_id: string; p_tz?: string }
+        Args: {
+          p_combine_all?: boolean
+          p_currency?: string | null
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_store_id: string
+          p_tz?: string
+        }
         Returns: Json
       }
       get_site_home_stats: {
-        Args: { p_currency?: string; p_store_id: string; p_tz?: string }
+        Args: {
+          p_combine_all?: boolean
+          p_currency?: string | null
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_store_id: string
+          p_tz?: string
+        }
         Returns: Json
       }
       refresh_dashboard_summaries_for_store: {

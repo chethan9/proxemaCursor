@@ -6,23 +6,23 @@ import { ProductFormState } from "@/services/productEditService";
 import { validateProductForm } from "@/services/productValidation";
 import { LivePreviewCard } from "@/components/product-edit/LivePreviewCard";
 import { isTabDirty } from "@/lib/product-edit/tab-slices";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export type AdvancedTabKey = "basic" | "pricing" | "inventory" | "variants";
 
-const ALL_STEPS: { key: AdvancedTabKey; label: string }[] = [
+const SECTIONS: { key: AdvancedTabKey; label: string }[] = [
   { key: "basic", label: "Basics" },
-  { key: "inventory", label: "Inventory" },
+  { key: "pricing", label: "Pricing & tax" },
+  { key: "inventory", label: "Inventory & shipping" },
   { key: "variants", label: "Variants" },
 ];
 
 type Props = {
   form: ProductFormState;
-  /** Snapshot when the editor opened (or last explicit reset). Tab chrome stays neutral until a tab differs from this. */
+  /** Snapshot when the editor opened (or last explicit reset). Section chrome stays neutral until a section differs from this. */
   baselineForm: ProductFormState | null;
   setForm?: (updater: (prev: ProductFormState) => ProductFormState) => void;
-  activeTab: AdvancedTabKey;
-  setActiveTab: (k: AdvancedTabKey) => void;
   tabContent: Record<AdvancedTabKey, ReactNode>;
   canAdvance: (tab: AdvancedTabKey) => boolean;
   onCancel: () => void;
@@ -33,118 +33,99 @@ type Props = {
   productId?: string | null;
 };
 
-export function AdvancedShell({ form, baselineForm, setForm, activeTab, setActiveTab, tabContent, canAdvance, onCancel, onPublish, saving, isEdit, storeId, productId }: Props) {
+export function AdvancedShell({ form, baselineForm, setForm, tabContent, canAdvance, onCancel, onPublish, saving, isEdit, storeId, productId }: Props) {
   const [errors, setErrors] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<string[]>(() =>
+    form.type === "variable" ? ["basic", "variants"] : ["basic"],
+  );
 
   const validation = useMemo(() => validateProductForm(form), [form]);
   const saveBlocked = !validation.ok;
   const publishing = form.status === "publish";
 
-  const steps = ALL_STEPS;
-
   useEffect(() => {
-    if (!steps.find((s) => s.key === activeTab)) {
-      setActiveTab(steps[0].key);
+    if (form.type !== "variable") {
+      setOpenSections((prev) => prev.filter((k) => k !== "variants"));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.type]);
-
-  const currentIdx = Math.max(0, steps.findIndex((t) => t.key === activeTab));
-  const isLast = currentIdx === steps.length - 1;
-
-  const goNext = () => {
-    setErrors(null);
-    if (!isLast) setActiveTab(steps[currentIdx + 1].key);
-  };
-
-  const goBack = () => {
-    setErrors(null);
-    if (currentIdx > 0) setActiveTab(steps[currentIdx - 1].key);
-  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
-      <Card>
-        <CardContent className="p-0">
-          {/* Tabs */}
-          <div className="flex items-center gap-1 px-4 sm:px-5 border-b border-border overflow-x-auto scrollbar-none">
-            {steps.map((step) => {
-              const isActive = step.key === activeTab;
-              const dirty = baselineForm ? isTabDirty(baselineForm, form, step.key) : false;
-              const complete = canAdvance(step.key);
+      <Card className="overflow-visible">
+        <CardContent className="p-0 pb-28">
+          <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="w-full">
+            {SECTIONS.map((section) => {
+              const dirty = baselineForm ? isTabDirty(baselineForm, form, section.key) : false;
+              const complete = canAdvance(section.key);
               const incomplete = dirty && !complete;
-
               return (
-                <button
-                  key={step.key}
-                  type="button"
-                  onClick={() => { setErrors(null); setActiveTab(step.key); }}
-                  aria-current={isActive ? "step" : undefined}
-                  aria-label={
-                    incomplete
-                      ? `${step.label}, required fields incomplete`
-                      : step.label
-                  }
-                  className={cn(
-                    "relative flex items-center gap-1.5 px-3 py-3.5 text-sm font-medium transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm",
-                    isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span>{step.label}</span>
-                  {incomplete && (
-                    <span
-                      className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0"
-                      aria-hidden
-                    />
-                  )}
-                  <span
-                    className={cn(
-                      "absolute inset-x-3 -bottom-px h-0.5 transition-all rounded-full",
-                      isActive ? "bg-foreground" : "bg-transparent",
-                    )}
-                  />
-                </button>
+                <AccordionItem key={section.key} value={section.key} className="border-b px-0">
+                  <AccordionTrigger className="px-4 sm:px-5 py-3.5 hover:no-underline">
+                    <span className="flex items-center gap-2 text-left">
+                      <span className="text-sm font-medium">{section.label}</span>
+                      {dirty && complete && (
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0"
+                          title="Unsaved changes in this section"
+                          aria-hidden
+                        />
+                      )}
+                      {incomplete && (
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0"
+                          title="Required fields incomplete"
+                          aria-hidden
+                        />
+                      )}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 sm:px-5 text-foreground">
+                    <div className="pb-2">{tabContent[section.key]}</div>
+                  </AccordionContent>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
 
-          <div className="p-6 space-y-6">
-            <div>{tabContent[activeTab]}</div>
+          {errors && <div className="text-sm text-destructive px-4 sm:px-5 pt-2">{errors}</div>}
 
-            {errors && <div className="text-sm text-destructive">{errors}</div>}
-
-            <div className="flex items-center justify-between pt-3 border-t">
-              <Button variant="ghost" onClick={onCancel} className="text-muted-foreground">Cancel</Button>
-              <div className="flex items-center gap-2">
-                {currentIdx > 0 && (
-                  <Button variant="outline" onClick={goBack} className="rounded-full"><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Button>
-                )}
-                {!isLast ? (
-                  <Button onClick={goNext} className="rounded-full bg-foreground text-background hover:bg-foreground/90">
-                    Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                  </Button>
-                ) : (
-                  <div className="flex flex-col items-end gap-1">
-                    <Button
-                      onClick={onPublish}
-                      disabled={saving || saveBlocked || (publishing && !form.name.trim())}
-                      className="rounded-full bg-foreground text-background hover:bg-foreground/90"
-                    >
-                      {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isEdit ? "Saving…" : "Publishing…"}</> : (isEdit ? "Save Changes" : "Publish Product")}
-                    </Button>
-                    {saveBlocked && validation.errors[0] && (
-                      <span className="text-xs text-destructive max-w-[280px] text-right">{validation.errors[0].message}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex items-center justify-between border-t px-4 sm:px-5 py-4 mt-2">
+            <Button variant="ghost" onClick={onCancel} className="text-muted-foreground">
+              Cancel
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       <div className="lg:sticky lg:top-4 h-fit space-y-3">
         <LivePreviewCard form={form} storeId={storeId} productId={productId} setForm={setForm} />
+      </div>
+
+      <div className="fixed bottom-4 right-4 z-[90] flex flex-col items-end gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
+        <div className="pointer-events-auto flex flex-col items-end gap-1 rounded-2xl border border-border bg-background/95 p-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
+          <Button
+            onClick={() => {
+              setErrors(null);
+              onPublish();
+            }}
+            disabled={saving || saveBlocked || (publishing && !form.name.trim())}
+            className="rounded-full bg-foreground text-background hover:bg-foreground/90 px-5 h-11 min-w-[132px]"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {isEdit ? "Saving…" : "Publishing…"}
+              </>
+            ) : isEdit ? (
+              "Save changes"
+            ) : (
+              "Publish product"
+            )}
+          </Button>
+          {saveBlocked && validation.errors[0] && (
+            <span className="text-xs text-destructive max-w-[240px] text-right px-1">{validation.errors[0].message}</span>
+          )}
+        </div>
       </div>
     </div>
   );

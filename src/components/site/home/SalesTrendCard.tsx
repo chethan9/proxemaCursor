@@ -9,9 +9,11 @@ interface Props {
   data: { day: string; orders: number; revenue: number }[];
   currency: string;
   loading?: boolean;
+  title?: string;
+  subtitle?: string;
 }
 
-export function SalesTrendCard({ data, currency, loading }: Props) {
+export function SalesTrendCard({ data, currency, loading, title, subtitle }: Props) {
   const { t, i18n } = useTranslation("site");
   const chartData = data.map((d) => ({
     ...d,
@@ -23,8 +25,8 @@ export function SalesTrendCard({ data, currency, loading }: Props) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t("home.cards.salesTrend.title")}</CardTitle>
-        <p className="text-xs text-muted-foreground">{t("home.cards.salesTrend.subtitle")}</p>
+        <CardTitle className="text-base">{title ?? t("home.cards.salesTrend.title")}</CardTitle>
+        <p className="text-xs text-muted-foreground">{subtitle ?? t("home.cards.salesTrend.subtitle")}</p>
       </CardHeader>
       <CardContent>
         {loading ? (

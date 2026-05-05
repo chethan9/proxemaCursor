@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -11,7 +11,7 @@ import {
 import { AttributeEditor } from "@/components/product-edit/variants/AttributeEditor";
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
-import { generateMatrix, mergeVariations, variationAttributeComboKey } from "@/components/product-edit/variants/utils";
+import { generateMatrix, mergeVariationsExtended, variationAttributeComboKey } from "@/components/product-edit/variants/utils";
 import { Loader2, RefreshCw, Info } from "lucide-react";
 
 type Props = {
@@ -60,13 +60,14 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   const regenerate = () => {
     const fresh = generateMatrix(form.attributes);
     setForm((p) => {
-      const merged = mergeVariations(fresh, p.variations);
-      const freshKeys = new Set(fresh.map((v) => v.key));
-      const orphanedIds = p.variations.filter((v) => v.id && !freshKeys.has(v.key)).map((v) => v.id!) as number[];
+      const merged = mergeVariationsExtended(fresh, p.variations);
+      const mergedIds = new Set(merged.map((v) => v.id).filter((id): id is number => typeof id === "number"));
+      const orphanedIds = p.variations.filter((v) => v.id && !mergedIds.has(v.id)).map((v) => v.id!) as number[];
+      const mergedDel = [...new Set([...(p.deletedVariationIds || []), ...orphanedIds])];
       return {
         ...p,
         variations: merged,
-        deletedVariationIds: [...(p.deletedVariationIds || []), ...orphanedIds],
+        deletedVariationIds: mergedDel,
       };
     });
   };
@@ -124,6 +125,24 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
       return { ...p, default_attributes: defaultAttributesFromVariation(v, p.attributes) };
     });
   };
+
+  const defaultVariationKey = useMemo(() => {
+    const idx = form.variations.findIndex((v) => variationMatchesDefault(v, form.default_attributes, form.attributes));
+    return idx >= 0 ? form.variations[idx].key : null;
+  }, [form.variations, form.default_attributes, form.attributes]);
+
+  const setDefaultByKey = useCallback((key: string | null) => {
+    setForm((p) => {
+      if (!key) return { ...p, default_attributes: [] };
+      const idx = p.variations.findIndex((v) => v.key === key);
+      if (idx < 0) return p;
+      const v = p.variations[idx];
+      if (variationMatchesDefault(v, p.default_attributes, p.attributes)) {
+        return { ...p, default_attributes: [] };
+      }
+      return { ...p, default_attributes: defaultAttributesFromVariation(v, p.attributes) };
+    });
+  }, [setForm]);
 
   const hasVariableAttrs = form.attributes.some((a) => a.variation && a.options.length > 0);
 
@@ -186,6 +205,17 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     [form.attributes],
   );
 
+  /** Clear Woo default_attributes if no variation matches (e.g. after attribute matrix change). */
+  useEffect(() => {
+    if (productMode !== "variable") return;
+    if (form.variations.length === 0) return;
+    if (!form.default_attributes?.length) return;
+    const any = form.variations.some((v) => variationMatchesDefault(v, form.default_attributes, form.attributes));
+    if (!any) {
+      setForm((p) => ({ ...p, default_attributes: [] }));
+    }
+  }, [form.variations, form.default_attributes, form.attributes, productMode, setForm]);
+
   const prevVariationAttrSig = useRef<string | null>(null);
   useEffect(() => {
     if (productMode !== "variable") {
@@ -204,13 +234,14 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     const tid = window.setTimeout(() => {
       setForm((p) => {
         const fresh = generateMatrix(p.attributes);
-        const merged = mergeVariations(fresh, p.variations);
-        const freshKeys = new Set(fresh.map((v) => v.key));
-        const orphanedIds = p.variations.filter((v) => v.id && !freshKeys.has(v.key)).map((v) => v.id!) as number[];
+        const merged = mergeVariationsExtended(fresh, p.variations);
+        const mergedIds = new Set(merged.map((v) => v.id).filter((id): id is number => typeof id === "number"));
+        const orphanedIds = p.variations.filter((v) => v.id && !mergedIds.has(v.id)).map((v) => v.id!) as number[];
+        const mergedDel = [...new Set([...(p.deletedVariationIds || []), ...orphanedIds])];
         return {
           ...p,
           variations: merged,
-          deletedVariationIds: [...(p.deletedVariationIds || []), ...orphanedIds],
+          deletedVariationIds: mergedDel,
         };
       });
     }, 400);
@@ -219,27 +250,46 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="text-sm font-medium text-primary">Attributes</div>
-      <AttributeEditor storeId={storeId} form={form} setForm={setForm} productMode={productMode} />
+      <div
+        className="rounded-lg border border-border bg-card px-2 py-2 shadow-sm space-y-2"
+        role="region"
+        aria-label="Product attributes"
+      >
+        <div className="text-sm font-medium text-foreground px-0.5">Attributes</div>
+        <AttributeEditor storeId={storeId} form={form} setForm={setForm} productMode={productMode} />
+      </div>
 
       {productMode === "variable" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="text-sm font-medium text-primary">Variations</div>
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm"
+            role="toolbar"
+            aria-label="Variations"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="text-sm font-medium text-foreground">Variations</div>
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
               {loadedFromWoo && !loading && form.variations.length > 0 && (
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded-full px-2 py-0.5">Live from WooCommerce</span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {productId && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => loadVariations(true)} disabled={loading} className="gap-1.5">
                   <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
                   Refresh
                 </Button>
               )}
-              <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={!hasVariableAttrs}>Regenerate from attributes</Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={regenerate}
+                disabled={!hasVariableAttrs}
+                title="Rebuilds combinations from attributes. Existing rows are merged when option combinations match; prices and images carry forward when you add new attributes."
+              >
+                Regenerate from attributes
+              </Button>
             </div>
           </div>
 
@@ -284,16 +334,19 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
             </div>
           ) : (
             <VariationsTable
+              className="rounded-xl border border-border bg-card p-3 shadow-sm"
               variations={form.variations}
               parentSku={form.sku}
               parentName={form.name}
               defaultAttrs={form.default_attributes}
               parentAttributes={form.attributes}
-              onSetDefault={setDefaultVariation}
+              defaultKey={defaultVariationKey}
+              onDefaultKeyChange={setDefaultByKey}
               onEdit={setEditIdx}
               onUpdate={updateVariation}
               onBulk={applyBulk}
               onBulkDelete={bulkDelete}
+              onDeleteRow={removeVariation}
               duplicateRowCount={duplicateCombos.length}
             />
           )}

@@ -16,6 +16,7 @@ import { ActivityHistoryDrawer } from "@/components/ActivityHistoryDrawer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useTranslation } from "next-i18next";
 import { formatDate as fmtIntlDate, formatDateTime as fmtIntlDateTime } from "@/lib/format-number";
+import { isValidEmail } from "@/lib/email-validation";
 
 type LineItem = {
   name?: string;
@@ -105,10 +106,15 @@ function CustomerDetailsInner() {
 
   useEffect(() => {
     if (customer) {
+      const mainEmail = customer.email || "";
+      const bill = { ...(customer.billing as Record<string, string> || {}) };
+      if (isValidEmail(mainEmail) && !isValidEmail(bill.email)) {
+        bill.email = mainEmail;
+      }
       setForm({
         first_name: customer.first_name || "", last_name: customer.last_name || "",
-        email: customer.email || "", username: customer.username || "",
-        billing: { ...(customer.billing as Record<string, string> || {}) },
+        email: mainEmail, username: customer.username || "",
+        billing: bill,
         shipping: { ...(customer.shipping as Record<string, string> || {}) },
       });
     }

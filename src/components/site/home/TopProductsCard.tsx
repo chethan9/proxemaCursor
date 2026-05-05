@@ -18,9 +18,10 @@ interface Props {
   storeId: string;
   currency: string;
   loading?: boolean;
+  subtitle?: string;
 }
 
-export function TopProductsCard({ products, storeId, currency, loading }: Props) {
+export function TopProductsCard({ products, storeId, currency, loading, subtitle }: Props) {
   const { t } = useTranslation("site");
   const router = useRouter();
 
@@ -28,7 +29,7 @@ export function TopProductsCard({ products, storeId, currency, loading }: Props)
     <Card className="h-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">{t("home.cards.topProducts.title")}</CardTitle>
-        <p className="text-xs text-muted-foreground">{t("home.cards.topProducts.subtitle")}</p>
+        <p className="text-xs text-muted-foreground">{subtitle ?? t("home.cards.topProducts.subtitle")}</p>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (

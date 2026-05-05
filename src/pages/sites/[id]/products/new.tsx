@@ -40,7 +40,6 @@ function Inner() {
     const base = emptyProductForm();
     return JSON.stringify(initialType === "variable" ? { ...base, type: "variable" } : base);
   });
-  const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
@@ -57,7 +56,6 @@ function Inner() {
       const base = emptyProductForm();
       setInitialFormJson(JSON.stringify({ ...base, type: "variable" }));
       setMode("advanced");
-      setActiveTab("basic");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.type]);
@@ -114,7 +112,7 @@ function Inner() {
   const canAdvance = (tab: AdvancedTabKey) => {
     if (form.status !== "publish") return true;
     if (tab === "basic") return form.name.trim().length > 0;
-    if (tab === "inventory") {
+    if (tab === "pricing" || tab === "inventory") {
       if (form.type === "variable") return true;
       const n = parseFloat((form.regular_price || "").trim());
       return !isNaN(n) && n > 0;
@@ -135,7 +133,7 @@ function Inner() {
   const submit = () => { setServerErrors([]); create.mutate(); };
 
   return (
-    <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+    <div className={cn("space-y-4 px-6 pt-4 max-w-[1400px] mx-auto", mode === "advanced" ? "pb-28" : "pb-6")}>
       <h1 className="sr-only">Add new product</h1>
       <div
         role="toolbar"
@@ -167,10 +165,14 @@ function Inner() {
             type="button"
             onClick={() => setMode("advanced")}
             className={cn(
-              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
-              mode === "advanced"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60 focus-visible:ring-offset-2",
+              form.type === "variable"
+                ? mode === "advanced"
+                  ? "bg-orange-500 text-white shadow-sm hover:bg-orange-600"
+                  : "bg-orange-500/25 text-orange-950 ring-1 ring-inset ring-orange-500/45 hover:bg-orange-500/35 dark:bg-orange-500/30 dark:text-orange-50 dark:ring-orange-400/50"
+                : mode === "advanced"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
             )}
           >
             <Layers className="size-3.5 shrink-0" />
@@ -212,8 +214,6 @@ function Inner() {
           form={form}
           baselineForm={baselineForm}
           setForm={setForm}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           canAdvance={canAdvance}
           onCancel={goBack}
           onPublish={submit}

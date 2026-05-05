@@ -58,7 +58,6 @@ function Inner() {
   const [initialFormJson, setInitialFormJson] = useState<string>("");
   const [savedOnce, setSavedOnce] = useState(false);
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
-  const [activeTab, setActiveTab] = useState<AdvancedTabKey>("basic");
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
@@ -276,7 +275,7 @@ function Inner() {
     if (!form) return false;
     if (form.status !== "publish") return true;
     if (tab === "basic") return form.name.trim().length > 0;
-    if (tab === "inventory") {
+    if (tab === "pricing" || tab === "inventory") {
       if (form.type === "variable") return true;
       const n = parseFloat((form.regular_price || "").trim());
       return !isNaN(n) && n > 0;
@@ -318,7 +317,7 @@ function Inner() {
   }
 
   return (
-    <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+    <div className={cn("space-y-4 px-6 pt-4 max-w-[1400px] mx-auto", mode === "advanced" ? "pb-28" : "pb-6")}>
       <h1 className="sr-only">Edit product</h1>
       <div
         role="toolbar"
@@ -394,10 +393,14 @@ function Inner() {
               type="button"
               onClick={() => setMode("advanced")}
               className={cn(
-                "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
-                mode === "advanced"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60 focus-visible:ring-offset-2",
+                form?.type === "variable"
+                  ? mode === "advanced"
+                    ? "bg-orange-500 text-white shadow-sm hover:bg-orange-600"
+                    : "bg-orange-500/25 text-orange-950 ring-1 ring-inset ring-orange-500/45 hover:bg-orange-500/35 dark:bg-orange-500/30 dark:text-orange-50 dark:ring-orange-400/50"
+                  : mode === "advanced"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
               )}
             >
               <Layers className="size-3.5 shrink-0" />
@@ -458,8 +461,6 @@ function Inner() {
           form={form}
           baselineForm={baselineForm}
           setForm={(u) => setForm((p) => (p ? u(p) : p))}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           canAdvance={canAdvance}
           onCancel={goBack}
           onPublish={onPublish}

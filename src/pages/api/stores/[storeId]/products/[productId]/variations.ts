@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import type { Json } from "@/integrations/supabase/database.types";
+import { compositeVariationKey } from "@/services/productEditService";
 
 type WooVariation = {
   id: number;
@@ -29,7 +30,7 @@ function toJson<T>(o: T): Json { return JSON.parse(JSON.stringify(o)) as Json; }
 
 function mapRowToResponse(row: Record<string, unknown>) {
   const attributes = Array.isArray(row.attributes) ? (row.attributes as { name: string; option: string }[]) : [];
-  const key = attributes.map(a => `${a.name}=${a.option}`).join("|");
+  const key = compositeVariationKey(attributes);
   const gallery = Array.isArray(row.gallery) ? (row.gallery as { id: number; src: string }[]) : [];
   const image = row.image as { id: number; src: string; alt: string } | null;
   return {

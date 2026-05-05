@@ -31,6 +31,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
   if (accessErr || !canAccess) return res.status(403).json({ error: "Forbidden" });
 
+  try {
+    const fxRes = await fetch("https://api.frankfurter.app/latest");
+    if (fxRes.ok) {
+      const body = (await fxRes.json()) as { base?: string; rates?: Record<string, number> };
+      if (body.rates && typeof body.rates === "object") {
+        const payload = { base: body.base ?? "EUR", rates: body.rates };
+        const { error: fxErr } = await supabaseAdmin.from("global_fx_rates").upsert(
+          { id: 1, payload, updated_at: new Date().toISOString() },
+          { onConflict: "id" }
+        );
+        if (fxErr) console.warn("[dashboard-summary/refresh] global_fx_rates upsert", fxErr);
+      }
+    }
+  } catch (e) {
+    console.warn("[dashboard-summary/refresh] Frankfurter fetch failed", e);
+  }
+
   const { error } = await supabaseAdmin.rpc("refresh_dashboard_summaries_for_store", {
     p_store_id: storeId,
   });

@@ -1,11 +1,13 @@
 import { useEffect, useMemo } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "next-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { useSiteHomeStats } from "@/hooks/queries/useSiteStats";
@@ -18,6 +20,26 @@ import { EmptyState } from "@/components/EmptyState";
 import { NoDataIllustration } from "@/components/illustrations/EmptyIllustrations";
 import { SitePreferencesOnboardingDialog } from "@/components/site/store-preferences/SitePreferencesOnboardingDialog";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  type SiteHomeStatsQuery,
+} from "@/services/siteStatsService";
+import { DateRangeFilter, type DateRangePresetValue } from "@/components/explore/DateRangeFilter";
+
+const VALID_RANGE_PRESETS = new Set<DateRangePresetValue>([
+  "all",
+  "today",
+  "yesterday",
+  "7d",
+  "30d",
+  "90d",
+  "custom",
+]);
+
+function parseRangeQuery(q: unknown): DateRangePresetValue {
+  return typeof q === "string" && VALID_RANGE_PRESETS.has(q as DateRangePresetValue)
+    ? (q as DateRangePresetValue)
+    : "30d";
+}
 
 const SalesTrendCard = dynamic(
   () => import("@/components/site/home/SalesTrendCard").then((m) => m.SalesTrendCard),
@@ -67,7 +89,33 @@ function HomeInner() {
   const storeId = store?.id;
   const urlCurrency = typeof router.query.currency === "string" ? router.query.currency : null;
   const storeTz = store?.timezone ?? null;
-  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(storeId, urlCurrency, storeTz);
+
+  const rangeParam = parseRangeQuery(router.query.range);
+  const fromYmd = typeof router.query.from === "string" ? router.query.from : undefined;
+  const toYmd = typeof router.query.to === "string" ? router.query.to : undefined;
+  const combineAll =
+    router.query.combine === "1" || router.query.combine === "true";
+
+  const homeQuery: SiteHomeStatsQuery = useMemo(() => {
+    let range = rangeParam;
+    if (range === "custom" && (!fromYmd || !toYmd)) {
+      range = "30d";
+    }
+    return {
+      range,
+      fromYmd: range === "custom" ? fromYmd : undefined,
+      toYmd: range === "custom" ? toYmd : undefined,
+      combineAll,
+    };
+  }, [rangeParam, fromYmd, toYmd, combineAll]);
+
+  const rpcCurrency = combineAll ? null : urlCurrency;
+  const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(
+    storeId,
+    rpcCurrency,
+    storeTz,
+    homeQuery
+  );
 
   useEffect(() => {
     if (!storeId || storeLoading) return;
@@ -92,7 +140,7 @@ function HomeInner() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [storeId, storeLoading, qc, urlCurrency, storeTz]);
+  }, [storeId, storeLoading, qc, urlCurrency, storeTz, homeQuery]);
 
   const statsLoading = !data && isLoading;
   const showRefreshing = !!data && isFetching;
@@ -102,8 +150,13 @@ function HomeInner() {
       : null;
 
   const s = data?.stats;
+  const meta = data?.meta;
   const currencies = data?.currencies || [];
-  const currency = data?.currency || urlCurrency || (store as { currency?: string } | null)?.currency || "USD";
+  const periodCustom = meta?.period_custom === true;
+  const storeCurrency = (store as { currency?: string } | null)?.currency ?? "USD";
+  const currency =
+    data?.currency || (combineAll ? storeCurrency : urlCurrency || storeCurrency);
+
   const multiCurrency = currencies.length > 1;
 
   const aov = s && s.orders_month_count > 0 ? s.sales_month / s.orders_month_count : 0;
@@ -111,6 +164,45 @@ function HomeInner() {
 
   const salesSpark = useMemo(() => (data?.daily || []).map((d) => ({ v: d.revenue })), [data]);
   const ordersSpark = useMemo(() => (data?.daily || []).map((d) => ({ v: d.orders })), [data]);
+
+  const rangeCaption = useMemo(() => {
+    if (!periodCustom) return undefined;
+    switch (homeQuery.range) {
+      case "7d":
+        return t("home.range.last7d");
+      case "90d":
+        return t("home.range.last90d");
+      case "today":
+        return t("home.range.today");
+      case "yesterday":
+        return t("home.range.yesterday");
+      case "all":
+        return t("home.range.all");
+      case "custom":
+        return t("home.range.selected");
+      default:
+        return t("home.range.last30d");
+    }
+  }, [periodCustom, homeQuery.range, t]);
+
+  const statItems = useMemo(() => {
+    if (periodCustom) {
+      return [
+        { label: t("home.stats.ordersInPeriod"), value: s?.orders_month_count ?? 0 },
+        { label: t("home.stats.salesInRange"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
+        { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
+        { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
+      ];
+    }
+    return [
+      { label: t("home.stats.ordersToday"), value: s?.orders_today ?? 0 },
+      { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
+      { label: t("home.stats.todaySales"), value: fmtMoney(s?.sales_today ?? 0), suffix: currency },
+      { label: t("home.stats.weeklySales"), value: fmtMoney(s?.sales_week ?? 0), suffix: currency },
+      { label: t("home.stats.monthlySales"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
+      { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
+    ];
+  }, [periodCustom, s, t, currency, aov]);
 
   const hasError = !!error;
   const querySucceeded = !storeLoading && !isLoading && !hasError && !!data;
@@ -124,6 +216,52 @@ function HomeInner() {
       { shallow: true, scroll: false }
     );
   };
+
+  const handleRangeChange = (range: DateRangePresetValue, from?: Date, to?: Date) => {
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    q.range = range;
+    if (range === "custom" && from && to) {
+      q.from = format(from, "yyyy-MM-dd");
+      q.to = format(to, "yyyy-MM-dd");
+    } else {
+      delete q.from;
+      delete q.to;
+    }
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true, scroll: false });
+  };
+
+  const handleCombineChange = (v: boolean) => {
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    if (v) {
+      q.combine = "1";
+      delete q.currency;
+    } else {
+      delete q.combine;
+    }
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true, scroll: false });
+  };
+
+  const customFrom =
+    homeQuery.fromYmd && homeQuery.range === "custom" ? parseISO(homeQuery.fromYmd) : undefined;
+  const customTo =
+    homeQuery.toYmd && homeQuery.range === "custom" ? parseISO(homeQuery.toYmd) : undefined;
+
+  const ordersSparkSub = periodCustom
+    ? multiCurrency && !combineAll
+      ? t("home.spark.ordersInCurrency", { currency })
+      : t("home.spark.ordersInRange")
+    : multiCurrency
+      ? t("home.spark.ordersInCurrency", { currency })
+      : t("home.spark.ordersLast30d");
+
+  const revenueSparkSub =
+    deltaPct != null
+      ? periodCustom
+        ? t("home.spark.vsPrevPeriod")
+        : t("home.spark.vsPrev30d")
+      : periodCustom
+        ? t("home.spark.revenueInRange")
+        : t("home.spark.last30d");
 
   return (
     <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
@@ -170,23 +308,55 @@ function HomeInner() {
         </Card>
       ) : (
         <>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <DateRangeFilter
+              range={homeQuery.range}
+              from={customFrom}
+              to={customTo}
+              onChange={handleRangeChange}
+            />
+            <div className="flex flex-wrap items-center gap-4">
+              {multiCurrency && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="combine-currencies"
+                    checked={combineAll}
+                    onCheckedChange={handleCombineChange}
+                  />
+                  <Label htmlFor="combine-currencies" className="text-xs text-muted-foreground cursor-pointer">
+                    {t("home.combineAll")}
+                  </Label>
+                </div>
+              )}
+              {multiCurrency && !combineAll && (
+                <CurrencySwitcher
+                  currencies={currencies}
+                  selected={currency}
+                  onChange={handleCurrencyChange}
+                />
+              )}
+            </div>
+          </div>
+
           {multiCurrency && (
-            <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{t("home.multiCurrency")}</span>
-                <span>·</span>
-                <span>{t("home.viewingIn")}</span>
-                <span className="font-mono font-semibold text-foreground">{currency}</span>
-              </div>
-              <CurrencySwitcher
-                currencies={currencies}
-                selected={currency}
-                onChange={handleCurrencyChange}
-              />
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground px-1">
+              <span className="font-medium text-foreground">{t("home.multiCurrency")}</span>
+              <span>·</span>
+              <span>{t("home.viewingIn")}</span>
+              <span className="font-mono font-semibold text-foreground">{currency}</span>
+              {combineAll && (
+                <span className="text-xs max-w-md">{t("home.combineHint")}</span>
+              )}
             </div>
           )}
 
-          {multiCurrency && !hasCurrencySales && (
+          {combineAll && meta?.fx_fallback && (
+            <Card className="border-amber-200 bg-amber-50/40">
+              <CardContent className="py-3 text-sm text-amber-900">{t("home.fxFallback")}</CardContent>
+            </Card>
+          )}
+
+          {multiCurrency && !combineAll && !hasCurrencySales && (
             <Card className="border-amber-200 bg-amber-50/40">
               <CardContent className="py-4 text-sm text-amber-900">
                 {t("home.noSalesInCurrency", { currency })}
@@ -205,27 +375,22 @@ function HomeInner() {
             </div>
           )}
 
-          <StatStrip
-            loading={statsLoading}
-            items={[
-              { label: t("home.stats.ordersToday"), value: s?.orders_today ?? 0 },
-              { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
-              { label: t("home.stats.todaySales"), value: fmtMoney(s?.sales_today ?? 0), suffix: currency },
-              { label: t("home.stats.weeklySales"), value: fmtMoney(s?.sales_week ?? 0), suffix: currency },
-              { label: t("home.stats.monthlySales"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
-              { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
-            ]}
-          />
+          <StatStrip loading={statsLoading} items={statItems} />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-6">
-              <SalesTrendCard data={data?.daily || []} currency={currency} loading={statsLoading} />
+              <SalesTrendCard
+                data={data?.daily || []}
+                currency={currency}
+                loading={statsLoading}
+                subtitle={rangeCaption}
+              />
             </div>
             <div className="lg:col-span-2 flex flex-col gap-4">
               <SparklineTile
                 label={t("home.spark.sales")}
                 value={String(s?.orders_month_count ?? 0)}
-                subtext={multiCurrency ? t("home.spark.ordersInCurrency", { currency }) : t("home.spark.ordersLast30d")}
+                subtext={ordersSparkSub}
                 data={ordersSpark}
                 color="hsl(var(--primary))"
                 loading={statsLoading}
@@ -235,7 +400,7 @@ function HomeInner() {
                 label={t("home.spark.revenue")}
                 value={fmtMoney(s?.sales_month ?? 0)}
                 suffix={currency}
-                subtext={deltaPct != null ? t("home.spark.vsPrev30d") : t("home.spark.last30d")}
+                subtext={revenueSparkSub}
                 data={salesSpark}
                 color="hsl(var(--success))"
                 delta={deltaPct}
@@ -244,7 +409,7 @@ function HomeInner() {
               />
             </div>
             <div className="lg:col-span-4">
-              <OrderStatusDonut data={data?.status_breakdown || []} loading={statsLoading} />
+              <OrderStatusDonut data={data?.status_breakdown || []} loading={statsLoading} subtitle={rangeCaption} />
             </div>
           </div>
 
@@ -264,6 +429,7 @@ function HomeInner() {
                 storeId={storeId || ""}
                 currency={currency}
                 loading={statsLoading}
+                subtitle={rangeCaption}
               />
             </div>
           </div>
@@ -274,5 +440,9 @@ function HomeInner() {
 }
 
 export default function SiteHomePage() {
-  return <SitePageShell><HomeInner /></SitePageShell>;
+  return (
+    <SitePageShell>
+      <HomeInner />
+    </SitePageShell>
+  );
 }

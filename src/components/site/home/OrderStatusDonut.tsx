@@ -18,9 +18,11 @@ const STATUS_COLORS: Record<string, string> = {
 interface Props {
   data: { status: string; count: number }[];
   loading?: boolean;
+  title?: string;
+  subtitle?: string;
 }
 
-export function OrderStatusDonut({ data, loading }: Props) {
+export function OrderStatusDonut({ data, loading, title, subtitle }: Props) {
   const { t } = useTranslation("site");
   const total = data.reduce((sum, d) => sum + d.count, 0);
   const chartData = data.map((d) => ({ ...d, color: STATUS_COLORS[d.status] || STATUS_COLORS.unknown }));
@@ -28,8 +30,8 @@ export function OrderStatusDonut({ data, loading }: Props) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t("home.cards.orderStatus.title")}</CardTitle>
-        <p className="text-xs text-muted-foreground">{t("home.cards.orderStatus.subtitle")}</p>
+        <CardTitle className="text-base">{title ?? t("home.cards.orderStatus.title")}</CardTitle>
+        <p className="text-xs text-muted-foreground">{subtitle ?? t("home.cards.orderStatus.subtitle")}</p>
       </CardHeader>
       <CardContent>
         {loading ? (

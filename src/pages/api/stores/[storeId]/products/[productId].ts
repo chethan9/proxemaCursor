@@ -333,8 +333,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const body = req.body || {};
-  const { variations, ...rest } = body as Record<string, unknown> & { variations?: Array<Record<string, unknown>> };
+  const {
+    variations,
+    deleted_variation_ids: deletedVariationIdsBody,
+    ...rest
+  } = body as Record<string, unknown> & {
+    variations?: Array<Record<string, unknown>>;
+    deleted_variation_ids?: unknown;
+  };
   const wooPayload: Record<string, unknown> = { ...rest };
+
+  const deletedVariationIds: number[] = Array.isArray(deletedVariationIdsBody)
+    ? [...new Set(deletedVariationIdsBody.filter((id): id is number => typeof id === "number" && id > 0))]
+    : [];
 
   try {
     const store = await getStoreCreds(storeId);
@@ -375,7 +386,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       wooPayload
     );
 
-    if (Array.isArray(variations) && updated.type === "variable") {
+    if (updated.type === "variable" && (Array.isArray(variations) || deletedVariationIds.length > 0)) {
+      const variationRows = Array.isArray(variations) ? variations : [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existingRows } = await (supabaseAdmin as any)
         .from("product_variations")
@@ -391,7 +403,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const userGalleryByWooId = new Map<number, Array<{ id: number; src: string; alt?: string }>>();
       const userGalleryByCreateIdx: Array<Array<{ id: number; src: string; alt?: string }>> = [];
 
-      for (const v of variations) {
+      for (const v of variationRows) {
         const img = v.image && ((v.image as Record<string, unknown>).id || (v.image as Record<string, unknown>).src)
           ? { image: (v.image as Record<string, unknown>).id ? { id: (v.image as Record<string, unknown>).id } : { src: (v.image as Record<string, unknown>).src, alt: (v.image as Record<string, unknown>).alt || "" } }
           : {};
@@ -454,12 +466,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const batch: Record<string, unknown> = {};
+      if (deletedVariationIds.length) batch.delete = deletedVariationIds;
       if (toCreate.length) batch.create = toCreate;
       if (toUpdate.length) batch.update = toUpdate;
 
-      if (toCreate.length || toUpdate.length) {
+      if (toCreate.length || toUpdate.length || deletedVariationIds.length) {
         try {
-          type BatchResp = { create?: Array<Record<string, unknown>>; update?: Array<Record<string, unknown>> };
+          type BatchResp = {
+            create?: Array<Record<string, unknown>>;
+            update?: Array<Record<string, unknown>>;
+            delete?: Array<{ id?: number }>;
+          };
           const resp = await wooRequest<BatchResp>(store, "POST", `products/${localProduct.woo_id}/variations/batch`, batch);
           const now = new Date().toISOString();
           const toUpsert: Record<string, unknown>[] = [];
@@ -513,6 +530,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             await (supabaseAdmin as any)
               .from("product_variations")
               .upsert(toUpsert, { onConflict: "store_id,woo_id", ignoreDuplicates: false });
+          }
+          if (deletedVariationIds.length) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabaseAdmin as any)
+              .from("product_variations")
+              .delete()
+              .eq("store_id", storeId)
+              .eq("product_id", productId)
+              .in("woo_id", deletedVariationIds);
           }
         } catch (ve) {
           console.error("[variations-batch-update]", ve);
