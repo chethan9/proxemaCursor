@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, ImageIcon, Loader2, GripVertical, SquarePen } from "lucide-react";
+import { Plus, X, ImageIcon, Loader2, GripVertical, SquarePen, FileText, Images, Tags } from "lucide-react";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "next-i18next";
@@ -92,150 +92,178 @@ export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: 
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label required>Product Name</Label>
-        <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Description</Label>
-        <RichTextEditor value={form.description} onChange={(html) => setForm((p) => ({ ...p, description: html }))} rows={4} />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Short Description</Label>
-        <RichTextEditor value={form.short_description || ""} onChange={(html) => setForm((p) => ({ ...p, short_description: html }))} rows={2} />
-      </div>
-
-      <div className="flex items-start gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Product Image</Label>
-          <div className="relative h-28 w-28">
-            <button type="button" onClick={() => setImageOpen("main")} className="h-28 w-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden">
-              {mainImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                  <ImageIcon className="h-5 w-5" />
-                  <span className="text-[10px]">Add image</span>
-                </div>
-              )}
-            </button>
-            {mainImage?.src ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                className="absolute bottom-0.5 right-0.5 h-6 w-6 shadow-sm"
-                title={t("products.edit.imageEditor.title")}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setImageEditorIdx(0);
-                  setImageEditorOpen(true);
-                }}
-              >
-                <SquarePen className="h-3 w-3" />
-              </Button>
-            ) : null}
+      <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5">
+        <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <FileText className="h-3.5 w-3.5" />
+          </span>
+          Basic info
+        </div>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label required>Product Name</Label>
+            <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <RichTextEditor value={form.description} onChange={(html) => setForm((p) => ({ ...p, description: html }))} rows={4} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Short Description</Label>
+            <RichTextEditor value={form.short_description || ""} onChange={(html) => setForm((p) => ({ ...p, short_description: html }))} rows={2} />
           </div>
         </div>
-        <div className="flex-1 space-y-1.5">
-          <Label className="text-xs">Gallery</Label>
-          <div className="grid grid-cols-5 gap-2">
-            {galleryImages.map((img, i) => (
-              <div
-                key={img.id ?? i}
-                draggable
-                onDragStart={() => setDragIdx(i)}
-                onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
-                onDragLeave={() => setDragOverIdx((v) => (v === i ? null : v))}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (dragIdx !== null) reorderGallery(dragIdx, i);
-                  setDragIdx(null);
-                  setDragOverIdx(null);
-                }}
-                onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
-                className={`h-20 rounded-md border overflow-hidden relative group cursor-move transition-all ${dragOverIdx === i ? "border-primary ring-2 ring-primary/30" : "border-border"} ${dragIdx === i ? "opacity-40" : ""}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.src} alt="" className="h-full w-full object-cover pointer-events-none" />
-                <div className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background/90 opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm">
-                  <GripVertical className="h-3 w-3 text-muted-foreground" />
-                </div>
-                {img.src ? (
-                  <button
-                    type="button"
-                    title={t("products.edit.imageEditor.title")}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setImageEditorIdx(i + 1);
-                      setImageEditorOpen(true);
-                    }}
-                    className="absolute bottom-0.5 left-0.5 h-5 w-5 rounded-full bg-background/95 border border-border shadow-sm opacity-0 group-hover:opacity-100 flex items-center justify-center hover:bg-muted z-[1]"
-                  >
-                    <SquarePen className="h-2.5 w-2.5 text-muted-foreground" />
+      </section>
+
+      <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5">
+        <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <Images className="h-3.5 w-3.5" />
+          </span>
+          Product media
+        </div>
+        <div className="flex min-w-0 flex-col items-start gap-4 lg:flex-row">
+          <div className="space-y-1.5 shrink-0">
+            <Label className="text-xs">Product Image</Label>
+            <div className="relative h-28 w-28">
+              <button type="button" onClick={() => setImageOpen("main")} className="h-28 w-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden">
+                {mainImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <ImageIcon className="h-5 w-5" />
+                    <span className="text-[10px]">Add image</span>
+                  </div>
+                )}
+              </button>
+              {mainImage?.src ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="absolute bottom-0.5 right-0.5 h-6 w-6 shadow-sm"
+                  title={t("products.edit.imageEditor.title")}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setImageEditorIdx(0);
+                    setImageEditorOpen(true);
+                  }}
+                >
+                  <SquarePen className="h-3 w-3" />
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Label className="text-xs">Gallery</Label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+              {galleryImages.map((img, i) => (
+                <div
+                  key={img.id ?? i}
+                  draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+                  onDragLeave={() => setDragOverIdx((v) => (v === i ? null : v))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIdx !== null) reorderGallery(dragIdx, i);
+                    setDragIdx(null);
+                    setDragOverIdx(null);
+                  }}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                  className={`h-20 rounded-md border overflow-hidden relative group cursor-move transition-all ${dragOverIdx === i ? "border-primary ring-2 ring-primary/30" : "border-border"} ${dragIdx === i ? "opacity-40" : ""}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img.src} alt="" className="h-full w-full object-cover pointer-events-none" />
+                  <div className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background/90 opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm">
+                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  {img.src ? (
+                    <button
+                      type="button"
+                      title={t("products.edit.imageEditor.title")}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setImageEditorIdx(i + 1);
+                        setImageEditorOpen(true);
+                      }}
+                      className="absolute bottom-0.5 left-0.5 h-5 w-5 rounded-full bg-background/95 border border-border shadow-sm opacity-0 group-hover:opacity-100 flex items-center justify-center hover:bg-muted z-[1]"
+                    >
+                      <SquarePen className="h-2.5 w-2.5 text-muted-foreground" />
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i + 1) }))} className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive/90 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                    <X className="h-3 w-3" />
                   </button>
-                ) : null}
-                <button type="button" onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i + 1) }))} className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive/90 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={() => setImageOpen("gallery")} className="h-20 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center text-muted-foreground">
-              <Plus className="h-4 w-4" />
-            </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setImageOpen("gallery")} className="h-20 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center text-muted-foreground">
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="space-y-1.5">
-        <Label>Product Category</Label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {form.categories.map((c) => (
-            <Badge key={c.id} variant="secondary" className="gap-1.5">
-              {c.name || `#${c.id}`}
-              <button onClick={() => setForm((p) => ({ ...p, categories: p.categories.filter((x) => x.id !== c.id) }))}><X className="h-3 w-3" /></button>
-            </Badge>
-          ))}
+      <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5">
+        <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <Tags className="h-3.5 w-3.5" />
+          </span>
+          Categories, brands & tags
         </div>
-        <div className="flex gap-2">
-          <Input list="adv-cat-options" value={catInput} onChange={(e) => setCatInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCategory(catInput); } }} placeholder="Type and press Enter" />
-          <datalist id="adv-cat-options">{categories.map((c) => <option key={c.id} value={c.name} />)}</datalist>
-          <Button type="button" variant="outline" onClick={() => addCategory(catInput)} disabled={!catInput.trim() || createCategory.isPending}>
-            {createCategory.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add"}
-          </Button>
-        </div>
-      </div>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Product Category</Label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {form.categories.map((c) => (
+                <Badge key={c.id} variant="secondary" className="gap-1.5">
+                  {c.name || `#${c.id}`}
+                  <button onClick={() => setForm((p) => ({ ...p, categories: p.categories.filter((x) => x.id !== c.id) }))}><X className="h-3 w-3" /></button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input list="adv-cat-options" value={catInput} onChange={(e) => setCatInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addCategory(catInput); } }} placeholder="Type and press Enter" />
+              <datalist id="adv-cat-options">{categories.map((c) => <option key={c.id} value={c.name} />)}</datalist>
+              <Button type="button" variant="outline" onClick={() => void addCategory(catInput)} disabled={!catInput.trim() || createCategory.isPending}>
+                {createCategory.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add"}
+              </Button>
+            </div>
+          </div>
 
-      <div className="space-y-1.5">
-        <Label>Brands</Label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {form.brands.map((b) => (
-            <Badge key={b.id} variant="secondary" className="gap-1.5">
-              {b.name || `#${b.id}`}
-              <button onClick={() => setForm((p) => ({ ...p, brands: p.brands.filter((x) => x.id !== b.id) }))}><X className="h-3 w-3" /></button>
-            </Badge>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <Input list="adv-brand-options" value={brandInput} onChange={(e) => setBrandInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addBrand(brandInput); } }} placeholder="Type brand name" />
-          <datalist id="adv-brand-options">{brands.map((b) => <option key={b.id} value={b.name} />)}</datalist>
-          <Button type="button" variant="outline" onClick={() => addBrand(brandInput)} disabled={!brandInput.trim() || createBrand.isPending}>
-            {createBrand.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add"}
-          </Button>
-        </div>
-      </div>
+          <div className="space-y-1.5">
+            <Label>Brands</Label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {form.brands.map((b) => (
+                <Badge key={b.id} variant="secondary" className="gap-1.5">
+                  {b.name || `#${b.id}`}
+                  <button onClick={() => setForm((p) => ({ ...p, brands: p.brands.filter((x) => x.id !== b.id) }))}><X className="h-3 w-3" /></button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input list="adv-brand-options" value={brandInput} onChange={(e) => setBrandInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addBrand(brandInput); } }} placeholder="Type brand name" />
+              <datalist id="adv-brand-options">{brands.map((b) => <option key={b.id} value={b.name} />)}</datalist>
+              <Button type="button" variant="outline" onClick={() => void addBrand(brandInput)} disabled={!brandInput.trim() || createBrand.isPending}>
+                {createBrand.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add"}
+              </Button>
+            </div>
+          </div>
 
-      <div className="space-y-1.5">
-        <Label>Product Tags</Label>
-        <TagPicker
-          storeId={storeId}
-          selected={form.tags}
-          onChange={(tags) => setForm((p) => ({ ...p, tags }))}
-        />
-      </div>
+          <div className="space-y-1.5">
+            <Label>Product Tags</Label>
+            <TagPicker
+              storeId={storeId}
+              selected={form.tags}
+              onChange={(tags) => setForm((p) => ({ ...p, tags }))}
+            />
+          </div>
+        </div>
+      </section>
 
       <ProductImageEditorDialog
         open={imageEditorOpen}

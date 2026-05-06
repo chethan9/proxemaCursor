@@ -4,6 +4,7 @@ import { resolveUserFromRequest } from "@/lib/server-auth";
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
 import { getDecryptedProviderApiKey } from "@/services/aiProviderCredentials.server";
 import { renderPromptTemplate } from "@/lib/ai/prompt-render";
+import { resolveImageControls } from "@/lib/ai/image-generation-controls";
 
 /** Smoke-test generation (0 credits). Uses optional sample image URL or placeholder fetch. */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -17,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const id = typeof req.query.id === "string" ? req.query.id : "";
   if (!id) return res.status(400).json({ error: "Missing id" });
 
-  const body = req.body as { sampleImageUrl?: string };
+  const body = req.body as { sampleImageUrl?: string; userInput?: Record<string, string | number | boolean> };
   const sampleUrl =
     typeof body.sampleImageUrl === "string" && body.sampleImageUrl.startsWith("http")
       ? body.sampleImageUrl
@@ -35,18 +36,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const prompt = renderPromptTemplate(feature.prompt_template, {
     product_name: "Test product",
-    user_input: {},
+    user_input: Object.fromEntries(
+      Object.entries(body.userInput || {}).map(([k, v]) => [k, String(v ?? "")])
+    ),
     index: 1,
     total: 1,
   });
+  const controls = resolveImageControls(
+    Object.fromEntries(Object.entries(body.userInput || {}).map(([k, v]) => [k, String(v ?? "")]))
+  );
 
   try {
     const out = await provider.generate(
       {
-        prompt,
+        prompt: `${prompt}\n${controls.instruction}`,
         sourceImageUrls: [sampleUrl],
         outputCount: 1,
         model: feature.model,
+        aspectRatio: controls.aspectRatio,
+        targetWidth: controls.width,
+        targetHeight: controls.height,
+        openAiSize: controls.openAiSize,
       },
       apiKey
     );

@@ -1,5 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProductFormState } from "@/services/productEditService";
 
@@ -23,7 +25,7 @@ export function PricingTaxTab({ form, setForm }: Props) {
   return (
     <TooltipProvider delayDuration={200}>
     <div className="space-y-5">
-      <div>
+      <div className="space-y-4">
         <div className="text-sm font-medium text-primary mb-2">Price</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -57,7 +59,28 @@ export function PricingTaxTab({ form, setForm }: Props) {
             {invalidOffer && <div className="text-[11px] text-destructive">Sale price must be lower than regular price.</div>}
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2">Tax settings have moved to the Inventory & Shipping step.</p>
+        <div className="space-y-3 border-t border-border/70 pt-3">
+          <div className="text-sm font-medium text-primary">Tax</div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <Checkbox checked={form.tax_status === "taxable"} onCheckedChange={(v) => setForm((p) => ({ ...p, tax_status: v ? "taxable" : "none" }))} />
+            Charge tax on this product
+          </label>
+          {form.tax_status === "taxable" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tax Class</Label>
+                <Select value={form.tax_class || "standard"} onValueChange={(v) => setForm((p) => ({ ...p, tax_class: v === "standard" ? "" : v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="reduced-rate">Reduced rate</SelectItem>
+                    <SelectItem value="zero-rate">Zero rate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
     </TooltipProvider>

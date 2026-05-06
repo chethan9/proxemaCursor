@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
+import { Eye, ImageIcon, ChevronLeft, ChevronRight, Maximize2, PanelRightClose, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProductFormState, ProductAttribute } from "@/services/productEditService";
 import { resolveMirroredProductImageUrl, type ImageVariantName } from "@/lib/product-image-urls";
@@ -13,9 +14,10 @@ export type LivePreviewCardProps = {
   storeId?: string;
   productId?: string | null;
   setForm?: (updater: (prev: ProductFormState) => ProductFormState) => void;
+  onHidePreview?: () => void;
 };
 
-export function LivePreviewCard({ form, storeId, productId, setForm }: LivePreviewCardProps) {
+export function LivePreviewCard({ form, storeId, productId, setForm, onHidePreview }: LivePreviewCardProps) {
   const mirrorMap = form.image_mirror_urls;
   const previewSrc = (rawSrc: string, variant: ImageVariantName) =>
     resolveMirroredProductImageUrl(rawSrc, mirrorMap, variant) || rawSrc;
@@ -65,11 +67,35 @@ export function LivePreviewCard({ form, storeId, productId, setForm }: LivePrevi
     <>
       <Card>
         <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 pb-1 border-b border-border">
-            <div className="text-xs font-medium text-muted-foreground">Live preview</div>
-            {showAi && (
-              <AIProductImageAssistant storeId={storeId} productId={productId ?? undefined} form={form} setForm={setForm} />
-            )}
+          <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
+            <div className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 p-1 text-muted-foreground">
+              <Eye className="h-3.5 w-3.5" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              {onHidePreview && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onHidePreview}
+                  className="h-8 w-8 rounded-full border-border/70 bg-background/80 p-0 hover:bg-accent"
+                  title="Hide preview"
+                  aria-label="Hide preview"
+                >
+                  <PanelRightClose className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {showAi && (
+                <AIProductImageAssistant
+                  storeId={storeId}
+                  productId={productId ?? undefined}
+                  form={form}
+                  setForm={setForm}
+                  tone="orange"
+                  label="AI image"
+                />
+              )}
+            </div>
           </div>
           <div
             className="aspect-square rounded-lg bg-muted/50 overflow-hidden flex items-center justify-center relative group outline-none"

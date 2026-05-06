@@ -166,186 +166,226 @@ export function VariationsTable({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {variations.length > 0 && onDefaultKeyChange && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 rounded-md border border-border/80 bg-muted/30 px-3 py-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground shrink-0">Default variation</span>
-          <Select
-            value={defaultSelectValue}
-            onValueChange={(v) => {
-              if (v === "__none__") {
-                onDefaultKeyChange(null);
-                return;
-              }
-              const m = /^idx:(\d+)$/.exec(v);
-              const i = m ? Number.parseInt(m[1], 10) : NaN;
-              const row = Number.isFinite(i) ? variations[i] : undefined;
-              onDefaultKeyChange(row?.key ?? null);
-            }}
-          >
-            <SelectTrigger className="h-9 w-full sm:max-w-xl lg:max-w-2xl text-left font-normal">
-              <SelectValue placeholder="No default" />
-            </SelectTrigger>
-            <SelectContent position="popper" className="max-h-[320px]">
-              <SelectItem value="__none__">No default</SelectItem>
-              {variations.map((v, i) => (
-                <SelectItem key={`def-opt-${i}-${v.key}`} value={`idx:${i}`} className="whitespace-normal">
-                  {variationLabel(v)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {variations.length > 0 ? (
+        <div className="rounded-lg border border-border/70 bg-muted/15 p-3 space-y-3">
+          {variations.length > 0 && onDefaultKeyChange && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground shrink-0">Default variation</span>
+              <Select
+                value={defaultSelectValue}
+                onValueChange={(v) => {
+                  if (v === "__none__") {
+                    onDefaultKeyChange(null);
+                    return;
+                  }
+                  const m = /^idx:(\d+)$/.exec(v);
+                  const i = m ? Number.parseInt(m[1], 10) : NaN;
+                  const row = Number.isFinite(i) ? variations[i] : undefined;
+                  onDefaultKeyChange(row?.key ?? null);
+                }}
+              >
+                <SelectTrigger className="h-9 w-full sm:max-w-xl lg:max-w-2xl text-left font-normal">
+                  <SelectValue placeholder="No default" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="max-h-[320px]">
+                  <SelectItem value="__none__">No default</SelectItem>
+                  {variations.map((v, i) => (
+                    <SelectItem key={`def-opt-${i}-${v.key}`} value={`idx:${i}`} className="whitespace-normal">
+                      {variationLabel(v)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-      <div
-        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/80 bg-muted/20 px-2 py-1.5"
-        role="toolbar"
-        aria-label="Variation bulk actions"
-      >
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm" disabled={selected.size === 0} className="rounded-full" title={selected.size === 0 ? "Select at least one variation" : undefined}>
-              <MoreVertical className="h-3.5 w-3.5 mr-1.5" />Bulk actions {selected.size > 0 ? `(${selected.size})` : ""}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setBulkMode("regular_price")}>Set regular price</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setBulkMode("sale_price")}>Set sale price</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setBulkMode("stock_quantity")}>Set stock quantity</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setAllEnabled(true)}>Enable selected</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAllEnabled(false)}>Disable selected</DropdownMenuItem>
-            {onBulkDelete && (
-              <>
+          <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Variation bulk actions">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" disabled={selected.size === 0} className="rounded-full" title={selected.size === 0 ? "Select at least one variation" : undefined}>
+                  <MoreVertical className="h-3.5 w-3.5 mr-1.5" />Bulk actions {selected.size > 0 ? `(${selected.size})` : ""}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => setBulkMode("regular_price")}>Set regular price</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setBulkMode("sale_price")}>Set sale price</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setBulkMode("stock_quantity")}>Set stock quantity</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={selected.size === 0} onClick={deleteSelected} className="text-destructive focus:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />Delete selected
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAllEnabled(true)}>Enable selected</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAllEnabled(false)}>Disable selected</DropdownMenuItem>
+                {onBulkDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled={selected.size === 0} onClick={deleteSelected} className="text-destructive focus:text-destructive">
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />Delete selected
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {bulkMode && (
+              <>
+                <NumberInput className="h-9 w-40" value={bulkValue} onValueChange={(v) => { setBulkValue(v); setBulkError(""); }} integer={bulkMode === "stock_quantity"} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
+                <Button size="sm" type="button" onClick={applyBulk} disabled={selected.size === 0} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply to {selected.size}</Button>
+                <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
               </>
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {bulkMode && (
-          <>
-            <NumberInput className="h-9 w-40" value={bulkValue} onValueChange={(v) => { setBulkValue(v); setBulkError(""); }} integer={bulkMode === "stock_quantity"} placeholder={bulkMode === "stock_quantity" ? "Qty" : "Price"} />
-            <Button size="sm" type="button" onClick={applyBulk} disabled={selected.size === 0} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">Apply to {selected.size}</Button>
-            <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
-          </>
-        )}
-        <div className="ml-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={autoFillSkus}
-            disabled={emptySkuCount === 0 || duplicateRowCount > 0}
-            title={
-              duplicateRowCount > 0
-                ? "Remove duplicate rows using the button in the warning above, then auto-fill SKUs"
-                : emptySkuCount === 0
-                  ? "All variations already have SKUs"
-                  : `Auto-fill ${emptySkuCount} empty SKU${emptySkuCount === 1 ? "" : "s"}`
-            }
-            className="rounded-full gap-1.5"
-          >
-            <Wand2 className="h-3.5 w-3.5" />
-            Auto-fill SKUs {emptySkuCount > 0 ? `(${emptySkuCount})` : ""}
-          </Button>
+            <div className="ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={autoFillSkus}
+                disabled={emptySkuCount === 0 || duplicateRowCount > 0}
+                title={
+                  duplicateRowCount > 0
+                    ? "Remove duplicate rows using the button in the warning above, then auto-fill SKUs"
+                    : emptySkuCount === 0
+                      ? "All variations already have SKUs"
+                      : `Auto-fill ${emptySkuCount} empty SKU${emptySkuCount === 1 ? "" : "s"}`
+                }
+                className="rounded-full gap-1.5"
+              >
+                <Wand2 className="h-3.5 w-3.5" />
+                Auto-fill SKUs {emptySkuCount > 0 ? `(${emptySkuCount})` : ""}
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
       {bulkError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{bulkError}</div>
       )}
 
-      <div className="rounded-xl border border-border overflow-x-auto bg-background">
-        <div className="min-w-[720px]">
-        <div className="grid grid-cols-[32px_minmax(140px,minmax(0,3fr))_minmax(88px,1.4fr)_92px_92px_80px_minmax(72px,88px)] gap-x-2 gap-y-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-3 py-3 border-b bg-muted/30 items-center">
-          <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} />
-          <div className="min-w-0 max-w-[min(100%,36rem)]">Options</div>
-          <div>SKU</div>
-          <div>Price <span className="text-destructive">*</span></div>
-          <div>Sale</div>
-          <div>Stock</div>
-          <div className="text-center">Actions</div>
-        </div>
-        {variations.map((v, i) => {
-          const isDisabled = v.enabled === false;
-          const priceMissing = v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0);
-          const isDefault = variationMatchesDefault(v, defaultAttrs, parentAttributes);
-          return (
-            <div key={`var-row-${i}-${v.key}`} className={`group grid grid-cols-[32px_minmax(140px,minmax(0,3fr))_minmax(88px,1.4fr)_92px_92px_80px_minmax(72px,88px)] gap-x-2 gap-y-1 items-center px-3 py-2.5 border-b last:border-b-0 text-sm hover:bg-muted/20 transition-colors ${isDisabled ? "opacity-50" : ""} ${priceMissing ? "bg-destructive/5" : ""} ${isDefault ? "border-l-[3px] border-l-primary bg-primary/[0.06]" : ""}`}>
-              <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} />
-              <div className="min-w-0 max-w-[min(100%,36rem)] flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
-                <span className="min-w-0 break-words leading-snug text-[13px]">{variationLabel(v)}</span>
-                {isDefault && <span className="text-[9px] uppercase bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium shrink-0">Default</span>}
-                {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal shrink-0">off</span>}
-                {priceMissing && <span className="text-[9px] uppercase bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-medium shrink-0">no price</span>}
-              </div>
-              <Input className={cellInput} value={v.sku} onChange={(e) => onUpdate(i, { sku: e.target.value })} placeholder="—" />
-              <Input className={`${cellInput} ${priceMissing ? "ring-1 ring-destructive/30" : ""}`} value={v.regular_price} onChange={(e) => onUpdate(i, { regular_price: e.target.value })} placeholder="—" />
-              <Input
-                className={`${cellInput} ${(() => {
-                  const reg = parseFloat(v.regular_price || "0");
-                  const sale = parseFloat(v.sale_price || "0");
-                  return reg > 0 && sale > 0 && sale >= reg ? "ring-1 ring-destructive/40 text-destructive" : "";
-                })()}`}
-                value={v.sale_price}
-                onChange={(e) => onUpdate(i, { sale_price: e.target.value })}
-                placeholder="—"
-                title={(() => {
-                  const reg = parseFloat(v.regular_price || "0");
-                  const sale = parseFloat(v.sale_price || "0");
-                  return reg > 0 && sale >= reg ? "Sale price must be less than regular price" : undefined;
-                })()}
-              />
-              <Input
-                className={`${cellInput} ${!v.manage_stock ? "bg-muted/30 text-muted-foreground cursor-not-allowed" : ""}`}
-                type="number"
-                min="0"
-                value={v.manage_stock ? (v.stock_quantity ?? "") : ""}
-                disabled={!v.manage_stock}
-                title={!v.manage_stock ? "Enable Manage Stock to set quantity" : undefined}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") { onUpdate(i, { stock_quantity: null }); return; }
-                  const n = Number(raw);
-                  if (Number.isNaN(n)) return;
-                  const qty = Math.max(0, n);
-                  const nextStatus: Variation["stock_status"] = qty === 0 ? "outofstock" : (v.stock_status === "onbackorder" ? "onbackorder" : "instock");
-                  onUpdate(i, { stock_quantity: qty, manage_stock: true, stock_status: nextStatus });
-                }}
-                placeholder="—"
-              />
-              <div className="flex items-center justify-end gap-0.5 shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground"
-                  onClick={() => onEdit(i)}
-                  aria-label="Edit variation"
-                  title="Edit variation"
+      <div className="rounded-lg border border-border/70 overflow-x-auto bg-background">
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
+          <thead>
+            <tr className="border-b bg-muted/30 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <th className="w-10 px-2 py-3 text-left align-middle">
+                <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} aria-label="Select all variations" />
+              </th>
+              <th className="w-[32%] px-2 py-3 text-left align-middle">Options</th>
+              <th className="w-[18%] px-2 py-3 text-left align-middle">SKU</th>
+              <th className="w-[11%] px-2 py-3 text-left align-middle">
+                Price <span className="text-destructive">*</span>
+              </th>
+              <th className="w-[11%] px-2 py-3 text-left align-middle">Sale</th>
+              <th className="w-[10%] px-2 py-3 text-left align-middle">Stock</th>
+              <th className="w-[88px] px-2 py-3 text-center align-middle">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {variations.map((v, i) => {
+              const isDisabled = v.enabled === false;
+              const priceMissing = v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0);
+              const isDefault = variationMatchesDefault(v, defaultAttrs, parentAttributes);
+              const saleInvalid = (() => {
+                const reg = parseFloat(v.regular_price || "0");
+                const sale = parseFloat(v.sale_price || "0");
+                return reg > 0 && sale > 0 && sale >= reg;
+              })();
+              return (
+                <tr
+                  key={`var-row-${i}-${v.key}`}
+                  className={cn(
+                    "border-b border-border last:border-b-0 transition-colors hover:bg-muted/20",
+                    isDisabled && "opacity-50",
+                    priceMissing && "bg-destructive/5",
+                    isDefault && "border-l-[3px] border-l-primary bg-primary/[0.06]",
+                  )}
                 >
-                  <Edit2 className="h-3.5 w-3.5" />
-                </Button>
-                {onDeleteRow && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => setDeleteIdx(i)}
-                    aria-label="Delete variation"
-                    title="Delete variation"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        </div>
+                  <td className="px-2 py-2 align-middle">
+                    <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} aria-label={`Select ${variationLabel(v)}`} />
+                  </td>
+                  <td className="px-2 py-2 align-middle min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium min-w-0">
+                      <span className="min-w-0 break-words leading-snug text-[13px]">{variationLabel(v)}</span>
+                      {isDefault && (
+                        <span className="text-[9px] uppercase bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium shrink-0">Default</span>
+                      )}
+                      {isDisabled && <span className="text-[9px] uppercase bg-muted rounded-full px-2 py-0.5 font-normal shrink-0">off</span>}
+                      {priceMissing && (
+                        <span className="text-[9px] uppercase bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-medium shrink-0">no price</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 align-middle min-w-0">
+                    <Input className={cellInput} value={v.sku} onChange={(e) => onUpdate(i, { sku: e.target.value })} placeholder="—" />
+                  </td>
+                  <td className="px-2 py-2 align-middle">
+                    <Input
+                      className={cn(cellInput, priceMissing && "ring-1 ring-destructive/30")}
+                      value={v.regular_price}
+                      onChange={(e) => onUpdate(i, { regular_price: e.target.value })}
+                      placeholder="—"
+                    />
+                  </td>
+                  <td className="px-2 py-2 align-middle">
+                    <Input
+                      className={cn(cellInput, saleInvalid && "ring-1 ring-destructive/40 text-destructive")}
+                      value={v.sale_price}
+                      onChange={(e) => onUpdate(i, { sale_price: e.target.value })}
+                      placeholder="—"
+                      title={saleInvalid ? "Sale price must be less than regular price" : undefined}
+                    />
+                  </td>
+                  <td className="px-2 py-2 align-middle">
+                    <Input
+                      className={cn(cellInput, !v.manage_stock && "bg-muted/30 text-muted-foreground cursor-not-allowed")}
+                      type="number"
+                      min="0"
+                      value={v.manage_stock ? (v.stock_quantity ?? "") : ""}
+                      disabled={!v.manage_stock}
+                      title={!v.manage_stock ? "Enable Manage Stock to set quantity" : undefined}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "") {
+                          onUpdate(i, { stock_quantity: null });
+                          return;
+                        }
+                        const n = Number(raw);
+                        if (Number.isNaN(n)) return;
+                        const qty = Math.max(0, n);
+                        const nextStatus: Variation["stock_status"] =
+                          qty === 0 ? "outofstock" : v.stock_status === "onbackorder" ? "onbackorder" : "instock";
+                        onUpdate(i, { stock_quantity: qty, manage_stock: true, stock_status: nextStatus });
+                      }}
+                      placeholder="—"
+                    />
+                  </td>
+                  <td className="px-1 py-2 align-middle">
+                    <div className="flex items-center justify-end gap-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground shrink-0"
+                        onClick={() => onEdit(i)}
+                        aria-label="Edit variation"
+                        title="Edit variation"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      {onDeleteRow && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => setDeleteIdx(i)}
+                          aria-label="Delete variation"
+                          title="Delete variation"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       <AlertDialog open={deleteIdx !== null} onOpenChange={(o) => { if (!o) setDeleteIdx(null); }}>

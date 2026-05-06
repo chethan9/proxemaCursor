@@ -12,11 +12,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Sparkles, Undo2, Upload, Images } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Undo2,
+  Upload,
+  Images,
+  Square,
+  RectangleVertical,
+  RectangleHorizontal,
+  Monitor,
+  Smartphone,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeProductImageSrc } from "@/lib/product-image-urls";
 import { ImagePickerDialog, type SelectedImage } from "@/components/product-edit/ImagePickerDialog";
 import { cn } from "@/lib/utils";
+import {
+  ASPECT_RATIO_OPTIONS,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_CUSTOM_HEIGHT,
+  DEFAULT_CUSTOM_WIDTH,
+  DEFAULT_SIZE_PRESET,
+  SIZE_PRESET_OPTIONS,
+  type AspectRatioValue,
+  type SizePresetValue,
+} from "@/lib/ai/image-generation-controls";
 
 type SwatchOption = { value: string; label?: string; hex?: string };
 type FieldOption = string | SwatchOption;
@@ -53,11 +76,17 @@ export function AIProductImageAssistant({
   productId,
   form,
   setForm,
+  compact = false,
+  tone = "default",
+  label,
 }: {
   storeId: string;
   productId?: string | null;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
+  compact?: boolean;
+  tone?: "default" | "orange";
+  label?: string;
 }) {
   const { t } = useTranslation("site");
   const { toast } = useToast();
@@ -81,10 +110,14 @@ export function AIProductImageAssistant({
   const fileRef = useRef<HTMLInputElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [additionalPrompt, setAdditionalPrompt] = useState("");
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const [sourceMode, setSourceMode] = useState<"main" | "gallery">("main");
   const [gallerySlot, setGallerySlot] = useState(0);
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioValue>(DEFAULT_ASPECT_RATIO);
+  const [sizePreset, setSizePreset] = useState<SizePresetValue>(DEFAULT_SIZE_PRESET);
+  const [customWidth, setCustomWidth] = useState(String(DEFAULT_CUSTOM_WIDTH));
+  const [customHeight, setCustomHeight] = useState(String(DEFAULT_CUSTOM_HEIGHT));
 
   const selected = features.find((f) => f.slug === featureSlug);
 
@@ -118,9 +151,24 @@ export function AIProductImageAssistant({
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    setAspectRatio(DEFAULT_ASPECT_RATIO);
+    setSizePreset(DEFAULT_SIZE_PRESET);
+    setCustomWidth(String(DEFAULT_CUSTOM_WIDTH));
+    setCustomHeight(String(DEFAULT_CUSTOM_HEIGHT));
     setAdditionalPrompt("");
-    setLightboxUrl(null);
+    setLightboxIndex(null);
   }, [open, loadFeatures]);
+
+  useEffect(() => {
+    if (lightboxIndex == null) return;
+    if (outputs.length === 0) {
+      setLightboxIndex(null);
+      return;
+    }
+    if (lightboxIndex >= outputs.length) {
+      setLightboxIndex(outputs.length - 1);
+    }
+  }, [outputs, lightboxIndex]);
 
   useEffect(() => {
     if (!selected || !open) return;
@@ -176,6 +224,16 @@ export function AIProductImageAssistant({
       toast({ title: t("products.ai.customPromptRequired"), variant: "destructive" });
       return;
     }
+    const generationUserInput: Record<string, string> = {
+      ...userValues,
+      aspect_ratio: aspectRatio,
+      output_size_preset: sizePreset,
+    };
+    if (sizePreset === "custom") {
+      generationUserInput.custom_width = customWidth || String(DEFAULT_CUSTOM_WIDTH);
+      generationUserInput.custom_height = customHeight || String(DEFAULT_CUSTOM_HEIGHT);
+    }
+
     setGenerating(true);
     setOutputs([]);
     setGenerationId(null);
@@ -196,7 +254,7 @@ export function AIProductImageAssistant({
           productId: productId ?? undefined,
           featureSlug,
           sources,
-          userInput: userValues,
+          userInput: generationUserInput,
           outputCount: outCount,
           additionalPrompt: additionalPrompt.trim() || undefined,
         }),
@@ -368,16 +426,37 @@ export function AIProductImageAssistant({
 
   const galleryLen = Math.max(0, form.images.length - 1);
   const thumbCount = form.images.length;
+  const aspectRatioIconMap: Record<AspectRatioValue, typeof Square> = {
+    "1:1": Square,
+    "4:5": RectangleVertical,
+    "3:4": RectangleVertical,
+    "16:9": Monitor,
+    "9:16": Smartphone,
+  };
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={cn(
+          "rounded-full text-xs font-medium shadow-sm",
+          tone === "orange"
+            ? "border-orange-300 bg-orange-500 text-white hover:bg-orange-600 hover:text-white"
+            : "border-border/70 bg-background/80 hover:bg-accent",
+          compact ? "h-8 w-8 p-0" : "h-8 gap-1.5 px-3"
+        )}
+        onClick={() => setOpen(true)}
+        title={label || t("products.ai.open")}
+        aria-label={label || t("products.ai.open")}
+      >
         {loadingFeatures && open ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-        <span className="text-xs">{t("products.ai.open")}</span>
+        {!compact && <span>{label || t("products.ai.open")}</span>}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex max-h-[min(92vh,760px)] w-[calc(100vw-1.5rem)] max-w-[min(100vw-1.5rem,560px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]">
+        <DialogContent className="flex max-h-[min(92vh,820px)] w-[calc(100vw-1.5rem)] max-w-[min(100vw-1.5rem,940px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[940px]">
           <DialogHeader className="shrink-0 space-y-0 border-b border-border px-4 py-2.5 pr-11 text-left">
             <div className="flex items-start justify-between gap-2">
               <DialogTitle className="text-base font-semibold leading-tight">{t("products.ai.title")}</DialogTitle>
@@ -455,6 +534,17 @@ export function AIProductImageAssistant({
                     )}
                   </TabsContent>
                 </Tabs>
+
+                <div className="space-y-0.5 border-t border-border pt-2">
+                  <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.additionalPrompt")}</Label>
+                  <Textarea
+                    value={additionalPrompt}
+                    onChange={(e) => setAdditionalPrompt(e.target.value)}
+                    placeholder={t("products.ai.additionalPromptPlaceholder")}
+                    rows={3}
+                    className="min-h-[5.5rem] resize-y text-xs leading-snug"
+                  />
+                </div>
 
                 <div className="space-y-1.5 border-t border-border pt-2">
                   <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.applyTarget")}</Label>
@@ -578,15 +668,76 @@ export function AIProductImageAssistant({
                     </div>
                   )}
 
-                <div className="space-y-0.5">
-                  <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.additionalPrompt")}</Label>
-                  <Textarea
-                    value={additionalPrompt}
-                    onChange={(e) => setAdditionalPrompt(e.target.value)}
-                    placeholder={t("products.ai.additionalPromptPlaceholder")}
-                    rows={2}
-                    className="min-h-0 resize-none text-xs leading-snug"
-                  />
+                <div className="space-y-2 rounded-md border border-border/70 bg-muted/20 p-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground">Aspect ratio</Label>
+                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+                      {ASPECT_RATIO_OPTIONS.map((option) => {
+                        const Icon = aspectRatioIconMap[option.value];
+                        return (
+                          <Button
+                            key={option.value}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAspectRatio(option.value)}
+                            className={cn(
+                              "h-9 min-w-0 px-2 text-[11px] font-medium",
+                              aspectRatio === option.value && "border-primary bg-primary/10 text-primary"
+                            )}
+                            title={`${option.label} (${option.value})`}
+                            aria-label={`${option.label} (${option.value})`}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            <span className="ml-1">{option.value}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground">Output size</Label>
+                    <Select value={sizePreset} onValueChange={(v) => setSizePreset(v as SizePresetValue)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SIZE_PRESET_OPTIONS.map((preset) => (
+                          <SelectItem key={preset.value} value={preset.value} className="text-xs">
+                            {preset.label}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="custom" className="text-xs">
+                          Custom size
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {sizePreset === "custom" && (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <Input
+                          type="number"
+                          min={256}
+                          max={4096}
+                          step={1}
+                          className="h-8 text-xs"
+                          value={customWidth}
+                          onChange={(e) => setCustomWidth(e.target.value)}
+                          placeholder="Width"
+                        />
+                        <Input
+                          type="number"
+                          min={256}
+                          max={4096}
+                          step={1}
+                          className="h-8 text-xs"
+                          value={customHeight}
+                          onChange={(e) => setCustomHeight(e.target.value)}
+                          placeholder="Height"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -623,7 +774,10 @@ export function AIProductImageAssistant({
                       key={o.index}
                       type="button"
                       className="relative aspect-square overflow-hidden rounded border focus:outline-none focus:ring-2 focus:ring-ring"
-                      onClick={() => setLightboxUrl(o.signedUrl)}
+                      onClick={() => {
+                        const idx = outputs.findIndex((item) => item.index === o.index);
+                        setLightboxIndex(idx >= 0 ? idx : 0);
+                      }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={o.signedUrl} alt="" className="h-full w-full object-cover" />
@@ -676,14 +830,40 @@ export function AIProductImageAssistant({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!lightboxUrl} onOpenChange={(o) => !o && setLightboxUrl(null)}>
+      <Dialog open={lightboxIndex !== null} onOpenChange={(o) => !o && setLightboxIndex(null)}>
         <DialogContent className="max-w-[min(96vw,900px)] p-2 sm:p-4">
           <DialogHeader className="sr-only">
             <DialogTitle>{t("products.ai.previewOutput")}</DialogTitle>
           </DialogHeader>
-          {lightboxUrl && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={lightboxUrl} alt="" className="w-full max-h-[85vh] object-contain rounded-md bg-muted/30" />
+          {lightboxIndex !== null && outputs[lightboxIndex] && (
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={outputs[lightboxIndex].signedUrl} alt="" className="w-full max-h-[85vh] object-contain rounded-md bg-muted/30" />
+              {outputs.length > 1 && (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-2 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full shadow-sm"
+                    onClick={() => setLightboxIndex((i) => (i == null ? 0 : (i - 1 + outputs.length) % outputs.length))}
+                    aria-label="Previous output image"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full shadow-sm"
+                    onClick={() => setLightboxIndex((i) => (i == null ? 0 : (i + 1) % outputs.length))}
+                    aria-label="Next output image"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>

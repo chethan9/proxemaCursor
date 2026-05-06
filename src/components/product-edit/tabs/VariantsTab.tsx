@@ -12,7 +12,7 @@ import { AttributeEditor } from "@/components/product-edit/variants/AttributeEdi
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
 import { generateMatrix, mergeVariationsExtended, variationAttributeComboKey } from "@/components/product-edit/variants/utils";
-import { Loader2, RefreshCw, Info } from "lucide-react";
+import { Loader2, RefreshCw, Info, ListTree, Table2 } from "lucide-react";
 
 type Props = {
   storeId: string;
@@ -249,33 +249,35 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   }, [variationAttrSig, productMode, setForm]);
 
   return (
-    <div className="space-y-5">
-      <div
-        className="rounded-lg border border-border bg-card px-2 py-2 shadow-sm space-y-2"
-        role="region"
-        aria-label="Product attributes"
-      >
-        <div className="text-sm font-medium text-foreground px-0.5">Attributes</div>
-        <AttributeEditor storeId={storeId} form={form} setForm={setForm} productMode={productMode} />
-      </div>
+    <div className="space-y-6">
+      <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5" role="region" aria-label="Product attributes">
+        <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <ListTree className="h-3.5 w-3.5" />
+          </span>
+          Product attributes
+        </div>
+        <AttributeEditor storeId={storeId} form={form} setForm={setForm} productMode={productMode} isEdit={!!productId} />
+      </section>
 
       {productMode === "variable" && (
-        <div className="space-y-3">
-          <div
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm"
-            role="toolbar"
-            aria-label="Variations"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="text-sm font-medium text-foreground">Variations</div>
+        <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold">
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <Table2 className="h-3.5 w-3.5" />
+              </span>
+              <span className="tracking-tight">Variation rows</span>
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
               {loadedFromWoo && !loading && form.variations.length > 0 && (
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded-full px-2 py-0.5">Live from WooCommerce</span>
+                <span className="text-[10px] font-normal uppercase tracking-wide text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                  Live from WooCommerce
+                </span>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0" role="toolbar" aria-label="Variation actions">
               {productId && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => loadVariations(true)} disabled={loading} className="gap-1.5">
+                <Button type="button" variant="outline" size="sm" onClick={() => loadVariations(true)} disabled={loading} className="gap-1.5">
                   <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
                   Refresh
                 </Button>
@@ -293,64 +295,65 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
             </div>
           </div>
 
-          {(duplicateCombos.length > 0 || missingPriceCount > 0) && !loading && form.variations.length > 0 && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs space-y-1">
-              {missingPriceCount > 0 && (
-                <div className="text-destructive">{missingPriceCount} variation{missingPriceCount === 1 ? "" : "s"} missing price — must be greater than 0 to publish.</div>
-              )}
-              {duplicateCombos.length > 0 && (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                  <div className="text-destructive min-w-0">
-                    Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}. Remove the extra rows before saving (auto-fill SKUs stays disabled until resolved).
+          <div className="space-y-3">
+            {(duplicateCombos.length > 0 || missingPriceCount > 0) && !loading && form.variations.length > 0 && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs space-y-1">
+                {missingPriceCount > 0 && (
+                  <div className="text-destructive">{missingPriceCount} variation{missingPriceCount === 1 ? "" : "s"} missing price — must be greater than 0 to publish.</div>
+                )}
+                {duplicateCombos.length > 0 && (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                    <div className="text-destructive min-w-0">
+                      Duplicate attribute combinations detected at row{duplicateCombos.length === 1 ? "" : "s"} {duplicateCombos.map((i) => i + 1).join(", ")}. Remove the extra rows before saving (auto-fill SKUs stays disabled until resolved).
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
+                      onClick={removeDuplicateVariations}
+                    >
+                      Remove duplicate rows ({duplicateCombos.length})
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
-                    onClick={removeDuplicateVariations}
-                  >
-                    Remove duplicate rows ({duplicateCombos.length})
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {loading && form.variations.length === 0 ? (
-            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-6 flex items-center gap-3">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <div>
-                <div className="font-medium text-foreground">Loading variations from WooCommerce…</div>
-                <div className="text-xs mt-0.5">Fetching on-demand since background sync hasn&apos;t reached this product yet.</div>
+                )}
               </div>
-            </div>
-          ) : !hasVariableAttrs ? (
-            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4">Tick &quot;Use for variations&quot; on at least one attribute with values, then regenerate.</div>
-          ) : form.variations.length === 0 ? (
-            <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4 flex items-start gap-2">
-              <Info className="h-4 w-4 mt-0.5 shrink-0" />
-              <div>Click &quot;Regenerate from attributes&quot; to create variations based on the options above.</div>
-            </div>
-          ) : (
-            <VariationsTable
-              className="rounded-xl border border-border bg-card p-3 shadow-sm"
-              variations={form.variations}
-              parentSku={form.sku}
-              parentName={form.name}
-              defaultAttrs={form.default_attributes}
-              parentAttributes={form.attributes}
-              defaultKey={defaultVariationKey}
-              onDefaultKeyChange={setDefaultByKey}
-              onEdit={setEditIdx}
-              onUpdate={updateVariation}
-              onBulk={applyBulk}
-              onBulkDelete={bulkDelete}
-              onDeleteRow={removeVariation}
-              duplicateRowCount={duplicateCombos.length}
-            />
-          )}
-        </div>
+            )}
+
+            {loading && form.variations.length === 0 ? (
+              <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-6 flex items-center gap-3">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <div>
+                  <div className="font-medium text-foreground">Loading variations from WooCommerce…</div>
+                  <div className="text-xs mt-0.5">Fetching on-demand since background sync hasn&apos;t reached this product yet.</div>
+                </div>
+              </div>
+            ) : !hasVariableAttrs ? (
+              <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4">Tick &quot;Use for variations&quot; on at least one attribute with values, then regenerate.</div>
+            ) : form.variations.length === 0 ? (
+              <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg p-4 flex items-start gap-2">
+                <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>Click &quot;Regenerate from attributes&quot; to create variations based on the options above.</div>
+              </div>
+            ) : (
+              <VariationsTable
+                variations={form.variations}
+                parentSku={form.sku}
+                parentName={form.name}
+                defaultAttrs={form.default_attributes}
+                parentAttributes={form.attributes}
+                defaultKey={defaultVariationKey}
+                onDefaultKeyChange={setDefaultByKey}
+                onEdit={setEditIdx}
+                onUpdate={updateVariation}
+                onBulk={applyBulk}
+                onBulkDelete={bulkDelete}
+                onDeleteRow={removeVariation}
+                duplicateRowCount={duplicateCombos.length}
+              />
+            )}
+          </div>
+        </section>
       )}
 
       {editIdx !== null && form.variations[editIdx] && (

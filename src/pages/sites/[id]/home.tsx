@@ -1,13 +1,12 @@
-import { useEffect, useMemo } from "react";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { useEffect, useMemo, useRef } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "next-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import { SitePageShell, useSiteFromRoute } from "@/components/site/shared";
 import { useSiteHomeStats } from "@/hooks/queries/useSiteStats";
@@ -23,16 +22,10 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   type SiteHomeStatsQuery,
 } from "@/services/siteStatsService";
-import { DateRangeFilter, type DateRangePresetValue } from "@/components/explore/DateRangeFilter";
+import { type DateRangePresetValue } from "@/components/explore/DateRangeFilter";
 
 const VALID_RANGE_PRESETS = new Set<DateRangePresetValue>([
-  "all",
-  "today",
-  "yesterday",
-  "7d",
   "30d",
-  "90d",
-  "custom",
 ]);
 
 function parseRangeQuery(q: unknown): DateRangePresetValue {
@@ -40,6 +33,10 @@ function parseRangeQuery(q: unknown): DateRangePresetValue {
     ? (q as DateRangePresetValue)
     : "30d";
 }
+
+const DASHBOARD_RANGE_OPTIONS: { value: DateRangePresetValue; label: string }[] = [
+  { value: "30d", label: "Last 30 days" },
+];
 
 const SalesTrendCard = dynamic(
   () => import("@/components/site/home/SalesTrendCard").then((m) => m.SalesTrendCard),
@@ -91,23 +88,15 @@ function HomeInner() {
   const storeTz = store?.timezone ?? null;
 
   const rangeParam = parseRangeQuery(router.query.range);
-  const fromYmd = typeof router.query.from === "string" ? router.query.from : undefined;
-  const toYmd = typeof router.query.to === "string" ? router.query.to : undefined;
   const combineAll =
     router.query.combine === "1" || router.query.combine === "true";
 
   const homeQuery: SiteHomeStatsQuery = useMemo(() => {
-    let range = rangeParam;
-    if (range === "custom" && (!fromYmd || !toYmd)) {
-      range = "30d";
-    }
     return {
-      range,
-      fromYmd: range === "custom" ? fromYmd : undefined,
-      toYmd: range === "custom" ? toYmd : undefined,
+      range: rangeParam,
       combineAll,
     };
-  }, [rangeParam, fromYmd, toYmd, combineAll]);
+  }, [rangeParam, combineAll]);
 
   const rpcCurrency = combineAll ? null : urlCurrency;
   const { data, isLoading, isFetching, error, refetch } = useSiteHomeStats(
@@ -117,8 +106,13 @@ function HomeInner() {
     homeQuery
   );
 
+  const didWarmSummaryRef = useRef<string | null>(null);
+  const didAttemptFxRefreshRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!storeId || storeLoading) return;
+    if (didWarmSummaryRef.current === storeId) return;
+    didWarmSummaryRef.current = storeId;
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
@@ -140,7 +134,37 @@ function HomeInner() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [storeId, storeLoading, qc, urlCurrency, storeTz, homeQuery]);
+  }, [storeId, storeLoading, qc]);
+
+  useEffect(() => {
+    if (!storeId || !combineAll) return;
+    if (!data?.meta?.fx_fallback) return;
+    const runKey = `${storeId}:fx`;
+    if (didAttemptFxRefreshRef.current === runKey) return;
+    didAttemptFxRefreshRef.current = runKey;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const tok = sessionData.session?.access_token;
+        if (!tok || cancelled) return;
+        const r = await fetch(`/api/stores/${storeId}/dashboard-summary/refresh`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${tok}` },
+        });
+        if (r.ok && !cancelled) {
+          qc.invalidateQueries({ queryKey: ["site-home-stats", storeId] });
+        }
+      } catch {
+        /* ignore; warning banner remains visible */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId, combineAll, data?.meta?.fx_fallback, qc]);
 
   const statsLoading = !data && isLoading;
   const showRefreshing = !!data && isFetching;
@@ -152,12 +176,12 @@ function HomeInner() {
   const s = data?.stats;
   const meta = data?.meta;
   const currencies = data?.currencies || [];
-  const periodCustom = meta?.period_custom === true;
   const storeCurrency = (store as { currency?: string } | null)?.currency ?? "USD";
   const currency =
     data?.currency || (combineAll ? storeCurrency : urlCurrency || storeCurrency);
 
   const multiCurrency = currencies.length > 1;
+  const allLabel = t("common.all", { defaultValue: "All" });
 
   const aov = s && s.orders_month_count > 0 ? s.sales_month / s.orders_month_count : 0;
   const deltaPct = s && s.sales_prev_month > 0 ? ((s.sales_month - s.sales_prev_month) / s.sales_prev_month) * 100 : null;
@@ -166,34 +190,10 @@ function HomeInner() {
   const ordersSpark = useMemo(() => (data?.daily || []).map((d) => ({ v: d.orders })), [data]);
 
   const rangeCaption = useMemo(() => {
-    if (!periodCustom) return undefined;
-    switch (homeQuery.range) {
-      case "7d":
-        return t("home.range.last7d");
-      case "90d":
-        return t("home.range.last90d");
-      case "today":
-        return t("home.range.today");
-      case "yesterday":
-        return t("home.range.yesterday");
-      case "all":
-        return t("home.range.all");
-      case "custom":
-        return t("home.range.selected");
-      default:
-        return t("home.range.last30d");
-    }
-  }, [periodCustom, homeQuery.range, t]);
+    return t("home.range.last30d", { defaultValue: "Last 30 days" });
+  }, [t]);
 
   const statItems = useMemo(() => {
-    if (periodCustom) {
-      return [
-        { label: t("home.stats.ordersInPeriod"), value: s?.orders_month_count ?? 0 },
-        { label: t("home.stats.salesInRange"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
-        { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
-        { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
-      ];
-    }
     return [
       { label: t("home.stats.ordersToday"), value: s?.orders_today ?? 0 },
       { label: t("home.stats.ordersInProgress"), value: s?.orders_in_progress ?? 0 },
@@ -202,7 +202,16 @@ function HomeInner() {
       { label: t("home.stats.monthlySales"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
       { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
     ];
-  }, [periodCustom, s, t, currency, aov]);
+  }, [s, t, currency, aov]);
+
+  const ordersSparkSub = multiCurrency && !combineAll
+    ? t("home.spark.ordersInCurrency", { currency })
+    : t("home.spark.ordersInRange");
+
+  const revenueSparkSub =
+    deltaPct != null
+      ? t("home.spark.vsPrevPeriod")
+      : t("home.spark.revenueInRange");
 
   const hasError = !!error;
   const querySucceeded = !storeLoading && !isLoading && !hasError && !!data;
@@ -210,58 +219,26 @@ function HomeInner() {
   const hasCurrencySales = !!s && s.sales_month > 0;
 
   const handleCurrencyChange = (code: string) => {
+    if (code === "__all__") {
+      const q: Record<string, string | string[] | undefined> = { ...router.query, combine: "1" };
+      delete q.currency;
+      router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true, scroll: false });
+      return;
+    }
     router.replace(
-      { pathname: router.pathname, query: { ...router.query, currency: code } },
+      { pathname: router.pathname, query: { ...router.query, currency: code, combine: undefined } },
       undefined,
       { shallow: true, scroll: false }
     );
   };
 
-  const handleRangeChange = (range: DateRangePresetValue, from?: Date, to?: Date) => {
+  const handleRangeChange = (range: DateRangePresetValue) => {
     const q: Record<string, string | string[] | undefined> = { ...router.query };
     q.range = range;
-    if (range === "custom" && from && to) {
-      q.from = format(from, "yyyy-MM-dd");
-      q.to = format(to, "yyyy-MM-dd");
-    } else {
-      delete q.from;
-      delete q.to;
-    }
+    delete q.from;
+    delete q.to;
     router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true, scroll: false });
   };
-
-  const handleCombineChange = (v: boolean) => {
-    const q: Record<string, string | string[] | undefined> = { ...router.query };
-    if (v) {
-      q.combine = "1";
-      delete q.currency;
-    } else {
-      delete q.combine;
-    }
-    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true, scroll: false });
-  };
-
-  const customFrom =
-    homeQuery.fromYmd && homeQuery.range === "custom" ? parseISO(homeQuery.fromYmd) : undefined;
-  const customTo =
-    homeQuery.toYmd && homeQuery.range === "custom" ? parseISO(homeQuery.toYmd) : undefined;
-
-  const ordersSparkSub = periodCustom
-    ? multiCurrency && !combineAll
-      ? t("home.spark.ordersInCurrency", { currency })
-      : t("home.spark.ordersInRange")
-    : multiCurrency
-      ? t("home.spark.ordersInCurrency", { currency })
-      : t("home.spark.ordersLast30d");
-
-  const revenueSparkSub =
-    deltaPct != null
-      ? periodCustom
-        ? t("home.spark.vsPrevPeriod")
-        : t("home.spark.vsPrev30d")
-      : periodCustom
-        ? t("home.spark.revenueInRange")
-        : t("home.spark.last30d");
 
   return (
     <div className="px-6 pt-2 pb-6 space-y-4 max-w-[1600px] mx-auto">
@@ -308,47 +285,55 @@ function HomeInner() {
         </Card>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-            <DateRangeFilter
-              range={homeQuery.range}
-              from={customFrom}
-              to={customTo}
-              onChange={handleRangeChange}
-            />
-            <div className="flex flex-wrap items-center gap-4">
-              {multiCurrency && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="combine-currencies"
-                    checked={combineAll}
-                    onCheckedChange={handleCombineChange}
+          <div className="rounded-lg border bg-card/70 px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {multiCurrency ? (
+                  <CurrencySwitcher
+                    currencies={currencies}
+                    selected={currency}
+                    onChange={handleCurrencyChange}
+                    includeAll
+                    allSelected={combineAll}
+                    allLabel={allLabel}
                   />
-                  <Label htmlFor="combine-currencies" className="text-xs text-muted-foreground cursor-pointer">
-                    {t("home.combineAll")}
-                  </Label>
-                </div>
-              )}
-              {multiCurrency && !combineAll && (
-                <CurrencySwitcher
-                  currencies={currencies}
-                  selected={currency}
-                  onChange={handleCurrencyChange}
-                />
-              )}
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {t("home.viewingIn")} <span className="font-mono font-semibold text-foreground">{currency}</span>
+                  </span>
+                )}
+                {combineAll && meta?.fx_fallback && (
+                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    {t("home.fxFallback")}
+                  </span>
+                )}
+                {snapshotRel || showRefreshing ? (
+                  <span className="text-xs text-muted-foreground">
+                    {snapshotRel ? t("home.dataUpdated", { relative: snapshotRel }) : null}
+                    {snapshotRel && showRefreshing ? " · " : null}
+                    {showRefreshing ? t("home.refreshingData") : null}
+                  </span>
+                ) : null}
+              </div>
+              <div className="ml-auto">
+                <Select
+                  value={homeQuery.range}
+                  onValueChange={(v) => handleRangeChange(v as DateRangePresetValue)}
+                >
+                  <SelectTrigger className="h-9 w-[150px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    {DASHBOARD_RANGE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
-
-          {multiCurrency && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground px-1">
-              <span className="font-medium text-foreground">{t("home.multiCurrency")}</span>
-              <span>·</span>
-              <span>{t("home.viewingIn")}</span>
-              <span className="font-mono font-semibold text-foreground">{currency}</span>
-              {combineAll && (
-                <span className="text-xs max-w-md">{t("home.combineHint")}</span>
-              )}
-            </div>
-          )}
 
           {combineAll && meta?.fx_fallback && (
             <Card className="border-amber-200 bg-amber-50/40">
@@ -362,17 +347,6 @@ function HomeInner() {
                 {t("home.noSalesInCurrency", { currency })}
               </CardContent>
             </Card>
-          )}
-
-          {(snapshotRel || showRefreshing) && (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground px-1">
-              {snapshotRel ? (
-                <span>{t("home.dataUpdated", { relative: snapshotRel })}</span>
-              ) : null}
-              {showRefreshing ? (
-                <span className="text-primary">{t("home.refreshingData")}</span>
-              ) : null}
-            </div>
           )}
 
           <StatStrip loading={statsLoading} items={statItems} />

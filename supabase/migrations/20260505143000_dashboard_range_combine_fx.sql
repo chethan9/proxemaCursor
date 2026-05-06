@@ -421,7 +421,6 @@ SET search_path TO 'public'
 AS $get$
 DECLARE
   ck text;
-  pk text;
   cached_payload jsonb;
   cached_updated timestamptz;
   computed jsonb;
@@ -430,13 +429,7 @@ BEGIN
   ck := CASE WHEN COALESCE(p_combine_all, false) THEN '' ELSE COALESCE(NULLIF(trim(p_currency), ''), '') END;
 
   IF p_period_start IS NOT NULL AND p_period_end IS NOT NULL THEN
-    pk := 'c:' || encode(digest(
-      p_period_start::text || '|' || p_period_end::text || '|' || ck || '|' || COALESCE(p_combine_all::text, 'false'),
-      'sha256'
-    ), 'hex');
     skip_cache := true;
-  ELSE
-    pk := '';
   END IF;
 
   IF NOT skip_cache THEN

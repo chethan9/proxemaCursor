@@ -110,6 +110,11 @@ export function siteHomeStatsRpcPeriod(
     return boundsFromYmd(startYmd, todayYmd);
   }
 
+  if (query.range === "60d") {
+    const startYmd = formatInTimeZone(subDays(noonAnchor, 59), tz, "yyyy-MM-dd");
+    return boundsFromYmd(startYmd, todayYmd);
+  }
+
   return { p_period_start: null, p_period_end: null };
 }
 

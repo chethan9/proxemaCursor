@@ -7,6 +7,10 @@ export type GenerateImageInput = {
   /** How many distinct images to produce */
   outputCount: number;
   model: string;
+  aspectRatio?: string;
+  targetWidth?: number;
+  targetHeight?: number;
+  openAiSize?: "1024x1024" | "1536x1024" | "1024x1536";
 };
 
 export type GenerateImageOutput = {

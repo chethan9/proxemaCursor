@@ -10,6 +10,7 @@ import { InventoryShippingTab } from "@/components/product-edit/tabs/InventorySh
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
 import { emptyProductForm, createProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, AlertCircle, Layers, Pencil, X } from "lucide-react";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
@@ -19,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Loader2 as Spinner } from "lucide-react";
 import { useBlockingEffect } from "@/contexts/LoadingProvider";
+import { validateProductForm } from "@/services/productValidation";
 
 function Inner() {
   const router = useRouter();
@@ -34,15 +36,25 @@ function Inner() {
   const [mode, setMode] = useState<"basic" | "advanced">(initialType === "variable" ? "advanced" : "basic");
   const [form, setForm] = useState<ProductFormState>(() => {
     const base = emptyProductForm();
-    return initialType === "variable" ? { ...base, type: "variable" } : base;
+    return initialType === "variable" ? { ...base, type: "variable", status: "draft" } : { ...base, status: "draft" };
   });
   const [initialFormJson, setInitialFormJson] = useState<string>(() => {
     const base = emptyProductForm();
-    return JSON.stringify(initialType === "variable" ? { ...base, type: "variable" } : base);
+    return JSON.stringify(initialType === "variable" ? { ...base, type: "variable", status: "draft" } : { ...base, status: "draft" });
   });
+  const [promoteToVariableOpen, setPromoteToVariableOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
+  const draftStorageKey = `product-new-draft:${id}`;
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Keep mode changes anchored to the top so Basic doesn't appear "mid-page" after switching from Variations.
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    });
+  }, [mode]);
 
   const baselineForm = useMemo(
     () => JSON.parse(initialFormJson) as ProductFormState,
@@ -52,13 +64,36 @@ function Inner() {
   useEffect(() => {
     if (!router.isReady) return;
     if (router.query.type === "variable" && form.type !== "variable") {
-      setForm((p) => ({ ...p, type: "variable" }));
+      setForm((p) => ({ ...p, type: "variable", status: p.status || "draft" }));
       const base = emptyProductForm();
-      setInitialFormJson(JSON.stringify({ ...base, type: "variable" }));
+      setInitialFormJson(JSON.stringify({ ...base, type: "variable", status: "draft" }));
       setMode("advanced");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.type]);
+
+  useEffect(() => {
+    if (!router.isReady || !id || typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(draftStorageKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as ProductFormState;
+      if (parsed?.status !== "draft") return;
+      setForm(parsed);
+      setInitialFormJson(JSON.stringify(parsed));
+      setMode(parsed.type === "variable" ? "advanced" : "basic");
+    } catch {
+      /* ignore invalid cached draft */
+    }
+  }, [router.isReady, id, draftStorageKey]);
+
+  useEffect(() => {
+    if (!id || savedOnce || form.status !== "draft" || typeof window === "undefined") return;
+    const timer = window.setInterval(() => {
+      window.localStorage.setItem(draftStorageKey, JSON.stringify(form));
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [id, savedOnce, form, draftStorageKey]);
 
   const create = useSiteMutation<{ id?: string }, void>({
     mutationFn: () => createProduct(id, form),
@@ -76,6 +111,9 @@ function Inner() {
     onSuccessExtra: () => {
       setSavedOnce(true);
       setInitialFormJson(JSON.stringify(form));
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(draftStorageKey);
+      }
       setTimeout(() => router.push(returnTo), 50);
     },
     onErrorExtra: (err) => {
@@ -131,9 +169,14 @@ function Inner() {
   };
 
   const submit = () => { setServerErrors([]); create.mutate(); };
+  const editorValidation = validateProductForm(form);
+  const saveBlocked = !editorValidation.ok;
+  const publishing = form.status === "publish";
+  const modeTabActiveClass =
+    "bg-orange-500 text-white shadow-sm hover:bg-orange-600";
 
   return (
-    <div className={cn("space-y-4 px-6 pt-4 max-w-[1400px] mx-auto", mode === "advanced" ? "pb-28" : "pb-6")}>
+    <div className="space-y-4 px-6 pt-4 pb-6 max-w-[1400px] mx-auto">
       <h1 className="sr-only">Add new product</h1>
       <div
         role="toolbar"
@@ -154,7 +197,7 @@ function Inner() {
             className={cn(
               "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
               mode === "basic"
-                ? "bg-background text-foreground shadow-sm"
+                ? modeTabActiveClass
                 : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
             )}
           >
@@ -163,16 +206,18 @@ function Inner() {
           </button>
           <button
             type="button"
-            onClick={() => setMode("advanced")}
+            onClick={() => {
+              if (form.type === "simple") {
+                setPromoteToVariableOpen(true);
+                return;
+              }
+              setMode("advanced");
+            }}
             className={cn(
-              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60 focus-visible:ring-offset-2",
-              form.type === "variable"
-                ? mode === "advanced"
-                  ? "bg-orange-500 text-white shadow-sm hover:bg-orange-600"
-                  : "bg-orange-500/25 text-orange-950 ring-1 ring-inset ring-orange-500/45 hover:bg-orange-500/35 dark:bg-orange-500/30 dark:text-orange-50 dark:ring-orange-400/50"
-                : mode === "advanced"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 focus-visible:ring-offset-2",
+              mode === "advanced"
+                ? modeTabActiveClass
+                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
             )}
           >
             <Layers className="size-3.5 shrink-0" />
@@ -185,6 +230,18 @@ function Inner() {
             disabled={create.isPending}
             className="h-8 rounded-md border-0 bg-background px-2 text-xs shadow-none hover:bg-muted/80"
           />
+        </div>
+        <div className="ml-auto flex items-center">
+          <Button
+            size="sm"
+            onClick={submit}
+            disabled={create.isPending || saveBlocked || (publishing && !form.name.trim())}
+            className="h-8 gap-1.5 rounded-md px-3 text-xs"
+            title={saveBlocked ? editorValidation.errors[0]?.message : "Save changes"}
+          >
+            {create.isPending ? <Spinner className="size-3.5 animate-spin" /> : null}
+            {create.isPending ? "Saving…" : "Save changes"}
+          </Button>
         </div>
       </div>
 
@@ -208,7 +265,7 @@ function Inner() {
       )}
 
       {mode === "basic" ? (
-        <BasicEditor storeId={id} productId={null} form={form} setForm={setForm} saving={create.isPending} onCancel={goBack} onPublish={submit} isEdit={false} />
+        <BasicEditor storeId={id} productId={null} form={form} setForm={setForm} />
       ) : (
         <AdvancedShell
           form={form}
@@ -216,9 +273,6 @@ function Inner() {
           setForm={setForm}
           canAdvance={canAdvance}
           onCancel={goBack}
-          onPublish={submit}
-          saving={create.isPending}
-          isEdit={false}
           storeId={id}
           productId={null}
           tabContent={{
@@ -229,6 +283,29 @@ function Inner() {
           }}
         />
       )}
+
+      <AlertDialog open={promoteToVariableOpen} onOpenChange={setPromoteToVariableOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to variable product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This product is currently simple. Switching now will move you into variations mode before saving.
+              You can continue editing and save when ready.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setForm((p) => ({ ...p, type: "variable" }));
+                setMode("advanced");
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

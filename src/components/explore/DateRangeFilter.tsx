@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useTranslation } from "next-i18next";
 
-export type DateRangePresetValue = "all" | "today" | "yesterday" | "7d" | "30d" | "90d" | "custom";
+export type DateRangePresetValue = "all" | "today" | "yesterday" | "7d" | "30d" | "60d" | "90d" | "custom";
 
 /** Defaults when the `site` bundle is not hydrated yet (matches `public/locales/en/site.json`). */
 const DATE_RANGE_FALLBACKS: Record<string, string> = {

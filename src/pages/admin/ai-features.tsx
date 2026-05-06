@@ -23,6 +23,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, FlaskConical, Pencil, Trash2 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/helpers";
+import {
+  ASPECT_RATIO_OPTIONS,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_CUSTOM_HEIGHT,
+  DEFAULT_CUSTOM_WIDTH,
+  DEFAULT_SIZE_PRESET,
+  SIZE_PRESET_OPTIONS,
+  type AspectRatioValue,
+  type SizePresetValue,
+} from "@/lib/ai/image-generation-controls";
 
 type Feature = Tables<"ai_features">;
 
@@ -63,6 +73,10 @@ function Inner() {
   const [editing, setEditing] = useState<Feature | null>(null);
   const [form, setForm] = useState<Partial<Feature>>(emptyForm);
   const [schemaText, setSchemaText] = useState("{}");
+  const [testAspectRatio, setTestAspectRatio] = useState<AspectRatioValue>(DEFAULT_ASPECT_RATIO);
+  const [testSizePreset, setTestSizePreset] = useState<SizePresetValue>(DEFAULT_SIZE_PRESET);
+  const [testCustomWidth, setTestCustomWidth] = useState(String(DEFAULT_CUSTOM_WIDTH));
+  const [testCustomHeight, setTestCustomHeight] = useState(String(DEFAULT_CUSTOM_HEIGHT));
 
   const providerId = (form.provider || "google_gemini") as "google_gemini" | "openai_image";
 
@@ -192,7 +206,14 @@ function Inner() {
       const res = await fetch(`/api/admin/ai-features/${id}/test`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          userInput: {
+            aspect_ratio: testAspectRatio,
+            output_size_preset: testSizePreset,
+            custom_width: testSizePreset === "custom" ? testCustomWidth : undefined,
+            custom_height: testSizePreset === "custom" ? testCustomHeight : undefined,
+          },
+        }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Test failed");
@@ -222,6 +243,66 @@ function Inner() {
       <p className="text-xs text-muted-foreground">
         Illustrations are stylized hints (not real model output). Slug must stay stable for stored generations.
       </p>
+      <Card>
+        <CardContent className="py-3 space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">Superadmin test defaults</div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Aspect ratio</Label>
+              <Select value={testAspectRatio} onValueChange={(v) => setTestAspectRatio(v as AspectRatioValue)}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASPECT_RATIO_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="text-xs">
+                      {option.label} ({option.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Output size</Label>
+              <Select value={testSizePreset} onValueChange={(v) => setTestSizePreset(v as SizePresetValue)}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SIZE_PRESET_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="text-xs">
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom" className="text-xs">Custom size</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {testSizePreset === "custom" && (
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                type="number"
+                min={256}
+                max={4096}
+                value={testCustomWidth}
+                onChange={(e) => setTestCustomWidth(e.target.value)}
+                className="h-8 text-xs"
+                placeholder="Width"
+              />
+              <Input
+                type="number"
+                min={256}
+                max={4096}
+                value={testCustomHeight}
+                onChange={(e) => setTestCustomHeight(e.target.value)}
+                className="h-8 text-xs"
+                placeholder="Height"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">

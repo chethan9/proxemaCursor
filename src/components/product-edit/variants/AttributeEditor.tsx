@@ -1,9 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Trash2, Plus, Loader2, ChevronsUpDown, Sparkles, Search, GripVertical, ChevronRight } from "lucide-react";
 import {
@@ -24,6 +23,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ProductFormState } from "@/services/productEditService";
 import {
   useWooAttributes,
@@ -38,7 +47,28 @@ type Props = {
   setForm: (u: (p: ProductFormState) => ProductFormState) => void;
   productMode: "simple" | "variable";
   onPromoteToVariable?: () => void;
+  /** When true, switching simple ↔ variable via attributes shows a confirmation (existing products only). */
+  isEdit?: boolean;
 };
+
+function applyVariationCheckboxChange(p: ProductFormState, idx: number, checked: boolean): ProductFormState {
+  const a = [...p.attributes];
+  a[idx] = {
+    ...a[idx],
+    variation: checked,
+    visible: checked ? false : a[idx].visible,
+  };
+  const anyVariation = a.some((x) => x.variation);
+  const nextType = anyVariation ? "variable" : p.type === "variable" ? "simple" : p.type;
+  return { ...p, attributes: a, type: nextType };
+}
+
+function isSimpleVariableTransition(prev: ProductFormState["type"], next: ProductFormState["type"]) {
+  return (
+    (prev === "simple" && next === "variable") ||
+    (prev === "variable" && next === "simple")
+  );
+}
 
 function AttributeNameCombobox({
   wooAttributes,
@@ -279,9 +309,11 @@ function SortableOptionRow({
   );
 }
 
-export function AttributeEditor({ storeId, form, setForm, productMode, onPromoteToVariable }: Props) {
+export function AttributeEditor({ storeId, form, setForm, productMode, onPromoteToVariable, isEdit }: Props) {
   const [editingAttr, setEditingAttr] = useState<number | null>(null);
   const [newValueInput, setNewValueInput] = useState<Record<number, string>>({});
+  const [typeSwitchOpen, setTypeSwitchOpen] = useState(false);
+  const pendingFormRef = useRef<ProductFormState | null>(null);
   const { data: wooAttributes = [] } = useWooAttributes(storeId);
   const createWooAttribute = useCreateWooAttribute(storeId);
 
@@ -358,13 +390,24 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
     setEditingAttr(null);
   };
 
+  const confirmTypeSwitch = () => {
+    const next = pendingFormRef.current;
+    pendingFormRef.current = null;
+    setTypeSwitchOpen(false);
+    if (!next) return;
+    setForm(() => next);
+    if (next.type === "variable" && onPromoteToVariable) {
+      queueMicrotask(() => onPromoteToVariable());
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <>
+    <div className="space-y-3">
       {form.attributes.map((attr, idx) => {
         const expanded = editingAttr === idx;
         return (
-          <Card key={idx} className="border-l-4 border-l-primary/60">
-            <CardContent className="p-3 sm:p-4">
+          <div key={idx} className="rounded-lg border border-border/70 bg-background p-3 sm:p-4">
               {expanded ? (
                 <div className="space-y-2">
                   <div className="space-y-1">
@@ -428,21 +471,21 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       onCheckedChange={(v) => {
                         const checked = !!v;
                         setForm((p) => {
-                          const a = [...p.attributes];
-                          a[idx] = {
-                            ...a[idx],
-                            variation: checked,
-                            visible: checked ? false : a[idx].visible,
-                          };
-                          const anyVariation = a.some((x) => x.variation);
-                          const nextType = anyVariation
-                            ? "variable"
-                            : p.type === "variable"
-                            ? "simple"
-                            : p.type;
-                          return { ...p, attributes: a, type: nextType };
+                          const nextState = applyVariationCheckboxChange(p, idx, checked);
+                          if (
+                            isEdit &&
+                            nextState.type !== p.type &&
+                            isSimpleVariableTransition(p.type, nextState.type)
+                          ) {
+                            pendingFormRef.current = nextState;
+                            queueMicrotask(() => setTypeSwitchOpen(true));
+                            return p;
+                          }
+                          if (checked && p.type === "simple" && nextState.type === "variable" && onPromoteToVariable) {
+                            queueMicrotask(() => onPromoteToVariable());
+                          }
+                          return nextState;
                         });
-                        if (checked && productMode === "simple" && onPromoteToVariable) onPromoteToVariable();
                       }}
                     />
                     Use for variations
@@ -510,8 +553,7 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </div>
         );
       })}
 
@@ -523,6 +565,35 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
         isPending={createWooAttribute.isPending}
       />
     </div>
+
+    <AlertDialog
+      open={typeSwitchOpen}
+      onOpenChange={(open) => {
+        if (!open) pendingFormRef.current = null;
+        setTypeSwitchOpen(open);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Change product type?</AlertDialogTitle>
+          <AlertDialogDescription className="text-sm text-muted-foreground space-y-2">
+            <span className="block">
+              Switching between a simple product and a variable product affects SKUs, pricing, and variations already linked in WooCommerce.
+            </span>
+            <span className="block font-medium text-foreground">
+              Save after changing type so WooCommerce stays in sync. Review variations and default options before publishing.
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+          <AlertDialogAction type="button" className="bg-foreground text-background hover:bg-foreground/90" onClick={confirmTypeSwitch}>
+            Continue
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 

@@ -27,8 +27,9 @@ import {
   Boxes,
   Truck,
   FolderTree,
-  Save,
   Images,
+  Eye,
+  PanelRightOpen,
 } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
 import { validateProductForm } from "@/services/productValidation";
@@ -53,31 +54,48 @@ interface Props {
   productId?: string | null;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
-  saving: boolean;
-  onCancel: () => void;
-  onPublish: () => void;
-  isEdit: boolean;
 }
 
 const BANNER_KEY = "product-basic-banner-dismissed";
+const PREVIEW_OPEN_KEY = "product-edit-live-preview-open";
 
-export function BasicEditor({ storeId, productId, form, setForm, saving, onCancel, onPublish, isEdit }: Props) {
+export function BasicEditor({ storeId, productId, form, setForm }: Props) {
   const { t } = useTranslation("site");
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [imageEditorIdx, setImageEditorIdx] = useState(0);
-  const [tagInput, setTagInput] = useState("");
+  const [brandInput, setBrandInput] = useState("");
   const [catSearch, setCatSearch] = useState("");
   const [catOpen, setCatOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(true);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const { data: categories = [] } = useWooTaxonomy(storeId, "categories");
+  const { data: brands = [] } = useWooTaxonomy(storeId, "brands");
   const createCategory = useCreateWooTaxonomy(storeId, "categories");
+  const createBrand = useCreateWooTaxonomy(storeId, "brands");
 
   useEffect(() => {
     setBannerDismissed(typeof window !== "undefined" && localStorage.getItem(BANNER_KEY) === "1");
   }, []);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(PREVIEW_OPEN_KEY) === "0") setPreviewOpen(false);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const persistPreviewOpen = (open: boolean) => {
+    setPreviewOpen(open);
+    try {
+      localStorage.setItem(PREVIEW_OPEN_KEY, open ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
 
   const dismissBanner = () => {
     localStorage.setItem(BANNER_KEY, "1");
@@ -142,12 +160,20 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
     setCatOpen(false);
   };
 
-  const addTag = (name: string) => {
+  const addBrand = async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    if (form.tags.find((t) => t.name.toLowerCase() === trimmed.toLowerCase())) return;
-    setForm((p) => ({ ...p, tags: [...p.tags, { name: trimmed }] }));
-    setTagInput("");
+    const existing = brands.find((b) => b.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      if (!form.brands.find((b) => b.id === existing.id)) {
+        setForm((p) => ({ ...p, brands: [...p.brands, { id: existing.id, name: existing.name }] }));
+      }
+      setBrandInput("");
+      return;
+    }
+    const created = await createBrand.mutateAsync({ name: trimmed });
+    setForm((p) => ({ ...p, brands: [...p.brands, { id: created.id, name: created.name }] }));
+    setBrandInput("");
   };
 
   const setStockQty = (raw: string) => {
@@ -206,7 +232,7 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
   ];
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-6">
       {!bannerDismissed && (
         <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
           <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -220,8 +246,13 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4">
-        <div className="space-y-4">
+      <div
+        className={cn(
+          "relative grid w-full grid-cols-1 gap-5 lg:items-start",
+          previewOpen && "lg:grid-cols-[1fr_minmax(240px,304px)]",
+        )}
+      >
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardContent className="p-4 space-y-3">
               <div className="space-y-1.5">
@@ -237,8 +268,8 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
 
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <div className="space-y-1.5">
+              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
+                <div className="space-y-1.5 shrink-0">
                   <Label className="text-xs inline-flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />Product image</Label>
                   <div className="relative h-[140px] w-[140px]">
                     <button type="button" onClick={() => setImageOpen("main")} className="h-[140px] w-[140px] rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden relative">
@@ -374,6 +405,48 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
                 </div>
               </div>
               <div className="space-y-1.5">
+                <Label>Brands</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {form.brands.map((b) => (
+                    <Badge key={b.id} variant="secondary" className="gap-1.5">
+                      {b.name || `#${b.id}`}
+                      <button onClick={() => setForm((p) => ({ ...p, brands: p.brands.filter((x) => x.id !== b.id) }))}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    list="basic-brand-options"
+                    value={brandInput}
+                    onChange={(e) => setBrandInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void addBrand(brandInput);
+                      }
+                    }}
+                    placeholder="Type brand name"
+                    className="min-w-[220px] flex-1"
+                  />
+                  <datalist id="basic-brand-options">
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.name} />
+                    ))}
+                  </datalist>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void addBrand(brandInput)}
+                    disabled={!brandInput.trim() || createBrand.isPending}
+                  >
+                    {createBrand.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                    Add
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
                 <Label className="inline-flex items-center gap-1.5"><Tag className="h-3.5 w-3.5 text-muted-foreground" />Tags</Label>
                 <TagPicker
                   storeId={storeId}
@@ -472,12 +545,12 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground" required={parentSkuRequired}>SKU</Label>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Input
                     value={form.sku || ""}
                     onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))}
                     placeholder={parentSkuRequired ? "Required" : "Optional"}
-                    className={`flex-1 ${parentSkuRequired && !form.sku.trim() ? "border-destructive" : ""}`}
+                    className={`min-w-[220px] flex-1 ${parentSkuRequired && !form.sku.trim() ? "border-destructive" : ""}`}
                   />
                   <Button
                     type="button"
@@ -510,48 +583,53 @@ export function BasicEditor({ storeId, productId, form, setForm, saving, onCance
           </Card>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-4 lg:h-fit">
-          <LivePreviewCard storeId={storeId} productId={productId} form={form} setForm={setForm} />
+        {previewOpen && (
+          <div className="min-w-0 space-y-2 lg:sticky lg:top-4 h-fit lg:self-start lg:pb-24">
+            <LivePreviewCard
+              storeId={storeId}
+              productId={productId}
+              form={form}
+              setForm={setForm}
+              onHidePreview={() => persistPreviewOpen(false)}
+            />
 
-          {saveBlocked && validation.errors.length > 0 && (
-            <div className="hidden lg:flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
-              <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
-              <ul className="text-foreground/80 space-y-1 list-disc pl-4">
-                {validation.errors.slice(0, 8).map((err, i) => (
-                  <li key={`${err.field}-${i}`}>{err.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
+            {saveBlocked && validation.errors.length > 0 && (
+              <div className="hidden lg:flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
+                <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+                <ul className="text-foreground/80 space-y-1 list-disc pl-4">
+                  {validation.errors.slice(0, 8).map((err, i) => (
+                    <li key={`${err.field}-${i}`}>{err.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
-      <div className="fixed bottom-4 right-4 z-[90] flex flex-col items-end gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
-        <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-border bg-background/95 p-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={onCancel} disabled={saving}>
-            <X className="shrink-0 text-muted-foreground h-4 w-4" />
-            Cancel
-          </Button>
+        {!previewOpen && (
           <Button
-            className="rounded-full bg-foreground text-background hover:bg-foreground/90 gap-1.5 px-5 h-10"
-            onClick={onPublish}
-            disabled={saving || saveBlocked || (publishing && !form.name.trim())}
+            type="button"
+            variant="outline"
+            className="fixed right-3 top-1/2 z-[85] h-14 w-14 -translate-y-1/2 overflow-hidden rounded-full border-border/70 bg-background/95 p-0 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90 hover:scale-[1.02] hover:bg-accent"
+            onClick={() => persistPreviewOpen(true)}
+            title="Show live preview"
+            aria-label="Show live preview"
           >
-            {saving ? (
+            {form.images[0]?.src ? (
               <>
-                <Loader2 className="animate-spin h-4 w-4" />
-                {isEdit ? "Saving…" : "Publishing…"}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={form.images[0].src} alt="" className="h-full w-full object-cover" />
+                <span className="absolute inset-0 bg-black/35" aria-hidden />
+                <span className="absolute bottom-0.5 right-0.5 rounded-full bg-background/95 p-1 shadow-sm">
+                  <PanelRightOpen className="h-3 w-3 text-foreground" />
+                </span>
               </>
             ) : (
-              <>
-                <Save className="shrink-0 h-4 w-4" />
-                {isEdit ? "Save changes" : form.status === "publish" ? "Publish" : "Save"}
-              </>
+              <span className="flex h-full w-full items-center justify-center bg-muted/40">
+                <Eye className="h-5 w-5 text-muted-foreground" />
+              </span>
             )}
           </Button>
-        </div>
-        {saveBlocked && validation.errors[0] && (
-          <p className="pointer-events-none text-xs text-destructive max-w-[260px] text-right px-1 lg:hidden">{validation.errors[0].message}</p>
         )}
       </div>
 

@@ -37,6 +37,7 @@ import { useBlockingEffect } from "@/contexts/LoadingProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { authorizedFetch } from "@/lib/api-client";
+import { validateProductForm } from "@/services/productValidation";
 
 type ProductRow = Record<string, unknown>;
 
@@ -60,12 +61,21 @@ function Inner() {
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [promoteToVariableOpen, setPromoteToVariableOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [wooId, setWooId] = useState<number | null>(null);
   const [baselineForm, setBaselineForm] = useState<ProductFormState | null>(null);
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Keep mode changes anchored to the top so Basic doesn't appear "mid-page" after switching from Variations.
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    });
+  }, [mode]);
 
   useEffect(() => {
     if (!storeId || !productId) return;
@@ -295,6 +305,12 @@ function Inner() {
 
   if (storeLoading || loading) return <ProductEditSkeleton />;
   if (!store || !form) return <div className="p-6">Product not found</div>;
+  const editorValidation = validateProductForm(form);
+  const saveBlocked = !editorValidation.ok;
+  const publishing = form.status === "publish";
+  /** Active Basic / Variations segment — same orange whether the product is simple or variable */
+  const modeTabActiveClass =
+    "bg-orange-500 text-white shadow-sm hover:bg-orange-600";
   if (syncReady && syncLocked) {
     return (
       <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
@@ -317,7 +333,7 @@ function Inner() {
   }
 
   return (
-    <div className={cn("space-y-4 px-6 pt-4 max-w-[1400px] mx-auto", mode === "advanced" ? "pb-28" : "pb-6")}>
+    <div className="space-y-4 px-6 pt-4 pb-6 max-w-[1400px] mx-auto">
       <h1 className="sr-only">Edit product</h1>
       <div
         role="toolbar"
@@ -382,7 +398,7 @@ function Inner() {
               className={cn(
                 "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
                 mode === "basic"
-                  ? "bg-background text-foreground shadow-sm"
+                  ? modeTabActiveClass
                   : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
               )}
             >
@@ -391,16 +407,18 @@ function Inner() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("advanced")}
+              onClick={() => {
+                if (form?.type === "simple") {
+                  setPromoteToVariableOpen(true);
+                  return;
+                }
+                setMode("advanced");
+              }}
               className={cn(
-                "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60 focus-visible:ring-offset-2",
-                form?.type === "variable"
-                  ? mode === "advanced"
-                    ? "bg-orange-500 text-white shadow-sm hover:bg-orange-600"
-                    : "bg-orange-500/25 text-orange-950 ring-1 ring-inset ring-orange-500/45 hover:bg-orange-500/35 dark:bg-orange-500/30 dark:text-orange-50 dark:ring-orange-400/50"
-                  : mode === "advanced"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 focus-visible:ring-offset-2",
+                mode === "advanced"
+                  ? modeTabActiveClass
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
               )}
             >
               <Layers className="size-3.5 shrink-0" />
@@ -417,6 +435,16 @@ function Inner() {
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          <Button
+            size="sm"
+            onClick={onPublish}
+            disabled={save.isPending || saveBlocked || (publishing && !form.name.trim())}
+            className="h-8 gap-1.5 rounded-md px-3 text-xs"
+            title={saveBlocked ? editorValidation.errors[0]?.message : "Save changes"}
+          >
+            {save.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            {save.isPending ? "Saving…" : "Save changes"}
+          </Button>
           <ActivityHistoryDrawer
             entityType="product"
             entityId={productId}
@@ -455,7 +483,12 @@ function Inner() {
       )}
 
       {mode === "basic" ? (
-        <BasicEditor storeId={storeId} productId={productId as string} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} saving={save.isPending} onCancel={goBack} onPublish={onPublish} isEdit={true} />
+        <BasicEditor
+          storeId={storeId}
+          productId={productId as string}
+          form={form}
+          setForm={(u) => setForm((p) => (p ? u(p) : p))}
+        />
       ) : (
         <AdvancedShell
           form={form}
@@ -463,9 +496,6 @@ function Inner() {
           setForm={(u) => setForm((p) => (p ? u(p) : p))}
           canAdvance={canAdvance}
           onCancel={goBack}
-          onPublish={onPublish}
-          saving={save.isPending}
-          isEdit={true}
           storeId={storeId}
           productId={productId}
           tabContent={{
@@ -476,6 +506,29 @@ function Inner() {
           }}
         />
       )}
+
+      <AlertDialog open={promoteToVariableOpen} onOpenChange={setPromoteToVariableOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to variable product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This product is currently simple. Switching now will move you into variations mode before saving.
+              You can still review and save when ready.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setForm((p) => (p ? { ...p, type: "variable" } : p));
+                setMode("advanced");
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

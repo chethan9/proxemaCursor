@@ -7,6 +7,7 @@ import { appendAdditionalPromptSegment, renderPromptTemplate } from "@/lib/ai/pr
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
 import { getDecryptedProviderApiKey } from "@/services/aiProviderCredentials.server";
 import type { TablesInsert } from "@/integrations/supabase/helpers";
+import { resolveImageControls } from "@/lib/ai/image-generation-controls";
 
 type GenerateBody = {
   storeId?: string;
@@ -118,6 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   const persistedUserInput = { ...userInputStr };
   if (additionalPrompt) persistedUserInput.additional_prompt = additionalPrompt;
+  const imageControls = resolveImageControls(userInputStr);
 
   const prompts: string[] = [];
   for (let i = 0; i < outputCount; i++) {
@@ -127,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       index: i + 1,
       total: outputCount,
     });
-    prompts.push(appendAdditionalPromptSegment(rendered, additionalPrompt));
+    prompts.push(appendAdditionalPromptSegment(rendered, `${imageControls.instruction}${additionalPrompt ? `\n${additionalPrompt}` : ""}`));
   }
 
   const buffers: Buffer[] = [];
@@ -140,6 +142,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sourceImageUrls: urls,
           outputCount: 1,
           model: feature.model,
+          aspectRatio: imageControls.aspectRatio,
+          targetWidth: imageControls.width,
+          targetHeight: imageControls.height,
+          openAiSize: imageControls.openAiSize,
         },
         apiKey
       );
