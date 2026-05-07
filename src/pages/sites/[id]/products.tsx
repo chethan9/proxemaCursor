@@ -25,6 +25,7 @@ function ProductsInner() {
         storeId={id}
         storeUrl={store.url}
         storeName={store.name}
+        storeCurrency={store.currency ?? "USD"}
         search={search}
         onSearchChange={setSearch}
         embedHeader

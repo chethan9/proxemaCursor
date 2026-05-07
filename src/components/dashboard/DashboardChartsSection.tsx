@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "next-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   PieChart,
@@ -48,18 +49,22 @@ export function DashboardChartsSection({
   aspectChartData,
   timelineData,
 }: DashboardChartsSectionProps) {
+  const { t } = useTranslation("common");
+  const barSuccessful = t("platformDashboard.charts.barSuccessful");
+  const barFailed = t("platformDashboard.charts.barFailed");
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Sync Status</CardTitle>
-            <CardDescription>Breakdown of sync outcomes</CardDescription>
+            <CardTitle className="text-lg">{t("platformDashboard.charts.syncStatusTitle")}</CardTitle>
+            <CardDescription>{t("platformDashboard.charts.syncStatusDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             {syncStatusData.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-muted-foreground">
-                <p className="text-sm">No sync data yet</p>
+                <p className="text-sm">{t("platformDashboard.charts.noSyncData")}</p>
               </div>
             ) : (
               <>
@@ -84,7 +89,7 @@ export function DashboardChartsSection({
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-3xl font-bold tabular-nums">{successRate}%</span>
-                    <span className="text-xs text-muted-foreground">success rate</span>
+                    <span className="text-xs text-muted-foreground">{t("platformDashboard.charts.successRateLabel")}</span>
                   </div>
                 </div>
                 <div className="mt-4 space-y-1.5">
@@ -105,13 +110,13 @@ export function DashboardChartsSection({
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg">Syncs by Data Type</CardTitle>
-            <CardDescription>Successful vs failed syncs per aspect</CardDescription>
+            <CardTitle className="text-lg">{t("platformDashboard.charts.syncsByTypeTitle")}</CardTitle>
+            <CardDescription>{t("platformDashboard.charts.syncsByTypeDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             {aspectChartData.length === 0 ? (
               <div className="h-[260px] flex items-center justify-center text-muted-foreground">
-                <p className="text-sm">No sync data yet</p>
+                <p className="text-sm">{t("platformDashboard.charts.noSyncData")}</p>
               </div>
             ) : (
               <div className="h-[260px] w-full">
@@ -140,8 +145,8 @@ export function DashboardChartsSection({
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
-                    <Bar dataKey="successful" name="Successful" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="successful" name={barSuccessful} fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="failed" name={barFailed} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -152,13 +157,13 @@ export function DashboardChartsSection({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Sync Activity Timeline</CardTitle>
-          <CardDescription>Daily sync outcomes over the past week</CardDescription>
+          <CardTitle className="text-lg">{t("platformDashboard.charts.timelineTitle")}</CardTitle>
+          <CardDescription>{t("platformDashboard.charts.timelineDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {timelineData.length === 0 ? (
             <div className="h-[220px] flex items-center justify-center text-muted-foreground">
-              <p className="text-sm">No sync activity yet</p>
+              <p className="text-sm">{t("platformDashboard.charts.noSyncActivity")}</p>
             </div>
           ) : (
             <div className="h-[220px]">
@@ -169,8 +174,8 @@ export function DashboardChartsSection({
                   <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
                   <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="circle" />
-                  <Line type="monotone" dataKey="successful" name="Successful" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
-                  <Line type="monotone" dataKey="failed" name="Failed" stroke="#ef4444" strokeWidth={2} dot={{ fill: "#ef4444", r: 3 }} />
+                  <Line type="monotone" dataKey="successful" name={barSuccessful} stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
+                  <Line type="monotone" dataKey="failed" name={barFailed} stroke="#ef4444" strokeWidth={2} dot={{ fill: "#ef4444", r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

@@ -21,6 +21,7 @@ export function CurrencySwitcher({
   allLabel = "All",
 }: Props) {
   const { t } = useTranslation("site");
+  const { t: tCommon } = useTranslation("common");
   const visibleCurrencies = currencies.slice(0, 5);
   const hiddenCurrencies = currencies.slice(5);
   const collapseCurrencies = allSelected;
@@ -70,9 +71,9 @@ export function CurrencySwitcher({
               size="sm"
               variant="ghost"
               className="h-7 px-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted"
-              title={t("common.more", { defaultValue: "More" })}
+              title={tCommon("actions.more")}
             >
-              +more
+              +{tCommon("actions.more")}
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-[220px] p-1.5">

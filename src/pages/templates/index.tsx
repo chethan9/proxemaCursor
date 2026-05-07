@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -17,17 +18,15 @@ import { format } from "date-fns";
 import { SEO } from "@/components/SEO";
 import { useBranding } from "@/contexts/BrandingProvider";
 
-const TYPE_META: Record<
-  "invoice" | "pickslip" | "report",
-  { label: string; icon: typeof FileText; description: string }
-> = {
-  invoice: { label: "Invoices", icon: Receipt, description: "Customer-facing PDFs sent or downloaded with orders." },
-  pickslip: { label: "Pick Slips", icon: FileText, description: "Warehouse documents for fulfillment and packing." },
-  report: { label: "Reports", icon: BarChart2, description: "PDF summaries and tabular sales reports from store orders." },
-};
+const TYPE_ICON = {
+  invoice: Receipt,
+  pickslip: FileText,
+  report: BarChart2,
+} as const;
 
 function TemplatesInner() {
   const router = useRouter();
+  const { t } = useTranslation("common");
   const { brandName } = useBranding();
   const { profile } = useAuth();
   const clientId = profile?.client_id ?? null;
@@ -47,20 +46,20 @@ function TemplatesInner() {
       return forkSampleTemplate(sampleId, clientId);
     },
     onSuccess: (newId) => {
-      toast({ title: "Template copied", description: "Opening editor…" });
+      toast({ title: t("templatesPage.toastCopied"), description: t("templatesPage.toastCopiedDesc") });
       qc.invalidateQueries({ queryKey: ["templates"] });
       router.push(`/templates/${newId}`);
     },
-    onError: (e: Error) => toast({ title: "Could not fork", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("templatesPage.toastForkFail"), description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteTemplate,
     onSuccess: () => {
-      toast({ title: "Template deleted" });
+      toast({ title: t("templatesPage.toastDeleted") });
       qc.invalidateQueries({ queryKey: ["templates"] });
     },
-    onError: (e: Error) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("templatesPage.toastDeleteFail"), description: e.message, variant: "destructive" }),
   });
 
   const setDefaultMutation = useMutation({
@@ -69,66 +68,71 @@ function TemplatesInner() {
       return setDefaultForType(clientId, type, id);
     },
     onSuccess: () => {
-      toast({ title: "Default updated" });
+      toast({ title: t("templatesPage.toastDefaultUpdated") });
       qc.invalidateQueries({ queryKey: ["templates"] });
     },
-    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("templatesPage.toastFailed"), description: e.message, variant: "destructive" }),
   });
 
-  const filtered = templates.filter((t) => !search.trim() || t.name.toLowerCase().includes(search.toLowerCase()));
-  const samples = filtered.filter((t) => t.is_sample);
-  const custom = filtered.filter((t) => !t.is_sample);
-  const meta = TYPE_META[activeType];
-  const TypeIcon = meta.icon;
+  const filtered = templates.filter((row) => !search.trim() || row.name.toLowerCase().includes(search.toLowerCase()));
+  const samples = filtered.filter((row) => row.is_sample);
+  const custom = filtered.filter((row) => !row.is_sample);
+  const typeDesc = (type: "invoice" | "pickslip" | "report") =>
+    type === "invoice" ? t("templatesPage.typeDescInvoice") : type === "pickslip" ? t("templatesPage.typeDescPickslip") : t("templatesPage.typeDescReport");
+
+  const typeNoun = (type: "invoice" | "pickslip" | "report") =>
+    type === "invoice" ? t("templatesPage.typeInvoice") : type === "pickslip" ? t("templatesPage.typePickslip") : t("templatesPage.typeReport");
 
   return (
     <>
-      <SEO title={`Templates · ${brandName}`} />
+      <SEO title={t("templatesPage.seoTitle", { brand: brandName })} />
       <div className="min-h-screen bg-white">
         <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <div className="space-y-0.5">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">PDF templates</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t("templatesPage.title")}</h1>
             <p className="text-xs text-slate-500 max-w-lg leading-snug">
-              Invoice, pick slip, and report layouts. Duplicate a starter or create blank—then edit in the visual builder.
+              {t("templatesPage.subtitle")}
             </p>
           </div>
           <Button onClick={() => router.push(`/templates/new?type=${activeType}`)} size="sm" className="gap-1.5 shrink-0 h-9">
-            <Plus className="h-3.5 w-3.5" /> New template
+            <Plus className="h-3.5 w-3.5" /> {t("templatesPage.newTemplate")}
           </Button>
         </div>
 
         <Tabs value={activeType} onValueChange={(v) => setActiveType(v as "invoice" | "pickslip" | "report")} className="w-full">
           <TabsList className="bg-slate-100/80 border border-slate-200/80 flex-wrap h-auto gap-0.5 py-1 px-1 rounded-lg text-sm">
-            <TabsTrigger value="invoice" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> Invoices</TabsTrigger>
-            <TabsTrigger value="pickslip" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Pick Slips</TabsTrigger>
-            <TabsTrigger value="report" className="gap-1.5"><BarChart2 className="h-3.5 w-3.5" /> Reports</TabsTrigger>
+            <TabsTrigger value="invoice" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> {t("templatesPage.tabInvoice")}</TabsTrigger>
+            <TabsTrigger value="pickslip" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> {t("templatesPage.tabPickslip")}</TabsTrigger>
+            <TabsTrigger value="report" className="gap-1.5"><BarChart2 className="h-3.5 w-3.5" /> {t("templatesPage.tabReport")}</TabsTrigger>
           </TabsList>
 
-          {(["invoice", "pickslip", "report"] as const).map((type) => (
+          {(["invoice", "pickslip", "report"] as const).map((type) => {
+            const TabIcon = TYPE_ICON[type];
+            return (
             <TabsContent key={type} value={type} className="mt-5 focus-visible:outline-none">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                <p className="text-xs text-slate-500 max-w-md">{TYPE_META[type].description}</p>
+                <p className="text-xs text-slate-500 max-w-md">{typeDesc(type)}</p>
                 <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="pl-9 h-9 text-sm border-slate-200 bg-white" />
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("templatesPage.searchPlaceholder")} className="ps-9 h-9 text-sm border-slate-200 bg-white" />
                 </div>
               </div>
 
               {isLoading ? (
-                <div className="text-sm text-slate-500 py-12 text-center">Loading templates…</div>
+                <div className="text-sm text-slate-500 py-12 text-center">{t("templatesPage.loading")}</div>
               ) : (
                 <div className="space-y-8">
                   {samples.length > 0 && (
                     <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
                       <div className="flex flex-wrap items-center gap-2 mb-4">
                         <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                        <h2 className="text-sm font-semibold text-slate-900">Starter layouts</h2>
-                        <span className="text-[11px] text-slate-500">Open to preview · use menu “Customize a copy” only if you want an editable duplicate</span>
+                        <h2 className="text-sm font-semibold text-slate-900">{t("templatesPage.starterSection")}</h2>
+                        <span className="text-[11px] text-slate-500">{t("templatesPage.starterHint")}</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {samples.map((t) => (
-                          <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} onSetDefault={() => setDefaultMutation.mutate({ id: t.id, type: t.type as TemplateType })} forking={forkMutation.isPending} />
+                        {samples.map((tpl) => (
+                          <TemplateCard key={tpl.id} template={tpl} onUse={() => router.push(`/templates/${tpl.id}`)} onFork={() => forkMutation.mutate(tpl.id)} onDelete={() => deleteMutation.mutate(tpl.id)} onSetDefault={() => setDefaultMutation.mutate({ id: tpl.id, type: tpl.type as TemplateType })} forking={forkMutation.isPending} />
                         ))}
                       </div>
                     </section>
@@ -136,20 +140,20 @@ function TemplatesInner() {
 
                   <section>
                     <div className="flex items-center gap-2 mb-4">
-                      <h2 className="text-sm font-semibold text-slate-900">Your templates</h2>
-                      <span className="text-[11px] text-slate-500">Workspace</span>
+                      <h2 className="text-sm font-semibold text-slate-900">{t("templatesPage.yourTemplates")}</h2>
+                      <span className="text-[11px] text-slate-500">{t("templatesPage.workspace")}</span>
                     </div>
                     {custom.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center max-w-md mx-auto">
-                        <TypeIcon className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                        <h3 className="text-sm font-medium text-slate-900 mb-1">No custom {TYPE_META[type].label.toLowerCase()} yet</h3>
-                        <p className="text-[11px] text-slate-500 mb-4">Duplicate a starter or start blank.</p>
-                        <Button size="sm" variant="outline" className="border-slate-200 h-8 text-xs" onClick={() => router.push(`/templates/new?type=${type}`)}><Plus className="h-3 w-3 mr-1" /> Blank template</Button>
+                        <TabIcon className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                        <h3 className="text-sm font-medium text-slate-900 mb-1">{t("templatesPage.noCustom", { type: typeNoun(type) })}</h3>
+                        <p className="text-[11px] text-slate-500 mb-4">{t("templatesPage.noCustomHint")}</p>
+                        <Button size="sm" variant="outline" className="border-slate-200 h-8 text-xs" onClick={() => router.push(`/templates/new?type=${type}`)}><Plus className="h-3 w-3 me-1" /> {t("templatesPage.blankTemplate")}</Button>
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {custom.map((t) => (
-                          <TemplateCard key={t.id} t={t} onUse={() => router.push(`/templates/${t.id}`)} onFork={() => forkMutation.mutate(t.id)} onDelete={() => deleteMutation.mutate(t.id)} onSetDefault={() => setDefaultMutation.mutate({ id: t.id, type: t.type as TemplateType })} forking={forkMutation.isPending} />
+                        {custom.map((tpl) => (
+                          <TemplateCard key={tpl.id} template={tpl} onUse={() => router.push(`/templates/${tpl.id}`)} onFork={() => forkMutation.mutate(tpl.id)} onDelete={() => deleteMutation.mutate(tpl.id)} onSetDefault={() => setDefaultMutation.mutate({ id: tpl.id, type: tpl.type as TemplateType })} forking={forkMutation.isPending} />
                         ))}
                       </div>
                     )}
@@ -157,7 +161,8 @@ function TemplatesInner() {
                 </div>
               )}
             </TabsContent>
-          ))}
+            );
+          })}
         </Tabs>
         </div>
       </div>
@@ -165,54 +170,55 @@ function TemplatesInner() {
   );
 }
 
-function TemplateCard({ t, onUse, onFork, onDelete, onSetDefault, forking }: { t: TemplateRow; onUse: () => void; onFork: () => void; onDelete: () => void; onSetDefault: () => void; forking: boolean }) {
+function TemplateCard({ template, onUse, onFork, onDelete, onSetDefault, forking }: { template: TemplateRow; onUse: () => void; onFork: () => void; onDelete: () => void; onSetDefault: () => void; forking: boolean }) {
+  const { t } = useTranslation("common");
   return (
     <div className="group rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all overflow-hidden">
       <div className="aspect-[4/3] bg-gradient-to-b from-slate-50 to-white flex items-center justify-center border-b border-slate-100 relative">
         <FileText className="h-8 w-8 text-slate-200 group-hover:text-slate-300 transition-colors" />
-        {t.is_default_for_type && (
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-50 text-amber-900 text-[9px] font-medium border border-amber-100">
-            <Star className="h-2 w-2 fill-amber-500 text-amber-500" /> Default
+        {template.is_default_for_type && (
+          <div className="absolute top-1.5 end-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-50 text-amber-900 text-[9px] font-medium border border-amber-100">
+            <Star className="h-2 w-2 fill-amber-500 text-amber-500" /> {t("templatesPage.default")}
           </div>
         )}
       </div>
       <div className="p-2.5">
         <div className="flex items-start justify-between gap-1 mb-0.5">
-          <h3 className="text-xs font-semibold truncate leading-snug text-slate-900">{t.name}</h3>
+          <h3 className="text-xs font-semibold truncate leading-snug text-slate-900">{template.name}</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1 -mt-0.5 shrink-0"><MoreVertical className="h-3 w-3" /></Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6 -me-1 -mt-0.5 shrink-0"><MoreVertical className="h-3 w-3" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {t.is_sample ? (
+              {template.is_sample ? (
                 <>
-                  <DropdownMenuItem onClick={onSetDefault} disabled={t.is_default_for_type}>
-                    <Star className={`h-3.5 w-3.5 mr-2 ${t.is_default_for_type ? "fill-amber-500 text-amber-500" : ""}`} />
-                    {t.is_default_for_type ? "Account default" : "Set as default"}
+                  <DropdownMenuItem onClick={onSetDefault} disabled={template.is_default_for_type}>
+                    <Star className={`h-3.5 w-3.5 me-2 ${template.is_default_for_type ? "fill-amber-500 text-amber-500" : ""}`} />
+                    {template.is_default_for_type ? t("templatesPage.accountDefault") : t("templatesPage.setAsDefault")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onFork} disabled={forking}><Copy className="h-3.5 w-3.5 mr-2" /> Customize a copy</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onFork} disabled={forking}><Copy className="h-3.5 w-3.5 me-2" /> {t("templatesPage.customizeCopy")}</DropdownMenuItem>
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem onClick={onUse}><Pencil className="h-3.5 w-3.5 mr-2" /> Edit</DropdownMenuItem>
-                  <DropdownMenuItem onClick={onSetDefault} disabled={t.is_default_for_type}><Star className={`h-3.5 w-3.5 mr-2 ${t.is_default_for_type ? "fill-amber-500 text-amber-500" : ""}`} /> {t.is_default_for_type ? "Default template" : "Set as default"}</DropdownMenuItem>
-                  <DropdownMenuItem onClick={onFork} disabled={forking}><Copy className="h-3.5 w-3.5 mr-2" /> Duplicate</DropdownMenuItem>
-                  <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive"><Trash2 className="h-3.5 w-3.5 mr-2" /> Delete</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onUse}><Pencil className="h-3.5 w-3.5 me-2" /> {t("templatesPage.edit")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onSetDefault} disabled={template.is_default_for_type}><Star className={`h-3.5 w-3.5 me-2 ${template.is_default_for_type ? "fill-amber-500 text-amber-500" : ""}`} /> {template.is_default_for_type ? t("templatesPage.defaultTemplate") : t("templatesPage.setAsDefault")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onFork} disabled={forking}><Copy className="h-3.5 w-3.5 me-2" /> {t("templatesPage.duplicate")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive"><Trash2 className="h-3.5 w-3.5 me-2" /> {t("templatesPage.delete")}</DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-1.5 mb-2">
-          {t.is_sample ? <Badge variant="outline" className="h-5 text-[9px] gap-0.5 px-1 border-amber-200 text-amber-900 bg-amber-50/80"><Sparkles className="h-2 w-2" /> Sample</Badge> : <Badge variant="outline" className="h-5 text-[9px] px-1 border-slate-200 text-slate-600">Custom</Badge>}
-          <span className="text-[9px] text-slate-400">{format(new Date(t.updated_at), "MMM d")}</span>
+          {template.is_sample ? <Badge variant="outline" className="h-5 text-[9px] gap-0.5 px-1 border-amber-200 text-amber-900 bg-amber-50/80"><Sparkles className="h-2 w-2" /> {t("templatesPage.sample")}</Badge> : <Badge variant="outline" className="h-5 text-[9px] px-1 border-slate-200 text-slate-600">{t("templatesPage.custom")}</Badge>}
+          <span className="text-[9px] text-slate-400">{format(new Date(template.updated_at), "MMM d")}</span>
         </div>
-        {t.is_sample ? (
+        {template.is_sample ? (
           <Button size="sm" className="w-full h-8 text-[11px]" onClick={onUse}>
-            Open
+            {t("templatesPage.open")}
           </Button>
         ) : (
-          <Button size="sm" className="w-full h-8 text-[11px]" onClick={onUse}>Edit</Button>
+          <Button size="sm" className="w-full h-8 text-[11px]" onClick={onUse}>{t("templatesPage.edit")}</Button>
         )}
       </div>
     </div>

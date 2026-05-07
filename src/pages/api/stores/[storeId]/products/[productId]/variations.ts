@@ -28,30 +28,130 @@ type WooVariation = {
 
 function toJson<T>(o: T): Json { return JSON.parse(JSON.stringify(o)) as Json; }
 
+/** Prefer column `attributes`; fall back to `raw_data.attributes` (Woo snapshot) when the column was cleared or never backfilled. */
+function variationAttributesFromRow(row: Record<string, unknown>): { name: string; option: string }[] {
+  const direct = Array.isArray(row.attributes) ? (row.attributes as { name: string; option: string }[]) : [];
+  if (direct.length > 0) return direct;
+  const raw = row.raw_data;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const attrs = (raw as { attributes?: unknown }).attributes;
+    if (Array.isArray(attrs) && attrs.length > 0) {
+      return attrs as { name: string; option: string }[];
+    }
+  }
+  return [];
+}
+
+function trimStr(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
+/** Woo batch/sync sometimes leaves typed columns null while `raw_data` still has the REST snapshot. */
+function rawSnapshot(row: Record<string, unknown>): WooVariation | null {
+  const raw = row.raw_data;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return raw as WooVariation;
+}
+
+function regularPriceFromRow(row: Record<string, unknown>): string {
+  if (row.regular_price != null && row.regular_price !== "") {
+    const n = typeof row.regular_price === "number" ? row.regular_price : parseFloat(String(row.regular_price));
+    if (Number.isFinite(n)) return String(row.regular_price).trim() || String(n);
+  }
+  const raw = rawSnapshot(row);
+  if (raw) {
+    const rp = trimStr(raw.regular_price);
+    if (rp) return rp;
+    const p = trimStr(raw.price);
+    if (p) return p;
+  }
+  return "";
+}
+
+function salePriceFromRow(row: Record<string, unknown>): string {
+  if (row.sale_price != null && row.sale_price !== "") {
+    const n = typeof row.sale_price === "number" ? row.sale_price : parseFloat(String(row.sale_price));
+    if (Number.isFinite(n)) return String(row.sale_price).trim() || String(n);
+  }
+  const raw = rawSnapshot(row);
+  if (raw) {
+    const sp = trimStr(raw.sale_price);
+    if (sp) return sp;
+  }
+  return "";
+}
+
+function skuFromRow(row: Record<string, unknown>): string {
+  const d = trimStr(row.sku);
+  if (d) return d;
+  const raw = rawSnapshot(row);
+  return raw ? trimStr(raw.sku) : "";
+}
+
+function dimensionsFromRow(row: Record<string, unknown>): { length: string; width: string; height: string } {
+  const d = row.dimensions as { length?: string; width?: string; height?: string } | null;
+  if (d && (d.length || d.width || d.height)) {
+    return {
+      length: String(d.length || ""),
+      width: String(d.width || ""),
+      height: String(d.height || ""),
+    };
+  }
+  const raw = rawSnapshot(row);
+  if (raw?.dimensions && typeof raw.dimensions === "object") {
+    const rd = raw.dimensions;
+    return {
+      length: trimStr(rd.length),
+      width: trimStr(rd.width),
+      height: trimStr(rd.height),
+    };
+  }
+  return { length: "", width: "", height: "" };
+}
+
+function imageFromRow(row: Record<string, unknown>): { id: number; src: string; alt: string } | null {
+  const image = row.image as { id: number; src: string; alt: string } | null;
+  if (image?.src || image?.id) return { id: image.id, src: image.src, alt: image.alt || "" };
+  const raw = rawSnapshot(row);
+  if (raw?.image?.src || raw?.image?.id) {
+    const im = raw.image;
+    return { id: im.id, src: im.src, alt: im.alt || "" };
+  }
+  return null;
+}
+
 function mapRowToResponse(row: Record<string, unknown>) {
-  const attributes = Array.isArray(row.attributes) ? (row.attributes as { name: string; option: string }[]) : [];
+  const attributes = variationAttributesFromRow(row);
   const key = compositeVariationKey(attributes);
   const gallery = Array.isArray(row.gallery) ? (row.gallery as { id: number; src: string }[]) : [];
-  const image = row.image as { id: number; src: string; alt: string } | null;
+  const image = imageFromRow(row);
+  const raw = rawSnapshot(row);
+  let stockQty = row.stock_quantity as number | null;
+  if (stockQty == null && raw && raw.stock_quantity != null) stockQty = raw.stock_quantity;
+  let stockStatus = trimStr(row.stock_status) || "instock";
+  if (!trimStr(row.stock_status) && raw?.stock_status) stockStatus = trimStr(raw.stock_status) || "instock";
+  let manageStock = !!row.manage_stock;
+  if (raw && typeof raw.manage_stock === "boolean") manageStock = raw.manage_stock;
+
   return {
     id: row.woo_id,
     key,
     attributes,
-    regular_price: row.regular_price != null ? String(row.regular_price) : "",
-    sale_price: row.sale_price != null ? String(row.sale_price) : "",
-    sku: (row.sku as string) || "",
-    stock_quantity: row.stock_quantity,
-    stock_status: (row.stock_status as string) || "instock",
-    manage_stock: !!row.manage_stock,
-    weight: (row.weight as string) || "",
-    dimensions: (row.dimensions as { length: string; width: string; height: string }) || { length: "", width: "", height: "" },
-    description: (row.description as string) || "",
-    image: image ? { id: image.id, src: image.src, alt: image.alt } : null,
+    regular_price: regularPriceFromRow(row),
+    sale_price: salePriceFromRow(row),
+    sku: skuFromRow(row),
+    stock_quantity: stockQty,
+    stock_status: stockStatus as "instock" | "outofstock" | "onbackorder",
+    manage_stock: manageStock,
+    weight: trimStr(row.weight) || (raw ? trimStr(raw.weight) : ""),
+    dimensions: dimensionsFromRow(row),
+    description: trimStr(row.description) || (raw ? trimStr(raw.description) : ""),
+    image,
     gallery,
     enabled: (row.status as string) !== "private",
-    virtual: !!row.virtual,
-    downloadable: !!row.downloadable,
-    tax_class: (row.tax_class as string) || "",
+    virtual: typeof row.virtual === "boolean" ? row.virtual : !!raw?.virtual,
+    downloadable: typeof row.downloadable === "boolean" ? row.downloadable : !!raw?.downloadable,
+    tax_class: trimStr(row.tax_class) || (raw ? trimStr(raw.tax_class) : ""),
   };
 }
 
@@ -149,7 +249,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(rows.map(mapRowToResponse));
     }
 
-    return res.status(200).json(list.map(mapRowToResponse));
+    let mappedList = list.map(mapRowToResponse);
+    const allAttrsMissing =
+      mappedList.length > 0 && mappedList.every((v) => (v.attributes?.length ?? 0) === 0);
+    if (allAttrsMissing) {
+      const rows = await fetchAndUpsert(storeId, productId, local.woo_id);
+      mappedList = rows.map(mapRowToResponse);
+      return res.status(200).json(mappedList);
+    }
+
+    const allPricesBlank =
+      mappedList.length > 0 &&
+      mappedList.every((v) => !trimStr(v.regular_price));
+    if (allPricesBlank) {
+      const rows = await fetchAndUpsert(storeId, productId, local.woo_id);
+      mappedList = rows.map(mapRowToResponse);
+      return res.status(200).json(mappedList);
+    }
+    return res.status(200).json(mappedList);
   } catch (e) {
     console.error("[variations-get]", e);
     return res.status(500).json({ error: e instanceof Error ? e.message : "Fetch failed" });

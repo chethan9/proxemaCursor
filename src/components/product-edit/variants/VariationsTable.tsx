@@ -136,7 +136,8 @@ export function VariationsTable({
     setSelected(new Set());
   };
 
-  const cellInput = "h-9 border-0 bg-muted/40 rounded-md text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background placeholder:text-muted-foreground/50";
+  const cellInput =
+    "h-9 min-w-0 w-full max-w-full border-0 bg-muted/40 rounded-md text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background placeholder:text-muted-foreground/50";
 
   const autoFillSkus = () => {
     const base = (parentSku?.trim() || (parentName ? slugify(parentName) : "") || "SKU").toUpperCase();
@@ -165,9 +166,9 @@ export function VariationsTable({
   }, [defaultKey, variations]);
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("min-w-0 space-y-3", className)}>
       {variations.length > 0 ? (
-        <div className="rounded-lg border border-border/70 bg-muted/15 p-3 space-y-3">
+        <div className="min-w-0 rounded-lg border border-border/70 bg-muted/15 p-3 space-y-3">
           {variations.length > 0 && onDefaultKeyChange && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
               <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground shrink-0">Default variation</span>
@@ -199,7 +200,7 @@ export function VariationsTable({
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Variation bulk actions">
+          <div className="flex min-w-0 flex-wrap items-center gap-2" role="toolbar" aria-label="Variation bulk actions">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" size="sm" disabled={selected.size === 0} className="rounded-full" title={selected.size === 0 ? "Select at least one variation" : undefined}>
@@ -230,7 +231,7 @@ export function VariationsTable({
                 <Button size="sm" type="button" variant="ghost" onClick={() => { setBulkMode(null); setBulkValue(""); setBulkError(""); }}>Cancel</Button>
               </>
             )}
-            <div className="ml-auto">
+            <div className="ml-auto min-w-0 shrink">
               <Button
                 type="button"
                 variant="outline"
@@ -257,21 +258,21 @@ export function VariationsTable({
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{bulkError}</div>
       )}
 
-      <div className="rounded-lg border border-border/70 overflow-x-auto bg-background">
-        <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
+      <div className="min-w-0 max-w-full rounded-lg border border-border/70 bg-background overflow-x-auto overscroll-x-contain">
+        <table className="w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="border-b bg-muted/30 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              <th className="w-10 px-2 py-3 text-left align-middle">
+              <th className="w-10 shrink-0 px-1.5 py-2.5 text-left align-middle sm:px-2 sm:py-3">
                 <Checkbox checked={selected.size === variations.length && variations.length > 0} onCheckedChange={toggleAll} aria-label="Select all variations" />
               </th>
-              <th className="w-[32%] px-2 py-3 text-left align-middle">Options</th>
-              <th className="w-[18%] px-2 py-3 text-left align-middle">SKU</th>
-              <th className="w-[11%] px-2 py-3 text-left align-middle">
+              <th className="min-w-0 w-[30%] px-1.5 py-2.5 text-left align-middle sm:w-[32%] sm:px-2 sm:py-3">Options</th>
+              <th className="min-w-0 w-[20%] px-1.5 py-2.5 text-left align-middle sm:w-[18%] sm:px-2 sm:py-3">SKU</th>
+              <th className="min-w-0 w-[12%] px-1.5 py-2.5 text-left align-middle sm:w-[11%] sm:px-2 sm:py-3">
                 Price <span className="text-destructive">*</span>
               </th>
-              <th className="w-[11%] px-2 py-3 text-left align-middle">Sale</th>
-              <th className="w-[10%] px-2 py-3 text-left align-middle">Stock</th>
-              <th className="w-[88px] px-2 py-3 text-center align-middle">Actions</th>
+              <th className="min-w-0 w-[11%] px-1.5 py-2.5 text-left align-middle sm:px-2 sm:py-3">Sale</th>
+              <th className="min-w-0 w-[10%] px-1.5 py-2.5 text-left align-middle sm:px-2 sm:py-3">Stock</th>
+              <th className="w-[72px] shrink-0 px-1 py-2.5 text-center align-middle sm:w-[88px] sm:px-2 sm:py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -294,10 +295,10 @@ export function VariationsTable({
                     isDefault && "border-l-[3px] border-l-primary bg-primary/[0.06]",
                   )}
                 >
-                  <td className="px-2 py-2 align-middle">
+                  <td className="px-1.5 py-2 align-middle sm:px-2">
                     <Checkbox checked={selected.has(v.key)} onCheckedChange={() => toggle(v.key)} aria-label={`Select ${variationLabel(v)}`} />
                   </td>
-                  <td className="px-2 py-2 align-middle min-w-0">
+                  <td className="px-1.5 py-2 align-middle min-w-0 sm:px-2">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium min-w-0">
                       <span className="min-w-0 break-words leading-snug text-[13px]">{variationLabel(v)}</span>
                       {isDefault && (
@@ -309,10 +310,10 @@ export function VariationsTable({
                       )}
                     </div>
                   </td>
-                  <td className="px-2 py-2 align-middle min-w-0">
+                  <td className="px-1.5 py-2 align-middle min-w-0 sm:px-2">
                     <Input className={cellInput} value={v.sku} onChange={(e) => onUpdate(i, { sku: e.target.value })} placeholder="—" />
                   </td>
-                  <td className="px-2 py-2 align-middle">
+                  <td className="px-1.5 py-2 align-middle sm:px-2">
                     <Input
                       className={cn(cellInput, priceMissing && "ring-1 ring-destructive/30")}
                       value={v.regular_price}
@@ -320,7 +321,7 @@ export function VariationsTable({
                       placeholder="—"
                     />
                   </td>
-                  <td className="px-2 py-2 align-middle">
+                  <td className="px-1.5 py-2 align-middle sm:px-2">
                     <Input
                       className={cn(cellInput, saleInvalid && "ring-1 ring-destructive/40 text-destructive")}
                       value={v.sale_price}
@@ -329,7 +330,7 @@ export function VariationsTable({
                       title={saleInvalid ? "Sale price must be less than regular price" : undefined}
                     />
                   </td>
-                  <td className="px-2 py-2 align-middle">
+                  <td className="px-1.5 py-2 align-middle sm:px-2">
                     <Input
                       className={cn(cellInput, !v.manage_stock && "bg-muted/30 text-muted-foreground cursor-not-allowed")}
                       type="number"
@@ -353,7 +354,7 @@ export function VariationsTable({
                       placeholder="—"
                     />
                   </td>
-                  <td className="px-1 py-2 align-middle">
+                  <td className="px-0.5 py-2 align-middle sm:px-1">
                     <div className="flex items-center justify-end gap-0.5">
                       <Button
                         type="button"

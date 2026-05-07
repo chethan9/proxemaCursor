@@ -45,6 +45,8 @@ interface Props {
   showLanguage: boolean;
   enabledLocaleCodes: string[];
   disabled?: boolean;
+  /** When set (e.g. modal onboarding), portals Select/Popover into this node so Radix Dialog does not block pointer events. */
+  overlayContainer?: HTMLElement | null;
 }
 
 /** Stronger visual signal when a select has a real value vs placeholder. */
@@ -63,6 +65,7 @@ export function StorePreferencesFields({
   showLanguage,
   enabledLocaleCodes,
   disabled,
+  overlayContainer,
 }: Props) {
   const { t } = useTranslation("site");
   const [tzOpen, setTzOpen] = useState(false);
@@ -71,11 +74,11 @@ export function StorePreferencesFields({
   const visibleLocales = LOCALES.filter((l) => enabledLocaleCodes.includes(l.code));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {showLanguage && visibleLocales.length > 1 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.language")}</Label>
-          <p className="text-[11px] leading-snug text-muted-foreground">{t("storePreferences.languageHint")}</p>
+          <p className="text-[11px] leading-tight text-muted-foreground">{t("storePreferences.languageHint")}</p>
           <Select
             value={values.locale}
             onValueChange={(v) => onChange({ locale: v as LocaleCode })}
@@ -84,7 +87,7 @@ export function StorePreferencesFields({
             <SelectTrigger className={selectTriggerClass(true)}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent container={overlayContainer}>
               {visibleLocales.map((l) => (
                 <SelectItem key={l.code} value={l.code}>
                   {l.nativeName} ({l.name})
@@ -95,7 +98,7 @@ export function StorePreferencesFields({
         </div>
       )}
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground" htmlFor="tz-trigger">
           {t("storePreferences.timezone")}
         </Label>
@@ -124,14 +127,16 @@ export function StorePreferencesFields({
             </Button>
           </PopoverTrigger>
           <PopoverContent
+            container={overlayContainer}
             className="w-[min(calc(100vw-2rem),400px)] p-0 sm:w-[400px]"
             align="start"
             sideOffset={4}
             collisionPadding={16}
+            onWheel={(e) => e.stopPropagation()}
           >
             <Command shouldFilter>
               <CommandInput placeholder={t("storePreferences.searchTimezone")} className="h-9" />
-              <CommandList className="max-h-[min(220px,40vh)]">
+              <CommandList className="max-h-[min(160px,30vh)] overflow-y-auto overscroll-contain">
                 <CommandEmpty>{t("storePreferences.noTzMatches")}</CommandEmpty>
                 <CommandGroup className="p-1">
                   {allZones.map((z) => (
@@ -159,8 +164,8 @@ export function StorePreferencesFields({
         </Popover>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-3">
-        <div className="space-y-1.5">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
+        <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.currency")}</Label>
           <Select
             value={values.currency}
@@ -170,7 +175,7 @@ export function StorePreferencesFields({
             <SelectTrigger className={selectTriggerClass(!!values.currency?.trim())}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent container={overlayContainer}>
               {REGION_CURRENCY_CODES.map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
@@ -179,7 +184,7 @@ export function StorePreferencesFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.country")}</Label>
           <Select
             value={values.countryCode || "__none__"}
@@ -189,7 +194,7 @@ export function StorePreferencesFields({
             <SelectTrigger className={selectTriggerClass(!!values.countryCode)}>
               <SelectValue placeholder={t("storePreferences.selectCountry")} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent container={overlayContainer}>
               <SelectItem value="__none__">{t("storePreferences.selectCountry")}</SelectItem>
               {REGION_COUNTRIES.map((c) => (
                 <SelectItem key={c.code} value={c.code}>
@@ -201,7 +206,7 @@ export function StorePreferencesFields({
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.storeType")}</Label>
         <Select
           value={values.storeType || "__none__"}
@@ -211,7 +216,7 @@ export function StorePreferencesFields({
           <SelectTrigger className={selectTriggerClass(!!values.storeType)}>
             <SelectValue placeholder={t("storePreferences.selectStoreType")} />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent container={overlayContainer}>
             <SelectItem value="__none__">{t("storePreferences.selectStoreType")}</SelectItem>
             {STORE_TYPE_IDS.map((id) => (
               <SelectItem key={id} value={id}>
@@ -222,7 +227,7 @@ export function StorePreferencesFields({
         </Select>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.acquisition")}</Label>
         <Select
           value={values.acquisitionSource || "__none__"}
@@ -232,7 +237,7 @@ export function StorePreferencesFields({
           <SelectTrigger className={selectTriggerClass(!!values.acquisitionSource)}>
             <SelectValue placeholder={t("storePreferences.selectAcquisition")} />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent container={overlayContainer}>
             <SelectItem value="__none__">{t("storePreferences.selectAcquisition")}</SelectItem>
             {ACQUISITION_SOURCE_IDS.map((id) => (
               <SelectItem key={id} value={id}>

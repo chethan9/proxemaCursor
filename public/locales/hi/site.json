@@ -687,7 +687,7 @@
   },
   "downloads": {
     "title": "Downloads",
-    "subtitle": "Generated documents and reports for {{name}} · auto-deleted after 7 days",
+    "subtitle": "Generated documents and reports for {{name}} · auto-deleted after 3 days",
     "bulkJobsLink": "Bulk Jobs",
     "refresh": "Refresh",
     "tiles": {
@@ -741,7 +741,7 @@
       "notDownloadable": "This file is not downloadable",
       "signInRequired": "Sign in required",
       "archiveExpired": "Archive expired",
-      "autoDeleted": "Auto-deleted after 7 days",
+      "autoDeleted": "Auto-deleted after 3 days",
       "downloadFailed": "Download failed",
       "removed": "Removed from Downloads",
       "removeFailed": "Failed to remove"

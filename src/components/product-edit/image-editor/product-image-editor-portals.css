@@ -1,0 +1,12 @@
+/*
+ * Scaleflex portals (#SfxPopper, modals) attach under body. Keep stacking above Radix dialog content.
+ * Lives in a plain stylesheet because CSS Modules disallow purely global selectors.
+ */
+body #SfxPopper {
+  position: relative;
+  z-index: 2147483000;
+}
+
+body .SfxModal-Wrapper {
+  z-index: 2147483001 !important;
+}

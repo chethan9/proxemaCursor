@@ -43,18 +43,33 @@ function Inner() {
     return JSON.stringify(initialType === "variable" ? { ...base, type: "variable", status: "draft" } : { ...base, status: "draft" });
   });
   const [promoteToVariableOpen, setPromoteToVariableOpen] = useState(false);
+  const [switchToBasicOpen, setSwitchToBasicOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [savedOnce, setSavedOnce] = useState(false);
+  const [variantsNavTick, setVariantsNavTick] = useState(0);
   const draftStorageKey = `product-new-draft:${id}`;
   const dirty = !savedOnce && initialFormJson !== JSON.stringify(form);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // Keep mode changes anchored to the top so Basic doesn't appear "mid-page" after switching from Variations.
+    if (mode !== "basic") return;
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "auto" });
     });
   }, [mode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (mode !== "advanced" || loading) return;
+    if (variantsNavTick === 0) return;
+    const t = window.setTimeout(() => {
+      document.getElementById("product-edit-section-variants")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [mode, variantsNavTick, loading]);
 
   const baselineForm = useMemo(
     () => JSON.parse(initialFormJson) as ProductFormState,
@@ -97,6 +112,7 @@ function Inner() {
 
   const create = useSiteMutation<{ id?: string }, void>({
     mutationFn: () => createProduct(id, form),
+    invalidateQueryFilters: { refetchType: "all" },
     invalidateKeys: [
       queryKeys.products(id),
       ["taxonomy", "categories", id],
@@ -128,7 +144,7 @@ function Inner() {
   if (!store) return <div className="p-6">Store not found</div>;
   if (syncReady && syncLocked) {
     return (
-      <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+      <div className="space-y-4 px-6 pb-6 pt-2 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
         </div>
@@ -176,7 +192,14 @@ function Inner() {
     "bg-orange-500 text-white shadow-sm hover:bg-orange-600";
 
   return (
-    <div className="space-y-4 px-6 pt-4 pb-6 max-w-[1400px] mx-auto">
+    <div
+      className={cn(
+        "min-h-0 space-y-3 bg-background pt-2 pb-6 mx-auto w-full",
+        mode === "advanced"
+          ? "max-w-[min(1920px,100%)] px-3 sm:px-5"
+          : "max-w-[1400px] px-6",
+      )}
+    >
       <h1 className="sr-only">Add new product</h1>
       <div
         role="toolbar"
@@ -193,7 +216,14 @@ function Inner() {
         <div className="flex min-w-0 items-center gap-1 rounded-md bg-muted/70 p-1">
           <button
             type="button"
-            onClick={() => setMode("basic")}
+            onClick={() => {
+              if (mode === "basic") return;
+              if (form.type === "variable") {
+                setSwitchToBasicOpen(true);
+                return;
+              }
+              setMode("basic");
+            }}
             className={cn(
               "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
               mode === "basic"
@@ -211,6 +241,7 @@ function Inner() {
                 setPromoteToVariableOpen(true);
                 return;
               }
+              setVariantsNavTick((n) => n + 1);
               setMode("advanced");
             }}
             className={cn(
@@ -284,6 +315,29 @@ function Inner() {
         />
       )}
 
+      <AlertDialog open={switchToBasicOpen} onOpenChange={setSwitchToBasicOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to Basic editor?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Basic mode uses a simplified layout. Attributes, variation rows, and the full advanced sections are available in Variations mode.
+              Your edits stay in the form — you can switch back anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setSwitchToBasicOpen(false);
+                setMode("basic");
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={promoteToVariableOpen} onOpenChange={setPromoteToVariableOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -298,6 +352,7 @@ function Inner() {
             <AlertDialogAction
               onClick={() => {
                 setForm((p) => ({ ...p, type: "variable" }));
+                setVariantsNavTick((n) => n + 1);
                 setMode("advanced");
               }}
             >

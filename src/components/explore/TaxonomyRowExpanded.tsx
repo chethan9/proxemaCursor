@@ -44,6 +44,7 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
     invalidateKeys: [
       ["taxonomy", mode, storeId],
       queryKeys.taxonomy(storeId, mode),
+      ["woo", "taxonomy", storeId, mode],
       ...(mode === "categories" ? [queryKeys.productCategoryOptions(storeId)] : []),
     ],
     successToast: "Synced to WooCommerce",
@@ -61,6 +62,7 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
     invalidateKeys: [
       ["taxonomy", mode, storeId],
       queryKeys.taxonomy(storeId, mode),
+      ["woo", "taxonomy", storeId, mode],
       ...(mode === "categories" ? [queryKeys.productCategoryOptions(storeId)] : []),
     ],
     successToast: "Deleted from WooCommerce",

@@ -1305,10 +1305,10 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
             )
           ) : (
             <div className={cn("overflow-x-auto transition-opacity duration-150", isFetching && !loading && orders.length > 0 && "opacity-70")}>
-              <Table className="[&_td]:px-1.5 [&_td]:py-1.5 [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-2">
+              <Table className="[&_td]:py-1.5 [&_td:not(:first-child)]:px-1.5 [&_th]:h-9 [&_th]:py-2 [&_th:not(:first-child)]:px-1.5">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-8 pl-3 pr-0">
+                    <TableHead className="w-8 min-w-8 ps-3 pe-2">
                       <Checkbox
                         checked={!locked && orders.length > 0 && orders.every((o) => selectedIds.has(o.id))}
                         disabled={locked}
@@ -1385,7 +1385,7 @@ export function OrdersTab({ storeId, storeUrl, storeName, storeTimezone = null, 
                     return (
                       <React.Fragment key={o.id}>
                         <TableRow className={`hover:bg-muted/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${isExpanded ? "bg-muted/30" : ""} ${isSelected ? "bg-primary/5" : ""} ${pending ? "opacity-60" : ""}`} onClick={() => { if (pending) { showLockedToast(o); return; } setExpandedRowId((cur) => (cur === o.id ? null : o.id)); }}>
-                          <TableCell className="w-8 pl-3 pr-0" onClick={(e) => e.stopPropagation()}>
+                          <TableCell className="w-8 min-w-8 ps-3 pe-2" onClick={(e) => e.stopPropagation()}>
                             <Checkbox checked={isSelected} disabled={locked || pending} onCheckedChange={() => { if (locked || pending) return; toggleSelect(o.id); }} />
                           </TableCell>
                           {visibleColList.map((c) => {

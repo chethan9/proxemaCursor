@@ -185,6 +185,46 @@
       "truncatedDesc": "First {{count}} rows only (limit {{max}}). Narrow filters for a smaller export.",
       "pdfTooManyRows": "PDF is limited to {{max}} rows. Use Excel or CSV, or narrow your filters."
     },
+    "quickEdit": {
+      "title": "Quick edit",
+      "description": "Syncs to WooCommerce immediately.",
+      "name": "Name",
+      "sku": "SKU",
+      "status": "Status",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "manageStock": "Manage stock",
+      "stockStatus": "Stock status",
+      "qty": "Qty",
+      "lastSync": "Last sync",
+      "editFull": "Edit full product",
+      "cancel": "Cancel",
+      "save": "Save",
+      "syncedToast": "Synced to WooCommerce",
+      "notReadyTitle": "Not ready",
+      "notReadyDesc": "Wait for the product to finish loading, then try again.",
+      "invalidPriceTitle": "Invalid price",
+      "invalidRegularDesc": "Regular price must be greater than 0.",
+      "invalidSaleTitle": "Invalid sale price",
+      "invalidSalePositiveDesc": "Sale price must be greater than 0.",
+      "invalidSaleLessDesc": "Sale price must be less than regular price.",
+      "invalidQtyTitle": "Invalid quantity",
+      "invalidQtyDesc": "Stock quantity cannot be negative.",
+      "variationsHeading": "Variations",
+      "loadingVariations": "Loading variations…",
+      "variationsError": "Could not load variations.",
+      "noVariations": "No variations found for this product.",
+      "variationFallback": "Variation #{{id}}",
+      "stockTracked": "Stock tracked",
+      "stockNotTracked": "Stock not tracked",
+      "qtyDisabledHint": "Turn on stock management for this variation in the full editor to edit quantity here.",
+      "resolveMissingWoo": "This product is still syncing — open again after sync, or use Edit full product.",
+      "resolveFailed": "Could not resolve product id.",
+      "variationInvalidRegular": "Variation \"{{label}}\": regular price must be greater than 0 when published.",
+      "variationInvalidSalePositive": "Variation \"{{label}}\": sale price must be greater than 0.",
+      "variationInvalidSaleLess": "Variation \"{{label}}\": sale price must be less than regular price.",
+      "variationInvalidQty": "Variation \"{{label}}\": quantity cannot be negative."
+    },
     "ai": {
       "open": "AI images",
       "title": "AI image generation",
@@ -207,6 +247,8 @@
       "uploadFailed": "Upload failed",
       "openaiNeedsSource": "OpenAI image editing requires a reference image — select product image, upload a file, or pick from the library.",
       "optionalRef": "optional ref.",
+      "customColor": "Custom color",
+      "noFeatures": "No AI image features are configured for this store yet.",
       "source": "Source image",
       "sourceMain": "Main product image",
       "sourceGallery": "Gallery image",
@@ -262,6 +304,16 @@
         "exportFailed": "Could not export the transformed image.",
         "editorCrashed": "The image editor failed to start.",
         "close": "Close"
+      },
+      "taxonomy": {
+        "addCategory": "Add category",
+        "addBrand": "Add brand",
+        "searchOrCreate": "Search or create…",
+        "searchOrCreateBrand": "Search or create brand…",
+        "noCategories": "No categories",
+        "noBrands": "No brands",
+        "createNamed": "Create \"{{name}}\"",
+        "createBrandNamed": "Create \"{{name}}\""
       }
     },
     "toolbar": {
@@ -330,6 +382,8 @@
       "syncProgress": "{{percent}}% complete — new products will appear automatically"
     },
     "bulk": {
+      "selectAll": "Select all",
+      "selectAllHint": "Select / clear all loaded products",
       "selected": "selected",
       "maxLimit": "(max {{max}} per job)",
       "lockedDuringSync": "Bulk actions disabled during initial sync",
@@ -557,7 +611,10 @@
       "cancelled": "Cancelled",
       "refunded": "Refunded",
       "failed": "Failed",
-      "pending": "Pending"
+      "pending": "Pending",
+      "draft": "Draft",
+      "trash": "Trash",
+      "unknown": "Unknown"
     },
     "toolbar": {
       "sort": "Sort",
@@ -781,6 +838,22 @@
       "actions": "Actions",
       "viewDetails": "View details",
       "editCustomer": "Edit customer"
+    },
+    "newPage": {
+      "title": "New Customer",
+      "breadcrumb": "Customers / New",
+      "storeNotFound": "Store not found",
+      "account": "Account",
+      "passwordOptional": "Password (optional)",
+      "passwordPlaceholder": "Leave empty to auto-generate",
+      "create": "Create customer",
+      "creating": "Creating…",
+      "emailRequired": "Email required",
+      "toastCreated": "Customer created",
+      "saved": "Saved",
+      "savedToStore": "Saved to {{siteName}}",
+      "copyFromBilling": "Copy from billing",
+      "countryIso": "Country (ISO)"
     }
   },
   "customerDetail": {
@@ -933,7 +1006,7 @@
   },
   "downloads": {
     "title": "Downloads",
-    "subtitle": "Generated documents and reports for {{name}} · auto-deleted after 7 days",
+    "subtitle": "Generated documents and reports for {{name}} · auto-deleted after 3 days",
     "bulkJobsLink": "Bulk Jobs",
     "refresh": "Refresh",
     "tiles": {
@@ -994,7 +1067,7 @@
       "notDownloadable": "This file is not downloadable",
       "signInRequired": "Sign in required",
       "archiveExpired": "Archive expired",
-      "autoDeleted": "Auto-deleted after 7 days",
+      "autoDeleted": "Auto-deleted after 3 days",
       "downloadFailed": "Download failed",
       "removed": "Removed from Downloads",
       "removeFailed": "Failed to remove"

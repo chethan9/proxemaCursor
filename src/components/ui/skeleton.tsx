@@ -12,7 +12,8 @@ function Skeleton({
         "relative overflow-hidden rounded-md bg-muted",
         "before:absolute before:inset-0 before:-translate-x-full",
         "before:animate-[shimmer_1.6s_infinite] before:bg-gradient-to-r",
-        "before:from-transparent before:via-white/40 before:to-transparent",
+        "before:from-transparent before:to-transparent",
+        "before:via-black/[0.06] dark:before:via-white/[0.08]",
         className
       )}
       {...props}

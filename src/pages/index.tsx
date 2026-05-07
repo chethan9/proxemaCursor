@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,12 +31,11 @@ const DashboardChartsSection = dynamic(
 );
 
 export default function Dashboard() {
-  const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  useAuth();
   const { data: stores = [], isLoading: sLoading } = useStores();
   const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
   const { brandName } = useBranding();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation("common");
 
   const loading = sLoading || rLoading;
 
@@ -65,23 +63,33 @@ export default function Dashboard() {
   const hasSites = stores.length > 0;
   const hasSyncs = syncRuns.length > 0;
 
+  const syncStatusData = useMemo(
+    () =>
+      [
+        { name: t("platformDashboard.syncStatusSuccessful"), value: stats.successfulSyncs, color: "#10b981" },
+        { name: t("platformDashboard.syncStatusFailed"), value: stats.failedSyncs, color: "#ef4444" },
+        { name: t("platformDashboard.syncStatusRunning"), value: stats.runningSyncs, color: "#3b82f6" },
+      ].filter((d) => d.value > 0),
+    [t, stats.successfulSyncs, stats.failedSyncs, stats.runningSyncs],
+  );
+
   // ---------- EMPTY STATE: no sites ----------
   if (!loading && !hasSites) {
     return (
-      <AppLayout title="Dashboard">
+      <AppLayout title={t("platformDashboard.pageTitle")}>
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
           <div className="max-w-lg text-center space-y-6">
             <BrandLogo size="xl" className="mx-auto" />
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight">Welcome to {brandName}</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">{t("platformDashboard.emptyWelcomeTitle", { brand: brandName })}</h1>
               <p className="text-base text-muted-foreground">
-                Add your first site to start monitoring sync health, activity, and fleet-wide insights.
+                {t("platformDashboard.emptyWelcomeBody")}
               </p>
             </div>
             <Button size="lg" asChild>
               <Link href="/projects">
-                <Plus className="h-4 w-4 mr-2" />
-                Add your first site
+                <Plus className="h-4 w-4 me-2" />
+                {t("platformDashboard.emptyAddSite")}
               </Link>
             </Button>
           </div>
@@ -89,13 +97,6 @@ export default function Dashboard() {
       </AppLayout>
     );
   }
-
-  // Charts data (only built when we have syncs)
-  const syncStatusData = [
-    { name: "Successful", value: stats.successfulSyncs, color: "#10b981" },
-    { name: "Failed", value: stats.failedSyncs, color: "#ef4444" },
-    { name: "Running", value: stats.runningSyncs, color: "#3b82f6" },
-  ].filter(d => d.value > 0);
 
   const syncsByAspect = syncRuns.reduce((acc, run) => {
     const aspect = run.aspect || "unknown";
@@ -116,13 +117,13 @@ export default function Dashboard() {
   const timelineData = Object.values(syncsByDay).slice(0, 7).reverse();
 
   return (
-    <AppLayout title="Dashboard">
+    <AppLayout title={t("platformDashboard.pageTitle")}>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t("platformDashboard.pageTitle")}</h1>
           <p className="text-muted-foreground">
-            {hasSyncs ? "Overview of your WooCommerce sync operations" : "Your sites are ready — sync activity will appear here"}
+            {hasSyncs ? t("platformDashboard.headerSubtitleWithSyncs") : t("platformDashboard.headerSubtitleNoSyncs")}
           </p>
         </div>
 
@@ -130,7 +131,7 @@ export default function Dashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Sites</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("platformDashboard.kpiActiveSites")}</CardTitle>
               <Store className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -138,19 +139,21 @@ export default function Dashboard() {
                 {stats.connectedStores}
                 <span className="text-sm font-normal text-muted-foreground">/{stats.stores}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Connected WooCommerce stores</p>
+              <p className="text-xs text-muted-foreground">{t("platformDashboard.kpiConnectedStores")}</p>
             </CardContent>
           </Card>
 
           {avgHealth !== null && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Fleet Health</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("platformDashboard.kpiFleetHealth")}</CardTitle>
                 <Heart className={`h-4 w-4 ${avgHealth >= 80 ? "text-emerald-500 fill-emerald-500" : avgHealth >= 50 ? "text-amber-500 fill-amber-500" : "text-red-500 fill-red-500"}`} />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{avgHealth}%</div>
-                <p className="text-xs text-muted-foreground">{healthyStores.length} healthy, {attentionStores.length} need attention</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("platformDashboard.kpiHealthyAttention", { healthy: healthyStores.length, attention: attentionStores.length })}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -158,7 +161,7 @@ export default function Dashboard() {
           {hasSyncs && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("platformDashboard.kpiSuccessRate")}</CardTitle>
                 {successRate >= 90 ? (
                   <TrendingUp className="h-4 w-4 text-success" />
                 ) : (
@@ -167,7 +170,9 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{successRate}%</div>
-                <p className="text-xs text-muted-foreground">{stats.successfulSyncs} of {stats.totalSyncs} syncs</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("platformDashboard.kpiSyncsFraction", { successful: stats.successfulSyncs, total: stats.totalSyncs })}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -175,12 +180,12 @@ export default function Dashboard() {
           {hasSyncs && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Records Synced</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("platformDashboard.kpiRecordsSynced")}</CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatNumber(stats.totalRecords, i18n.language)}</div>
-                <p className="text-xs text-muted-foreground">Total records processed</p>
+                <p className="text-xs text-muted-foreground">{t("platformDashboard.kpiTotalRecordsProcessed")}</p>
               </CardContent>
             </Card>
           )}
@@ -192,7 +197,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <CardTitle className="text-sm font-medium">Sites Needing Attention</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("platformDashboard.attentionTitle")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -218,9 +223,9 @@ export default function Dashboard() {
           <Card>
             <CardContent className="py-12 text-center">
               <RefreshCw className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
-              <h3 className="text-lg font-medium mb-1">No sync data yet</h3>
+              <h3 className="text-lg font-medium mb-1">{t("platformDashboard.noSyncYetTitle")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Syncs will appear here once they are triggered. You can start one from any site&apos;s page.
+                {t("platformDashboard.noSyncYetBody")}
               </p>
             </CardContent>
           </Card>
@@ -242,12 +247,12 @@ export default function Dashboard() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Recent Sites</CardTitle>
-                      <CardDescription>Latest WooCommerce stores</CardDescription>
+                      <CardTitle>{t("platformDashboard.recentSitesTitle")}</CardTitle>
+                      <CardDescription>{t("platformDashboard.recentSitesDesc")}</CardDescription>
                     </div>
                     <Button variant="ghost" size="sm" asChild>
                       <Link href="/projects">
-                        View all <ArrowRight className="ml-1 h-4 w-4" />
+                        {t("platformDashboard.viewAll")} <ArrowRight className="ms-1 h-4 w-4" />
                       </Link>
                     </Button>
                   </CardHeader>
@@ -280,12 +285,12 @@ export default function Dashboard() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Recent Sync Runs</CardTitle>
-                      <CardDescription>Latest sync operations</CardDescription>
+                      <CardTitle>{t("platformDashboard.recentSyncRunsTitle")}</CardTitle>
+                      <CardDescription>{t("platformDashboard.recentSyncRunsDesc")}</CardDescription>
                     </div>
                     <Button variant="ghost" size="sm" asChild>
                       <Link href="/sync-runs">
-                        View all <ArrowRight className="ml-1 h-4 w-4" />
+                        {t("platformDashboard.viewAll")} <ArrowRight className="ms-1 h-4 w-4" />
                       </Link>
                     </Button>
                   </CardHeader>

@@ -34,14 +34,29 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
   showClose?: boolean
   /** Merged into the underlay — use to lift z-index above other app overlays (e.g. blocking loaders). */
   overlayClassName?: string
+  /**
+   * Use with `<Dialog modal={false}>`. Radix omits `DialogOverlay` in non-modal mode; this renders an
+   * equivalent full-screen scrim so the surface still dims behind the panel (e.g. nested/third-party portals).
+   */
+  nonModalBackdrop?: boolean
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, showClose = true, overlayClassName, ...props }, ref) => (
+>(({ className, children, showClose = true, overlayClassName, nonModalBackdrop, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay className={overlayClassName} />
+    {nonModalBackdrop ? (
+      <div
+        aria-hidden
+        className={cn(
+          "fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          overlayClassName,
+        )}
+      />
+    ) : (
+      <DialogOverlay className={overlayClassName} />
+    )}
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

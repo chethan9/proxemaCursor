@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -12,6 +13,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { TemplateBuilderShell } from "@/components/templates/builder/TemplateBuilderShell";
 
 function BuilderInner() {
+  const { t } = useTranslation("common");
   const router = useRouter();
   const id = router.query.id as string;
   const isNew = id === "new";
@@ -30,7 +32,11 @@ function BuilderInner() {
     (async () => {
       try {
         const defaultName =
-          newType === "pickslip" ? "Untitled pick slip" : newType === "report" ? "Untitled report" : "Untitled invoice";
+          newType === "pickslip"
+            ? t("templatesEditor.untitledPickSlip")
+            : newType === "report"
+              ? t("templatesEditor.untitledReport")
+              : t("templatesEditor.untitledInvoice");
         const defaultHtml =
           newType === "pickslip" ? blankPickslipHtml() : newType === "report" ? blankReportHtml() : blankInvoiceHtml();
         const newId = await createTemplate({
@@ -41,11 +47,11 @@ function BuilderInner() {
         });
         router.replace(`/templates/${newId}`);
       } catch (e) {
-        toast({ title: "Failed to create template", description: (e as Error).message, variant: "destructive" });
+        toast({ title: t("templatesEditor.createFailed"), description: (e as Error).message, variant: "destructive" });
         router.replace("/templates");
       }
     })();
-  }, [router.isReady, isNew, newType, profile?.client_id, router, toast]);
+  }, [router.isReady, isNew, newType, profile?.client_id, router, toast, t]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["template", id],
@@ -102,7 +108,7 @@ function BuilderInner() {
       if (!data) throw new Error("Template not loaded");
       if (data.template.is_sample) {
         const newId = await createTemplate({
-          name: `Copy of ${data.template.name}`,
+          name: t("templatesEditor.copyOf", { name: data.template.name }),
           type: data.template.type,
           description: data.template.description ?? undefined,
           clientId: profile.client_id as string,
@@ -120,13 +126,11 @@ function BuilderInner() {
       qc.invalidateQueries({ queryKey: ["templates"] });
       setPreviewKey((k) => k + 1);
       toast({
-        title: forkedFromSample ? "Saved as your template" : "Template saved",
-        description: forkedFromSample
-          ? "You were editing a platform layout — a copy was created under your workspace."
-          : undefined,
+        title: forkedFromSample ? t("templatesEditor.savedAsYours") : t("templatesEditor.templateSaved"),
+        description: forkedFromSample ? t("templatesEditor.savedCopyDesc") : undefined,
       });
     },
-    onError: (e: Error) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("templatesEditor.saveFailed"), description: e.message, variant: "destructive" }),
   });
 
   const renameMutation = useMutation({
@@ -142,7 +146,7 @@ function BuilderInner() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["template", id] });
       qc.invalidateQueries({ queryKey: ["templates"] });
-      toast({ title: "Set as default" });
+      toast({ title: t("templatesEditor.setDefaultToast") });
     },
   });
 
@@ -158,7 +162,7 @@ function BuilderInner() {
 
   const copyToken = (token: string) => {
     navigator.clipboard?.writeText(token).catch(() => {});
-    toast({ title: "Copied", description: token });
+    toast({ title: t("templatesEditor.copied"), description: token });
   };
 
   if (isNew || isLoading || !data) {
@@ -174,7 +178,7 @@ function BuilderInner() {
 
   return (
     <>
-      <SEO title={`${name || "Template"} · Editor`} />
+      <SEO title={t("templatesEditor.seoName", { name: name || t("templatesPage.title") })} />
       <TemplateBuilderShell
         canvasKey={canvasKey}
         document={document}

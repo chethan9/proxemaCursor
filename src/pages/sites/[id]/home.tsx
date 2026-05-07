@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ import {
   type SiteHomeStatsQuery,
 } from "@/services/siteStatsService";
 import { type DateRangePresetValue } from "@/components/explore/DateRangeFilter";
+import { formatNumber } from "@/lib/format-number";
 
 const VALID_RANGE_PRESETS = new Set<DateRangePresetValue>([
   "30d",
@@ -33,10 +35,6 @@ function parseRangeQuery(q: unknown): DateRangePresetValue {
     ? (q as DateRangePresetValue)
     : "30d";
 }
-
-const DASHBOARD_RANGE_OPTIONS: { value: DateRangePresetValue; label: string }[] = [
-  { value: "30d", label: "Last 30 days" },
-];
 
 const SalesTrendCard = dynamic(
   () => import("@/components/site/home/SalesTrendCard").then((m) => m.SalesTrendCard),
@@ -74,12 +72,15 @@ const SparklineTile = dynamic(
   }
 );
 
-function fmtMoney(n: number): string {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
-}
-
 function HomeInner() {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
+  const { t: tCommon } = useTranslation("common");
+
+  const fmtMoney = useCallback(
+    (n: number) =>
+      formatNumber(n, i18n.language, { maximumFractionDigits: 2, minimumFractionDigits: 0 }),
+    [i18n.language]
+  );
   const { store, loading: storeLoading } = useSiteFromRoute();
   const router = useRouter();
   const qc = useQueryClient();
@@ -168,10 +169,14 @@ function HomeInner() {
 
   const statsLoading = !data && isLoading;
   const showRefreshing = !!data && isFetching;
-  const snapshotRel =
-    data?.snapshot_updated_at != null && String(data.snapshot_updated_at).length > 0
-      ? formatDistanceToNow(new Date(String(data.snapshot_updated_at)), { addSuffix: true })
-      : null;
+  const dateFnsLocale = i18n.language?.toLowerCase().startsWith("ar") ? ar : undefined;
+  const snapshotRel = useMemo(() => {
+    if (data?.snapshot_updated_at == null || String(data.snapshot_updated_at).length === 0) return null;
+    return formatDistanceToNow(new Date(String(data.snapshot_updated_at)), {
+      addSuffix: true,
+      locale: dateFnsLocale,
+    });
+  }, [data?.snapshot_updated_at, dateFnsLocale]);
 
   const s = data?.stats;
   const meta = data?.meta;
@@ -181,7 +186,7 @@ function HomeInner() {
     data?.currency || (combineAll ? storeCurrency : urlCurrency || storeCurrency);
 
   const multiCurrency = currencies.length > 1;
-  const allLabel = t("common.all", { defaultValue: "All" });
+  const allLabel = tCommon("common.all");
 
   const aov = s && s.orders_month_count > 0 ? s.sales_month / s.orders_month_count : 0;
   const deltaPct = s && s.sales_prev_month > 0 ? ((s.sales_month - s.sales_prev_month) / s.sales_prev_month) * 100 : null;
@@ -193,6 +198,13 @@ function HomeInner() {
     return t("home.range.last30d", { defaultValue: "Last 30 days" });
   }, [t]);
 
+  const rangeSelectOptions = useMemo(
+    (): { value: DateRangePresetValue; label: string }[] => [
+      { value: "30d", label: t("home.range.last30d", { defaultValue: "Last 30 days" }) },
+    ],
+    [t]
+  );
+
   const statItems = useMemo(() => {
     return [
       { label: t("home.stats.ordersToday"), value: s?.orders_today ?? 0 },
@@ -202,7 +214,7 @@ function HomeInner() {
       { label: t("home.stats.monthlySales"), value: fmtMoney(s?.sales_month ?? 0), suffix: currency },
       { label: t("home.stats.avgOrder"), value: fmtMoney(aov), suffix: currency },
     ];
-  }, [s, t, currency, aov]);
+  }, [s, t, currency, aov, fmtMoney]);
 
   const ordersSparkSub = multiCurrency && !combineAll
     ? t("home.spark.ordersInCurrency", { currency })
@@ -324,7 +336,7 @@ function HomeInner() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="end">
-                    {DASHBOARD_RANGE_OPTIONS.map((opt) => (
+                    {rangeSelectOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value} className="text-xs">
                         {opt.label}
                       </SelectItem>

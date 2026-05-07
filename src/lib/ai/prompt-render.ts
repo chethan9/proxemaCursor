@@ -20,9 +20,29 @@ export function renderPromptTemplate(template: string, ctx: PromptContext): stri
   });
 }
 
-/** Appends non-template extra instructions after the rendered prompt (always applied when non-empty). */
-export function appendAdditionalPromptSegment(rendered: string, additional?: string): string {
-  const t = additional?.trim();
-  if (!t) return rendered;
-  return `${rendered}\n\nAdditional instructions: ${t}`;
+/**
+ * Builds the final image prompt. User-supplied additional instructions come **first**
+ * so models treat them as highest priority; then feature template, then resolution/aspect constraints.
+ */
+export function composeImageGenerationPrompt(parts: {
+  renderedTemplate: string;
+  imageInstruction?: string;
+  additionalPrompt?: string;
+}): string {
+  const extra = parts.additionalPrompt?.trim();
+  const img = parts.imageInstruction?.trim();
+  const template = parts.renderedTemplate?.trim();
+
+  const segments: string[] = [];
+  if (extra) {
+    segments.push(`Priority instructions (follow these first):\n${extra}`);
+  }
+  if (template) {
+    segments.push(`Feature guidance:\n${template}`);
+  }
+  if (img) {
+    segments.push(`Output constraints:\n${img}`);
+  }
+  return segments.join("\n\n");
 }
+

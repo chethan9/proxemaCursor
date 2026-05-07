@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { BULK_INVOICE_ARTIFACT_RETENTION_MS } from "@/lib/bulk-invoice-artifact-retention";
 import { slugifyStoreNameForFile } from "@/lib/templates/render-filename";
 
 export type DownloadFileType = "invoice" | "packing_slip" | "credit_note" | "report";
@@ -18,7 +19,6 @@ export interface DownloadFile {
   download_url: string;
 }
 
-const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const JOB_TYPE_TO_FILE_TYPE: Record<string, DownloadFileType> = {
   print_invoices_bulk: "invoice",
 };
@@ -59,7 +59,7 @@ export async function listSiteDownloads(storeId: string): Promise<DownloadFile[]
     const sizeBytes = (payload.artifact_size_bytes as number | undefined) ?? null;
     const completedAt = j.completed_at as string;
     const expiresAt = completedAt
-      ? new Date(new Date(completedAt).getTime() + RETENTION_MS).toISOString()
+      ? new Date(new Date(completedAt).getTime() + BULK_INVOICE_ARTIFACT_RETENTION_MS).toISOString()
       : null;
 
     rows.push({

@@ -3,11 +3,11 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
 import { isBillingDevMode } from "@/lib/billing-dev-mode.server";
 import { consumeAICredits, getAICreditsState, aiQuotaErrorPayload } from "@/lib/ai-credits.server";
-import { appendAdditionalPromptSegment, renderPromptTemplate } from "@/lib/ai/prompt-render";
+import { composeImageGenerationPrompt, renderPromptTemplate } from "@/lib/ai/prompt-render";
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
 import { getDecryptedProviderApiKey } from "@/services/aiProviderCredentials.server";
 import type { TablesInsert } from "@/integrations/supabase/helpers";
-import { resolveImageControls } from "@/lib/ai/image-generation-controls";
+import { MAX_AI_IMAGE_OUTPUT_COUNT, resolveImageControls } from "@/lib/ai/image-generation-controls";
 
 type GenerateBody = {
   storeId?: string;
@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const outputCount = Math.min(
     Math.max(1, Number(body.outputCount ?? feature.default_output_count) || 1),
-    8
+    MAX_AI_IMAGE_OUTPUT_COUNT
   );
   const creditsNeeded = outputCount * feature.credit_cost_per_output;
 
@@ -129,7 +129,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       index: i + 1,
       total: outputCount,
     });
-    prompts.push(appendAdditionalPromptSegment(rendered, `${imageControls.instruction}${additionalPrompt ? `\n${additionalPrompt}` : ""}`));
+    prompts.push(
+      composeImageGenerationPrompt({
+        renderedTemplate: rendered,
+        imageInstruction: imageControls.instruction,
+        additionalPrompt,
+      })
+    );
   }
 
   const buffers: Buffer[] = [];

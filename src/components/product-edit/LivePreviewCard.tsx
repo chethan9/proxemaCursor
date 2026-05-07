@@ -1,11 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Eye, ImageIcon, ChevronLeft, ChevronRight, Maximize2, PanelRightClose, X } from "lucide-react";
+import { ImageIcon, ChevronLeft, ChevronRight, Maximize2, PanelRightClose, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProductFormState, ProductAttribute } from "@/services/productEditService";
 import { resolveMirroredProductImageUrl, type ImageVariantName } from "@/lib/product-image-urls";
 import { AIProductImageAssistant } from "@/components/product-edit/ai/AIProductImageAssistant";
+import { cn } from "@/lib/utils";
 
 const MAX_PREVIEW_ATTRS = 4;
 
@@ -66,39 +67,9 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
   return (
     <>
       <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
-            <div className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 p-1 text-muted-foreground">
-              <Eye className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              {onHidePreview && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onHidePreview}
-                  className="h-8 w-8 rounded-full border-border/70 bg-background/80 p-0 hover:bg-accent"
-                  title="Hide preview"
-                  aria-label="Hide preview"
-                >
-                  <PanelRightClose className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              {showAi && (
-                <AIProductImageAssistant
-                  storeId={storeId}
-                  productId={productId ?? undefined}
-                  form={form}
-                  setForm={setForm}
-                  tone="orange"
-                  label="AI image"
-                />
-              )}
-            </div>
-          </div>
+        <CardContent className="space-y-3 p-4">
           <div
-            className="aspect-square rounded-lg bg-muted/50 overflow-hidden flex items-center justify-center relative group outline-none"
+            className="group relative aspect-square overflow-hidden rounded-lg border border-border/60 bg-muted/40 outline-none dark:bg-muted/25"
             tabIndex={0}
             onKeyDown={onKey}
           >
@@ -106,15 +77,54 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
               // eslint-disable-next-line @next/next/no-img-element
               <img src={previewSrc(active.src, "edit")} alt="" className="h-full w-full object-cover" />
             ) : (
-              <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+              <div className="flex h-full w-full items-center justify-center">
+                <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+              </div>
             )}
+
+            {/* Toolbar on image — saves vertical space vs a separate header row */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2">
+              {(onHidePreview || showAi) && (
+                <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-white/25 bg-black/45 p-1 shadow-lg backdrop-blur-sm">
+                  {onHidePreview && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={onHidePreview}
+                      className="h-7 w-7 shrink-0 rounded-md p-0 text-white hover:bg-white/15 hover:text-white"
+                      title="Hide preview"
+                      aria-label="Hide preview"
+                    >
+                      <PanelRightClose className="h-3.5 w-3.5 text-white" />
+                    </Button>
+                  )}
+                  {showAi && (
+                    <AIProductImageAssistant
+                      storeId={storeId}
+                      productId={productId ?? undefined}
+                      form={form}
+                      setForm={setForm}
+                      tone="overlay"
+                      label="AI image"
+                      triggerIcon="wand"
+                    />
+                  )}
+                </div>
+              )}
+              {count > 1 && (
+                <div className="pointer-events-none rounded-full border border-white/25 bg-black/70 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white shadow-md backdrop-blur-md">
+                  {activeIdx + 1}/{count}
+                </div>
+              )}
+            </div>
 
             {count > 1 && (
               <>
                 <button
                   type="button"
                   onClick={prev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-background/95 border border-border shadow-md hover:bg-background hover:scale-105 flex items-center justify-center transition-all z-10"
+                  className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white shadow-md backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-105"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -122,7 +132,7 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
                 <button
                   type="button"
                   onClick={next}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-background/95 border border-border shadow-md hover:bg-background hover:scale-105 flex items-center justify-center transition-all z-10"
+                  className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white shadow-md backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-105"
                   aria-label="Next image"
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -134,18 +144,12 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                className="absolute bottom-2 left-2 h-8 w-8 rounded-full bg-background/90 border border-border shadow hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Click to enlarge"
-                title="Click to enlarge"
+                className="absolute bottom-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white opacity-0 shadow-md backdrop-blur-sm transition-colors hover:bg-black/70 group-hover:opacity-100"
+                aria-label="Enlarge preview"
+                title="Enlarge preview"
               >
                 <Maximize2 className="h-3.5 w-3.5" />
               </button>
-            )}
-
-            {count > 1 && (
-              <div className="absolute top-2 right-2 text-[10px] font-medium bg-background/90 border border-border rounded px-1.5 py-0.5 tabular-nums">
-                {activeIdx + 1}/{count}
-              </div>
             )}
           </div>
 
@@ -161,7 +165,7 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
                     ref={(el) => { thumbRefs.current[i] = el; }}
                     type="button"
                     onClick={() => setActiveIdx(i)}
-                    className={`h-14 w-14 rounded-md overflow-hidden shrink-0 snap-start border transition-all ${i === activeIdx ? "ring-2 ring-primary ring-offset-2 border-transparent" : "border-border hover:border-primary/40"}`}
+                    className={`h-14 w-14 rounded-md overflow-hidden shrink-0 snap-start border bg-muted/90 transition-all ring-offset-0 ${i === activeIdx ? "ring-2 ring-primary border-primary/40" : "border-border hover:border-primary/40"}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={previewSrc(img.src, "thumb")} alt="" className="h-full w-full object-cover" />
@@ -226,60 +230,84 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
 
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent
-          className="max-w-[95vw] w-[95vw] h-[92vh] p-0 bg-black/95 border-neutral-800 [&>button]:hidden"
+          showClose={false}
+          overlayClassName="z-[100]"
+          className={cn(
+            /* Override dialog defaults: grid + gap breaks flex layout and clips thumbs */
+            "!flex !flex-col !gap-0 overflow-hidden border-neutral-800 bg-neutral-950 p-0 shadow-2xl sm:rounded-lg",
+            "fixed left-1/2 top-1/2 z-[101] h-[min(92dvh,880px)] max-h-[92dvh] w-[min(96vw,1200px)] max-w-[96vw] -translate-x-1/2 -translate-y-1/2",
+          )}
           onKeyDown={onKey}
         >
           <button
             type="button"
             onClick={() => setLightboxOpen(false)}
-            className="absolute top-3 right-3 z-10 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/20 hover:bg-white/25"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
-          <div className="flex flex-col h-full">
-            <div className="flex-1 relative flex items-center justify-center min-h-0">
-              {active && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewSrc(active.src, "zoom")} alt="" className="max-h-full max-w-full object-contain" />
-              )}
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            {/* Image stage only — nav overlay height excludes thumb strip so arrows stay aligned */}
+            <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
+              <div className="absolute inset-0 flex items-center justify-center p-2 pb-2 pt-14 sm:p-4 sm:pt-14">
+                {active && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewSrc(active.src, "zoom")}
+                    alt=""
+                    className="max-h-full max-w-full object-contain"
+                    draggable={false}
+                  />
+                )}
+              </div>
+
               {count > 1 && (
                 <>
-                  <button
-                    type="button"
-                    onClick={prev}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-                    aria-label="Previous"
-                  >
-                    <ChevronLeft className="h-6 w-6" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={next}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-                    aria-label="Next"
-                  >
-                    <ChevronRight className="h-6 w-6" />
-                  </button>
-                  <div className="absolute top-4 left-4 text-white/80 text-sm tabular-nums bg-white/10 rounded px-2 py-1">
+                  <div className="pointer-events-none absolute left-3 top-14 z-20 rounded-md bg-black/55 px-2 py-1 text-sm tabular-nums text-white/95 ring-1 ring-white/15 backdrop-blur-sm sm:left-4">
                     {activeIdx + 1} / {count}
+                  </div>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 top-14 z-20 flex items-center justify-between px-2 sm:px-4">
+                    <button
+                      type="button"
+                      onClick={prev}
+                      className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/70 sm:h-12 sm:w-12"
+                      aria-label="Previous"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={next}
+                      className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/70 sm:h-12 sm:w-12"
+                      aria-label="Next"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
                   </div>
                 </>
               )}
             </div>
+
             {count > 1 && (
-              <div className="p-4 flex gap-2 justify-center overflow-x-auto bg-black/50">
-                {images.map((img, i) => (
-                  <button
-                    key={img.id ?? `lb-${img.src}-${i}`}
-                    type="button"
-                    onClick={() => setActiveIdx(i)}
-                    className={`h-20 w-20 rounded overflow-hidden shrink-0 border-2 transition-all ${i === activeIdx ? "border-white" : "border-transparent opacity-60 hover:opacity-100"}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={previewSrc(img.src, "thumb")} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
+              <div className="shrink-0 border-t border-white/10 bg-black/70 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="flex max-w-full justify-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+                  {images.map((img, i) => (
+                    <button
+                      key={img.id ?? `lb-${img.src}-${i}`}
+                      type="button"
+                      onClick={() => setActiveIdx(i)}
+                      className={cn(
+                        "h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-all sm:h-[4.5rem] sm:w-[4.5rem]",
+                        i === activeIdx ? "border-white ring-2 ring-white/30" : "border-transparent opacity-65 hover:opacity-100",
+                      )}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={previewSrc(img.src, "thumb")} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

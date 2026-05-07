@@ -1,4 +1,10 @@
-import { useMutation, useQueryClient, type QueryKey, type UseMutationOptions } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  type InvalidateQueryFilters,
+  type QueryKey,
+  type UseMutationOptions,
+} from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useRecentMutations } from "@/contexts/RecentMutationsProvider";
 
@@ -16,6 +22,8 @@ export type TrackConfig<TVars, TData> = {
 export type UseSiteMutationOptions<TData, TVars> = {
   mutationFn: (vars: TVars) => Promise<TData>;
   invalidateKeys?: QueryKey[];
+  /** Applied to every `invalidateQueries` call. Use `{ refetchType: 'all' }` when inactive queries (e.g. the products list while on another page) must refresh before returning. */
+  invalidateQueryFilters?: Omit<InvalidateQueryFilters, "queryKey">;
   optimisticUpdates?: OptimisticPatch<TVars>[];
   onSuccessExtra?: (data: TData, vars: TVars) => void;
   onErrorExtra?: (err: unknown, vars: TVars) => void;
@@ -32,6 +40,7 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
   const {
     mutationFn,
     invalidateKeys = [],
+    invalidateQueryFilters,
     optimisticUpdates = [],
     onSuccessExtra,
     onErrorExtra,
@@ -84,7 +93,9 @@ export function useSiteMutation<TData, TVars>(options: UseSiteMutationOptions<TD
         const id = track.entityId(vars, data);
         if (id) recent.markSaved(track.entityType, String(id));
       }
-      await Promise.all(invalidateKeys.map((key) => qc.invalidateQueries({ queryKey: key })));
+      await Promise.all(
+        invalidateKeys.map((key) => qc.invalidateQueries({ queryKey: key, ...invalidateQueryFilters })),
+      );
       if (successToast) {
         const msg = typeof successToast === "function" ? successToast(data, vars) : successToast;
         toast({

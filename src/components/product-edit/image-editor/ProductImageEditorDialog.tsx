@@ -18,8 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeProductImageSrc } from "@/lib/product-image-urls";
 import { uploadWpMedia } from "@/services/wpMediaService";
-import { Loader2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "react-error-boundary";
 import shellStyles from "./product-image-editor-shell.module.css";
@@ -88,6 +87,15 @@ async function savedImagePayloadToFile(data: SavedImagePayload): Promise<File> {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new File([bytes], filename, { type: mime });
+}
+
+/** Scaleflex / Filerobot portals menus & confirmation dialogs to `document.body`; keep Radix from treating them as “outside” closes. */
+function isScaleflexOverlayTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el?.closest) return false;
+  return !!el.closest(
+    ".SfxModal-Wrapper, .SfxDropdownList, .SfxPopover-Wrapper, #SfxPopper, [id='SfxPopper']",
+  );
 }
 
 const VIEW_EDGE = 16;
@@ -301,10 +309,26 @@ export function ProductImageEditorDialog({ open, onOpenChange, storeId, src, alt
   }, [onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showClose={false}
+        nonModalBackdrop
         overlayClassName="z-[100]"
+        onPointerDownOutside={(e) => {
+          if (isScaleflexOverlayTarget(e.detail.originalEvent.target)) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          if (isScaleflexOverlayTarget(e.target)) {
+            e.preventDefault();
+          }
+        }}
+        onFocusOutside={(e) => {
+          if (isScaleflexOverlayTarget(e.detail.originalEvent.target)) {
+            e.preventDefault();
+          }
+        }}
         className={cn(
           "!flex max-h-[min(96vh,1196px)] flex-col gap-0 overflow-hidden border-slate-200/90 bg-white p-0 shadow-xl",
           "min-h-0 z-[101] !w-auto max-w-none",
@@ -314,23 +338,10 @@ export function ProductImageEditorDialog({ open, onOpenChange, storeId, src, alt
           maxWidth: `min(${shellLayout.dialogWidthPx}px, calc(100vw - 1rem))`,
         }}
       >
-        <div className="relative z-[110] flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{t("products.edit.imageEditor.title")}</DialogTitle>
-            <DialogDescription>{t("products.edit.imageEditor.dialogDescription")}</DialogDescription>
-          </DialogHeader>
-          <span className="truncate text-sm font-medium text-slate-800">{t("products.edit.imageEditor.title")}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-slate-600 hover:text-slate-900"
-            onClick={() => onOpenChange(false)}
-            aria-label={t("products.edit.imageEditor.close")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <DialogHeader className="sr-only">
+          <DialogTitle>{t("products.edit.imageEditor.title")}</DialogTitle>
+          <DialogDescription>{t("products.edit.imageEditor.dialogDescription")}</DialogDescription>
+        </DialogHeader>
 
         {!trimmedSrc && (
           <div className="px-4 py-6 text-sm text-muted-foreground">

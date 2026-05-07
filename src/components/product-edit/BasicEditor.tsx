@@ -7,14 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus,
   X,
   ImageIcon,
-  Loader2,
-  Info,
-  Search,
   GripVertical,
   AlertCircle,
   Sparkles,
@@ -26,7 +22,6 @@ import {
   CircleDollarSign,
   Boxes,
   Truck,
-  FolderTree,
   Images,
   Eye,
   PanelRightOpen,
@@ -36,7 +31,7 @@ import { validateProductForm } from "@/services/productValidation";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
-import { useWooTaxonomy, useCreateWooTaxonomy } from "@/hooks/queries/useWooTaxonomy";
+import { ProductTaxonomyFields } from "@/components/product-edit/ProductTaxonomyFields";
 import { cn } from "@/lib/utils";
 import { LivePreviewCard } from "@/components/product-edit/LivePreviewCard";
 
@@ -56,7 +51,6 @@ interface Props {
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
 }
 
-const BANNER_KEY = "product-basic-banner-dismissed";
 const PREVIEW_OPEN_KEY = "product-edit-live-preview-open";
 
 export function BasicEditor({ storeId, productId, form, setForm }: Props) {
@@ -64,22 +58,9 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [imageEditorIdx, setImageEditorIdx] = useState(0);
-  const [brandInput, setBrandInput] = useState("");
-  const [catSearch, setCatSearch] = useState("");
-  const [catOpen, setCatOpen] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(true);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const { data: categories = [] } = useWooTaxonomy(storeId, "categories");
-  const { data: brands = [] } = useWooTaxonomy(storeId, "brands");
-  const createCategory = useCreateWooTaxonomy(storeId, "categories");
-  const createBrand = useCreateWooTaxonomy(storeId, "brands");
-
-  useEffect(() => {
-    setBannerDismissed(typeof window !== "undefined" && localStorage.getItem(BANNER_KEY) === "1");
-  }, []);
-
   useEffect(() => {
     try {
       if (localStorage.getItem(PREVIEW_OPEN_KEY) === "0") setPreviewOpen(false);
@@ -95,11 +76,6 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
     } catch {
       /* ignore */
     }
-  };
-
-  const dismissBanner = () => {
-    localStorage.setItem(BANNER_KEY, "1");
-    setBannerDismissed(true);
   };
 
   const mainImage = form.images[0];
@@ -133,47 +109,6 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
     const n = parseFloat(v);
     if (Number.isNaN(n)) return v;
     return n < 0 ? "0" : v;
-  };
-
-  const filteredCats = useMemo(() => {
-    const q = catSearch.trim().toLowerCase();
-    const selected = new Set(form.categories.map((c) => c.id));
-    return categories.filter((c) => !selected.has(c.id) && (!q || c.name.toLowerCase().includes(q)));
-  }, [catSearch, categories, form.categories]);
-
-  const canCreateCat = catSearch.trim().length > 0 && !categories.find((c) => c.name.toLowerCase() === catSearch.trim().toLowerCase());
-
-  const addCategoryById = (id: number, name: string) => {
-    if (!form.categories.find((c) => c.id === id)) {
-      setForm((p) => ({ ...p, categories: [...p.categories, { id, name }] }));
-    }
-    setCatSearch("");
-    setCatOpen(false);
-  };
-
-  const createAndAddCategory = async () => {
-    const name = catSearch.trim();
-    if (!name) return;
-    const created = await createCategory.mutateAsync({ name });
-    setForm((p) => ({ ...p, categories: [...p.categories, { id: created.id, name: created.name }] }));
-    setCatSearch("");
-    setCatOpen(false);
-  };
-
-  const addBrand = async (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const existing = brands.find((b) => b.name.toLowerCase() === trimmed.toLowerCase());
-    if (existing) {
-      if (!form.brands.find((b) => b.id === existing.id)) {
-        setForm((p) => ({ ...p, brands: [...p.brands, { id: existing.id, name: existing.name }] }));
-      }
-      setBrandInput("");
-      return;
-    }
-    const created = await createBrand.mutateAsync({ name: trimmed });
-    setForm((p) => ({ ...p, brands: [...p.brands, { id: created.id, name: created.name }] }));
-    setBrandInput("");
   };
 
   const setStockQty = (raw: string) => {
@@ -233,23 +168,10 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
 
   return (
     <div className="space-y-4 pb-6">
-      {!bannerDismissed && (
-        <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
-          <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium">Basic Mode</div>
-            <div className="text-xs text-muted-foreground">Essential product details only. Switch to Variations for variants and advanced fields.</div>
-          </div>
-          <button onClick={dismissBanner} className="text-muted-foreground hover:text-foreground shrink-0">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
       <div
         className={cn(
           "relative grid w-full grid-cols-1 gap-5 lg:items-start",
-          previewOpen && "lg:grid-cols-[1fr_minmax(240px,304px)]",
+          previewOpen && "lg:grid-cols-[1fr_minmax(260px,360px)]",
         )}
       >
         <div className="min-w-0 space-y-4">
@@ -361,91 +283,7 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
 
           <Card>
             <CardContent className="p-4 space-y-4">
-              <div className="space-y-1.5">
-                <Label className="inline-flex items-center gap-1.5"><FolderTree className="h-3.5 w-3.5 text-muted-foreground" />Categories</Label>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {form.categories.map((c) => (
-                    <Badge key={c.id} variant="secondary" className="gap-1.5 py-1">
-                      {c.name || `#${c.id}`}
-                      <button onClick={() => setForm((p) => ({ ...p, categories: p.categories.filter((x) => x.id !== c.id) }))}><X className="h-3 w-3" /></button>
-                    </Badge>
-                  ))}
-                  <Popover open={catOpen} onOpenChange={setCatOpen}>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" size="sm" className="h-7 gap-1">
-                        <Plus className="h-3.5 w-3.5" />
-                        Add category
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-0" align="start">
-                      <div className="p-2 border-b border-border">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="Search or create…" className="h-8 pl-7 text-sm" autoFocus />
-                        </div>
-                      </div>
-                      <div className="max-h-56 overflow-y-auto">
-                        {filteredCats.slice(0, 50).map((c) => (
-                          <button key={c.id} type="button" onClick={() => addCategoryById(c.id, c.name)} className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted text-left">
-                            <span className="truncate">{c.name}</span>
-                          </button>
-                        ))}
-                        {filteredCats.length === 0 && !canCreateCat && (
-                          <div className="px-3 py-4 text-xs text-muted-foreground text-center">No categories</div>
-                        )}
-                      </div>
-                      {canCreateCat && (
-                        <button type="button" onClick={createAndAddCategory} disabled={createCategory.isPending} className="w-full flex items-center gap-2 px-3 py-2 text-sm border-t border-border hover:bg-muted disabled:opacity-60">
-                          {createCategory.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                          <span>Create "<span className="font-medium">{catSearch.trim()}</span>"</span>
-                        </button>
-                      )}
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Brands</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {form.brands.map((b) => (
-                    <Badge key={b.id} variant="secondary" className="gap-1.5">
-                      {b.name || `#${b.id}`}
-                      <button onClick={() => setForm((p) => ({ ...p, brands: p.brands.filter((x) => x.id !== b.id) }))}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    list="basic-brand-options"
-                    value={brandInput}
-                    onChange={(e) => setBrandInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void addBrand(brandInput);
-                      }
-                    }}
-                    placeholder="Type brand name"
-                    className="min-w-[220px] flex-1"
-                  />
-                  <datalist id="basic-brand-options">
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.name} />
-                    ))}
-                  </datalist>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void addBrand(brandInput)}
-                    disabled={!brandInput.trim() || createBrand.isPending}
-                  >
-                    {createBrand.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
-                    Add
-                  </Button>
-                </div>
-              </div>
+              <ProductTaxonomyFields storeId={storeId} form={form} setForm={setForm} />
               <div className="space-y-1.5">
                 <Label className="inline-flex items-center gap-1.5"><Tag className="h-3.5 w-3.5 text-muted-foreground" />Tags</Label>
                 <TagPicker

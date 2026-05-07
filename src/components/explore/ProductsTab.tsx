@@ -52,7 +52,7 @@ import { useSyncUrl, getQueryString } from "@/hooks/useUrlState";
 import { ProductTypeDialog } from "@/components/product-edit/ProductTypeDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "next-i18next";
-import { formatNumber } from "@/lib/format-number";
+import { formatCurrency, formatNumber } from "@/lib/format-number";
 import {
   PRODUCT_CATALOG_COLUMNS as COLUMNS,
   type CatalogColumnKey as ColumnKey,
@@ -143,6 +143,35 @@ interface ProductsTabProps {
   storeName?: string;
   onSearchChange?: (v: string) => void;
   embedHeader?: boolean;
+  /** ISO 4217 code from store settings (Configuration). Used for catalog prices instead of parsing WooCommerce HTML. */
+  storeCurrency?: string | null;
+}
+
+function parseProductMoney(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const raw = typeof value === "number" ? String(value) : String(value).trim();
+  if (raw === "") return null;
+  const n = Number.parseFloat(raw.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatCatalogPrice(
+  value: string | number | null | undefined,
+  currencyCode: string,
+  locale: string | undefined,
+): string {
+  const n = parseProductMoney(value);
+  if (n === null) return "—";
+  return formatCurrency(n, currencyCode, locale);
+}
+
+function formatCatalogPriceRange(
+  min: number,
+  max: number,
+  currencyCode: string,
+  locale: string | undefined,
+): string {
+  return `${formatCurrency(min, currencyCode, locale)}\u2013${formatCurrency(max, currencyCode, locale)}`;
 }
 
 function countSelectedProductTypes(products: ProductRow[], selectedIds: Set<string>) {
@@ -168,9 +197,18 @@ function ProductCatalogStringCell({ columnKey, raw }: { columnKey: ColumnKey; ra
   );
 }
 
-export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChange, embedHeader = false }: ProductsTabProps) {
+export function ProductsTab({
+  storeId,
+  storeUrl,
+  search,
+  storeName,
+  onSearchChange,
+  embedHeader = false,
+  storeCurrency = "USD",
+}: ProductsTabProps) {
   const cfDebugBadge = useCfDebugBadge();
   const { t, i18n } = useTranslation("site");
+  const currencyCode = (storeCurrency?.trim() || "USD").toUpperCase();
   const queryClient = useQueryClient();
   const { locked } = useSyncLocked(storeId);
   const router = useRouter();
@@ -1089,14 +1127,28 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
 
       <Card className="relative">
         <CardContent className="p-0">
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && (() => {
+            const allLoadedSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
+            const partialLoadedSelected = !allLoadedSelected && products.some((p) => selectedIds.has(p.id));
+            return (
             <div className={`flex items-center gap-3 px-4 py-2.5 border-b border-border ${overLimit ? "bg-destructive/5" : "bg-primary/5"}`}>
-              <div className="flex items-center gap-2">
+              <Checkbox
+                checked={allLoadedSelected ? true : partialLoadedSelected ? "indeterminate" : false}
+                disabled={locked || products.length === 0}
+                onCheckedChange={(v) => {
+                  if (locked) return;
+                  if (v) setSelectedIds(new Set(products.map((p) => p.id)));
+                  else setSelectedIds(new Set());
+                }}
+                aria-label={t("products.bulk.selectAll")}
+                title={t("products.bulk.selectAllHint")}
+              />
+              <div className="flex items-center gap-2 ps-1 border-s border-border">
                 <Badge variant="secondary" className="font-mono text-xs">{selectedIds.size}</Badge>
                 <span className="text-xs font-medium">{t("products.bulk.selected")}</span>
-                {overLimit && <span className="text-[11px] text-destructive ml-1">{t("products.bulk.maxLimit", { max: MAX_BULK })}</span>}
-                {locked && <span className="text-[11px] text-warning ml-1">{t("products.bulk.lockedDuringSync")}</span>}
-                <div className="flex items-center gap-3 border-l border-border pl-3 ml-1 text-muted-foreground">
+                {overLimit && <span className="text-[11px] text-destructive ms-1">{t("products.bulk.maxLimit", { max: MAX_BULK })}</span>}
+                {locked && <span className="text-[11px] text-warning ms-1">{t("products.bulk.lockedDuringSync")}</span>}
+                <div className="flex items-center gap-3 border-s border-border ps-3 ms-1 text-muted-foreground">
                   <span className="inline-flex items-center gap-1 text-[11px]" title={t("products.filters.typeSimple")}>
                     <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     <span className="font-mono tabular-nums text-foreground">{selectionTypeCounts.simple}</span>
@@ -1115,7 +1167,8 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground" disabled={overLimit || locked} onClick={() => setBulkDialog("delete")}><Trash2 className="h-3.5 w-3.5" />{t("products.bulk.delete")}</Button>
               <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setSelectedIds(new Set())}><X className="h-3.5 w-3.5" />{t("products.bulk.clear")}</Button>
             </div>
-          )}
+            );
+          })()}
           {viewMode !== "table" ? (
             <div className={cn("p-4 transition-opacity duration-150", showRefetchOverlay && "opacity-70")}>
               {(() => {
@@ -1170,17 +1223,20 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const brandList = Array.isArray(p.brands) ? (p.brands as { name?: string }[]).map((b) => b.name).filter(Boolean) : [];
                       const stockLow = p.stock_quantity != null && p.stock_quantity > 0 && p.stock_quantity < 5;
                       const stockOut = p.stock_quantity === 0 || p.stock_status === "outofstock";
-                      const priceHtml = (p.raw_data?.price_html as string) || "";
-                      const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
-                      const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
-                      const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
+                      const fmtPrice = (v: string | number | null | undefined) => formatCatalogPrice(v, currencyCode, i18n.language);
                       const minP = (p as ProductRow & { min_price?: number | null }).min_price;
                       const maxP = (p as ProductRow & { max_price?: number | null }).max_price;
                       const isVariable = p.type === "variable";
                       const hasRange = isVariable && minP != null && maxP != null && minP !== maxP;
                       const hasSingleVariablePrice = isVariable && minP != null && maxP != null && minP === maxP;
-                      const rangeText = hasRange ? `${currency ? currency + " " : ""}${Number(minP).toFixed(2)}–${Number(maxP).toFixed(2)}` : null;
-                      const variableSingleText = hasSingleVariablePrice ? `${currency ? currency + " " : ""}${Number(minP).toFixed(2)}` : null;
+                      const rangeText =
+                        hasRange && minP != null && maxP != null
+                          ? formatCatalogPriceRange(Number(minP), Number(maxP), currencyCode, i18n.language)
+                          : null;
+                      const variableSingleText =
+                        hasSingleVariablePrice && minP != null
+                          ? formatCatalogPrice(minP, currencyCode, i18n.language)
+                          : null;
                       const dotColor: Record<string, string> = {
                         publish: "bg-success",
                         draft: "bg-muted-foreground/50",
@@ -1414,7 +1470,7 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
             </div>
           ) : (
             <div className={cn("overflow-x-auto transition-opacity duration-150", showRefetchOverlay && "opacity-70")}>
-              <Table className="[&_td]:px-1.5 [&_td]:py-1.5 [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-2">
+              <Table className="[&_td]:py-1.5 [&_td:not(:first-child)]:px-1.5 [&_th]:h-9 [&_th]:py-2 [&_th:not(:first-child)]:px-1.5">
                 <TableHeader>
                   <TableRow className="bg-muted/30">
                     <TableHead className="w-8 min-w-8 ps-3 pe-2">
@@ -1524,16 +1580,16 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
                       const thumb = getProductThumbnail(p.images, p.image_mirror_urls, "thumb");
                       const fallbackThumb = getFirstImageSrc(p.images);
                       const isSelected = selectedIds.has(p.id);
-                      const priceHtml = (p.raw_data?.price_html as string) || "";
-                      const currencyMatch = priceHtml.match(/<span class="woocommerce-Price-currencySymbol"[^>]*>([^<]+)<\/span>/);
-                      const currency = currencyMatch ? currencyMatch[1].replace(/&[^;]+;/g, "").trim() : "";
-                      const fmtPrice = (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" ? `${currency ? currency + " " : ""}${v}` : "—";
+                      const fmtPrice = (v: string | number | null | undefined) => formatCatalogPrice(v, currencyCode, i18n.language);
                       const statusLabel = p.status === "publish" ? "Active" : (p.status || "—");
                       const pending = isPending(p);
                       const minPRow = (p as ProductRow & { min_price?: number | null }).min_price;
                       const maxPRow = (p as ProductRow & { max_price?: number | null }).max_price;
                       const hasRangeRow = p.type === "variable" && minPRow != null && maxPRow != null && minPRow !== maxPRow;
-                      const rangeTextRow = hasRangeRow ? `${currency ? currency + " " : ""}${Number(minPRow).toFixed(2)}–${Number(maxPRow).toFixed(2)}` : null;
+                      const rangeTextRow =
+                        hasRangeRow && minPRow != null && maxPRow != null
+                          ? formatCatalogPriceRange(Number(minPRow), Number(maxPRow), currencyCode, i18n.language)
+                          : null;
                       return (
                           <TableRow
                             key={p.id}
@@ -1953,9 +2009,21 @@ export function ProductsTab({ storeId, storeUrl, search, storeName, onSearchChan
           )}
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setBulkDialog(null)} disabled={bulkSubmitting}>Cancel</Button>
             <Button
-              onClick={submitBulk}
+              type="button"
+              variant="ghost"
+              onClick={() => setBulkDialog(null)}
+              disabled={bulkSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void submitBulk();
+              }}
               disabled={bulkSubmitting}
               className={bulkDialog === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >

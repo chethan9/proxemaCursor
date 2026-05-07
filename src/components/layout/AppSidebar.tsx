@@ -502,7 +502,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
         {active && !collapsed && (
           <span aria-hidden="true" className="absolute start-0 top-1 bottom-1 w-0.5 rounded-e-full bg-sidebar-primary" />
         )}
-        <Icon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} aria-hidden="true" />
+        <Icon
+          className="h-4 w-4 shrink-0"
+          style={node.iconColor ? { color: node.iconColor } : undefined}
+          aria-hidden="true"
+        />
         {!collapsed && <span className="truncate">{label}</span>}
       </Link>
     );
@@ -685,7 +689,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                           active ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" style={child.iconColor ? { color: child.iconColor } : undefined} />
+                        <Icon
+                          className="h-4 w-4 shrink-0"
+                          style={child.iconColor ? { color: child.iconColor } : undefined}
+                        />
                         <span className="truncate">{childLabel}</span>
                       </Link>
                     </li>
@@ -998,7 +1005,10 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                       )}
                     >
                       {active && <span aria-hidden className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-e-full bg-foreground" />}
-                      <Icon className="h-4 w-4 shrink-0" style={child.iconColor ? { color: child.iconColor } : undefined} />
+                      <Icon
+                        className="h-4 w-4 shrink-0"
+                        style={child.iconColor ? { color: child.iconColor } : undefined}
+                      />
                       <span className="truncate">{tItemLabel(child)}</span>
                     </Link>
                   </li>

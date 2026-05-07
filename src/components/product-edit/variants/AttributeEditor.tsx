@@ -403,11 +403,12 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
 
   return (
     <>
-    <div className="space-y-3">
+    <div className="rounded-lg border border-border bg-background">
+      <div className="divide-y divide-border/70">
       {form.attributes.map((attr, idx) => {
         const expanded = editingAttr === idx;
         return (
-          <div key={idx} className="rounded-lg border border-border/70 bg-background p-3 sm:p-4">
+          <div key={idx} className="p-3 sm:p-4 bg-background">
               {expanded ? (
                 <div className="space-y-2">
                   <div className="space-y-1">
@@ -556,14 +557,17 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
           </div>
         );
       })}
+      </div>
 
-      <AttributeNameCombobox
-        wooAttributes={wooAttributes}
-        excludeIds={usedAttrIds}
-        onSelectExisting={addExistingAttribute}
-        onCreateNew={(name) => void addNewAttribute(name)}
-        isPending={createWooAttribute.isPending}
-      />
+      <div className="border-t border-border/70 p-3 sm:p-4 bg-muted/20">
+        <AttributeNameCombobox
+          wooAttributes={wooAttributes}
+          excludeIds={usedAttrIds}
+          onSelectExisting={addExistingAttribute}
+          onCreateNew={(name) => void addNewAttribute(name)}
+          isPending={createWooAttribute.isPending}
+        />
+      </div>
     </div>
 
     <AlertDialog

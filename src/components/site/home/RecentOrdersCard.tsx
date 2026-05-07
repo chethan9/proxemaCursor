@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { formatStoreDateTime } from "@/lib/format-store-date";
+import { formatNumber } from "@/lib/format-number";
+import { translateOrderStatus } from "@/lib/order-status-i18n";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { useTranslation } from "next-i18next";
@@ -63,7 +65,7 @@ export function RecentOrdersCard({ orders, storeId, currency, storeTimezone, loa
                   className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left"
                 >
                   <StatusBadge variant={getStatusVariant(o.status || "")} className="shrink-0">
-                    {o.status || "—"}
+                    {translateOrderStatus(o.status, t)}
                   </StatusBadge>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">#{o.order_number || o.woo_id || "—"}</div>
@@ -85,7 +87,11 @@ export function RecentOrdersCard({ orders, storeId, currency, storeTimezone, loa
                   </div>
                   <div className="text-right shrink-0 w-24">
                     <div className="text-sm font-semibold tabular-nums">
-                      {Number(o.total || 0).toFixed(2)} <span className="text-xs text-muted-foreground">{o.currency || currency}</span>
+                      {formatNumber(Number(o.total || 0), i18n.language, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      <span className="text-xs text-muted-foreground">{o.currency || currency}</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {o.date_created

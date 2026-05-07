@@ -84,7 +84,7 @@ export function SiteBlockedBanner({ storeId }: Props) {
             The last sync failed because {label} security is blocking our requests. Run the diagnostic to see a copy-paste fix for your site admin.
           </p>
         </div>
-        <Button size="sm" variant="outline" className="bg-white shrink-0" onClick={() => setDiagnoseOpen(true)}>
+        <Button size="sm" variant="outline" className="bg-background shrink-0" onClick={() => setDiagnoseOpen(true)}>
           <Shield className="h-3.5 w-3.5 mr-1.5" />
           Diagnose & Fix
         </Button>

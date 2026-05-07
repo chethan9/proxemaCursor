@@ -239,7 +239,7 @@ function CustomerDetailsInner() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-white p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
           <div className="flex items-center gap-3">
             <div className="h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-semibold">{getCustomerInitials(customer)}</div>
@@ -267,7 +267,7 @@ function CustomerDetailsInner() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-white overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="border-b border-border flex">
           <button onClick={() => setTab("details")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "details" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t("customerDetail.tabs.details")}</button>
           <button onClick={() => setTab("orders")} className={`px-5 py-2.5 text-sm font-medium border-b-2 ${tab === "orders" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t("customerDetail.tabs.orders", { count: ordersTotal })}</button>
@@ -414,7 +414,7 @@ function OrderCard({ order, siteId, expanded, onToggle, statusLabel, t }: { orde
   const coupon = Array.isArray(order.coupon_lines) && order.coupon_lines[0]?.code;
 
   return (
-    <div className={`rounded-lg border border-border bg-white overflow-hidden ${expanded ? "ring-1 ring-primary/20" : "hover:border-primary/30"} transition-colors`}>
+    <div className={`rounded-lg border border-border bg-card overflow-hidden ${expanded ? "ring-1 ring-primary/20" : "hover:border-primary/30"} transition-colors`}>
       <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={onToggle}>
         <span className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-medium capitalize ring-1 ring-inset ${sc.pill}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />

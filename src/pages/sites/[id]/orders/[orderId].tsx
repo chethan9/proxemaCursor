@@ -523,7 +523,7 @@ function OrderDetailSkeleton() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-5 animate-in fade-in duration-200">
       <div className="space-y-4 min-w-0">
-        <div className="rounded-lg border border-border bg-white p-5 space-y-3">
+        <div className="rounded-lg border border-border bg-card p-5 space-y-3">
           <Skeleton className="h-4 w-44" />
           <div className="grid grid-cols-3 gap-3">
             <Skeleton className="h-16 rounded-lg" />
@@ -533,7 +533,7 @@ function OrderDetailSkeleton() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-lg border border-border bg-white p-5 space-y-2.5">
+            <div key={i} className="rounded-lg border border-border bg-card p-5 space-y-2.5">
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-5/6" />
@@ -542,7 +542,7 @@ function OrderDetailSkeleton() {
             </div>
           ))}
         </div>
-        <div className="rounded-lg border border-border bg-white p-5 space-y-3">
+        <div className="rounded-lg border border-border bg-card p-5 space-y-3">
           <Skeleton className="h-4 w-32" />
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
@@ -563,7 +563,7 @@ function OrderDetailSkeleton() {
       </div>
       <div className="space-y-4">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-lg border border-border bg-white p-4 space-y-2.5">
+          <div key={i} className="rounded-lg border border-border bg-card p-4 space-y-2.5">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />

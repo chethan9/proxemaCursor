@@ -11,6 +11,11 @@
     "actionPlaceholder": "الإجراء",
     "entityPlaceholder": "نوع الكيان",
     "entityIdPlaceholder": "معرف الكيان…",
+    "modulePlaceholder": "الوحدة",
+    "moduleAll": "كل الوحدات",
+    "clientIdPlaceholder": "معرف العميل (المستأجر)…",
+    "searchPlaceholder": "بحث…",
+    "toDate": "إلى تاريخ",
     "allActions": "جميع الإجراءات",
     "allEntities": "جميع الكيانات",
     "filterActive_one": "فلتر {{count}} نشط",
@@ -19,5 +24,23 @@
     "empty": "لا يوجد نشاط مطابق للفلاتر.",
     "loadMore": "تحميل المزيد",
     "unknownError": "خطأ غير معروف"
+  },
+  "ai": {
+    "settingsTitle": "موفّرو الذكاء الاصطناعي",
+    "settingsSubtitle": "خزّن مفاتيح API لتوليد الصور (مشفّرة في السكون).",
+    "geminiKey": "مفتاح Google Gemini API",
+    "openaiKey": "مفتاح OpenAI API",
+    "save": "حفظ المفاتيح",
+    "saved": "تم تحديث مفاتيح الموفّرين",
+    "featuresTitle": "ميزات الذكاء الاصطناعي",
+    "featuresSubtitle": "التوجيهات والنماذج وتكلفة الرصيد لكل مخرج.",
+    "addFeature": "إضافة ميزة",
+    "test": "اختبار",
+    "slug": "المعرّف",
+    "name": "الاسم",
+    "provider": "الموفّر",
+    "model": "النموذج",
+    "credits": "الأرصدة / مخرج",
+    "active": "نشط"
   }
 }

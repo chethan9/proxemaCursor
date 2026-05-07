@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Loader2,
-  Trash2,
   AlertCircle,
   X,
   ExternalLink,
@@ -62,20 +61,37 @@ function Inner() {
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [promoteToVariableOpen, setPromoteToVariableOpen] = useState(false);
+  const [switchToBasicOpen, setSwitchToBasicOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<ProductValidationIssue[]>([]);
   const [wooId, setWooId] = useState<number | null>(null);
   const [baselineForm, setBaselineForm] = useState<ProductFormState | null>(null);
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  /** Increment on Variations navigation so we scroll to the Variants block without scrolling on initial variable-product load. */
+  const [variantsNavTick, setVariantsNavTick] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // Keep mode changes anchored to the top so Basic doesn't appear "mid-page" after switching from Variations.
+    if (mode !== "basic") return;
+    // Anchor to top when returning to Basic mode (not when entering Variations — that would hide the Variants section).
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "auto" });
     });
   }, [mode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (mode !== "advanced" || loading || storeLoading) return;
+    if (variantsNavTick === 0) return;
+    const t = window.setTimeout(() => {
+      document.getElementById("product-edit-section-variants")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [mode, variantsNavTick, loading, storeLoading]);
 
   useEffect(() => {
     if (!storeId || !productId) return;
@@ -201,6 +217,7 @@ function Inner() {
 
   const save = useSiteMutation<unknown, void>({
     mutationFn: () => updateProduct(storeId, productId, form!),
+    invalidateQueryFilters: { refetchType: "all" },
     invalidateKeys: [
       queryKeys.products(storeId),
       ["product", productId],
@@ -221,6 +238,7 @@ function Inner() {
   });
 
   const remove = useSiteMutation<unknown, void>({
+    invalidateQueryFilters: { refetchType: "all" },
     mutationFn: async () => {
       const res = await authorizedFetch(`/api/stores/${storeId}/products/${productId}`, { method: "DELETE" });
       if (!res.ok) {
@@ -313,7 +331,7 @@ function Inner() {
     "bg-orange-500 text-white shadow-sm hover:bg-orange-600";
   if (syncReady && syncLocked) {
     return (
-      <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto">
+      <div className="space-y-4 px-6 pb-6 pt-2 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild><Link href={returnTo}><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link></Button>
         </div>
@@ -333,7 +351,14 @@ function Inner() {
   }
 
   return (
-    <div className="space-y-4 px-6 pt-4 pb-6 max-w-[1400px] mx-auto">
+    <div
+      className={cn(
+        "min-h-0 space-y-3 bg-background pt-2 pb-6 mx-auto w-full",
+        mode === "advanced"
+          ? "max-w-[min(1920px,100%)] px-3 sm:px-5"
+          : "max-w-[1400px] px-6",
+      )}
+    >
       <h1 className="sr-only">Edit product</h1>
       <div
         role="toolbar"
@@ -394,7 +419,14 @@ function Inner() {
           <div className="flex min-w-0 items-center gap-1 rounded-md bg-muted/70 p-1">
             <button
               type="button"
-              onClick={() => setMode("basic")}
+              onClick={() => {
+                if (mode === "basic") return;
+                if (form.type === "variable") {
+                  setSwitchToBasicOpen(true);
+                  return;
+                }
+                setMode("basic");
+              }}
               className={cn(
                 "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-xs font-medium transition-colors",
                 mode === "basic"
@@ -412,6 +444,7 @@ function Inner() {
                   setPromoteToVariableOpen(true);
                   return;
                 }
+                setVariantsNavTick((n) => n + 1);
                 setMode("advanced");
               }}
               className={cn(
@@ -435,6 +468,12 @@ function Inner() {
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          <ActivityHistoryDrawer
+            entityType="product"
+            entityId={productId}
+            storeId={storeId}
+            className="h-8 gap-1 px-2 text-xs"
+          />
           <Button
             size="sm"
             onClick={onPublish}
@@ -444,21 +483,6 @@ function Inner() {
           >
             {save.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
             {save.isPending ? "Saving…" : "Save changes"}
-          </Button>
-          <ActivityHistoryDrawer
-            entityType="product"
-            entityId={productId}
-            storeId={storeId}
-            className="h-8 gap-1 px-2 text-xs"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDeleteOpen(true)}
-            className="h-8 gap-1 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/25"
-          >
-            <Trash2 className="size-3.5 shrink-0" />
-            Delete
           </Button>
         </div>
       </div>
@@ -495,7 +519,7 @@ function Inner() {
           baselineForm={baselineForm}
           setForm={(u) => setForm((p) => (p ? u(p) : p))}
           canAdvance={canAdvance}
-          onCancel={goBack}
+          onRequestDelete={() => setDeleteOpen(true)}
           storeId={storeId}
           productId={productId}
           tabContent={{
@@ -506,6 +530,29 @@ function Inner() {
           }}
         />
       )}
+
+      <AlertDialog open={switchToBasicOpen} onOpenChange={setSwitchToBasicOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to Basic editor?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Basic mode uses a simplified layout. Attributes, variation rows, and the full advanced sections are available in Variations mode.
+              Your edits stay in the form — you can switch back anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setSwitchToBasicOpen(false);
+                setMode("basic");
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={promoteToVariableOpen} onOpenChange={setPromoteToVariableOpen}>
         <AlertDialogContent>
@@ -521,6 +568,7 @@ function Inner() {
             <AlertDialogAction
               onClick={() => {
                 setForm((p) => (p ? { ...p, type: "variable" } : p));
+                setVariantsNavTick((n) => n + 1);
                 setMode("advanced");
               }}
             >
@@ -554,7 +602,7 @@ export default function EditProductPage() {
 
 function ProductEditSkeleton() {
   return (
-    <div className="space-y-4 px-6 pb-6 pt-4 max-w-[1400px] mx-auto animate-in fade-in duration-200">
+    <div className="space-y-4 px-6 pb-6 pt-2 max-w-[1400px] mx-auto animate-in fade-in duration-200">
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
         <Skeleton className="h-8 w-14 shrink-0" />
         <Skeleton className="hidden h-7 w-px shrink-0 sm:block" />
@@ -567,7 +615,7 @@ function ProductEditSkeleton() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
         <div className="space-y-4 min-w-0">
-          <div className="rounded-lg border border-border bg-white p-5 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-5 space-y-3">
             <Skeleton className="h-4 w-32" />
             <div className="grid grid-cols-4 gap-2.5">
               <Skeleton className="aspect-square rounded-md col-span-2 row-span-2" />
@@ -578,7 +626,7 @@ function ProductEditSkeleton() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-white p-5 space-y-4">
+          <div className="rounded-lg border border-border bg-card p-5 space-y-4">
             <Skeleton className="h-4 w-28" />
             <div className="space-y-3">
               <div><Skeleton className="h-3 w-16 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
@@ -590,7 +638,7 @@ function ProductEditSkeleton() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-white p-5 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-5 space-y-3">
             <Skeleton className="h-4 w-24" />
             <div className="grid grid-cols-2 gap-3">
               <div><Skeleton className="h-3 w-20 mb-1.5" /><Skeleton className="h-9 w-full" /></div>
@@ -600,12 +648,12 @@ function ProductEditSkeleton() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-white p-4 space-y-2.5">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-2.5">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />
           </div>
-          <div className="rounded-lg border border-border bg-white p-4 space-y-2.5">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-2.5">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { BULK_INVOICE_ARTIFACT_RETENTION_DAYS } from "@/lib/bulk-invoice-artifact-retention";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { slugifyStoreNameForFile } from "@/lib/templates/render-filename";
 
@@ -39,7 +40,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const payload = job.payload as { artifact_path?: string; output_mode?: string; artifact_deleted?: boolean } | null;
   if (payload?.artifact_deleted === true) {
-    return res.status(410).json({ error: "Invoice archive expired (auto-deleted after 7 days)" });
+    return res.status(410).json({
+      error: `Invoice archive expired (auto-deleted after ${BULK_INVOICE_ARTIFACT_RETENTION_DAYS} days)`,
+    });
   }
   const path = payload?.artifact_path;
   if (!path) return res.status(404).json({ error: "Artifact missing or expired" });

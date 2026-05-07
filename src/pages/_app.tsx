@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "@/components/product-edit/image-editor/product-image-editor-portals.css";
 import "tippy.js/dist/tippy.css";
 import "tippy.js/animations/scale.css";
 import "grapesjs/dist/css/grapes.min.css";

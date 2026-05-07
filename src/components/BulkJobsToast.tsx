@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { acknowledgeDownloadArtifacts } from "@/lib/downloads-artifacts-ack";
+import { BULK_INVOICE_ARTIFACT_RETENTION_DAYS } from "@/lib/bulk-invoice-artifact-retention";
 
 export function BulkJobsToast() {
   const { data: jobs = [] } = useActiveBulkJobs();
@@ -69,7 +70,12 @@ export function BulkJobsToast() {
       });
       if (res.status === 410) {
         const j = await res.json().catch(() => ({}));
-        toast({ title: "Archive expired", description: j.error || "Auto-deleted after 7 days", variant: "destructive" });
+        toast({
+          title: "Archive expired",
+          description:
+            j.error || `Auto-deleted after ${BULK_INVOICE_ARTIFACT_RETENTION_DAYS} days`,
+          variant: "destructive",
+        });
         return;
       }
       if (!res.ok) {

@@ -12,6 +12,37 @@ export type UseProductsOptions = Omit<FetchProductsOptions, "page"> & {
   pageSize?: number;
 };
 
+type TaxonomyOptionRow = { woo_id: number | null; name: string | null };
+
+/** Merge DB taxonomy rows with live Woo terms so IDs assigned on products but missing locally still appear in dropdowns. */
+function mergeTaxonomyOptionsForExplorer(
+  rows: TaxonomyOptionRow[],
+  live: { id: number; name?: string }[],
+): { woo_id: number; name: string }[] {
+  const liveById = new Map(live.map((t) => [t.id, t] as const));
+  const byId = new Map<number, string>();
+
+  for (const r of rows) {
+    if (r.woo_id == null) continue;
+    const lv = liveById.get(r.woo_id);
+    const name = (lv?.name?.trim() || r.name?.trim() || "").trim();
+    if (!name) continue;
+    byId.set(r.woo_id, name);
+  }
+
+  for (const t of live) {
+    const name = (typeof t.name === "string" ? t.name : "").trim();
+    if (!name) continue;
+    if (!byId.has(t.id)) {
+      byId.set(t.id, name);
+    }
+  }
+
+  return Array.from(byId.entries())
+    .map(([woo_id, name]) => ({ woo_id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /**
  * Infinite-scroll hook for the products list.
  *
@@ -22,6 +53,7 @@ export type UseProductsOptions = Omit<FetchProductsOptions, "page"> & {
 export function useProducts(opts: UseProductsOptions) {
   const { enabled: enabledOverride, pageSize = 100, ...fetchOpts } = opts;
   const { data: syncStatus } = useStoreSyncStatus(fetchOpts.storeId);
+  const awaitingSyncStatus = syncStatus === undefined;
   const initialSyncRunning = syncStatus ? !syncStatus.initialSyncDone : false;
   const anySyncRunning = syncStatus?.running || initialSyncRunning;
 
@@ -51,10 +83,11 @@ export function useProducts(opts: UseProductsOptions) {
       return allPages.length;
     },
     placeholderData: keepPreviousData,
-    enabled: !!fetchOpts.storeId && syncStatus !== undefined && (enabledOverride ?? true),
+    enabled: !!fetchOpts.storeId && !awaitingSyncStatus && (enabledOverride ?? true),
     staleTime: anySyncRunning ? 10_000 : 120_000,
     gcTime: 10 * 60_000,
-    refetchOnMount: false,
+    /** Refetch stale data when revisiting the catalog (needed after mutations invalidated the list while the route was inactive). */
+    refetchOnMount: true,
     refetchOnWindowFocus: anySyncRunning,
     refetchInterval: anySyncRunning ? 8_000 : false,
     retry: 1,
@@ -74,7 +107,8 @@ export function useProducts(opts: UseProductsOptions) {
   return {
     data,
     count,
-    isLoading: query.isLoading,
+    /** Includes waiting on store sync-status so the UI does not flash an empty catalog first. */
+    isLoading: awaitingSyncStatus || query.isLoading,
     isFetching: query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,
     hasNextPage: !!query.hasNextPage,
@@ -93,16 +127,7 @@ export function useProductCategoryOptions(storeId: string) {
         fetchAllCategories(storeId).catch(() => []),
         listTaxonomy(storeId, "categories").catch(() => []),
       ]);
-      const byWoo = new Map<number, { woo_id: number; name: string }>();
-      for (const r of rows) {
-        if (!r.name?.trim()) continue;
-        byWoo.set(r.woo_id, { woo_id: r.woo_id, name: r.name });
-      }
-      for (const r of live) {
-        if (!r.name?.trim()) continue;
-        if (!byWoo.has(r.id)) byWoo.set(r.id, { woo_id: r.id, name: r.name });
-      }
-      return [...byWoo.values()].sort((a, b) => a.name.localeCompare(b.name));
+      return mergeTaxonomyOptionsForExplorer(rows, live);
     },
     enabled: !!storeId,
     staleTime: 60_000,
@@ -114,11 +139,11 @@ export function useProductTagOptions(storeId: string) {
   return useQuery({
     queryKey: queryKeys.taxonomy(storeId, "tags"),
     queryFn: async () => {
-      const rows = await fetchAllTags(storeId);
-      return rows
-        .filter((r) => r.name?.trim())
-        .map((r) => ({ woo_id: r.woo_id, name: r.name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const [rows, live] = await Promise.all([
+        fetchAllTags(storeId).catch(() => []),
+        listTaxonomy(storeId, "tags").catch(() => []),
+      ]);
+      return mergeTaxonomyOptionsForExplorer(rows, live);
     },
     enabled: !!storeId,
     staleTime: 60_000,
@@ -130,11 +155,11 @@ export function useProductBrandOptions(storeId: string) {
   return useQuery({
     queryKey: queryKeys.taxonomy(storeId, "brands"),
     queryFn: async () => {
-      const rows = await fetchAllBrands(storeId);
-      return rows
-        .filter((r) => r.name?.trim())
-        .map((r) => ({ woo_id: r.woo_id, name: r.name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const [rows, live] = await Promise.all([
+        fetchAllBrands(storeId).catch(() => []),
+        listTaxonomy(storeId, "brands").catch(() => []),
+      ]);
+      return mergeTaxonomyOptionsForExplorer(rows, live);
     },
     enabled: !!storeId,
     staleTime: 60_000,

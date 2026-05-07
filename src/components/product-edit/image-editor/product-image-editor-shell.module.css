@@ -1,8 +1,14 @@
 /**
  * Tighter density for Scaleflex FIE inside our dialog (sidebar, bars scale down slightly).
  */
+.shell {
+  position: relative;
+  isolation: isolate;
+}
+
 .shell :global(.FIE_root) {
   font-size: 13px;
+  position: relative;
 }
 
 .shell :global(.FIE_root svg) {

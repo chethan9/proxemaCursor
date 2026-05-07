@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
 import { isBillingDevMode } from "@/lib/billing-dev-mode.server";
 import { consumeAICredits, getAICreditsState, aiQuotaErrorPayload } from "@/lib/ai-credits.server";
-import { appendAdditionalPromptSegment, renderPromptTemplate } from "@/lib/ai/prompt-render";
+import { composeImageGenerationPrompt, renderPromptTemplate } from "@/lib/ai/prompt-render";
 import { getAIImageProvider } from "@/lib/ai/providers/registry";
 import { getDecryptedProviderApiKey } from "@/services/aiProviderCredentials.server";
 import { resolveImageControls } from "@/lib/ai/image-generation-controls";
@@ -22,7 +22,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const body = req.body as { storeId?: string; outputIndices?: number[]; additionalPrompt?: string };
   const storeId = typeof body.storeId === "string" ? body.storeId : "";
-  const additionalPrompt = typeof body.additionalPrompt === "string" ? body.additionalPrompt.trim() : "";
   if (!storeId) return res.status(400).json({ error: "storeId required" });
 
   const gate = await assertStoreAccess(userRes.user.id, storeId);
@@ -46,6 +45,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   for (const [k, v] of Object.entries(userInputRaw)) {
     userInputStr[k] = String(v ?? "");
   }
+  const storedAdditional = (userInputStr.additional_prompt || "").trim();
+  const additionalPromptFromBody =
+    typeof body.additionalPrompt === "string" ? body.additionalPrompt.trim() : undefined;
+  /** Prefer live request text; if omitted, reuse what was stored on the generation. */
+  const additionalPrompt =
+    additionalPromptFromBody !== undefined ? additionalPromptFromBody : storedAdditional;
   const imageControls = resolveImageControls(userInputStr);
 
   let productName = "";
@@ -90,15 +95,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     for (let j = 0; j < indices.length; j++) {
       const idx = indices[j];
-      const prompt = appendAdditionalPromptSegment(
-        renderPromptTemplate(feature.prompt_template, {
+      const prompt = composeImageGenerationPrompt({
+        renderedTemplate: renderPromptTemplate(feature.prompt_template, {
           product_name: productName,
           user_input: userInputStr,
           index: idx + 1,
           total,
         }),
-        `${imageControls.instruction}${additionalPrompt ? `\n${additionalPrompt}` : ""}`
-      );
+        imageInstruction: imageControls.instruction,
+        additionalPrompt,
+      });
       const out = await provider.generate(
         {
           prompt,

@@ -18,6 +18,9 @@ export const SIZE_PRESET_OPTIONS: Array<{ value: Exclude<SizePresetValue, "custo
   { value: "hero", label: "Hero (1920 x 1080)", width: 1920, height: 1080 },
 ];
 
+/** Max simultaneous outputs per generation request (UI + API). */
+export const MAX_AI_IMAGE_OUTPUT_COUNT = 5;
+
 export const DEFAULT_ASPECT_RATIO: AspectRatioValue = "1:1";
 export const DEFAULT_SIZE_PRESET: SizePresetValue = "md";
 export const DEFAULT_CUSTOM_WIDTH = 1024;

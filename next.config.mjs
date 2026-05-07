@@ -59,9 +59,9 @@ const nextConfig = {
   },
   allowedDevOrigins: ["*.daytona.work", "*.softgen.dev"],
   /**
-   * react-filerobot-image-editor / @scaleflex/ui ship chunks that reference `React`
-   * without importing it (legacy JSX). Production webpack does not define that global,
-   * which causes ReferenceError: React is not defined when opening the editor.
+   * react-filerobot-image-editor ships some chunks that use `React.createElement` without importing
+   * `react`. Webpack: ProvidePlugin injects `React` client-side. Turbopack: run postinstall
+   * `scripts/patch-filerobot-react-imports.mjs` (see package.json) so those files get an explicit import.
    */
   webpack: (config, { webpack: webpackInstance, isServer }) => {
     if (!isServer) {

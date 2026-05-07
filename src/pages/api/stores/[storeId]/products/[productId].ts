@@ -31,6 +31,36 @@ function trimStr(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/**
+ * WooCommerce `POST …/variations/batch` frequently returns **partial** variation objects: omitted fields,
+ * or `attributes: []`, or prices only in `price` / omitted entirely. Shallow-merging that response over
+ * `raw_data` would overwrite our last full REST snapshot with blanks. Drop destructive patch keys when the
+ * stored snapshot still holds usable values so the mirror cannot be erased by an incomplete response.
+ */
+function sanitizePartialWooVariationForMirrorMerge(
+  v: Record<string, unknown>,
+  prevRaw: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const out = { ...v };
+  if (!prevRaw) return out;
+
+  if (Array.isArray(out.attributes) && out.attributes.length === 0) {
+    const pa = prevRaw.attributes;
+    if (Array.isArray(pa) && pa.length > 0) delete out.attributes;
+  }
+
+  const dropIfLostPrice = (key: string) => {
+    if (toNumeric(out[key]) == null && toNumeric(prevRaw[key]) != null) delete out[key];
+  };
+  dropIfLostPrice("regular_price");
+  dropIfLostPrice("sale_price");
+  dropIfLostPrice("price");
+
+  if (trimStr(out.sku) === "" && trimStr(prevRaw.sku) !== "") delete out.sku;
+
+  return out;
+}
+
 function pricePositive(s: unknown): boolean {
   const t = trimStr(s);
   if (!t) return false;
@@ -218,25 +248,6 @@ function diffFields(before: Record<string, unknown>, after: Record<string, unkno
   return changes;
 }
 
-function variationChanged(
-  incoming: Record<string, unknown>,
-  row: Record<string, unknown>
-): boolean {
-  const pairs: [unknown, unknown][] = [
-    [incoming.regular_price || "", row.regular_price != null ? String(row.regular_price) : ""],
-    [incoming.sale_price || "", row.sale_price != null ? String(row.sale_price) : ""],
-    [incoming.sku || "", row.sku || ""],
-    [!!incoming.manage_stock, !!row.manage_stock],
-    [incoming.manage_stock ? incoming.stock_quantity : null, row.manage_stock ? row.stock_quantity : null],
-    [incoming.stock_status || "instock", row.stock_status || "instock"],
-    [incoming.weight || "", row.weight || ""],
-    [JSON.stringify(incoming.dimensions || {}), JSON.stringify(row.dimensions || {})],
-    [incoming.description || "", row.description || ""],
-    [(incoming.image && (incoming.image as Record<string, unknown>).id) || null, (row.image && (row.image as Record<string, unknown>).id) || null],
-  ];
-  return pairs.some(([a, b]) => JSON.stringify(a) !== JSON.stringify(b));
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET" && req.method !== "PUT" && req.method !== "DELETE") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -395,7 +406,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("store_id", storeId)
         .eq("product_id", productId);
       const byWooId = new Map<number, Record<string, unknown>>();
-      (existingRows || []).forEach((r: Record<string, unknown>) => byWooId.set(r.woo_id as number, r));
+      (existingRows || []).forEach((r: Record<string, unknown>) => {
+        const wid = Number(r.woo_id);
+        if (Number.isFinite(wid)) byWooId.set(wid, r);
+      });
 
       const toCreate: Record<string, unknown>[] = [];
       const toUpdate: Record<string, unknown>[] = [];
@@ -439,18 +453,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
           continue;
         }
-        const existing = byWooId.get(v.id as number);
-        userGalleryByWooId.set(v.id as number, userGallery);
-        if (existing && !variationChanged(v, existing)) {
-          // Still update gallery if user changed it
-          const existingGallery = Array.isArray(existing.gallery) ? (existing.gallery as Array<{ id: number }>) : [];
-          const sameGallery =
-            existingGallery.length === userGallery.length &&
-            existingGallery.every((g, i) => g.id === userGallery[i]?.id);
-          if (sameGallery) continue;
+        const wid = typeof v.id === "number" && Number.isFinite(v.id) ? v.id : Number(v.id);
+        if (!Number.isFinite(wid)) {
+          console.warn("[variations-batch-update] skipping row with invalid variation id");
+          continue;
         }
+        userGalleryByWooId.set(wid, userGallery);
+        // Always send variation updates to Woo when the client submits them. Skipping “unchanged” rows relied on
+        // fragile string/number comparisons and produced successful API responses with no Woo batch write.
         toUpdate.push({
-          id: v.id,
+          id: wid,
           regular_price: (v.regular_price as string) || "",
           sale_price: (v.sale_price as string) || "",
           sku: (v.sku as string) || "",
@@ -495,30 +507,95 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 const u = userById.get(id);
                 return u ? { id: u.id, src: u.src || "", alt: u.alt || "" } : { id, src: "" };
               });
+              const wooIdNum = v.id as number;
+              const existingPv = kind === "update" ? byWooId.get(wooIdNum) : undefined;
+              const attrsFromResponse = Array.isArray(v.attributes) ? v.attributes : [];
+              let attributesPayload: unknown = attrsFromResponse;
+              if (!attrsFromResponse.length && existingPv) {
+                const prevAttrs = existingPv.attributes;
+                if (Array.isArray(prevAttrs) && prevAttrs.length > 0) {
+                  attributesPayload = prevAttrs;
+                } else if (
+                  existingPv.raw_data &&
+                  typeof existingPv.raw_data === "object" &&
+                  Array.isArray((existingPv.raw_data as { attributes?: unknown }).attributes)
+                ) {
+                  attributesPayload = (existingPv.raw_data as { attributes: unknown[] }).attributes;
+                }
+              }
+
+              let regularPriceNum = toNumeric(v.regular_price ?? v.price);
+              if (regularPriceNum == null && existingPv) {
+                regularPriceNum = toNumeric(existingPv.regular_price);
+              }
+              if (regularPriceNum == null && existingPv?.raw_data && typeof existingPv.raw_data === "object") {
+                const rd = existingPv.raw_data as { regular_price?: unknown; price?: unknown };
+                regularPriceNum = toNumeric(rd.regular_price) ?? toNumeric(rd.price);
+              }
+
+              let salePriceNum = toNumeric(v.sale_price);
+              if (salePriceNum == null && existingPv) {
+                salePriceNum = toNumeric(existingPv.sale_price);
+              }
+              if (salePriceNum == null && existingPv?.raw_data && typeof existingPv.raw_data === "object") {
+                salePriceNum = toNumeric((existingPv.raw_data as { sale_price?: unknown }).sale_price);
+              }
+
+              let displayPriceNum = toNumeric(v.price);
+              if (displayPriceNum == null && regularPriceNum != null) displayPriceNum = regularPriceNum;
+
+              let skuPersist = trimStr(v.sku);
+              if (!skuPersist && existingPv) {
+                skuPersist = trimStr(existingPv.sku);
+                if (!skuPersist && existingPv.raw_data && typeof existingPv.raw_data === "object") {
+                  skuPersist = trimStr((existingPv.raw_data as { sku?: string }).sku);
+                }
+              }
+
+              let stockQty = (v.stock_quantity as number) ?? null;
+              if (stockQty == null && existingPv && existingPv.stock_quantity != null) {
+                stockQty = existingPv.stock_quantity as number;
+              }
+
+              let stockStat = trimStr(v.stock_status);
+              if (!stockStat && existingPv) {
+                stockStat = trimStr(existingPv.stock_status);
+              }
+
+              const prevRaw =
+                kind === "update" &&
+                existingPv?.raw_data &&
+                typeof existingPv.raw_data === "object" &&
+                !Array.isArray(existingPv.raw_data)
+                  ? (existingPv.raw_data as Record<string, unknown>)
+                  : undefined;
+              const patch = sanitizePartialWooVariationForMirrorMerge(v as Record<string, unknown>, prevRaw);
+              const rawPayload: Record<string, unknown> = prevRaw ? { ...prevRaw, ...patch } : { ...patch };
+
               toUpsert.push({
                 store_id: storeId,
                 product_id: productId,
                 woo_parent_id: localProduct.woo_id,
-                woo_id: v.id as number,
-                sku: (v.sku as string) || null,
-                regular_price: toNumeric(v.regular_price),
-                sale_price: toNumeric(v.sale_price),
-                price: toNumeric(v.price),
-                stock_quantity: (v.stock_quantity as number) ?? null,
-                stock_status: (v.stock_status as string) || null,
-                manage_stock: !!v.manage_stock,
+                woo_id: wooIdNum,
+                sku: skuPersist || null,
+                regular_price: regularPriceNum,
+                sale_price: salePriceNum,
+                price: displayPriceNum,
+                stock_quantity: stockQty,
+                stock_status: stockStat || null,
+                manage_stock: v.manage_stock != null ? !!v.manage_stock : !!(existingPv && existingPv.manage_stock),
                 status: (v.status as string) || "publish",
-                virtual: !!v.virtual,
-                downloadable: !!v.downloadable,
-                tax_class: (v.tax_class as string) || null,
-                weight: (v.weight as string) || null,
-                dimensions: toJson(v.dimensions || {}),
-                description: (v.description as string) || null,
-                attributes: toJson(v.attributes || []),
-                image: v.image ? toJson(v.image) : null,
+                virtual: v.virtual != null ? !!v.virtual : !!(existingPv && existingPv.virtual),
+                downloadable: v.downloadable != null ? !!v.downloadable : !!(existingPv && existingPv.downloadable),
+                tax_class: trimStr(v.tax_class) || trimStr(existingPv?.tax_class as string) || null,
+                weight: trimStr(v.weight as string) || trimStr(existingPv?.weight as string) || null,
+                dimensions: toJson(v.dimensions || (existingPv?.dimensions as object) || {}),
+                description: trimStr(v.description as string) || trimStr(existingPv?.description as string) || null,
+                attributes: toJson(attributesPayload || []),
+                image: v.image ? toJson(v.image) : (existingPv?.image ? toJson(existingPv.image) : null),
                 gallery: toJson(finalGallery),
                 menu_order: (v.menu_order as number) || 0,
-                raw_data: toJson(v),
+                raw_data: toJson(rawPayload),
                 synced_at: now,
               });
             });
@@ -542,6 +619,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         } catch (ve) {
           console.error("[variations-batch-update]", ve);
+          throw ve;
         }
       }
     }

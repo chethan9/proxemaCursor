@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useTranslation } from "next-i18next";
+import { translateOrderStatus } from "@/lib/order-status-i18n";
 
 const STATUS_COLORS: Record<string, string> = {
   processing: "hsl(221 83% 53%)",
@@ -49,7 +50,16 @@ export function OrderStatusDonut({ data, loading, title, subtitle }: Props) {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const row = payload[0].payload as { status: string; count: number };
+                      return (
+                        <div className="rounded-md border bg-popover px-2 py-1.5 text-xs shadow-md">
+                          <div className="font-medium">{translateOrderStatus(row.status, t)}</div>
+                          <div className="tabular-nums text-muted-foreground">{row.count}</div>
+                        </div>
+                      );
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -63,7 +73,7 @@ export function OrderStatusDonut({ data, loading, title, subtitle }: Props) {
                 <div key={d.status} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full" style={{ background: d.color }} />
-                    <span className="capitalize">{d.status.replace(/-/g, " ")}</span>
+                    <span>{translateOrderStatus(d.status, t)}</span>
                   </div>
                   <span className="tabular-nums text-muted-foreground">{d.count}</span>
                 </div>

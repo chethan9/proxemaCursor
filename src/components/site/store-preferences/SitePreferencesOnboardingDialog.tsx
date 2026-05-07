@@ -49,6 +49,8 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
   const [values, setValues] = useState<StorePrefsFormValues | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Radix Select/Popover portals must render inside this scroll region so the modal dialog does not block pointer events (`disableOutsidePointerEvents`). */
+  const [overlayContainer, setOverlayContainer] = useState<HTMLDivElement | null>(null);
 
   const storeCount = storesList?.length;
   const showLanguage =
@@ -143,35 +145,37 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
       <DialogContent
         showClose={false}
         className={cn(
-          "flex h-[min(92vh,680px)] w-[calc(100vw-1.25rem)] max-w-md flex-col gap-0 overflow-hidden p-0",
-          "border-2 border-primary/15 bg-background shadow-xl sm:w-full sm:max-w-[420px]"
+          /* Avoid `relative`: merged after DialogContent's `fixed` and would break viewport centering. */
+          "flex max-h-[min(88vh,calc(100dvh-2rem),520px)] min-h-0 w-[calc(100vw-1.25rem)] max-w-md flex-col gap-0 overflow-hidden p-0",
+          "border-2 border-primary/15 bg-background shadow-xl sm:w-full sm:max-w-[400px]"
         )}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
-        <div className="shrink-0 border-b border-border/80 bg-muted/30 px-5 py-4">
-          <DialogHeader className="space-y-1.5 text-left">
-            <DialogTitle className="text-base font-semibold leading-snug tracking-tight">
+        <div className="shrink-0 border-b border-border/80 bg-muted/30 px-4 py-3">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-[15px] font-semibold leading-snug tracking-tight">
               {t("storePreferences.wizardTitle")}
             </DialogTitle>
-            <DialogDescription className="text-xs leading-relaxed">
+            <DialogDescription className="text-[11px] leading-snug">
               {t("storePreferences.wizardDescription")}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 [-webkit-overflow-scrolling:touch]">
+        <form onSubmit={handleSubmit} className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 [-webkit-overflow-scrolling:touch]">
             <StorePreferencesFields
               values={values}
               onChange={patch}
               showLanguage={showLanguage}
               enabledLocaleCodes={enabledLocales}
               disabled={submitting}
+              overlayContainer={overlayContainer}
             />
           </div>
 
-          <div className="shrink-0 space-y-2 border-t border-border bg-background px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <div className="shrink-0 space-y-2 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {error ?
               <p className="text-sm text-destructive" role="alert">
                 {error}
@@ -187,6 +191,11 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
             </Button>
           </div>
         </form>
+        {/* Inside dialog DOM (not body) so modal pointer-events work, but outside overflow-auto so lists are not clipped */}
+        <div
+          ref={setOverlayContainer}
+          className="pointer-events-none absolute inset-0 z-[80] [&>*]:pointer-events-auto"
+        />
       </DialogContent>
     </Dialog>
   );

@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { BULK_INVOICE_ARTIFACT_RETENTION_DAYS } from "@/lib/bulk-invoice-artifact-retention";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
-
-const RETENTION_DAYS = 7;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = req.headers.authorization || "";
@@ -10,7 +9,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(
+    Date.now() - BULK_INVOICE_ARTIFACT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const startedAt = Date.now();
 
   let scanned = 0;
@@ -84,6 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       ok: true,
+      retention_days: BULK_INVOICE_ARTIFACT_RETENTION_DAYS,
       scanned,
       deleted,
       errors,

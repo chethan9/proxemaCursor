@@ -1,6 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { WooStoreCreds } from "@/lib/woo-client";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+
+/** Woo list endpoints are paginated (default 10–100 items); fetch every page for explorer dropdowns. */
+async function fetchPagedWooList<T>(store: WooStoreCreds, endpointPath: string, maxPages = 50): Promise<T[]> {
+  const all: T[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const chunk = await wooRequest<T[]>(store, "GET", `${endpointPath}?per_page=100&page=${page}`);
+    if (!Array.isArray(chunk) || chunk.length === 0) break;
+    all.push(...chunk);
+    if (chunk.length < 100) break;
+  }
+  return all;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { storeId: raw, kind } = req.query;
@@ -30,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     if (req.method === "GET") {
-      const data = await wooRequest(store, "GET", `${endpoint}?per_page=100`);
+      const data = await fetchPagedWooList<Record<string, unknown>>(store, endpoint);
       return res.status(200).json(data);
     }
     if (req.method === "POST") {

@@ -249,9 +249,13 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   }, [variationAttrSig, productMode, setForm]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5" role="region" aria-label="Product attributes">
-        <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
+    <div className="space-y-2">
+      <section
+        className="rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:p-4"
+        role="region"
+        aria-label="Product attributes"
+      >
+        <div className="mb-1.5 inline-flex items-center gap-2 text-sm font-semibold">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <ListTree className="h-3.5 w-3.5" />
           </span>
@@ -261,8 +265,8 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
       </section>
 
       {productMode === "variable" && (
-        <section className="rounded-xl border border-border/70 bg-background p-4 sm:p-5">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <section className="min-w-0 space-y-2 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:p-4">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold">
               <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <Table2 className="h-3.5 w-3.5" />
@@ -295,7 +299,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {(duplicateCombos.length > 0 || missingPriceCount > 0) && !loading && form.variations.length > 0 && (
               <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs space-y-1">
                 {missingPriceCount > 0 && (
