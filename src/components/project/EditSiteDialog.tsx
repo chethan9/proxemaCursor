@@ -5,7 +5,7 @@ import { useTranslation } from "next-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useBranding } from "@/contexts/BrandingProvider";
 import { useClients } from "@/hooks/queries/useClients";
-import { updateStore, deleteStore } from "@/services/storeService";
+import { updateStore, deleteStore, type DeleteStoreProgress } from "@/services/storeService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useToast } from "@/hooks/use-toast";
-import { Store, Image as ImageIcon, Copy, ExternalLink, Trash2, AlertTriangle, Unlink, Loader2, Unlock } from "lucide-react";
+import { Store, Image as ImageIcon, Copy, ExternalLink, Trash2, AlertTriangle, Unlink, Unlock } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/helpers";
+import { SiteDeletingOverlay } from "@/components/project/SiteDeletingOverlay";
 
 type StoreRow = Tables<"stores">;
 
@@ -40,6 +41,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
   const [timezone, setTimezone] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState<DeleteStoreProgress | null>(null);
 
   useEffect(() => {
     if (!site) return;
@@ -95,16 +97,19 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
   };
 
   const handleDelete = async () => {
+    setDeleteProgress(null);
     setDeleting(true);
     try {
-      await deleteStore(site.id);
+      await deleteStore(site.id, (p) => setDeleteProgress(p));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       toast({ title: t("editSite.deleted") });
       setDeleting(false);
+      setDeleteProgress(null);
       onOpenChange(false);
       if (router.pathname.includes("/sites/")) router.push("/projects");
     } catch (err) {
       setDeleting(false);
+      setDeleteProgress(null);
       toast({ title: t("editSite.deleteFailed"), description: (err as Error).message, variant: "destructive" });
     }
   };
@@ -127,16 +132,23 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
       }}
     >
       <DialogContent
-        className="max-w-3xl p-0 gap-0 max-h-[90vh] flex flex-col"
+        className="relative flex max-h-[min(90vh,100dvh-2rem)] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0 min-h-0"
         onInteractOutside={(e) => { if (deleting) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (deleting) e.preventDefault(); }}
       >
-        <DialogHeader className="px-5 pt-5 pb-3 border-b">
+        <DialogHeader className="shrink-0 border-b px-5 pb-3 pt-5">
           <DialogTitle className="text-lg">{t("editSite.title")}</DialogTitle>
           <DialogDescription className="text-xs">{t("editSite.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className={deleting ? "flex-1 overflow-y-auto px-5 py-4 space-y-4 pointer-events-none select-none opacity-40" : "flex-1 overflow-y-auto px-5 py-4 space-y-4"} aria-hidden={deleting}>
+        <div
+          className={
+            deleting ?
+              "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 pointer-events-none select-none opacity-40"
+            : "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4"
+          }
+          aria-hidden={deleting}
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label htmlFor="name" className="text-xs">{t("editSite.siteName")}</Label>
@@ -307,7 +319,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t px-5 py-3 bg-muted/30 rounded-b-lg">
+        <div className="flex shrink-0 items-center justify-between gap-2 rounded-b-lg border-t bg-muted/30 px-5 py-3">
           <div className="text-[11px] text-muted-foreground">{t("editSite.footerNote", { brand: brandName })}</div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9" disabled={saving || deleting}>{t("editSite.cancel")}</Button>
@@ -317,13 +329,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
           </div>
         </div>
 
-        {deleting && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/85 backdrop-blur-sm rounded-lg">
-            <Loader2 className="h-8 w-8 animate-spin text-destructive" />
-            <div className="text-sm font-medium">{t("editSite.deleting")} <span className="text-destructive">{site.name}</span></div>
-            <div className="text-xs text-muted-foreground">{t("editSite.deletingDesc")}</div>
-          </div>
-        )}
+        <SiteDeletingOverlay open={deleting} siteName={site.name} progress={deleteProgress} />
       </DialogContent>
     </Dialog>
   );

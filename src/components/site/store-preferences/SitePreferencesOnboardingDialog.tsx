@@ -146,8 +146,8 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
         showClose={false}
         className={cn(
           /* Avoid `relative`: merged after DialogContent's `fixed` and would break viewport centering. */
-          "flex max-h-[min(88vh,calc(100dvh-2rem),520px)] min-h-0 w-[calc(100vw-1.25rem)] max-w-md flex-col gap-0 overflow-hidden p-0",
-          "border-2 border-primary/15 bg-background shadow-xl sm:w-full sm:max-w-[400px]"
+          "flex max-h-[min(90dvh,calc(100dvh-1.5rem),640px)] min-h-0 w-[calc(100vw-1.25rem)] max-w-lg flex-col gap-0 overflow-visible p-0",
+          "border-2 border-primary/15 bg-background shadow-xl sm:w-full sm:max-w-[440px]"
         )}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}

@@ -59,7 +59,8 @@ function applyVariationCheckboxChange(p: ProductFormState, idx: number, checked:
     visible: checked ? false : a[idx].visible,
   };
   const anyVariation = a.some((x) => x.variation);
-  const nextType = anyVariation ? "variable" : p.type === "variable" ? "simple" : p.type;
+  /** Stay variable until the user explicitly switches product type — avoids losing the Variants tab when all rows are cleared. */
+  const nextType = anyVariation ? "variable" : p.type === "variable" ? "variable" : p.type;
   return { ...p, attributes: a, type: nextType };
 }
 

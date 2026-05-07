@@ -1179,11 +1179,15 @@
     "selectTimezone": "Select timezone",
     "searchTimezone": "Search time zones…",
     "noTzMatches": "No matching time zones.",
+    "selectCurrency": "Select currency",
+    "searchCurrency": "Search currencies…",
     "currency": "Currency",
     "country": "Country / region",
     "selectCountry": "Select country",
+    "searchCountry": "Search countries…",
     "storeType": "What type of store is this?",
     "selectStoreType": "Select store type",
+    "searchStoreType": "Search store types…",
     "storeTypes": {
       "physical_products": "Physical products",
       "digital_products": "Digital products / downloads",
@@ -1200,6 +1204,7 @@
     },
     "acquisition": "How did you find us?",
     "selectAcquisition": "Select one",
+    "searchAcquisition": "Search options…",
     "acquisitionSources": {
       "direct": "Direct / word of mouth",
       "referral": "Referral",

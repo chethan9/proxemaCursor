@@ -26,12 +26,12 @@ import { Store, ExternalLink, Heart, Pencil, Package, ShoppingCart, Users, Tag, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
-import { getStore, type StoreWithClient } from "@/services/storeService";
+import { deleteStore, getStore, type DeleteStoreProgress, type StoreWithClient } from "@/services/storeService";
 import type { Client } from "@/services/clientService";
 import { useAllActiveSyncs } from "@/hooks/queries/useAllActiveSyncs";
-import { useDeleteStore } from "@/hooks/queries/useStores";
 import { useToast } from "@/hooks/use-toast";
 import { IncompleteSiteDialog } from "./IncompleteSiteDialog";
+import { SiteDeletingOverlay } from "./SiteDeletingOverlay";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTranslation } from "next-i18next";
 import { formatDateTime } from "@/lib/format-number";
@@ -65,12 +65,12 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selec
   const { toast } = useToast();
   const { isSuperAdmin } = useAuth();
   const { data: activeSyncs = [] } = useAllActiveSyncs();
-  const deleteStoreMutation = useDeleteStore();
   const syncMap = new Map(activeSyncs.map((s) => [s.store_id, s]));
 
   const [editingIncomplete, setEditingIncomplete] = useState<StoreWithClient | null>(null);
   const [deletingStore, setDeletingStore] = useState<StoreWithClient | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState<DeleteStoreProgress | null>(null);
 
   const prefetchStore = (storeId: string) => {
     qc.prefetchQuery({
@@ -87,9 +87,10 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selec
 
   const handleConfirmDelete = async () => {
     if (!deletingStore) return;
+    setDeleteProgress(null);
     setDeleting(true);
     try {
-      const result = await deleteStoreMutation.mutateAsync(deletingStore.id);
+      const result = await deleteStore(deletingStore.id, (p) => setDeleteProgress(p));
       const counts = result.record_counts || {};
       const totalRecords = Object.values(counts).reduce((sum, n) => sum + (n || 0), 0);
       const parts: string[] = [];
@@ -107,10 +108,17 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selec
         description: parts.length > 0 ? `Deleted: ${parts.join(", ")}${apiKeyNote}` : (apiKeyNote || "Site removed."),
       });
       setDeletingStore(null);
+      qc.invalidateQueries({ queryKey: queryKeys.stores });
+      try {
+        localStorage.removeItem("sidebar-sites-cache");
+      } catch {
+        /* ignore */
+      }
     } catch (e) {
       toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setDeleting(false);
+      setDeleteProgress(null);
     }
   };
 
@@ -360,6 +368,15 @@ export function SitesTable({ stores, clients, loading, hasFilters, onEdit, selec
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {deleting && deletingStore && (
+        <SiteDeletingOverlay
+          open
+          siteName={deletingStore.name}
+          progress={deleteProgress}
+          className="fixed inset-0 z-[100] rounded-none"
+        />
+      )}
     </TooltipProvider>
   );
 }

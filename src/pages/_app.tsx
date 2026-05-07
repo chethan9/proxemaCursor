@@ -11,7 +11,7 @@ import { useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -26,7 +26,7 @@ import { BlockingOverlay } from "@/contexts/LoadingProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TopProgressBar } from "@/components/ui/top-progress-bar";
-import { makeQueryClient } from "@/lib/query-client";
+import { makeQueryClient, queryKeys } from "@/lib/query-client";
 import { createPersister, clearPersistedCache, getCacheBustKey, setCacheBustKey } from "@/lib/query-persistence";
 import { initPostHog, capturePostHogPageView } from "@/lib/posthog";
 import { isRtl } from "@/lib/i18n";
@@ -120,14 +120,17 @@ function PostHogPageviews() {
 
 function CacheBuster() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   useEffect(() => {
     const current = getCacheBustKey();
     const uid = user?.id || null;
     if (current !== uid) {
       clearPersistedCache();
       setCacheBustKey(uid);
+      queryClient.removeQueries({ queryKey: queryKeys.stores });
+      queryClient.removeQueries({ queryKey: ["sync-runs"] });
     }
-  }, [user?.id]);
+  }, [user?.id, queryClient]);
   return null;
 }
 

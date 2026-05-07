@@ -356,6 +356,21 @@
     "cancel": "Cancel",
     "deleting": "Deleting…",
     "deletingDesc": "Please wait — this may take a few seconds.",
+    "deleteProgress": {
+      "starting": "Starting…",
+      "taskCounter": "Step {{current}} of {{total}}",
+      "steps": {
+        "audit_linked_data": "Auditing linked products, orders, and other records…",
+        "prepare_webhooks": "Loading webhook registrations…",
+        "remove_remote_webhooks": "Removing webhooks from WooCommerce…",
+        "revoke_api_keys": "Revoking REST API keys in WooCommerce…",
+        "cancel_sync_jobs": "Stopping background sync jobs…",
+        "cleanup_image_mirrors": "Cleaning up hosted product images…",
+        "delete_database_records": "Deleting database records for this site…",
+        "write_audit_log": "Writing audit log…",
+        "finalize": "Finishing up…"
+      }
+    },
     "nameUrlRequired": "Name and URL required",
     "updateFailed": "Update failed",
     "updated": "Site updated",

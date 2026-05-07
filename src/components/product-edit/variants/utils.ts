@@ -1,5 +1,33 @@
 import { ProductAttribute, Variation, compositeVariationKey } from "@/services/productEditService";
 
+/**
+ * True when variation-driving attributes lost options or a variation dimension was removed,
+ * so existing variation rows may be stale. Pure additions (new option, new variation attr) return false.
+ */
+export function attributesMatrixShrinks(prev: ProductAttribute[], next: ProductAttribute[]): boolean {
+  const norm = (attrs: ProductAttribute[]) =>
+    attrs
+      .filter((a) => a.variation && a.name.trim())
+      .map((a) => ({
+        key: a.name.trim().toLowerCase(),
+        options: a.options.map((o) => o.trim().toLowerCase()).filter(Boolean),
+      }))
+      .sort((x, y) => x.key.localeCompare(y.key));
+
+  const PN = norm(prev);
+  const NN = norm(next);
+  const nextByKey = new Map(NN.map((x) => [x.key, x]));
+  for (const p of PN) {
+    const n = nextByKey.get(p.key);
+    if (!n) return true;
+    const newOpt = new Set(n.options);
+    for (const o of p.options) {
+      if (!newOpt.has(o)) return true;
+    }
+  }
+  return false;
+}
+
 export type { Variation };
 
 export function generateMatrix(attrs: ProductAttribute[]): Variation[] {

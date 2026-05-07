@@ -18,14 +18,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { LOCALES, type LocaleCode } from "@/lib/i18n";
-import { REGION_COUNTRIES, REGION_CURRENCY_CODES } from "@/lib/region-countries";
 import {
   ACQUISITION_SOURCE_IDS,
   STORE_TYPE_IDS,
   listTimeZones,
 } from "@/lib/store-preference-options";
+import { currencyLabel, listIsoCurrencyCodes, listIsoRegionCodes, regionLabel } from "@/lib/iso-locale-lists";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
 
@@ -59,6 +59,90 @@ function selectTriggerClass(filled: boolean) {
   );
 }
 
+type ComboOption = { value: string; label: string; searchText: string };
+
+function SearchableCombo({
+  id,
+  value,
+  displayLabel,
+  placeholder,
+  options,
+  onSelect,
+  disabled,
+  container,
+  searchPlaceholder,
+  filled,
+}: {
+  id: string;
+  value: string;
+  displayLabel: string;
+  placeholder: string;
+  options: ComboOption[];
+  onSelect: (v: string) => void;
+  disabled?: boolean;
+  container?: HTMLElement | null;
+  searchPlaceholder: string;
+  filled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
+      <PopoverAnchor asChild>
+        <div className="w-full">
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className={cn(
+              "h-9 w-full justify-between px-3 font-normal shadow-sm",
+              filled ?
+                "border-input bg-background font-medium text-foreground"
+              : "border-input/80 bg-muted/40 text-muted-foreground"
+            )}
+          >
+            <span className="truncate text-left">{displayLabel || placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        container={container}
+        className="w-[var(--radix-popper-anchor-width)] min-w-[var(--radix-popper-anchor-width)] max-w-[min(calc(100vw-2rem),480px)] p-0"
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        collisionPadding={12}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <Command shouldFilter>
+          <CommandInput placeholder={searchPlaceholder} className="h-9" />
+          <CommandList className="max-h-[min(280px,50vh)] overflow-y-auto overscroll-contain">
+            <CommandEmpty>No matches.</CommandEmpty>
+            <CommandGroup className="p-1">
+              {options.map((o) => (
+                <CommandItem
+                  key={o.value}
+                  value={o.searchText}
+                  onSelect={() => {
+                    onSelect(o.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("h-4 w-4 shrink-0", value === o.value ? "opacity-100 text-primary" : "opacity-0")} />
+                  <span className="truncate">{o.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function StorePreferencesFields({
   values,
   onChange,
@@ -67,11 +151,50 @@ export function StorePreferencesFields({
   disabled,
   overlayContainer,
 }: Props) {
-  const { t } = useTranslation("site");
+  const { t, i18n } = useTranslation("site");
   const [tzOpen, setTzOpen] = useState(false);
   const allZones = useMemo(() => listTimeZones(), []);
+  const lang = i18n.language || "en";
+
+  const countryOptions = useMemo((): ComboOption[] => {
+    return listIsoRegionCodes().map((code) => ({
+      value: code,
+      label: `${regionLabel(code, lang)} (${code})`,
+      searchText: `${code} ${regionLabel(code, lang)}`.toLowerCase(),
+    }));
+  }, [lang]);
+
+  const currencyOptions = useMemo((): ComboOption[] => {
+    return listIsoCurrencyCodes().map((code) => ({
+      value: code,
+      label: currencyLabel(code, lang),
+      searchText: `${code} ${currencyLabel(code, lang)}`.toLowerCase(),
+    }));
+  }, [lang]);
+
+  const storeTypeOptions = useMemo(
+    (): ComboOption[] =>
+      STORE_TYPE_IDS.map((id) => ({
+        value: id,
+        label: t(`storePreferences.storeTypes.${id}`),
+        searchText: `${id} ${t(`storePreferences.storeTypes.${id}`)}`.toLowerCase(),
+      })),
+    [t]
+  );
+
+  const acquisitionOptions = useMemo(
+    (): ComboOption[] =>
+      ACQUISITION_SOURCE_IDS.map((id) => ({
+        value: id,
+        label: t(`storePreferences.acquisitionSources.${id}`),
+        searchText: `${id} ${t(`storePreferences.acquisitionSources.${id}`)}`.toLowerCase(),
+      })),
+    [t]
+  );
 
   const visibleLocales = LOCALES.filter((l) => enabledLocaleCodes.includes(l.code));
+
+  const countryDisplay = values.countryCode ? countryOptions.find((o) => o.value === values.countryCode)?.label || values.countryCode : "";
 
   return (
     <div className="space-y-2.5">
@@ -87,7 +210,7 @@ export function StorePreferencesFields({
             <SelectTrigger className={selectTriggerClass(true)}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent container={overlayContainer}>
+            <SelectContent container={overlayContainer} collisionPadding={12}>
               {visibleLocales.map((l) => (
                 <SelectItem key={l.code} value={l.code}>
                   {l.nativeName} ({l.name})
@@ -102,41 +225,40 @@ export function StorePreferencesFields({
         <Label className="text-xs font-medium text-muted-foreground" htmlFor="tz-trigger">
           {t("storePreferences.timezone")}
         </Label>
-        <Popover
-          open={tzOpen}
-          onOpenChange={setTzOpen}
-          modal={false}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              id="tz-trigger"
-              type="button"
-              variant="outline"
-              role="combobox"
-              aria-expanded={tzOpen}
-              disabled={disabled}
-              className={cn(
-                "h-9 w-full justify-between px-3 font-normal shadow-sm",
-                values.timezone ?
-                  "border-input bg-background font-medium text-foreground"
-                : "border-input/80 bg-muted/40 text-muted-foreground"
-              )}
-            >
-              <span className="truncate text-left">{values.timezone || t("storePreferences.selectTimezone")}</span>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
+        <Popover open={tzOpen} onOpenChange={setTzOpen} modal={false}>
+          <PopoverAnchor asChild>
+            <div className="w-full">
+              <Button
+                id="tz-trigger"
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={tzOpen}
+                disabled={disabled}
+                className={cn(
+                  "h-9 w-full justify-between px-3 font-normal shadow-sm",
+                  values.timezone ?
+                    "border-input bg-background font-medium text-foreground"
+                  : "border-input/80 bg-muted/40 text-muted-foreground"
+                )}
+              >
+                <span className="truncate text-left">{values.timezone || t("storePreferences.selectTimezone")}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </div>
+          </PopoverAnchor>
           <PopoverContent
             container={overlayContainer}
-            className="w-[min(calc(100vw-2rem),400px)] p-0 sm:w-[400px]"
+            className="w-[var(--radix-popper-anchor-width)] min-w-[var(--radix-popper-anchor-width)] max-w-[min(calc(100vw-2rem),480px)] p-0"
             align="start"
+            side="bottom"
             sideOffset={4}
-            collisionPadding={16}
+            collisionPadding={12}
             onWheel={(e) => e.stopPropagation()}
           >
             <Command shouldFilter>
               <CommandInput placeholder={t("storePreferences.searchTimezone")} className="h-9" />
-              <CommandList className="max-h-[min(160px,30vh)] overflow-y-auto overscroll-contain">
+              <CommandList className="max-h-[min(280px,50vh)] overflow-y-auto overscroll-contain">
                 <CommandEmpty>{t("storePreferences.noTzMatches")}</CommandEmpty>
                 <CommandGroup className="p-1">
                   {allZones.map((z) => (
@@ -166,86 +288,75 @@ export function StorePreferencesFields({
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.currency")}</Label>
-          <Select
+          <Label className="text-xs font-medium text-muted-foreground" htmlFor="currency-combo">
+            {t("storePreferences.currency")}
+          </Label>
+          <SearchableCombo
+            id="currency-combo"
             value={values.currency}
-            onValueChange={(v) => onChange({ currency: v })}
+            displayLabel={values.currency ? currencyLabel(values.currency, lang) : ""}
+            placeholder={t("storePreferences.selectCurrency")}
+            options={currencyOptions}
+            onSelect={(v) => onChange({ currency: v })}
             disabled={disabled}
-          >
-            <SelectTrigger className={selectTriggerClass(!!values.currency?.trim())}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent container={overlayContainer}>
-              {REGION_CURRENCY_CODES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            container={overlayContainer}
+            searchPlaceholder={t("storePreferences.searchCurrency")}
+            filled={!!values.currency?.trim()}
+          />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.country")}</Label>
-          <Select
-            value={values.countryCode || "__none__"}
-            onValueChange={(v) => onChange({ countryCode: v === "__none__" ? "" : v })}
+          <Label className="text-xs font-medium text-muted-foreground" htmlFor="country-combo">
+            {t("storePreferences.country")}
+          </Label>
+          <SearchableCombo
+            id="country-combo"
+            value={values.countryCode}
+            displayLabel={countryDisplay}
+            placeholder={t("storePreferences.selectCountry")}
+            options={countryOptions}
+            onSelect={(v) => onChange({ countryCode: v })}
             disabled={disabled}
-          >
-            <SelectTrigger className={selectTriggerClass(!!values.countryCode)}>
-              <SelectValue placeholder={t("storePreferences.selectCountry")} />
-            </SelectTrigger>
-            <SelectContent container={overlayContainer}>
-              <SelectItem value="__none__">{t("storePreferences.selectCountry")}</SelectItem>
-              {REGION_COUNTRIES.map((c) => (
-                <SelectItem key={c.code} value={c.code}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            container={overlayContainer}
+            searchPlaceholder={t("storePreferences.searchCountry")}
+            filled={!!values.countryCode}
+          />
         </div>
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.storeType")}</Label>
-        <Select
-          value={values.storeType || "__none__"}
-          onValueChange={(v) => onChange({ storeType: v === "__none__" ? "" : v })}
+        <Label className="text-xs font-medium text-muted-foreground" htmlFor="store-type-combo">
+          {t("storePreferences.storeType")}
+        </Label>
+        <SearchableCombo
+          id="store-type-combo"
+          value={values.storeType}
+          displayLabel={values.storeType ? t(`storePreferences.storeTypes.${values.storeType}`) : ""}
+          placeholder={t("storePreferences.selectStoreType")}
+          options={storeTypeOptions}
+          onSelect={(v) => onChange({ storeType: v })}
           disabled={disabled}
-        >
-          <SelectTrigger className={selectTriggerClass(!!values.storeType)}>
-            <SelectValue placeholder={t("storePreferences.selectStoreType")} />
-          </SelectTrigger>
-          <SelectContent container={overlayContainer}>
-            <SelectItem value="__none__">{t("storePreferences.selectStoreType")}</SelectItem>
-            {STORE_TYPE_IDS.map((id) => (
-              <SelectItem key={id} value={id}>
-                {t(`storePreferences.storeTypes.${id}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          container={overlayContainer}
+          searchPlaceholder={t("storePreferences.searchStoreType")}
+          filled={!!values.storeType}
+        />
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium text-muted-foreground">{t("storePreferences.acquisition")}</Label>
-        <Select
-          value={values.acquisitionSource || "__none__"}
-          onValueChange={(v) => onChange({ acquisitionSource: v === "__none__" ? "" : v })}
+        <Label className="text-xs font-medium text-muted-foreground" htmlFor="acquisition-combo">
+          {t("storePreferences.acquisition")}
+        </Label>
+        <SearchableCombo
+          id="acquisition-combo"
+          value={values.acquisitionSource}
+          displayLabel={values.acquisitionSource ? t(`storePreferences.acquisitionSources.${values.acquisitionSource}`) : ""}
+          placeholder={t("storePreferences.selectAcquisition")}
+          options={acquisitionOptions}
+          onSelect={(v) => onChange({ acquisitionSource: v })}
           disabled={disabled}
-        >
-          <SelectTrigger className={selectTriggerClass(!!values.acquisitionSource)}>
-            <SelectValue placeholder={t("storePreferences.selectAcquisition")} />
-          </SelectTrigger>
-          <SelectContent container={overlayContainer}>
-            <SelectItem value="__none__">{t("storePreferences.selectAcquisition")}</SelectItem>
-            {ACQUISITION_SOURCE_IDS.map((id) => (
-              <SelectItem key={id} value={id}>
-                {t(`storePreferences.acquisitionSources.${id}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          container={overlayContainer}
+          searchPlaceholder={t("storePreferences.searchAcquisition")}
+          filled={!!values.acquisitionSource}
+        />
         {values.acquisitionSource === "other" && (
           <div className="space-y-1 pt-0.5">
             <Label className="text-xs text-muted-foreground">{t("storePreferences.acquisitionOtherDetail")}</Label>

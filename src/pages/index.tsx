@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, getStatusVariant } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Store, RefreshCw, ArrowRight, Clock, TrendingUp, TrendingDown, Activity, Heart, AlertTriangle, Plus } from "lucide-react";
+import { Store, RefreshCw, ArrowRight, Clock, TrendingUp, TrendingDown, Activity, Heart, AlertTriangle, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useStores } from "@/hooks/queries/useStores";
@@ -32,12 +32,16 @@ const DashboardChartsSection = dynamic(
 
 export default function Dashboard() {
   useAuth();
-  const { data: stores = [], isLoading: sLoading } = useStores();
-  const { data: syncRuns = [], isLoading: rLoading } = useSyncRuns(100);
+  const { data: stores = [], isPending: sPending, isFetching: sFetching } = useStores();
+  const { data: syncRuns = [], isPending: rPending, isFetching: rFetching } = useSyncRuns(100);
   const { brandName } = useBranding();
   const { t, i18n } = useTranslation("common");
 
-  const loading = sLoading || rLoading;
+  const loading =
+    sPending ||
+    rPending ||
+    (sFetching && stores.length === 0) ||
+    (rFetching && syncRuns.length === 0);
 
   const stats = {
     stores: stores.length,
@@ -73,8 +77,18 @@ export default function Dashboard() {
     [t, stats.successfulSyncs, stats.failedSyncs, stats.runningSyncs],
   );
 
+  if (loading) {
+    return (
+      <AppLayout title={t("platformDashboard.pageTitle")}>
+        <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label={t("platformDashboard.pageTitle")} />
+        </div>
+      </AppLayout>
+    );
+  }
+
   // ---------- EMPTY STATE: no sites ----------
-  if (!loading && !hasSites) {
+  if (!hasSites) {
     return (
       <AppLayout title={t("platformDashboard.pageTitle")}>
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">

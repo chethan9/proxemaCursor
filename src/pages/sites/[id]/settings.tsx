@@ -16,7 +16,7 @@ import {
 import { ArrowLeft, RefreshCw, Plug, AlertTriangle, Trash2, Clock, Upload, X as XIcon, Image as ImageIcon, CalendarClock, Zap, Receipt } from "lucide-react";
 import { useTranslation } from "next-i18next";
 import { formatDateTime, formatNumber } from "@/lib/format-number";
-import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
+import { getStore, updateStore, deleteStore, type DeleteStoreProgress, type Store } from "@/services/storeService";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteIcon } from "@/components/site/SiteIcon";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,7 @@ import { HistoryWindowCard } from "@/components/site/HistoryWindowCard";
 import { DefaultTemplatesCard } from "@/components/site/DefaultTemplatesCard";
 import { StoreProfileCard } from "@/components/site/StoreProfileCard";
 import { StorePreferencesSettingsCard } from "@/components/site/store-preferences/StorePreferencesSettingsCard";
+import { SiteDeletingOverlay } from "@/components/project/SiteDeletingOverlay";
 
 /** Logo URL from Supabase — detect SVG for preview styling (query/hash-safe). */
 function isSvgPublicUrl(url: string): boolean {
@@ -52,6 +53,7 @@ function SettingsInner() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState<DeleteStoreProgress | null>(null);
   const [triggeringCron, setTriggeringCron] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [lastCron, setLastCron] = useState<{ started_at: string; status: string } | null>(null);
@@ -233,9 +235,10 @@ function SettingsInner() {
 
   const handleDeleteStore = async () => {
     if (!store || deleteConfirmation !== store.name) return;
+    setDeleteProgress(null);
     setDeleting(true);
     try {
-      const result = await deleteStore(store.id);
+      const result = await deleteStore(store.id, (p) => setDeleteProgress(p));
       const parts = [t("settings.danger.removed", { name: store.name })];
       if (result.webhooks_removed > 0) parts.push(t("settings.danger.webhooksRemoved", { count: result.webhooks_removed }));
       if (result.webhooks_failed > 0) parts.push(t("settings.danger.webhooksFailed", { count: result.webhooks_failed }));
@@ -245,6 +248,7 @@ function SettingsInner() {
       toast({ title: t("settings.danger.deleteFailed"), description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
     } finally {
       setDeleting(false);
+      setDeleteProgress(null);
     }
   };
 
@@ -533,6 +537,10 @@ function SettingsInner() {
           </Card>
         </div>
       </div>
+
+      {deleting && (
+        <SiteDeletingOverlay open siteName={store.name} progress={deleteProgress} className="fixed inset-0 z-[80] rounded-none" />
+      )}
     </div>
   );
 }

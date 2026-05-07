@@ -1,21 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthProvider";
 import { createStore, getStores, getStore, getStoresByClient, updateStore, deleteStore, type StoreWithClient, type Store } from "@/services/storeService";
 import { queryKeys } from "@/lib/query-client";
 
 export function useStores() {
+  const { user } = useAuth();
   return useQuery({
     queryKey: queryKeys.stores,
     queryFn: getStores,
     staleTime: 0,
     refetchOnMount: "always",
+    enabled: !!user,
   });
 }
 
 export function useStore(id: string | null | undefined) {
+  const { user } = useAuth();
   return useQuery({
     queryKey: id ? queryKeys.store(id) : ["stores", "none"],
     queryFn: () => getStore(id as string),
-    enabled: !!id,
+    enabled: !!id && !!user,
     staleTime: 60_000,
   });
 }

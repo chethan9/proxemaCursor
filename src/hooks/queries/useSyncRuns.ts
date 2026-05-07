@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-client";
 
@@ -14,6 +15,7 @@ export interface SyncRunFilters {
 interface StoreOption { id: string; name: string; }
 
 export function useSyncRuns(limit = 100) {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["sync-runs", "recent", limit] as const,
     queryFn: async () => {
@@ -29,10 +31,12 @@ export function useSyncRuns(limit = 100) {
       }));
     },
     staleTime: 30_000,
+    enabled: !!user,
   });
 }
 
 export function useStoreOptions() {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["stores", "id-name-list"] as const,
     queryFn: async () => {
@@ -40,10 +44,12 @@ export function useStoreOptions() {
       return (data || []) as StoreOption[];
     },
     staleTime: 5 * 60_000,
+    enabled: !!user,
   });
 }
 
 export function useSyncRunsStats() {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["sync-runs-stats"] as const,
     queryFn: async () => {
@@ -59,6 +65,7 @@ export function useSyncRunsStats() {
     },
     staleTime: 15_000,
     refetchInterval: 30_000,
+    enabled: !!user,
   });
 }
 
@@ -69,6 +76,7 @@ export function useSyncRunsPaged(
   stores: StoreOption[],
   pollingMs: number | false,
 ) {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["sync-runs", "paged", page, pageSize, filters, stores.length] as const,
     queryFn: async () => {
@@ -96,10 +104,12 @@ export function useSyncRunsPaged(
     },
     placeholderData: (prev) => prev,
     refetchInterval: pollingMs,
+    enabled: !!user,
   });
 }
 
 export function useSyncRunsList(filters: SyncRunFilters, page: number, pageSize: number) {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["sync-runs", "list", filters, page, pageSize] as const,
     queryFn: async () => {
@@ -128,10 +138,12 @@ export function useSyncRunsList(filters: SyncRunFilters, page: number, pageSize:
       const rows = (query.state.data as { data?: { status: string }[] } | undefined)?.data;
       return rows?.some((r) => r.status === "running") ? 5000 : false;
     },
+    enabled: !!user,
   });
 }
 
 export function useSyncRunStats() {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["sync-runs", "stats"] as const,
     queryFn: async () => {
@@ -146,10 +158,12 @@ export function useSyncRunStats() {
       };
     },
     staleTime: 30_000,
+    enabled: !!user,
   });
 }
 
 export function useStoresForFilter() {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["stores", "id-name-list"] as const,
     queryFn: async () => {
@@ -157,5 +171,6 @@ export function useStoresForFilter() {
       return data || [];
     },
     staleTime: 5 * 60_000,
+    enabled: !!user,
   });
 }

@@ -3,15 +3,20 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ProductFormState,
+  ProductAttribute,
   Variation,
-  fetchProductVariations,
   defaultAttributesFromVariation,
   variationMatchesDefault,
 } from "@/services/productEditService";
 import { AttributeEditor } from "@/components/product-edit/variants/AttributeEditor";
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
-import { generateMatrix, mergeVariationsExtended, variationAttributeComboKey } from "@/components/product-edit/variants/utils";
+import {
+  attributesMatrixShrinks,
+  generateMatrix,
+  mergeVariationsExtended,
+  variationAttributeComboKey,
+} from "@/components/product-edit/variants/utils";
 import { Loader2, RefreshCw, Info, ListTree, Table2 } from "lucide-react";
 
 type Props = {
@@ -145,6 +150,9 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
   }, [setForm]);
 
   const hasVariableAttrs = form.attributes.some((a) => a.variation && a.options.length > 0);
+  const hasRegenerateTarget = form.attributes.some(
+    (a) => a.variation && a.name.trim().length > 0 && a.options.length > 0,
+  );
 
   const duplicateCombos = (() => {
     if (productMode !== "variable") return [] as number[];
@@ -223,6 +231,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     }
   }, [productMode]);
 
+  /** Only auto-merge when the attribute matrix shrinks (removed option/dimension); additive changes wait for Regenerate. */
   useEffect(() => {
     if (productMode !== "variable") return;
     if (prevVariationAttrSig.current === null) {
@@ -230,7 +239,26 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
       return;
     }
     if (prevVariationAttrSig.current === variationAttrSig) return;
+
+    let prevAttrs: ProductAttribute[];
+    try {
+      prevAttrs = JSON.parse(prevVariationAttrSig.current) as ProductAttribute[];
+    } catch {
+      prevVariationAttrSig.current = variationAttrSig;
+      return;
+    }
+
+    let nextAttrs: ProductAttribute[];
+    try {
+      nextAttrs = JSON.parse(variationAttrSig) as ProductAttribute[];
+    } catch {
+      prevVariationAttrSig.current = variationAttrSig;
+      return;
+    }
     prevVariationAttrSig.current = variationAttrSig;
+
+    if (!attributesMatrixShrinks(prevAttrs, nextAttrs)) return;
+
     const tid = window.setTimeout(() => {
       setForm((p) => {
         const fresh = generateMatrix(p.attributes);
@@ -291,8 +319,12 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
                 variant="outline"
                 size="sm"
                 onClick={regenerate}
-                disabled={!hasVariableAttrs}
+                disabled={!hasRegenerateTarget}
                 title="Rebuilds combinations from attributes. Existing rows are merged when option combinations match; prices and images carry forward when you add new attributes."
+                className={cn(
+                  hasRegenerateTarget &&
+                    "border-orange-500 bg-orange-50 text-orange-950 hover:bg-orange-100 hover:text-orange-950 dark:border-orange-600 dark:bg-orange-950/40 dark:text-orange-50 dark:hover:bg-orange-900/50",
+                )}
               >
                 Regenerate from attributes
               </Button>

@@ -28,7 +28,7 @@ import {
   CheckCircle2, XCircle, AlertCircle, Eye, Settings, Database, FileText,
   Trash2, Copy, AlertTriangle, Zap, Archive,
 } from "lucide-react";
-import { getStore, updateStore, deleteStore, type Store } from "@/services/storeService";
+import { getStore, updateStore, deleteStore, type DeleteStoreProgress, type Store } from "@/services/storeService";
 import {
   getSyncRunsByStore, getProductsByStore, getOrdersByStore, getCustomersByStore,
   type SyncRun, type Product, type Order, type Customer,
@@ -50,6 +50,7 @@ import { useTranslation } from "next-i18next";
 import { formatNumber } from "@/lib/format-number";
 import { authorizedFetch } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { SiteDeletingOverlay } from "@/components/project/SiteDeletingOverlay";
 
 interface SyncProgress { current: number; total: number; aspect: string; }
 
@@ -94,6 +95,7 @@ export default function SiteWorkspacePage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState<DeleteStoreProgress | null>(null);
   const [triggeringCron, setTriggeringCron] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
 
@@ -288,9 +290,16 @@ export default function SiteWorkspacePage() {
 
   const handleDeleteStore = async () => {
     if (!store || deleteConfirmation !== store.name) return;
+    setDeleteProgress(null);
     setDeleting(true);
-    try { await deleteStore(store.id); siteCache.delete(store.id); router.push("/projects"); }
-    finally { setDeleting(false); }
+    try {
+      await deleteStore(store.id, (p) => setDeleteProgress(p));
+      siteCache.delete(store.id);
+      router.push("/projects");
+    } finally {
+      setDeleting(false);
+      setDeleteProgress(null);
+    }
   };
 
   const handleTriggerCron = async () => {
@@ -655,6 +664,15 @@ export default function SiteWorkspacePage() {
           <div className="mt-4"><JsonTableView data={selectedItem} /></div>
         </DialogContent>
       </Dialog>
+
+      {deleting && store && (
+        <SiteDeletingOverlay
+          open
+          siteName={store.name}
+          progress={deleteProgress}
+          className="fixed inset-0 z-[100] rounded-none"
+        />
+      )}
     </AppLayout>
   );
 }

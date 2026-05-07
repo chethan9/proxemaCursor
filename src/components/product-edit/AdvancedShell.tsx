@@ -71,7 +71,13 @@ export function AdvancedShell({
     >
       <div className="min-w-0 overflow-visible pb-4">
         <div className="flex flex-col gap-3">
-          {SECTIONS.filter((section) => form.type === "variable" || section.key !== "variants").map((section) => (
+          {SECTIONS.filter(
+            (section) =>
+              section.key !== "variants" ||
+              form.type === "variable" ||
+              form.attributes.some((a) => a.variation) ||
+              form.variations.length > 0,
+          ).map((section) => (
             <section
               key={section.key}
               id={`product-edit-section-${section.key}`}
