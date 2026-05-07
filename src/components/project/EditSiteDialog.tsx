@@ -132,7 +132,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
       }}
     >
       <DialogContent
-        className="relative flex max-h-[min(90vh,100dvh-2rem)] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0 min-h-0"
+        className="relative flex h-[min(92vh,calc(100dvh-1.5rem))] w-[min(56rem,calc(100vw-1rem))] max-w-none flex-col gap-0 overflow-hidden p-0"
         onInteractOutside={(e) => { if (deleting) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (deleting) e.preventDefault(); }}
       >
@@ -144,19 +144,29 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
         <div
           className={
             deleting ?
-              "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 pointer-events-none select-none opacity-40"
-            : "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4"
+              "min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4 pointer-events-none select-none opacity-40"
+            : "min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4"
           }
           aria-hidden={deleting}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label htmlFor="name" className="text-xs">{t("editSite.siteName")}</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-9 focus-visible:border-foreground/20 focus-visible:ring-1 focus-visible:ring-foreground/15"
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="url" className="text-xs">{t("editSite.storeUrl")}</Label>
-              <Input id="url" value={url} onChange={(e) => setUrl(e.target.value)} className="h-9" />
+              <Input
+                id="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="h-9 focus-visible:border-foreground/20 focus-visible:ring-1 focus-visible:ring-foreground/15"
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="client" className="text-xs">{t("editSite.client")}</Label>
@@ -164,7 +174,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                 id="client"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:border-foreground/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/15"
               >
                 <option value="">{t("editSite.unassigned")}</option>
                 {clients.map((c) => (
@@ -182,14 +192,14 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 placeholder={t("editSite.timezonePlaceholder")}
-                className="h-9 font-mono text-xs flex-1"
+                className="h-9 flex-1 font-mono text-xs focus-visible:border-foreground/20 focus-visible:ring-1 focus-visible:ring-foreground/15"
               />
               <Button type="button" variant="outline" size="sm" onClick={useMyTz} className="h-9 whitespace-nowrap">{t("editSite.useMine")}</Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-md border p-3 space-y-2.5">
+            <div className="min-w-0 space-y-2.5 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Store className="h-4 w-4 text-muted-foreground" />
@@ -227,7 +237,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
               )}
             </div>
 
-            <div className="rounded-md border p-3 space-y-2.5">
+            <div className="min-w-0 space-y-2.5 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-muted-foreground" />
