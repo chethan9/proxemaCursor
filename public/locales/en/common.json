@@ -25,6 +25,7 @@
     "categories": "Categories",
     "tags": "Tags",
     "brands": "Brands",
+    "attributes": "Attributes",
     "downloads": "Downloads",
     "bulkJobs": "Bulk jobs",
     "syncRuns": "Sync runs",
@@ -111,9 +112,15 @@
     "system": "System",
     "signOut": "Sign out"
   },
+  "attributesSyncLocked": {
+    "title": "Catalog is syncing",
+    "body": "Attribute management is unavailable until the initial import finishes. You can browse products in live preview.",
+    "back": "Back to products"
+  },
   "errors": {
     "unknown": "Unknown",
     "unknownError": "Unknown error",
+    "notFound": "Not found",
     "loadFailed": "Failed to load",
     "saveFailed": "Save failed"
   },

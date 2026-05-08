@@ -2,18 +2,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listAttributes,
   createAttribute,
+  getAttribute,
+  updateAttribute,
+  deleteAttribute,
   listAttributeTerms,
   createAttributeTerm,
+  updateAttributeTerm,
   deleteAttributeTerm,
   WooAttribute,
-  WooAttributeTerm,
 } from "@/services/wooAttributeService";
+import { queryKeys } from "@/lib/query-client";
 
 export function useWooAttributes(storeId: string) {
   return useQuery({
     queryKey: ["woo", "attributes", storeId] as const,
     queryFn: () => listAttributes(storeId),
     enabled: !!storeId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useWooAttribute(storeId: string, attributeId: number | null) {
+  return useQuery({
+    queryKey: ["woo", "attributes", storeId, attributeId] as const,
+    queryFn: () => getAttribute(storeId, attributeId!),
+    enabled: !!storeId && attributeId !== null && !Number.isNaN(attributeId),
     staleTime: 5 * 60_000,
   });
 }
@@ -33,7 +46,34 @@ export function useCreateWooAttribute(storeId: string) {
     mutationFn: (payload: Parameters<typeof createAttribute>[1]) => createAttribute(storeId, payload),
     onSuccess: (attr: WooAttribute) => {
       qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId] });
+      qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
       return attr;
+    },
+  });
+}
+
+export function useUpdateWooAttribute(storeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ attributeId, payload }: { attributeId: number; payload: Parameters<typeof updateAttribute>[2] }) =>
+      updateAttribute(storeId, attributeId, payload),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId] });
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId, vars.attributeId] });
+      qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
+    },
+  });
+}
+
+export function useDeleteWooAttribute(storeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attributeId: number) => deleteAttribute(storeId, attributeId),
+    onSuccess: (_void, attributeId) => {
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId] });
+      qc.removeQueries({ queryKey: ["woo", "attributes", storeId, attributeId] });
+      qc.removeQueries({ queryKey: ["woo", "attributes", storeId, attributeId, "terms"] });
+      qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
     },
   });
 }
@@ -42,9 +82,28 @@ export function useCreateWooAttributeTerm(storeId: string, attributeId: number) 
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: Parameters<typeof createAttributeTerm>[2]) => createAttributeTerm(storeId, attributeId, payload),
-    onSuccess: (term: WooAttributeTerm) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId, attributeId, "terms"] });
-      return term;
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId] });
+      qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
+    },
+  });
+}
+
+export function useUpdateWooAttributeTerm(storeId: string, attributeId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      termId,
+      payload,
+    }: {
+      termId: number;
+      payload: Parameters<typeof updateAttributeTerm>[3];
+    }) => updateAttributeTerm(storeId, attributeId, termId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId, attributeId, "terms"] });
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId] });
+      qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
     },
   });
 }
@@ -53,6 +112,10 @@ export function useDeleteWooAttributeTerm(storeId: string, attributeId: number) 
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (termId: number) => deleteAttributeTerm(storeId, attributeId, termId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId, attributeId, "terms"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId, attributeId, "terms"] });
+      qc.invalidateQueries({ queryKey: ["woo", "attributes", storeId] });
+      qc.invalidateQueries({ queryKey: queryKeys.products(storeId) });
+    },
   });
 }

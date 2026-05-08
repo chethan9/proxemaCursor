@@ -5,6 +5,7 @@
     "orders": "Orders",
     "customers": "Customers",
     "categories": "Categories",
+    "attributes": "Attributes",
     "tags": "Tags",
     "brands": "Brands",
     "downloads": "Downloads",
@@ -967,6 +968,107 @@
       "deleted": "Customer deleted",
       "notFound": "Customer not found",
       "storeNotFound": "Store not found"
+    }
+  },
+  "attributes": {
+    "title": "Product attributes",
+    "subtitle": "Define extra product data (size, color, etc.). Values are managed per attribute as terms.",
+    "loading": "Loading attributes…",
+    "searchPlaceholder": "Search attributes…",
+    "empty": "No attributes match your search.",
+    "emptyNone": "No attributes yet. Add one below or sync from WooCommerce.",
+    "addCard": {
+      "title": "Add attribute",
+      "hint": "Visible name on the storefront; slug is the internal reference (max 28 characters).",
+      "submit": "Add attribute"
+    },
+    "fields": {
+      "name": "Name",
+      "nameHint": "Shown on the product page.",
+      "slug": "Slug",
+      "slugHint": "Unique reference for the attribute (max 28 characters).",
+      "type": "Type",
+      "typeSelect": "Select",
+      "typeText": "Text",
+      "orderBy": "Default sort order",
+      "hasArchives": "Enable archives"
+    },
+    "orderBy": {
+      "orderMenu": "Custom ordering",
+      "orderName": "Name",
+      "orderNameNum": "Name (numeric)",
+      "orderId": "Term ID"
+    },
+    "table": {
+      "title": "Attributes",
+      "name": "Name",
+      "slug": "Slug",
+      "type": "Type",
+      "orderBy": "Order by",
+      "actions": "Actions",
+      "configureTerms": "Terms",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "edit": {
+      "title": "Edit attribute",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "delete": {
+      "title": "Delete attribute?",
+      "description": "Remove “{{name}}” from WooCommerce? Products using this attribute may be affected.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "errors": {
+      "nameRequired": "Name is required",
+      "createFailed": "Could not create attribute",
+      "updateFailed": "Could not update attribute",
+      "deleteFailed": "Could not delete attribute"
+    },
+    "toast": {
+      "created": "Attribute created",
+      "updated": "Attribute updated",
+      "deleted": "Attribute deleted"
+    },
+    "terms": {
+      "back": "Back to attributes",
+      "title": "{{name}} — terms",
+      "subtitle": "Add, edit, or remove values for this attribute.",
+      "addTitle": "Add term",
+      "addSubmit": "Add term",
+      "tableTitle": "Terms",
+      "editTitle": "Edit term",
+      "deleteTitle": "Delete term?",
+      "deleteDescription": "Remove “{{name}}”? Products using this value may need updating.",
+      "empty": "No terms yet.",
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "menuOrder": "Order"
+      },
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "products": "Products",
+        "order": "Order",
+        "actions": "Actions"
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "invalidAttribute": "Invalid or missing attribute.",
+        "createFailed": "Could not create term",
+        "updateFailed": "Could not update term",
+        "deleteFailed": "Could not delete term"
+      },
+      "toast": {
+        "created": "Term created",
+        "updated": "Term updated",
+        "deleted": "Term deleted"
+      }
     }
   },
   "taxonomy": {

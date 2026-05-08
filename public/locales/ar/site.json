@@ -5,6 +5,7 @@
     "orders": "الطلبات",
     "customers": "العملاء",
     "categories": "الفئات",
+    "attributes": "السمات",
     "tags": "الوسوم",
     "brands": "العلامات التجارية",
     "downloads": "التنزيلات",
@@ -921,6 +922,107 @@
       "deleted": "تم حذف العميل",
       "notFound": "العميل غير موجود",
       "storeNotFound": "المتجر غير موجود"
+    }
+  },
+  "attributes": {
+    "title": "سمات المنتج",
+    "subtitle": "بيانات إضافية للمنتج (الحجم، اللون، إلخ). تُدار القيم كمصطلحات لكل سمة.",
+    "loading": "جاري تحميل السمات…",
+    "searchPlaceholder": "البحث في السمات…",
+    "empty": "لا توجد سمات مطابقة.",
+    "emptyNone": "لا توجد سمات بعد. أضف من الأسفل أو زامن من WooCommerce.",
+    "addCard": {
+      "title": "إضافة سمة",
+      "hint": "الاسم الظاهر في المتجر؛ المعرف هو المرجع الداخلي (بحد أقصى 28 حرفاً).",
+      "submit": "إضافة سمة"
+    },
+    "fields": {
+      "name": "الاسم",
+      "nameHint": "يُعرض في صفحة المنتج.",
+      "slug": "المعرف",
+      "slugHint": "مرجع فريد للسمة (بحد أقصى 28 حرفاً).",
+      "type": "النوع",
+      "typeSelect": "قائمة",
+      "typeText": "نص",
+      "orderBy": "ترتيب افتراضي",
+      "hasArchives": "تفعيل الأرشيف"
+    },
+    "orderBy": {
+      "orderMenu": "ترتيب مخصص",
+      "orderName": "الاسم",
+      "orderNameNum": "الاسم (رقمي)",
+      "orderId": "معرف المصطلح"
+    },
+    "table": {
+      "title": "السمات",
+      "name": "الاسم",
+      "slug": "المعرف",
+      "type": "النوع",
+      "orderBy": "الترتيب",
+      "actions": "إجراءات",
+      "configureTerms": "المصطلحات",
+      "edit": "تعديل",
+      "delete": "حذف"
+    },
+    "edit": {
+      "title": "تعديل السمة",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "delete": {
+      "title": "حذف السمة؟",
+      "description": "إزالة «{{name}}» من WooCommerce؟ قد تتأثر المنتجات التي تستخدم هذه السمة.",
+      "cancel": "إلغاء",
+      "confirm": "حذف"
+    },
+    "errors": {
+      "nameRequired": "الاسم مطلوب",
+      "createFailed": "تعذر إنشاء السمة",
+      "updateFailed": "تعذر تحديث السمة",
+      "deleteFailed": "تعذر حذف السمة"
+    },
+    "toast": {
+      "created": "تم إنشاء السمة",
+      "updated": "تم تحديث السمة",
+      "deleted": "تم حذف السمة"
+    },
+    "terms": {
+      "back": "العودة إلى السمات",
+      "title": "{{name}} — المصطلحات",
+      "subtitle": "إضافة أو تعديل أو حذف قيم هذه السمة.",
+      "addTitle": "إضافة مصطلح",
+      "addSubmit": "إضافة مصطلح",
+      "tableTitle": "المصطلحات",
+      "editTitle": "تعديل المصطلح",
+      "deleteTitle": "حذف المصطلح؟",
+      "deleteDescription": "إزالة «{{name}}»؟ قد تحتاج المنتجات التي تستخدم هذه القيمة إلى تحديث.",
+      "empty": "لا توجد مصطلحات بعد.",
+      "fields": {
+        "name": "الاسم",
+        "slug": "المعرف",
+        "description": "الوصف",
+        "menuOrder": "الترتيب"
+      },
+      "columns": {
+        "name": "الاسم",
+        "slug": "المعرف",
+        "description": "الوصف",
+        "products": "المنتجات",
+        "order": "الترتيب",
+        "actions": "إجراءات"
+      },
+      "errors": {
+        "nameRequired": "الاسم مطلوب",
+        "invalidAttribute": "سمة غير صالحة أو مفقودة.",
+        "createFailed": "تعذر إنشاء المصطلح",
+        "updateFailed": "تعذر تحديث المصطلح",
+        "deleteFailed": "تعذر حذف المصطلح"
+      },
+      "toast": {
+        "created": "تم إنشاء المصطلح",
+        "updated": "تم تحديث المصطلح",
+        "deleted": "تم حذف المصطلح"
+      }
     }
   },
   "taxonomy": {
