@@ -317,7 +317,7 @@ export function SiteSidebar({ siteId }: Props) {
             ? "size-9 shrink-0 justify-center p-0"
             : "gap-2.5 px-2.5 py-1.5",
           active
-            ? "bg-foreground/[0.08] text-foreground font-semibold"
+            ? "bg-sidebar-active text-sidebar-active-foreground font-semibold shadow-[inset_0_0_0_1px_hsl(var(--border))]"
             : "font-medium text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
         )}
         onMouseEnter={() => node.href && warmRouteAndData(node.href)}
@@ -327,7 +327,7 @@ export function SiteSidebar({ siteId }: Props) {
           <span
             aria-hidden
             className={cn(
-              "absolute start-0 w-0.5 rounded-e-full bg-foreground",
+              "absolute start-0 w-0.5 rounded-e-full bg-sidebar-primary",
               compact ? "top-1.5 bottom-1.5" : "top-1.5 bottom-1.5"
             )}
           />
@@ -335,7 +335,7 @@ export function SiteSidebar({ siteId }: Props) {
         <Icon
           className={cn(
             "h-4 w-4 shrink-0",
-            !node.iconColor && (active ? "text-foreground" : "text-foreground/60"),
+            !node.iconColor && (active ? "text-sidebar-active-foreground" : "text-foreground/60"),
           )}
           style={node.iconColor ? { color: node.iconColor } : undefined}
           aria-hidden

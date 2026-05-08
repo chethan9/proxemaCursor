@@ -283,43 +283,46 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
     }
 
     if (!isVariable) {
-      const regNum = parseFloat(regular);
-      if (!regular || Number.isNaN(regNum) || regNum <= 0) {
-        toast({
-          title: t("products.quickEdit.invalidPriceTitle"),
-          description: t("products.quickEdit.invalidRegularDesc"),
-          variant: "destructive",
-        });
-        return;
-      }
-      if (sale) {
-        const saleNum = parseFloat(sale);
-        if (Number.isNaN(saleNum) || saleNum <= 0) {
+      const publishing = status === "publish";
+      if (publishing) {
+        const regNum = parseFloat(regular);
+        if (!regular || Number.isNaN(regNum) || regNum <= 0) {
           toast({
-            title: t("products.quickEdit.invalidSaleTitle"),
-            description: t("products.quickEdit.invalidSalePositiveDesc"),
+            title: t("products.quickEdit.invalidPriceTitle"),
+            description: t("products.quickEdit.invalidRegularDesc"),
             variant: "destructive",
           });
           return;
         }
-        if (saleNum >= regNum) {
-          toast({
-            title: t("products.quickEdit.invalidSaleTitle"),
-            description: t("products.quickEdit.invalidSaleLessDesc"),
-            variant: "destructive",
-          });
-          return;
+        if (sale) {
+          const saleNum = parseFloat(sale);
+          if (Number.isNaN(saleNum) || saleNum <= 0) {
+            toast({
+              title: t("products.quickEdit.invalidSaleTitle"),
+              description: t("products.quickEdit.invalidSalePositiveDesc"),
+              variant: "destructive",
+            });
+            return;
+          }
+          if (saleNum >= regNum) {
+            toast({
+              title: t("products.quickEdit.invalidSaleTitle"),
+              description: t("products.quickEdit.invalidSaleLessDesc"),
+              variant: "destructive",
+            });
+            return;
+          }
         }
-      }
-      if (manageStock && stockQty !== "") {
-        const qtyNum = Number(stockQty);
-        if (Number.isNaN(qtyNum) || qtyNum < 0) {
-          toast({
-            title: t("products.quickEdit.invalidQtyTitle"),
-            description: t("products.quickEdit.invalidQtyDesc"),
-            variant: "destructive",
-          });
-          return;
+        if (manageStock && stockQty !== "") {
+          const qtyNum = Number(stockQty);
+          if (Number.isNaN(qtyNum) || qtyNum < 0) {
+            toast({
+              title: t("products.quickEdit.invalidQtyTitle"),
+              description: t("products.quickEdit.invalidQtyDesc"),
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
       const patch: Record<string, unknown> = {
@@ -352,36 +355,36 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
           });
           return;
         }
-      }
-      if (d.sale_price.trim()) {
-        const saleNum = parseFloat(d.sale_price);
-        if (Number.isNaN(saleNum) || saleNum <= 0) {
-          toast({
-            title: t("products.quickEdit.invalidSaleTitle"),
-            description: t("products.quickEdit.variationInvalidSalePositive", { label: variationLabel(d.attributes) || `#${d.wooId}` }),
-            variant: "destructive",
-          });
-          return;
+        if (d.sale_price.trim()) {
+          const saleNum = parseFloat(d.sale_price);
+          if (Number.isNaN(saleNum) || saleNum <= 0) {
+            toast({
+              title: t("products.quickEdit.invalidSaleTitle"),
+              description: t("products.quickEdit.variationInvalidSalePositive", { label: variationLabel(d.attributes) || `#${d.wooId}` }),
+              variant: "destructive",
+            });
+            return;
+          }
+          const reg = parseFloat(d.regular_price);
+          if (!Number.isNaN(reg) && reg > 0 && saleNum >= reg) {
+            toast({
+              title: t("products.quickEdit.invalidSaleTitle"),
+              description: t("products.quickEdit.variationInvalidSaleLess", { label: variationLabel(d.attributes) || `#${d.wooId}` }),
+              variant: "destructive",
+            });
+            return;
+          }
         }
-        const reg = parseFloat(d.regular_price);
-        if (!Number.isNaN(reg) && reg > 0 && saleNum >= reg) {
-          toast({
-            title: t("products.quickEdit.invalidSaleTitle"),
-            description: t("products.quickEdit.variationInvalidSaleLess", { label: variationLabel(d.attributes) || `#${d.wooId}` }),
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      if (d.manage_stock && d.stock_qty.trim() !== "") {
-        const q = Number(d.stock_qty);
-        if (Number.isNaN(q) || q < 0) {
-          toast({
-            title: t("products.quickEdit.invalidQtyTitle"),
-            description: t("products.quickEdit.variationInvalidQty", { label: variationLabel(d.attributes) || `#${d.wooId}` }),
-            variant: "destructive",
-          });
-          return;
+        if (d.manage_stock && d.stock_qty.trim() !== "") {
+          const q = Number(d.stock_qty);
+          if (Number.isNaN(q) || q < 0) {
+            toast({
+              title: t("products.quickEdit.invalidQtyTitle"),
+              description: t("products.quickEdit.variationInvalidQty", { label: variationLabel(d.attributes) || `#${d.wooId}` }),
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
     }

@@ -8,6 +8,7 @@ import {
   defaultAttributesFromVariation,
   variationMatchesDefault,
 } from "@/services/productEditService";
+import { variationMatrixSyncIssues } from "@/services/productValidation";
 import { AttributeEditor } from "@/components/product-edit/variants/AttributeEditor";
 import { VariationsTable } from "@/components/product-edit/variants/VariationsTable";
 import { VariationEditDialog } from "@/components/product-edit/variants/VariationEditDialog";
@@ -200,6 +201,8 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
     ? form.variations.filter((v) => v.enabled !== false && (!v.regular_price || Number(v.regular_price) <= 0)).length
     : 0;
 
+  const matrixSync = productMode === "variable" ? variationMatrixSyncIssues(form) : null;
+
   const variationAttrSig = useMemo(
     () =>
       JSON.stringify(
@@ -226,12 +229,13 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
 
   const prevVariationAttrSig = useRef<string | null>(null);
   useEffect(() => {
-    if (productMode !== "variable") {
-      prevVariationAttrSig.current = null;
-    }
+    if (productMode !== "variable") prevVariationAttrSig.current = null;
   }, [productMode]);
 
-  /** Only auto-merge when the attribute matrix shrinks (removed option/dimension); additive changes wait for Regenerate. */
+  /**
+   * When the attribute matrix shrinks (removed option or variation dimension), sync variation rows immediately.
+   * When variations are still empty, do nothing — additive changes require an explicit “Regenerate from attributes”.
+   */
   useEffect(() => {
     if (productMode !== "variable") return;
     if (prevVariationAttrSig.current === null) {
@@ -261,6 +265,7 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
 
     const tid = window.setTimeout(() => {
       setForm((p) => {
+        if (p.variations.length === 0) return p;
         const fresh = generateMatrix(p.attributes);
         const merged = mergeVariationsExtended(fresh, p.variations);
         const mergedIds = new Set(merged.map((v) => v.id).filter((id): id is number => typeof id === "number"));
@@ -332,6 +337,19 @@ export function VariantsTab({ storeId, productId, form, setForm }: Props) {
           </div>
 
           <div className="space-y-2">
+            {matrixSync && !loading && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-50">
+                Variation rows don’t match your attributes (
+                {matrixSync.missing > 0
+                  ? `${matrixSync.missing} missing combination${matrixSync.missing === 1 ? "" : "s"}`
+                  : null}
+                {matrixSync.missing > 0 && matrixSync.extra > 0 ? "; " : null}
+                {matrixSync.extra > 0
+                  ? `${matrixSync.extra} stale row${matrixSync.extra === 1 ? "" : "s"}`
+                  : null}
+                ). Click &quot;Regenerate from attributes&quot; before saving — Save is blocked until rows match.
+              </div>
+            )}
             {(duplicateCombos.length > 0 || missingPriceCount > 0) && !loading && form.variations.length > 0 && (
               <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs space-y-1">
                 {missingPriceCount > 0 && (

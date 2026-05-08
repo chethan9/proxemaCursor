@@ -305,6 +305,7 @@
         "editorCrashed": "The image editor failed to start.",
         "close": "Close"
       },
+      "removeMainImage": "Remove product image",
       "taxonomy": {
         "addCategory": "Add category",
         "addBrand": "Add brand",

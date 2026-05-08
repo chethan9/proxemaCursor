@@ -19,6 +19,10 @@ const rawBackfillProductConcurrency = Number(process.env.CF_BACKFILL_PRODUCT_CON
 const BACKFILL_PRODUCT_CONCURRENCY = Number.isFinite(rawBackfillProductConcurrency)
   ? Math.min(12, Math.max(1, rawBackfillProductConcurrency))
   : 4;
+const rawDeleteConcurrency = Number(process.env.CF_DELETE_IMAGE_CONCURRENCY || 10);
+const DELETE_CONCURRENCY = Number.isFinite(rawDeleteConcurrency)
+  ? Math.min(24, Math.max(1, rawDeleteConcurrency))
+  : 10;
 
 function logCfMirrorMetric(cfg: ResolvedCloudflareConfig | null, payload: Record<string, unknown>) {
   const on = cfg?.metricsEnabled || process.env.CLOUDFLARE_IMAGE_MIRROR_METRICS === "true";
@@ -217,7 +221,7 @@ export async function deleteMirrorsForProduct(productId: string): Promise<void> 
   await supabaseAdmin.from("product_image_mirrors").delete().eq("product_id", productId);
   const cfg = await getResolvedCloudflareConfig();
   if (!cfg) return;
-  for (const cfId of cfIds) {
+  await mapPool(cfIds, DELETE_CONCURRENCY, async (cfId) => {
     const { count } = await supabaseAdmin
       .from("product_image_mirrors")
       .select("id", { count: "exact", head: true })
@@ -225,7 +229,7 @@ export async function deleteMirrorsForProduct(productId: string): Promise<void> 
     if ((count ?? 0) === 0) {
       await deleteCloudflareImage(cfId);
     }
-  }
+  });
 }
 
 /** Call before deleting a store row — removes CF images tracked for this store. */
@@ -239,8 +243,13 @@ export async function deleteMirrorsForStore(storeId: string): Promise<void> {
   await supabaseAdmin.from("product_image_mirrors").delete().eq("store_id", storeId);
   const cfg = await getResolvedCloudflareConfig();
   if (!cfg) return;
-  for (const id of cfIds) {
-    await deleteCloudflareImage(id);
+  let failedDeletes = 0;
+  await mapPool(cfIds, DELETE_CONCURRENCY, async (id) => {
+    const out = await deleteCloudflareImage(id);
+    if (!out.ok) failedDeletes++;
+  });
+  if (failedDeletes > 0) {
+    console.warn("[product-image-mirror] store delete mirror cleanup failures", { storeId, failedDeletes, total: cfIds.length });
   }
 }
 

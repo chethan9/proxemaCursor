@@ -146,56 +146,60 @@ export function SitePreferencesOnboardingDialog({ store }: { store: Store | null
         showClose={false}
         className={cn(
           /* Avoid `relative`: merged after DialogContent's `fixed` and would break viewport centering. */
-          "flex max-h-[min(90dvh,calc(100dvh-1.5rem),640px)] min-h-0 w-[calc(100vw-1.25rem)] max-w-lg flex-col gap-0 overflow-visible p-0",
-          "border-2 border-primary/15 bg-background shadow-xl sm:w-full sm:max-w-[440px]"
+          "flex max-h-[min(90dvh,calc(100dvh-1.5rem),640px)] min-h-0 w-[calc(100vw-1.25rem)] max-w-lg flex-col gap-0 overflow-visible border-none bg-transparent p-0 shadow-none sm:w-full sm:max-w-[440px]"
         )}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
-        <div className="shrink-0 border-b border-border/80 bg-muted/30 px-4 py-3">
-          <DialogHeader className="space-y-1 text-left">
-            <DialogTitle className="text-[15px] font-semibold leading-snug tracking-tight">
-              {t("storePreferences.wizardTitle")}
-            </DialogTitle>
-            <DialogDescription className="text-[11px] leading-snug">
-              {t("storePreferences.wizardDescription")}
-            </DialogDescription>
-          </DialogHeader>
+        <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border-2 border-primary/15 bg-background shadow-xl">
+          <div className="shrink-0 border-b border-border/80 bg-muted/30 px-4 py-3">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="text-[15px] font-semibold leading-snug tracking-tight">
+                {t("storePreferences.wizardTitle")}
+              </DialogTitle>
+              <DialogDescription className="text-[11px] leading-snug">
+                {t("storePreferences.wizardDescription")}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 [-webkit-overflow-scrolling:touch]">
+              <StorePreferencesFields
+                values={values}
+                onChange={patch}
+                showLanguage={showLanguage}
+                enabledLocaleCodes={enabledLocales}
+                disabled={submitting}
+                overlayContainer={overlayContainer}
+              />
+            </div>
+
+            <div className="shrink-0 space-y-2 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {error ?
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              : null}
+              <Button type="submit" disabled={submitting} className="w-full font-medium sm:min-w-[168px]">
+                {submitting ?
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("storePreferences.saving")}
+                  </>
+                : t("storePreferences.saveContinue")}
+              </Button>
+            </div>
+          </form>
+          {/* Inside dialog DOM (not body) so modal pointer-events work, but outside overflow-auto so lists are not clipped */}
+          <div
+            ref={setOverlayContainer}
+            className="pointer-events-none absolute inset-0 z-[80] [&>*]:pointer-events-auto"
+          />
         </div>
-
-        <form onSubmit={handleSubmit} className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 [-webkit-overflow-scrolling:touch]">
-            <StorePreferencesFields
-              values={values}
-              onChange={patch}
-              showLanguage={showLanguage}
-              enabledLocaleCodes={enabledLocales}
-              disabled={submitting}
-              overlayContainer={overlayContainer}
-            />
-          </div>
-
-          <div className="shrink-0 space-y-2 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {error ?
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            : null}
-            <Button type="submit" disabled={submitting} className="w-full font-medium sm:min-w-[168px]">
-              {submitting ?
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("storePreferences.saving")}
-                </>
-              : t("storePreferences.saveContinue")}
-            </Button>
-          </div>
-        </form>
-        {/* Inside dialog DOM (not body) so modal pointer-events work, but outside overflow-auto so lists are not clipped */}
-        <div
-          ref={setOverlayContainer}
-          className="pointer-events-none absolute inset-0 z-[80] [&>*]:pointer-events-auto"
-        />
       </DialogContent>
     </Dialog>
   );

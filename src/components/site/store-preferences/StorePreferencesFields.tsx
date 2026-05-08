@@ -18,7 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LOCALES, type LocaleCode } from "@/lib/i18n";
 import {
   ACQUISITION_SOURCE_IDS,
@@ -86,31 +86,37 @@ function SearchableCombo({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      modal={false}
+    >
       <PopoverAnchor asChild>
         <div className="w-full">
-          <Button
-            id={id}
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className={cn(
-              "h-9 w-full justify-between px-3 font-normal shadow-sm",
-              filled ?
-                "border-input bg-background font-medium text-foreground"
-              : "border-input/80 bg-muted/40 text-muted-foreground"
-            )}
-          >
-            <span className="truncate text-left">{displayLabel || placeholder}</span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+          <PopoverTrigger asChild>
+            <Button
+              id={id}
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              disabled={disabled}
+              className={cn(
+                "h-9 w-full justify-between px-3 font-normal shadow-sm",
+                filled ?
+                  "border-input bg-background font-medium text-foreground"
+                : "border-input/80 bg-muted/40 text-muted-foreground"
+              )}
+            >
+              <span className="truncate text-left">{displayLabel || placeholder}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
         </div>
       </PopoverAnchor>
       <PopoverContent
         container={container}
-        className="w-[var(--radix-popper-anchor-width)] min-w-[var(--radix-popper-anchor-width)] max-w-[min(calc(100vw-2rem),480px)] p-0"
+        className="w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)] max-w-[min(calc(100vw-2rem),480px)] p-0"
         align="start"
         side="bottom"
         sideOffset={4}
@@ -225,31 +231,37 @@ export function StorePreferencesFields({
         <Label className="text-xs font-medium text-muted-foreground" htmlFor="tz-trigger">
           {t("storePreferences.timezone")}
         </Label>
-        <Popover open={tzOpen} onOpenChange={setTzOpen} modal={false}>
+        <Popover
+          open={tzOpen}
+          onOpenChange={setTzOpen}
+          modal={false}
+        >
           <PopoverAnchor asChild>
             <div className="w-full">
-              <Button
-                id="tz-trigger"
-                type="button"
-                variant="outline"
-                role="combobox"
-                aria-expanded={tzOpen}
-                disabled={disabled}
-                className={cn(
-                  "h-9 w-full justify-between px-3 font-normal shadow-sm",
-                  values.timezone ?
-                    "border-input bg-background font-medium text-foreground"
-                  : "border-input/80 bg-muted/40 text-muted-foreground"
-                )}
-              >
-                <span className="truncate text-left">{values.timezone || t("storePreferences.selectTimezone")}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
+              <PopoverTrigger asChild>
+                <Button
+                  id="tz-trigger"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={tzOpen}
+                  disabled={disabled}
+                  className={cn(
+                    "h-9 w-full justify-between px-3 font-normal shadow-sm",
+                    values.timezone ?
+                      "border-input bg-background font-medium text-foreground"
+                    : "border-input/80 bg-muted/40 text-muted-foreground"
+                  )}
+                >
+                  <span className="truncate text-left">{values.timezone || t("storePreferences.selectTimezone")}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
             </div>
           </PopoverAnchor>
           <PopoverContent
             container={overlayContainer}
-            className="w-[var(--radix-popper-anchor-width)] min-w-[var(--radix-popper-anchor-width)] max-w-[min(calc(100vw-2rem),480px)] p-0"
+            className="w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)] max-w-[min(calc(100vw-2rem),480px)] p-0"
             align="start"
             side="bottom"
             sideOffset={4}

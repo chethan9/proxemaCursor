@@ -273,7 +273,11 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                       <Fragment key={item.id}>
                         <TableRow
                           onClick={() => setExpanded(isExpanded ? null : item.id)}
-                          className={`cursor-pointer ${isExpanded ? "bg-muted/30 hover:bg-muted/30" : "hover:bg-muted/30"}`}
+                          className={
+                            isExpanded
+                              ? "cursor-pointer border-b-0 bg-muted/25 hover:bg-muted/25"
+                              : "cursor-pointer hover:bg-muted/30"
+                          }
                         >
                           <TableCell className="w-8">
                             {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
@@ -285,8 +289,8 @@ export function TaxonomyTab({ storeId, mode, search, onSearchChange, storeName }
                           <TableCell className="text-right font-mono text-xs text-muted-foreground">{item.woo_id ?? "—"}</TableCell>
                         </TableRow>
                         {isExpanded && (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={6} className="p-0">
+                          <TableRow className="border-0 bg-muted/25 hover:bg-muted/25">
+                            <TableCell colSpan={6} className="border-0 p-0">
                               <div onClick={(e) => e.stopPropagation()}>
                                 <TaxonomyRowExpanded
                                   item={item}

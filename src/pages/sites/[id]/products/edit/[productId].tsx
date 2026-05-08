@@ -24,6 +24,7 @@ import {
   Eye,
   Pencil,
   Layers,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -474,6 +475,20 @@ function Inner() {
             storeId={storeId}
             className="h-8 gap-1 px-2 text-xs"
           />
+          {mode === "basic" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+              disabled={remove.isPending}
+              aria-label="Delete product"
+            >
+              <Trash2 className="size-3.5 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Delete</span>
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={onPublish}

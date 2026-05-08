@@ -193,9 +193,9 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
               <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
                 <div className="space-y-1.5 shrink-0">
                   <Label className="text-xs inline-flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />Product image</Label>
-                  <div className="relative h-[140px] w-[140px]">
+                  <div className="relative group h-[140px] w-[140px]">
                     <button type="button" onClick={() => setImageOpen("main")} className="h-[140px] w-[140px] rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center bg-muted/30 overflow-hidden relative">
-                      {mainImage ? (
+                      {mainImage?.src ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={mainImage.src} alt="" className="h-full w-full object-cover" />
                       ) : (
@@ -206,21 +206,39 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
                       )}
                     </button>
                     {mainImage?.src ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        className="absolute bottom-1 right-1 h-7 w-7 shadow-sm"
-                        title={t("products.edit.imageEditor.title")}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setImageEditorIdx(0);
-                          setImageEditorOpen(true);
-                        }}
-                      >
-                        <SquarePen className="h-3.5 w-3.5" />
-                      </Button>
+                      <>
+                        <button
+                          type="button"
+                          title={t("products.edit.removeMainImage")}
+                          aria-label={t("products.edit.removeMainImage")}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setForm((p) => ({
+                              ...p,
+                              images: [{ src: "", alt: "" }, ...p.images.slice(1)],
+                            }));
+                          }}
+                          className="absolute top-1 right-1 z-[2] h-5 w-5 rounded-full bg-destructive/90 text-white opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center hover:bg-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="absolute bottom-1 right-1 z-[2] h-7 w-7 shadow-sm"
+                          title={t("products.edit.imageEditor.title")}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setImageEditorIdx(0);
+                            setImageEditorOpen(true);
+                          }}
+                        >
+                          <SquarePen className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
                     ) : null}
                   </div>
                 </div>

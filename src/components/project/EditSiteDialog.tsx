@@ -132,49 +132,49 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
       }}
     >
       <DialogContent
-        className="relative flex h-[min(92vh,calc(100dvh-1.5rem))] w-[min(56rem,calc(100vw-1rem))] max-w-none flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[min(90vh,100dvh-2rem)] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0 min-h-0"
         onInteractOutside={(e) => { if (deleting) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (deleting) e.preventDefault(); }}
       >
-        <DialogHeader className="shrink-0 border-b px-5 pb-3 pt-5">
-          <DialogTitle className="text-lg">{t("editSite.title")}</DialogTitle>
-          <DialogDescription className="text-xs">{t("editSite.description")}</DialogDescription>
+        <DialogHeader className="shrink-0 border-b px-4 pb-2 pt-4">
+          <DialogTitle className="text-base">{t("editSite.title")}</DialogTitle>
+          <DialogDescription className="text-[11px]">{t("editSite.description")}</DialogDescription>
         </DialogHeader>
 
         <div
           className={
             deleting ?
-              "min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4 pointer-events-none select-none opacity-40"
-            : "min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4"
+              "min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-3 pointer-events-none select-none opacity-40"
+            : "min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-3"
           }
           aria-hidden={deleting}
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <div className="space-y-1">
-              <Label htmlFor="name" className="text-xs">{t("editSite.siteName")}</Label>
+              <Label htmlFor="name" className="text-[11px]">{t("editSite.siteName")}</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-9 focus-visible:border-foreground/20 focus-visible:ring-1 focus-visible:ring-foreground/15"
+                className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="url" className="text-xs">{t("editSite.storeUrl")}</Label>
+              <Label htmlFor="url" className="text-[11px]">{t("editSite.storeUrl")}</Label>
               <Input
                 id="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="h-9 focus-visible:border-foreground/20 focus-visible:ring-1 focus-visible:ring-foreground/15"
+                className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="client" className="text-xs">{t("editSite.client")}</Label>
+              <Label htmlFor="client" className="text-[11px]">{t("editSite.client")}</Label>
               <select
                 id="client"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:border-foreground/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/15"
+                className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs"
               >
                 <option value="">{t("editSite.unassigned")}</option>
                 {clients.map((c) => (
@@ -185,26 +185,26 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="tz" className="text-xs">{t("editSite.timezone")}</Label>
+            <Label htmlFor="tz" className="text-[11px]">{t("editSite.timezone")}</Label>
             <div className="flex gap-2">
               <Input
                 id="tz"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 placeholder={t("editSite.timezonePlaceholder")}
-                className="h-9 flex-1 font-mono text-xs focus-visible:border-foreground/20 focus-visible:ring-1 focus-visible:ring-foreground/15"
+                className="h-8 flex-1 font-mono text-xs"
               />
-              <Button type="button" variant="outline" size="sm" onClick={useMyTz} className="h-9 whitespace-nowrap">{t("editSite.useMine")}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={useMyTz} className="h-8 whitespace-nowrap px-2.5 text-xs">{t("editSite.useMine")}</Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="min-w-0 space-y-2.5 rounded-md border p-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div className="min-w-0 space-y-2 rounded-md border p-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Store className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <div className="text-sm font-medium leading-tight">{t("editSite.woocommerceTitle")}</div>
+                    <div className="text-xs font-medium leading-tight">{t("editSite.woocommerceTitle")}</div>
                     <div className="text-[11px] text-muted-foreground">{t("editSite.woocommerceDesc")}</div>
                   </div>
                 </div>
@@ -237,12 +237,12 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
               )}
             </div>
 
-            <div className="min-w-0 space-y-2.5 rounded-md border p-3">
+            <div className="min-w-0 space-y-2 rounded-md border p-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <div className="text-sm font-medium leading-tight">{t("editSite.wpTitle")}</div>
+                    <div className="text-xs font-medium leading-tight">{t("editSite.wpTitle")}</div>
                     <div className="text-[11px] text-muted-foreground">{t("editSite.wpDesc")}</div>
                   </div>
                 </div>
@@ -297,7 +297,7 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
             </div>
           )}
 
-          <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2">
             <div className="flex items-center gap-2 min-w-0">
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
               <div className="min-w-0">
@@ -329,11 +329,11 @@ export function EditSiteDialog({ open, onOpenChange, site }: EditSiteDialogProps
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 rounded-b-lg border-t bg-muted/30 px-5 py-3">
-          <div className="text-[11px] text-muted-foreground">{t("editSite.footerNote", { brand: brandName })}</div>
+        <div className="flex shrink-0 items-center justify-between gap-2 rounded-b-lg border-t bg-muted/30 px-4 py-2.5">
+          <div className="text-[10px] text-muted-foreground">{t("editSite.footerNote", { brand: brandName })}</div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-9" disabled={saving || deleting}>{t("editSite.cancel")}</Button>
-            <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="h-9 min-w-[110px]">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-8 px-3 text-xs" disabled={saving || deleting}>{t("editSite.cancel")}</Button>
+            <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="h-8 min-w-[96px] px-3 text-xs">
               {saving ? t("editSite.saving") : t("editSite.save")}
             </Button>
           </div>

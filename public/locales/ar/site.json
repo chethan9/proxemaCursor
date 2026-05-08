@@ -275,7 +275,8 @@
         "exportFailed": "تعذّر تصدير الصورة بعد التحويل.",
         "editorCrashed": "فشل تشغيل محرّر الصور.",
         "close": "إغلاق"
-      }
+      },
+      "removeMainImage": "إزالة صورة المنتج"
     },
     "toolbar": {
       "sort": "ترتيب",

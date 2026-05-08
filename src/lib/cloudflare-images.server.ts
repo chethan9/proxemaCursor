@@ -128,6 +128,21 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function cfFetchWithTimeout(
+  cfg: ResolvedCloudflareConfig,
+  path: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<CfApiResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await cfFetch(cfg, path, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function uploadImageByRemoteUrlForm(
   cfg: NonNullable<Awaited<ReturnType<typeof getResolvedCloudflareConfig>>>,
   remoteUrl: string
@@ -171,12 +186,35 @@ export async function uploadImageFromUrl(remoteUrl: string): Promise<{ ok: true;
 export async function deleteCloudflareImage(imageId: string): Promise<{ ok: boolean; error?: string }> {
   const cfg = await getResolvedCloudflareConfig();
   if (!cfg || !cfg.enabled) return { ok: true };
-  const { json } = await cfFetch(cfg, `/images/v1/${encodeURIComponent(imageId)}`, { method: "DELETE" });
-  if (!json.success) {
-    const msg = json.errors?.map((e) => e.message).join("; ") || "Delete failed";
-    return { ok: false, error: msg };
+  const rawTimeoutMs = Number(process.env.CF_IMAGE_DELETE_TIMEOUT_MS || 6000);
+  const timeoutMs = Number.isFinite(rawTimeoutMs) ? Math.min(30_000, Math.max(1000, rawTimeoutMs)) : 6000;
+  const rawAttempts = Number(process.env.CF_IMAGE_DELETE_ATTEMPTS || 2);
+  const attempts = Number.isFinite(rawAttempts) ? Math.min(5, Math.max(1, rawAttempts)) : 2;
+  const baseBackoffMs = 200;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const { status, json } = await cfFetchWithTimeout(cfg, `/images/v1/${encodeURIComponent(imageId)}`, { method: "DELETE" }, timeoutMs);
+      if (json.success) return { ok: true };
+
+      const msg = json.errors?.map((e) => e.message).join("; ") || `Delete failed (${status})`;
+      const retryable = status === 429 || status >= 500;
+      if (retryable && attempt < attempts) {
+        await sleep(baseBackoffMs * Math.pow(2, attempt - 1));
+        continue;
+      }
+      return { ok: false, error: msg };
+    } catch (e) {
+      const retryable = e instanceof DOMException && e.name === "AbortError";
+      if (retryable && attempt < attempts) {
+        await sleep(baseBackoffMs * Math.pow(2, attempt - 1));
+        continue;
+      }
+      return { ok: false, error: e instanceof Error ? e.message : "Delete request failed" };
+    }
   }
-  return { ok: true };
+
+  return { ok: false, error: "Delete failed" };
 }
 
 /** Verify credentials with Cloudflare API (lightweight list request). */

@@ -495,7 +495,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary",
           collapsed ? "h-9 w-9 justify-center mx-auto" : cn("gap-2.5 py-1.5", indent ? "pl-7 pr-2.5" : "px-2.5"),
           active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]"
             : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
         )}
       >
@@ -634,7 +634,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
             className={cn(
               "relative w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
               (isOpen || hasActiveChild)
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]"
                 : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
             )}
           >
@@ -658,7 +658,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                     aria-label={groupLabel}
                     className={cn(
                       "relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
-                      hasActiveChild ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                      hasActiveChild ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <GroupIcon className="h-4 w-4 shrink-0" style={node.iconColor ? { color: node.iconColor } : undefined} />
@@ -686,7 +686,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                         onFocus={() => prefetchNavRoute(child.href)}
                         className={cn(
                           "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
-                          active ? "bg-accent text-accent-foreground" : "hover:bg-accent/60"
+                          active ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]" : "hover:bg-sidebar-accent/60"
                         )}
                       >
                         <Icon
@@ -713,7 +713,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
           className={cn(
             "w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
             "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-            hasActiveChild && !isExpanded && "text-sidebar-accent-foreground"
+            hasActiveChild && !isExpanded && "text-sidebar-active-foreground"
           )}
           aria-expanded={isExpanded}
         >
@@ -820,7 +820,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Link href={href} prefetch onPointerDown={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} className={cn("relative flex items-center justify-center rounded-md h-9 w-9 mx-auto transition-colors",
-                                  isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
+                                  isActive ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]" : "hover:bg-sidebar-accent/60")}>
                                   <SiteIcon site={site} size="md" />
                                   <span className={cn("absolute top-0.5 end-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-sidebar",
                                     site.status === "connected" ? "bg-success" : "bg-sidebar-foreground/40")} />
@@ -838,7 +838,7 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                           <Link href={href} prefetch onPointerDown={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onMouseEnter={() => { prefetchStore(site.id); prefetchNavRoute(href); }} onClick={() => beginSidebarNavigation(href)} aria-current={isActive ? "page" : undefined} className={cn(
                             "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
                             isActive
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]"
                               : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                           )}>
                             {isActive && (
@@ -1000,11 +1000,11 @@ export function AppSidebar({ forceCollapsed = false }: { forceCollapsed?: boolea
                       className={cn(
                         "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors",
                         active
-                          ? "bg-foreground/[0.08] text-foreground"
+                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-[inset_0_0_0_1px_hsl(var(--border))]"
                           : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
                       )}
                     >
-                      {active && <span aria-hidden className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-e-full bg-foreground" />}
+                      {active && <span aria-hidden className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-e-full bg-sidebar-primary" />}
                       <Icon
                         className="h-4 w-4 shrink-0"
                         style={child.iconColor ? { color: child.iconColor } : undefined}

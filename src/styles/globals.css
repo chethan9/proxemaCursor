@@ -59,6 +59,9 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
+    /** Selected nav row — white pill on light sidebar; ring/shadow adds separation from sidebar bg */
+    --sidebar-active: 0 0% 100%;
+    --sidebar-active-foreground: 222 47% 11%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 22 100% 50%;
     --sidebar-muted: 220 9% 46%;
@@ -108,6 +111,8 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 11% 24%;
     --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-active: 210 11% 28%;
+    --sidebar-active-foreground: 0 0% 100%;
     --sidebar-border: 210 10% 27%;
     --sidebar-ring: 166 100% 35%;
     --sidebar-muted: 215 10% 65%;
@@ -155,6 +160,8 @@
     --sidebar-primary-foreground: 222 30% 14%;
     --sidebar-accent: 222 20% 15%;
     --sidebar-accent-foreground: 210 15% 88%;
+    --sidebar-active: 222 22% 14%;
+    --sidebar-active-foreground: 210 15% 88%;
     --sidebar-border: 222 18% 17%;
     --sidebar-ring: 22 80% 52%;
     --sidebar-muted: 215 12% 58%;
@@ -202,6 +209,8 @@
     --sidebar-primary-foreground: 0 0% 96%;
     --sidebar-accent: 210 12% 18%;
     --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-active: 210 12% 22%;
+    --sidebar-active-foreground: 0 0% 96%;
     --sidebar-border: 210 12% 22%;
     --sidebar-ring: 166 70% 42%;
     --sidebar-muted: 215 8% 60%;
@@ -401,8 +410,9 @@
   }
 
   [data-theme-preset="modern"] [data-sidebar="menu-button"][data-active="true"] {
-    background-color: hsl(220 14% 96%);
-    color: hsl(222 47% 11%);
+    background-color: hsl(var(--sidebar-active));
+    color: hsl(var(--sidebar-active-foreground));
+    box-shadow: inset 0 0 0 1px hsl(var(--sidebar-border));
   }
 
   [data-theme-preset="modern"] [data-sidebar="group-label"] {
@@ -645,8 +655,9 @@
   }
 
   .dark[data-theme-preset="modern"] [data-sidebar="menu-button"][data-active="true"] {
-    background-color: hsl(var(--sidebar-accent));
-    color: hsl(var(--sidebar-accent-foreground));
+    background-color: hsl(var(--sidebar-active));
+    color: hsl(var(--sidebar-active-foreground));
+    box-shadow: inset 0 0 0 1px hsl(var(--sidebar-border));
   }
 
   .dark[data-theme-preset="modern"] [data-sidebar="menu-button"]:hover {

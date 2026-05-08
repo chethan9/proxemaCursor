@@ -1,4 +1,5 @@
 import { ProductFormState, Variation, ProductAttribute, compositeVariationKey } from "@/services/productEditService";
+import { generateMatrix } from "@/components/product-edit/variants/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ValidationError = { field: string; message: string };
@@ -137,6 +138,26 @@ export function validateVariation(
   return errs;
 }
 
+/** Active variation rows vs attribute matrix (same rules as Regenerate from attributes). */
+export function variationMatrixSyncIssues(form: ProductFormState): { missing: number; extra: number } | null {
+  if (form.type !== "variable") return null;
+  const required = generateMatrix(form.attributes);
+  const requiredKeys = new Set(required.map((r) => r.key));
+  const active = form.variations.filter((v) => v.enabled !== false);
+  const variationKeys = new Set(active.map((v) => v.key));
+
+  let missing = 0;
+  for (const r of required) {
+    if (!variationKeys.has(r.key)) missing++;
+  }
+  let extra = 0;
+  for (const v of active) {
+    if (!requiredKeys.has(v.key)) extra++;
+  }
+  if (missing === 0 && extra === 0) return null;
+  return { missing, extra };
+}
+
 export function validateProductForm(form: ProductFormState): ValidationResult {
   const errors: ValidationError[] = [];
   const name = trim(form.name);
@@ -166,6 +187,17 @@ export function validateProductForm(form: ProductFormState): ValidationResult {
       errors.push({ field: "stock_quantity", message: "Stock quantity cannot be negative" });
     }
   } else if (form.type === "variable") {
+    const sync = variationMatrixSyncIssues(form);
+    if (sync) {
+      const parts: string[] = [];
+      if (sync.missing > 0) parts.push(`${sync.missing} combination${sync.missing === 1 ? "" : "s"} missing from variation rows`);
+      if (sync.extra > 0) parts.push(`${sync.extra} stale row${sync.extra === 1 ? "" : "s"} that no longer match attributes`);
+      errors.push({
+        field: "variations",
+        message: `Variation rows don’t match attributes (${parts.join("; ")}). Open the Variants tab and click “Regenerate from attributes”, then save.`,
+      });
+    }
+
     const variationAttrs = form.attributes.filter((a) => a.variation && a.options.length > 0);
     if (publishing && variationAttrs.length === 0) {
       errors.push({ field: "attributes", message: "Variable products need at least one attribute marked for variations" });
