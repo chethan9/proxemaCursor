@@ -527,6 +527,7 @@ function Inner() {
           productId={productId as string}
           form={form}
           setForm={(u) => setForm((p) => (p ? u(p) : p))}
+          committedSlug={(baselineForm?.slug ?? "").trim()}
         />
       ) : (
         <AdvancedShell
@@ -538,7 +539,15 @@ function Inner() {
           storeId={storeId}
           productId={productId}
           tabContent={{
-            basic: <BasicInfoTab storeId={storeId} productId={productId as string} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
+            basic: (
+              <BasicInfoTab
+                storeId={storeId}
+                productId={productId as string}
+                form={form}
+                setForm={(u) => setForm((p) => (p ? u(p) : p))}
+                committedSlug={(baselineForm?.slug ?? "").trim()}
+              />
+            ),
             pricing: <PricingTaxTab form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
             inventory: <InventoryShippingTab form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,
             variants: <VariantsTab storeId={storeId} productId={productId} form={form} setForm={(u) => setForm((p) => (p ? u(p) : p))} />,

@@ -297,10 +297,10 @@ function HomeInner() {
         </Card>
       ) : (
         <>
-          <div className="rounded-lg border bg-card/70 px-3 py-2.5">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {multiCurrency ? (
+          {multiCurrency ? (
+            <div className="rounded-lg border bg-card/70 px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <CurrencySwitcher
                     currencies={currencies}
                     selected={currency}
@@ -309,43 +309,39 @@ function HomeInner() {
                     allSelected={combineAll}
                     allLabel={allLabel}
                   />
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {t("home.viewingIn")} <span className="font-mono font-semibold text-foreground">{currency}</span>
-                  </span>
-                )}
-                {combineAll && meta?.fx_fallback && (
-                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                    {t("home.fxFallback")}
-                  </span>
-                )}
-                {snapshotRel || showRefreshing ? (
-                  <span className="text-xs text-muted-foreground">
-                    {snapshotRel ? t("home.dataUpdated", { relative: snapshotRel }) : null}
-                    {snapshotRel && showRefreshing ? " · " : null}
-                    {showRefreshing ? t("home.refreshingData") : null}
-                  </span>
-                ) : null}
-              </div>
-              <div className="ml-auto">
-                <Select
-                  value={homeQuery.range}
-                  onValueChange={(v) => handleRangeChange(v as DateRangePresetValue)}
-                >
-                  <SelectTrigger className="h-9 w-[150px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent align="end">
-                    {rangeSelectOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {combineAll && meta?.fx_fallback && (
+                    <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                      {t("home.fxFallback")}
+                    </span>
+                  )}
+                  {snapshotRel || showRefreshing ? (
+                    <span className="text-xs text-muted-foreground">
+                      {snapshotRel ? t("home.dataUpdated", { relative: snapshotRel }) : null}
+                      {snapshotRel && showRefreshing ? " · " : null}
+                      {showRefreshing ? t("home.refreshingData") : null}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="ml-auto">
+                  <Select
+                    value={homeQuery.range}
+                    onValueChange={(v) => handleRangeChange(v as DateRangePresetValue)}
+                  >
+                    <SelectTrigger className="h-9 w-[150px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent align="end">
+                      {rangeSelectOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {combineAll && meta?.fx_fallback && (
             <Card className="border-amber-200 bg-amber-50/40">

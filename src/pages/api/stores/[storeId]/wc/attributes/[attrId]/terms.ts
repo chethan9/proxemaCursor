@@ -1,5 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getStoreCreds, wooRequest } from "@/lib/woo-client";
+import {
+  deleteGlobalAttributeTermMirror,
+  getGlobalAttributeFromMirror,
+  listGlobalAttributeTermsFromMirror,
+  mirrorUpsertTermAfterWoo,
+  storeHasInitialSyncDone,
+} from "@/lib/product-global-attributes-mirror.server";
+
+async function fetchAllTermsLive(
+  store: NonNullable<Awaited<ReturnType<typeof getStoreCreds>>>,
+  attrId: string,
+): Promise<Record<string, unknown>[]> {
+  const all: Record<string, unknown>[] = [];
+  let page = 1;
+  while (page < 50) {
+    const batch = await wooRequest<Record<string, unknown>[]>(
+      store,
+      "GET",
+      `products/attributes/${attrId}/terms?per_page=100&page=${page}`,
+    );
+    all.push(...batch);
+    if (!Array.isArray(batch) || batch.length < 100) break;
+    page++;
+  }
+  return all;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { storeId: s, attrId: a } = req.query;
@@ -10,24 +36,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const store = await getStoreCreds(storeId);
   if (!store) return res.status(404).json({ error: "Store not connected" });
 
+  const aid = typeof attrId === "string" ? Number.parseInt(attrId, 10) : Number.NaN;
+
   try {
     if (req.method === "GET") {
-      const all: unknown[] = [];
-      let page = 1;
-      while (page < 20) {
-        const batch = await wooRequest<unknown[]>(
-          store,
-          "GET",
-          `products/attributes/${attrId}/terms?per_page=100&page=${page}`
-        );
-        all.push(...batch);
-        if (!Array.isArray(batch) || batch.length < 100) break;
-        page++;
+      const mirrorOk = await storeHasInitialSyncDone(storeId);
+      if (mirrorOk && Number.isFinite(aid)) {
+        try {
+          const attrMirror = await getGlobalAttributeFromMirror(storeId, aid);
+          if (attrMirror) {
+            const fromDb = await listGlobalAttributeTermsFromMirror(storeId, aid);
+            return res.status(200).json(fromDb);
+          }
+        } catch (e) {
+          console.warn("[wc/terms] mirror read failed:", e);
+        }
       }
+      const all = await fetchAllTermsLive(store, String(attrId));
       return res.status(200).json(all);
     }
     if (req.method === "POST") {
-      const data = await wooRequest(store, "POST", `products/attributes/${attrId}/terms`, req.body);
+      const data = await wooRequest<Record<string, unknown>>(
+        store,
+        "POST",
+        `products/attributes/${attrId}/terms`,
+        req.body,
+      );
+      if (Number.isFinite(aid)) {
+        try {
+          await mirrorUpsertTermAfterWoo(storeId, aid, data);
+        } catch (e) {
+          console.warn("[wc/terms] mirror upsert POST:", e);
+        }
+      }
       return res.status(200).json(data);
     }
     if (req.method === "PUT") {
@@ -35,7 +76,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const termId = body.termId as number | undefined;
       if (!termId) return res.status(400).json({ error: "Missing termId" });
       const { termId: _drop, ...payload } = body;
-      const data = await wooRequest(store, "PUT", `products/attributes/${attrId}/terms/${termId}`, payload);
+      const data = await wooRequest<Record<string, unknown>>(
+        store,
+        "PUT",
+        `products/attributes/${attrId}/terms/${termId}`,
+        payload,
+      );
+      if (Number.isFinite(aid)) {
+        try {
+          await mirrorUpsertTermAfterWoo(storeId, aid, data);
+        } catch (e) {
+          console.warn("[wc/terms] mirror upsert PUT:", e);
+        }
+      }
       return res.status(200).json(data);
     }
     if (req.method === "DELETE") {
@@ -46,8 +99,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (termId === undefined || termId === null || termId === "") {
         return res.status(400).json({ error: "Missing termId" });
       }
-      const data = await wooRequest(store, "DELETE", `products/attributes/${attrId}/terms/${termId}?force=true`);
-      return res.status(200).json(data);
+      const tid = typeof termId === "string" ? Number.parseInt(termId, 10) : Number(termId);
+      await wooRequest(store, "DELETE", `products/attributes/${attrId}/terms/${termId}?force=true`);
+      if (Number.isFinite(aid) && Number.isFinite(tid)) {
+        try {
+          await deleteGlobalAttributeTermMirror(storeId, aid, tid);
+        } catch (e) {
+          console.warn("[wc/terms] mirror delete:", e);
+        }
+      }
+      return res.status(200).json({ ok: true });
     }
     return res.status(405).json({ error: "Method not allowed" });
   } catch (e) {

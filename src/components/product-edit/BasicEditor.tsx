@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "next-i18next";
 import { Card, CardContent } from "@/components/ui/card";
+import { LockedSlugField } from "@/components/ui/locked-slug-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import { ProductFormState } from "@/services/productEditService";
+import { slugify } from "@/lib/slugify";
 import { validateProductForm } from "@/services/productValidation";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
@@ -49,11 +51,13 @@ interface Props {
   productId?: string | null;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
+  /** Server / baseline slug for dirty re-lock (product edit). */
+  committedSlug?: string;
 }
 
 const PREVIEW_OPEN_KEY = "product-edit-live-preview-open";
 
-export function BasicEditor({ storeId, productId, form, setForm }: Props) {
+export function BasicEditor({ storeId, productId, form, setForm, committedSlug = "" }: Props) {
   const { t } = useTranslation("site");
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
@@ -180,6 +184,17 @@ export function BasicEditor({ storeId, productId, form, setForm }: Props) {
               <div className="space-y-1.5">
                 <Label required>Product name</Label>
                 <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="basic-product-slug">{t("products.edit.slug")}</Label>
+                <LockedSlugField
+                  id="basic-product-slug"
+                  value={form.slug ?? ""}
+                  committedValue={committedSlug}
+                  onChange={(v) => setForm((p) => ({ ...p, slug: slugify(v) }))}
+                  placeholder={t("products.edit.slugPlaceholder")}
+                />
+                <p className="text-[11px] text-muted-foreground">{t("products.edit.slugHint")}</p>
               </div>
               <div className="space-y-1.5">
                 <Label>Description</Label>

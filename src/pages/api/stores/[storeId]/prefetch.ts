@@ -4,6 +4,7 @@ import { getAppUrl } from "@/lib/app-url";
 import type { Json } from "@/integrations/supabase/database.types";
 import { getWooUserAgent } from "@/lib/brand-name-server";
 import { normalizeWooDate } from "@/lib/woo-date";
+import { prefetchGlobalAttributesMirror } from "@/lib/product-global-attributes-mirror.server";
 
 function toJson<T>(obj: T): Json {
   return JSON.parse(JSON.stringify(obj)) as Json;
@@ -204,6 +205,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       upsertCategories(storeId, categories),
       upsertTags(storeId, tags),
       upsertBrands(storeId, brands),
+      prefetchGlobalAttributesMirror({
+        storeId,
+        storeUrl: store.url,
+        consumerKey: store.consumer_key,
+        consumerSecret: store.consumer_secret,
+      }).catch((e) => console.warn("[prefetch] global attributes mirror:", e)),
     ]);
 
     // Stamp onboarding complete

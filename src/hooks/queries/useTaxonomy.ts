@@ -27,6 +27,8 @@ export function useTaxonomyRows(
   pageSize: number,
   sortField: TaxonomySortField = "name",
   sortDirection: TaxonomySortDirection = "asc",
+  /** When false, the infinite query is disabled (e.g. categories use the full tree hook instead). */
+  listEnabled = true,
 ) {
   const { data: syncStatus } = useStoreSyncStatus(storeId);
   const anySyncRunning = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
@@ -46,7 +48,7 @@ export function useTaxonomyRows(
       if (loaded >= total) return undefined;
       return allPages.length;
     },
-    enabled: !!storeId,
+    enabled: !!storeId && listEnabled,
     staleTime: 60_000,
     refetchOnMount: false,
     refetchInterval: anySyncRunning ? 5000 : false,

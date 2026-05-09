@@ -1,3 +1,4 @@
+import { LockedSlugField } from "@/components/ui/locked-slug-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "next-i18next";
 import { ProductFormState } from "@/services/productEditService";
+import { slugify } from "@/lib/slugify";
 import { ImagePickerDialog } from "@/components/product-edit/ImagePickerDialog";
 import { RichTextEditor } from "@/components/product-edit/RichTextEditor";
 import { TagPicker } from "@/components/product-edit/TagPicker";
@@ -22,9 +24,11 @@ type Props = {
   productId?: string | null;
   form: ProductFormState;
   setForm: (updater: (prev: ProductFormState) => ProductFormState) => void;
+  /** Server / baseline slug for dirty re-lock (product edit). */
+  committedSlug?: string;
 };
 
-export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: Props) {
+export function BasicInfoTab({ storeId, productId: _productId, form, setForm, committedSlug = "" }: Props) {
   const { t } = useTranslation("site");
   const [imageOpen, setImageOpen] = useState<"main" | "gallery" | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
@@ -56,6 +60,17 @@ export function BasicInfoTab({ storeId, productId: _productId, form, setForm }: 
           <div className="space-y-1.5">
             <Label required>Product Name</Label>
             <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Minimal Ceramic Mug" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="adv-product-slug">{t("products.edit.slug")}</Label>
+            <LockedSlugField
+              id="adv-product-slug"
+              value={form.slug ?? ""}
+              committedValue={committedSlug}
+              onChange={(v) => setForm((p) => ({ ...p, slug: slugify(v) }))}
+              placeholder={t("products.edit.slugPlaceholder")}
+            />
+            <p className="text-[11px] text-muted-foreground">{t("products.edit.slugHint")}</p>
           </div>
           <div className="space-y-1.5">
             <Label>Description</Label>

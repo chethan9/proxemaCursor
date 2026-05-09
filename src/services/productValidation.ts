@@ -306,6 +306,7 @@ export function buildWooPayload(formRaw: ProductFormState): Record<string, unkno
   const form = normalizeProductForm(formRaw);
 
   const safeName = trim(form.name) || (form.status !== "publish" ? "Draft" : "");
+  const slugOut = trim(form.slug);
   const payload: Record<string, unknown> = {
     name: safeName,
     type: form.type,
@@ -334,6 +335,8 @@ export function buildWooPayload(formRaw: ProductFormState): Record<string, unkno
       return base;
     }),
   };
+
+  if (slugOut) payload.slug = slugOut;
 
   if (form.type === "simple") {
     const rp = priceStr(form.regular_price);

@@ -111,10 +111,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sourceImageUrls: urls,
           outputCount: 1,
           model: feature.model,
-          aspectRatio: imageControls.aspectRatio,
+          aspectRatio: imageControls.outputAspectRatio,
           targetWidth: imageControls.width,
           targetHeight: imageControls.height,
           openAiSize: imageControls.openAiSize,
+          geminiImage: {
+            aspectRatio: imageControls.outputAspectRatio,
+            imageSize: imageControls.geminiImageSize,
+          },
         },
         apiKey
       );

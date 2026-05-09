@@ -28,9 +28,11 @@ import {
   DEFAULT_ASPECT_RATIO,
   DEFAULT_CUSTOM_HEIGHT,
   DEFAULT_CUSTOM_WIDTH,
+  DEFAULT_IMAGE_DIMENSION_MODE,
   DEFAULT_SIZE_PRESET,
   SIZE_PRESET_OPTIONS,
   type AspectRatioValue,
+  type ImageDimensionMode,
   type SizePresetValue,
 } from "@/lib/ai/image-generation-controls";
 
@@ -74,6 +76,7 @@ function Inner() {
   const [form, setForm] = useState<Partial<Feature>>(emptyForm);
   const [schemaText, setSchemaText] = useState("{}");
   const [testAspectRatio, setTestAspectRatio] = useState<AspectRatioValue>(DEFAULT_ASPECT_RATIO);
+  const [testDimensionMode, setTestDimensionMode] = useState<ImageDimensionMode>(DEFAULT_IMAGE_DIMENSION_MODE);
   const [testSizePreset, setTestSizePreset] = useState<SizePresetValue>(DEFAULT_SIZE_PRESET);
   const [testCustomWidth, setTestCustomWidth] = useState(String(DEFAULT_CUSTOM_WIDTH));
   const [testCustomHeight, setTestCustomHeight] = useState(String(DEFAULT_CUSTOM_HEIGHT));
@@ -208,10 +211,12 @@ function Inner() {
         headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({
           userInput: {
+            image_dimension_mode: testDimensionMode,
             aspect_ratio: testAspectRatio,
             output_size_preset: testSizePreset,
             custom_width: testSizePreset === "custom" ? testCustomWidth : undefined,
             custom_height: testSizePreset === "custom" ? testCustomHeight : undefined,
+            ...(testSizePreset === "original" ? { source_width: "512", source_height: "512" } : {}),
           },
         }),
       });
@@ -246,7 +251,23 @@ function Inner() {
       <Card>
         <CardContent className="py-3 space-y-2">
           <div className="text-xs font-medium text-muted-foreground">Superadmin test defaults</div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Dimension mode</Label>
+              <Select value={testDimensionMode} onValueChange={(v) => setTestDimensionMode(v as ImageDimensionMode)}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="size" className="text-xs">
+                    Pixel size
+                  </SelectItem>
+                  <SelectItem value="aspect" className="text-xs">
+                    Aspect ratio
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1">
               <Label className="text-xs">Aspect ratio</Label>
               <Select value={testAspectRatio} onValueChange={(v) => setTestAspectRatio(v as AspectRatioValue)}>
@@ -269,6 +290,9 @@ function Inner() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="original" className="text-xs">
+                    Original (512×512 for sample URL)
+                  </SelectItem>
                   {SIZE_PRESET_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value} className="text-xs">
                       {option.label}

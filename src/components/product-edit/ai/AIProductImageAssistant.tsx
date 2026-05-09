@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "next-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductFormState } from "@/services/productEditService";
@@ -38,10 +38,13 @@ import {
   DEFAULT_ASPECT_RATIO,
   DEFAULT_CUSTOM_HEIGHT,
   DEFAULT_CUSTOM_WIDTH,
+  DEFAULT_IMAGE_DIMENSION_MODE,
   DEFAULT_SIZE_PRESET,
   MAX_AI_IMAGE_OUTPUT_COUNT,
+  ORIGINAL_SIZE_OPTION,
   SIZE_PRESET_OPTIONS,
   type AspectRatioValue,
+  type ImageDimensionMode,
   type SizePresetValue,
 } from "@/lib/ai/image-generation-controls";
 
@@ -116,6 +119,7 @@ function hexEquals(a: string, b: string): boolean {
 }
 
 const SIZE_PRESET_SHORT: Record<Exclude<SizePresetValue, "custom">, string> = {
+  original: "Original",
   sm: "S",
   md: "M",
   lg: "L",
@@ -173,9 +177,11 @@ export function AIProductImageAssistant({
   const [sourceMode, setSourceMode] = useState<"main" | "gallery">("main");
   const [gallerySlot, setGallerySlot] = useState(0);
   const [aspectRatio, setAspectRatio] = useState<AspectRatioValue>(DEFAULT_ASPECT_RATIO);
+  const [dimensionMode, setDimensionMode] = useState<ImageDimensionMode>(DEFAULT_IMAGE_DIMENSION_MODE);
   const [sizePreset, setSizePreset] = useState<SizePresetValue>(DEFAULT_SIZE_PRESET);
   const [customWidth, setCustomWidth] = useState(String(DEFAULT_CUSTOM_WIDTH));
   const [customHeight, setCustomHeight] = useState(String(DEFAULT_CUSTOM_HEIGHT));
+  const [sourceDims, setSourceDims] = useState<{ w: number; h: number } | null>(null);
 
   const selected = features.find((f) => f.slug === featureSlug);
   const estimatedGenerateCredits =
@@ -268,18 +274,29 @@ export function AIProductImageAssistant({
     if (selectedImageIdx >= n) setSelectedImageIdx(0);
   }, [form.images.length, selectedImageIdx]);
 
-  const resolvedInputUrl = (): string | null => {
+  const primarySourceUrl = useMemo((): string | null => {
     if (sourceTab === "product") {
       const img = form.images[selectedImageIdx];
       return img?.src ? normalizeProductImageSrc(img.src) : null;
     }
     return externalSourceUrl;
-  };
+  }, [sourceTab, selectedImageIdx, externalSourceUrl, form.images]);
+
+  useEffect(() => {
+    if (!primarySourceUrl) {
+      setSourceDims(null);
+      return;
+    }
+    const el = new Image();
+    el.crossOrigin = "anonymous";
+    el.onload = () => setSourceDims({ w: el.naturalWidth, h: el.naturalHeight });
+    el.onerror = () => setSourceDims(null);
+    el.src = primarySourceUrl;
+  }, [primarySourceUrl]);
 
   const buildSources = (): Array<{ url: string; role: string }> => {
-    const u = resolvedInputUrl();
-    if (!u) return [];
-    return [{ url: u, role: "source" }];
+    if (!primarySourceUrl) return [];
+    return [{ url: primarySourceUrl, role: "source" }];
   };
 
   const runGenerate = async () => {
@@ -303,6 +320,7 @@ export function AIProductImageAssistant({
     }
     const generationUserInput: Record<string, string> = {
       ...userValues,
+      image_dimension_mode: dimensionMode,
       aspect_ratio: aspectRatio,
       output_size_preset: sizePreset,
     };
@@ -314,6 +332,10 @@ export function AIProductImageAssistant({
     if (sizePreset === "custom") {
       generationUserInput.custom_width = customWidth || String(DEFAULT_CUSTOM_WIDTH);
       generationUserInput.custom_height = customHeight || String(DEFAULT_CUSTOM_HEIGHT);
+    }
+    if (sizePreset === "original" && sourceDims) {
+      generationUserInput.source_width = String(sourceDims.w);
+      generationUserInput.source_height = String(sourceDims.h);
     }
 
     setGenerating(true);
@@ -657,7 +679,34 @@ export function AIProductImageAssistant({
 
                 <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#ffffff] p-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-medium text-muted-foreground">Aspect ratio</Label>
+                    <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.outputDimensions")}</Label>
+                    <div className="flex gap-1 rounded-md border border-border/80 bg-muted/30 p-0.5">
+                      <Button
+                        type="button"
+                        variant={dimensionMode === "size" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-7 flex-1 text-[10px] font-medium sm:text-[11px]"
+                        onClick={() => setDimensionMode("size")}
+                      >
+                        {t("products.ai.dimensionModeSize")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={dimensionMode === "aspect" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-7 flex-1 text-[10px] font-medium sm:text-[11px]"
+                        onClick={() => setDimensionMode("aspect")}
+                      >
+                        {t("products.ai.dimensionModeAspect")}
+                      </Button>
+                    </div>
+                    <p className="text-[10px] leading-snug text-muted-foreground">
+                      {dimensionMode === "size" ? t("products.ai.dimensionHintSize") : t("products.ai.dimensionHintAspect")}
+                    </p>
+                  </div>
+
+                  <div className={cn("space-y-1", dimensionMode !== "aspect" && "pointer-events-none opacity-45")}>
+                    <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.aspectRatio")}</Label>
                     <div className="grid grid-cols-3 gap-1 sm:grid-cols-5">
                       {ASPECT_RATIO_OPTIONS.map((option) => {
                         const Icon = aspectRatioIconMap[option.value];
@@ -667,6 +716,7 @@ export function AIProductImageAssistant({
                             type="button"
                             variant="outline"
                             size="sm"
+                            disabled={dimensionMode !== "aspect"}
                             onClick={() => setAspectRatio(option.value)}
                             className={cn(
                               "h-7 min-w-0 bg-[#ffffff] px-1 text-[10px] font-medium sm:px-1.5 sm:text-[11px]",
@@ -683,9 +733,27 @@ export function AIProductImageAssistant({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-medium text-muted-foreground">Output size</Label>
-                    <div className="grid grid-cols-3 gap-1 sm:grid-cols-6">
+                  <div className={cn("space-y-1", dimensionMode !== "size" && "pointer-events-none opacity-45")}>
+                    <Label className="text-[11px] font-medium text-muted-foreground">{t("products.ai.outputSize")}</Label>
+                    <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-7">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={dimensionMode !== "size"}
+                        onClick={() => setSizePreset("original")}
+                        className={cn(
+                          "h-auto min-h-7 min-w-0 flex-col gap-0 bg-[#ffffff] px-0.5 py-1 text-[9px] font-semibold leading-none sm:px-1 sm:text-[10px]",
+                          sizePreset === "original" && "border-primary bg-primary/10 text-primary",
+                        )}
+                        title={ORIGINAL_SIZE_OPTION.label}
+                        aria-pressed={sizePreset === "original"}
+                      >
+                        <span>{SIZE_PRESET_SHORT.original}</span>
+                        <span className="mt-0.5 font-normal text-[8px] text-muted-foreground tabular-nums sm:text-[9px]">
+                          {sourceDims ? `${sourceDims.w}×${sourceDims.h}` : "—"}
+                        </span>
+                      </Button>
                       {SIZE_PRESET_OPTIONS.map((preset) => {
                         const active = sizePreset === preset.value;
                         return (
@@ -694,9 +762,10 @@ export function AIProductImageAssistant({
                             type="button"
                             variant="outline"
                             size="sm"
+                            disabled={dimensionMode !== "size"}
                             onClick={() => setSizePreset(preset.value)}
                             className={cn(
-                              "h-7 min-w-0 flex-col gap-0 bg-[#ffffff] px-0.5 py-0.5 text-[9px] font-semibold leading-none sm:px-1 sm:text-[10px]",
+                              "h-auto min-h-7 min-w-0 flex-col gap-0 bg-[#ffffff] px-0.5 py-1 text-[9px] font-semibold leading-none sm:px-1 sm:text-[10px]",
                               active && "border-primary bg-primary/10 text-primary",
                             )}
                             title={preset.label}
@@ -713,19 +782,20 @@ export function AIProductImageAssistant({
                         type="button"
                         variant="outline"
                         size="sm"
+                        disabled={dimensionMode !== "size"}
                         onClick={() => setSizePreset("custom")}
                         className={cn(
-                          "h-7 min-w-0 flex-col gap-0 bg-[#ffffff] px-0.5 py-0.5 text-[9px] font-semibold leading-none sm:px-1 sm:text-[10px]",
+                          "h-auto min-h-7 min-w-0 flex-col gap-0 bg-[#ffffff] px-0.5 py-1 text-[9px] font-semibold leading-none sm:px-1 sm:text-[10px]",
                           sizePreset === "custom" && "border-primary bg-primary/10 text-primary",
                         )}
-                        title="Custom width and height"
+                        title={t("products.ai.customOutputSize")}
                         aria-pressed={sizePreset === "custom"}
                       >
                         <SlidersHorizontal className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="mt-0.5 text-[8px] font-normal sm:text-[9px]">Custom</span>
+                        <span className="mt-0.5 text-[8px] font-normal sm:text-[9px]">{t("products.ai.customOutputSizeShort")}</span>
                       </Button>
                     </div>
-                    {sizePreset === "custom" && (
+                    {dimensionMode === "size" && sizePreset === "custom" && (
                       <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                         <Input
                           type="number"

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useTranslation } from "next-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Loader2 } from "lucide-react";
+import { LockedSlugField } from "@/components/ui/locked-slug-field";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
 import { queryKeys } from "@/lib/query-client";
 import { slugify } from "@/lib/slugify";
@@ -28,29 +30,28 @@ type Props = {
   mode: "categories" | "tags" | "brands";
   storeId: string;
   onClose: () => void;
+  locked?: boolean;
 };
 
-const readOnlyRowClass =
-  "flex min-h-10 w-full cursor-default items-center rounded-md border border-transparent bg-muted/30 px-3 py-2 text-left text-sm outline-none transition-colors select-none hover:bg-muted/45";
-
-export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
+export function TaxonomyRowExpanded({ item, mode, storeId, onClose, locked = false }: Props) {
+  const { t } = useTranslation("site");
   const qc = useQueryClient();
   const [name, setName] = useState(item.name);
   const [slug, setSlug] = useState(item.slug || "");
   const [description, setDescription] = useState(item.description || "");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [slugEditing, setSlugEditing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string }>({});
 
-  const slugInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    setName(item.name);
+    setSlug(item.slug || "");
+    setDescription(item.description || "");
+    setSlugTouched(false);
+  }, [item.id, item.name, item.slug, item.description]);
 
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(name));
   }, [name, slugTouched]);
-
-  useEffect(() => {
-    if (slugEditing) slugInputRef.current?.focus();
-  }, [slugEditing]);
 
   const updateMut = useSiteMutation<Taxonomy, { name: string; slug: string; description: string }>({
     mutationFn: (vars) => {
@@ -62,7 +63,9 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
       ["taxonomy", mode, storeId],
       queryKeys.taxonomy(storeId, mode),
       ["woo", "taxonomy", storeId, mode],
-      ...(mode === "categories" ? [queryKeys.productCategoryOptions(storeId)] : []),
+      ...(mode === "categories"
+        ? [queryKeys.productCategoryOptions(storeId), [...queryKeys.taxonomy(storeId, "categories"), "all"]]
+        : []),
     ],
     successToast: "Synced to WooCommerce",
     onSuccessExtra: () => {
@@ -81,7 +84,9 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
       ["taxonomy", mode, storeId],
       queryKeys.taxonomy(storeId, mode),
       ["woo", "taxonomy", storeId, mode],
-      ...(mode === "categories" ? [queryKeys.productCategoryOptions(storeId)] : []),
+      ...(mode === "categories"
+        ? [queryKeys.productCategoryOptions(storeId), [...queryKeys.taxonomy(storeId, "categories"), "all"]]
+        : []),
     ],
     successToast: "Deleted from WooCommerce",
     onSuccessExtra: () => {
@@ -90,7 +95,9 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
     },
   });
 
-  const singular = mode === "categories" ? "category" : mode === "tags" ? "tag" : "brand";
+  const singular =
+    mode === "categories" ? t("taxonomy.expanded.singularCategory") : mode === "tags" ? t("taxonomy.expanded.singularTag") : t("taxonomy.expanded.singularBrand");
+
   const dirty = name !== item.name || slug !== (item.slug || "") || description !== (item.description || "");
 
   const nameTrim = name.trim();
@@ -98,14 +105,15 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
   const requiredOk = nameTrim.length > 0 && slugTrim.length > 0;
 
   async function handleDelete() {
-    if (!confirm(`Delete this ${singular}? This will remove it from WooCommerce.`)) return;
+    if (!confirm(t("taxonomy.expanded.deleteConfirm", { singular }))) return;
     deleteMut.mutate();
   }
 
   function handleSave() {
+    if (locked) return;
     const next: { name?: string; slug?: string } = {};
-    if (!nameTrim) next.name = "Name is required.";
-    if (!slugTrim) next.slug = "Slug is required.";
+    if (!nameTrim) next.name = t("taxonomy.expanded.errors.nameRequired");
+    if (!slugTrim) next.slug = t("taxonomy.expanded.errors.slugRequired");
     if (next.name || next.slug) {
       setFieldErrors(next);
       return;
@@ -114,27 +122,26 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
     updateMut.mutate({ name: nameTrim, slug: slugTrim, description });
   }
 
-  const title =
-    mode === "categories" ? "Category details" : mode === "tags" ? "Tag details" : "Brand details";
+  const titleKey =
+    mode === "categories" ? "titleCategory" : mode === "tags" ? "titleTag" : "titleBrand";
 
   return (
     <div className="bg-muted/25 px-4 pb-4 pt-0 sm:px-6">
       <Card className="mx-auto max-w-3xl rounded-t-none rounded-b-xl border-border/80 shadow-sm">
         <CardHeader className="space-y-1 border-b border-border/60 pb-4 pt-4">
-          <CardTitle className="text-base font-semibold">{title}</CardTitle>
-          <CardDescription className="text-xs">
-            Changes sync to WooCommerce when you save. Double-click the slug to edit it (it stays in sync with name until you do).
-          </CardDescription>
+          <CardTitle className="text-base font-semibold">{t(`taxonomy.expanded.${titleKey}`)}</CardTitle>
+          <CardDescription className="text-xs">{t("taxonomy.expanded.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={`tax-edit-name-${item.id}`} className="text-sm font-medium">
-                Name <span className="text-destructive">*</span>
+                {t("taxonomy.create.nameLabel")} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id={`tax-edit-name-${item.id}`}
                 value={name}
+                disabled={locked}
                 onChange={(e) => {
                   setName(e.target.value);
                   if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: undefined }));
@@ -146,53 +153,32 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor={`tax-edit-slug-${item.id}`} className="text-sm font-medium">
-                Slug <span className="text-destructive">*</span>
+                {t("taxonomy.create.slugLabel")} <span className="text-destructive">*</span>
               </Label>
-              {slugEditing ? (
-                <Input
-                  ref={slugInputRef}
-                  id={`tax-edit-slug-${item.id}`}
-                  value={slug}
-                  onChange={(e) => {
-                    setSlugTouched(true);
-                    setSlug(e.target.value);
-                    if (fieldErrors.slug) setFieldErrors((f) => ({ ...f, slug: undefined }));
-                  }}
-                  onBlur={() => setSlugEditing(false)}
-                  className={cn("h-10 bg-background font-mono text-sm", fieldErrors.slug && "border-destructive")}
-                  aria-invalid={!!fieldErrors.slug}
-                />
-              ) : (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className={cn(readOnlyRowClass, "font-mono text-sm", fieldErrors.slug && "border-destructive/50")}
-                  title="Double-click to edit (auto-filled from name until you change it)"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSlugEditing(true);
-                    }
-                  }}
-                  onDoubleClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSlugEditing(true);
-                  }}
-                >
-                  {slugTrim ? slug : <span className="font-sans text-muted-foreground">Double-click to edit slug</span>}
-                </div>
-              )}
+              <LockedSlugField
+                id={`tax-edit-slug-${item.id}`}
+                value={slug}
+                committedValue={item.slug ?? ""}
+                disabled={locked}
+                maxLength={200}
+                onChange={(next) => {
+                  setSlugTouched(true);
+                  setSlug(slugify(next));
+                  if (fieldErrors.slug) setFieldErrors((f) => ({ ...f, slug: undefined }));
+                }}
+                placeholder={t("taxonomy.create.slugPlaceholder")}
+              />
               {fieldErrors.slug ? <p className="text-xs text-destructive">{fieldErrors.slug}</p> : null}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor={`tax-edit-desc-${item.id}`} className="text-sm font-medium">
-              Description
+              {t("taxonomy.create.descriptionLabel")}
             </Label>
             <Textarea
               id={`tax-edit-desc-${item.id}`}
               value={description}
+              disabled={locked}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               className="resize-none bg-background min-h-[88px] text-sm"
@@ -206,23 +192,25 @@ export function TaxonomyRowExpanded({ item, mode, storeId, onClose }: Props) {
             size="sm"
             className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive sm:-ml-2"
             onClick={handleDelete}
-            disabled={deleteMut.isPending}
+            disabled={deleteMut.isPending || locked}
+            title={locked ? t("products.toolbar.lockedHint") : undefined}
           >
             {deleteMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-            Delete
+            {t("taxonomy.expanded.delete")}
           </Button>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" size="default" onClick={onClose}>
-              Cancel
+              {t("taxonomy.expanded.cancel")}
             </Button>
             <Button
               type="button"
               size="default"
-              disabled={!dirty || !requiredOk || updateMut.isPending}
+              disabled={!dirty || !requiredOk || updateMut.isPending || locked}
+              title={locked ? t("products.toolbar.lockedHint") : undefined}
               onClick={handleSave}
             >
               {updateMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save changes
+              {t("taxonomy.expanded.save")}
             </Button>
           </div>
         </div>

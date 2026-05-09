@@ -2042,6 +2042,109 @@ export type Database = {
           },
         ]
       }
+      product_global_attribute_terms: {
+        Row: {
+          attribute_woo_id: number
+          count: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          menu_order: number | null
+          name: string
+          raw_data: Json | null
+          slug: string | null
+          store_id: string
+          synced_at: string | null
+          woo_id: number
+        }
+        Insert: {
+          attribute_woo_id: number
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          menu_order?: number | null
+          name: string
+          raw_data?: Json | null
+          slug?: string | null
+          store_id: string
+          synced_at?: string | null
+          woo_id: number
+        }
+        Update: {
+          attribute_woo_id?: number
+          count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          menu_order?: number | null
+          name?: string
+          raw_data?: Json | null
+          slug?: string | null
+          store_id?: string
+          synced_at?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_global_attribute_terms_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_global_attributes: {
+        Row: {
+          created_at: string | null
+          has_archives: boolean | null
+          id: string
+          name: string
+          order_by: string | null
+          raw_data: Json | null
+          slug: string | null
+          store_id: string
+          synced_at: string | null
+          type: string | null
+          woo_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          has_archives?: boolean | null
+          id?: string
+          name: string
+          order_by?: string | null
+          raw_data?: Json | null
+          slug?: string | null
+          store_id: string
+          synced_at?: string | null
+          type?: string | null
+          woo_id: number
+        }
+        Update: {
+          created_at?: string | null
+          has_archives?: boolean | null
+          id?: string
+          name?: string
+          order_by?: string | null
+          raw_data?: Json | null
+          slug?: string | null
+          store_id?: string
+          synced_at?: string | null
+          type?: string | null
+          woo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_global_attributes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           attributes: Json | null

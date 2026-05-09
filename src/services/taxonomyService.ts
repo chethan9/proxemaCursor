@@ -135,7 +135,11 @@ export async function createBrand(storeId: string, payload: { name: string; slug
   }
 }
 
-export async function updateCategory(storeId: string, categoryId: string, patch: { name?: string; slug?: string; description?: string }) {
+export async function updateCategory(
+  storeId: string,
+  categoryId: string,
+  patch: { name?: string; slug?: string; description?: string; parent?: number; menu_order?: number },
+) {
   const res = await authorizedFetch(`/api/stores/${storeId}/categories/${categoryId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

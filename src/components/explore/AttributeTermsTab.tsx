@@ -10,6 +10,7 @@ import {
 } from "@/hooks/queries/useWooAttributes";
 import type { WooAttributeTerm } from "@/services/wooAttributeService";
 import { slugify } from "@/lib/slugify";
+import { LockedSlugField } from "@/components/ui/locked-slug-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -206,16 +207,19 @@ export function AttributeTermsTab({ storeId, attributeId, locked = false }: Prop
                 disabled={locked}
               />
             </div>
-            <div className="space-y-1 flex-1 min-w-[140px]">
-              <Label className="text-xs">{t("attributes.terms.fields.slug")}</Label>
-              <Input
+            <div className="space-y-1 flex-1 min-w-[180px]">
+              <Label className="text-xs" htmlFor="term-new-slug">
+                {t("attributes.terms.fields.slug")}
+              </Label>
+              <LockedSlugField
+                id="term-new-slug"
                 value={newSlug}
-                onChange={(e) => {
+                onChange={(v) => {
                   setNewSlugTouched(true);
-                  setNewSlug(slugify(e.target.value));
+                  setNewSlug(slugify(v));
                 }}
-                className="h-9 font-mono text-xs bg-background"
                 disabled={locked}
+                placeholder={t("attributes.fields.slugPlaceholder")}
               />
             </div>
             <Button
@@ -318,15 +322,19 @@ export function AttributeTermsTab({ storeId, attributeId, locked = false }: Prop
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">{t("attributes.terms.fields.slug")}</Label>
-              <Input
+              <Label className="text-xs" htmlFor="term-edit-slug">
+                {t("attributes.terms.fields.slug")}
+              </Label>
+              <LockedSlugField
+                id="term-edit-slug"
                 value={editSlug}
-                onChange={(e) => {
+                committedValue={editRow?.slug ?? ""}
+                onChange={(v) => {
                   setEditSlugTouched(true);
-                  setEditSlug(slugify(e.target.value));
+                  setEditSlug(slugify(v));
                 }}
-                className="h-9 font-mono text-xs bg-background"
                 disabled={locked}
+                placeholder={t("attributes.fields.slugPlaceholder")}
               />
             </div>
             <div className="space-y-1">

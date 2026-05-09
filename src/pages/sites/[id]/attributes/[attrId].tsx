@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { ArrowLeft, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, SquarePen, Trash2, X } from "lucide-react";
 import { SitePageShell, useSiteFromRoute, SiteLoadingSkeleton } from "@/components/site/shared";
 import { SyncLockBanner, useSyncLocked } from "@/components/site/SyncLockBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,19 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -51,6 +38,8 @@ import {
 import type { WooAttributeTerm } from "@/services/wooAttributeService";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/format-number";
+import { slugify } from "@/lib/slugify";
+import { cn } from "@/lib/utils";
 
 function AttributeTermsInner() {
   const router = useRouter();
@@ -62,17 +51,17 @@ function AttributeTermsInner() {
   const { t, i18n } = useTranslation("site");
   const { t: tc } = useTranslation("common");
   const { toast } = useToast();
-  const { locked, ready: syncReady } = useSyncLocked(storeId);
+  const { locked } = useSyncLocked(storeId);
 
   const [termName, setTermName] = useState("");
   const [termSlug, setTermSlug] = useState("");
   const [termDesc, setTermDesc] = useState("");
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [editing, setEditing] = useState<WooAttributeTerm | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editSlug, setEditSlug] = useState("");
-  const [editDesc, setEditDesc] = useState("");
+  const [inlineEditId, setInlineEditId] = useState<number | null>(null);
+  const [inlineName, setInlineName] = useState("");
+  const [inlineSlug, setInlineSlug] = useState("");
+  const [inlineDesc, setInlineDesc] = useState("");
+  const [inlineSlugTouched, setInlineSlugTouched] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<WooAttributeTerm | null>(null);
 
@@ -96,12 +85,65 @@ function AttributeTermsInner() {
     );
   }, [terms]);
 
-  function openEdit(term: WooAttributeTerm) {
-    setEditing(term);
-    setEditName(term.name);
-    setEditSlug(term.slug || "");
-    setEditDesc(term.description || "");
-    setEditOpen(true);
+  useEffect(() => {
+    if (inlineEditId == null) return;
+    if (!inlineSlugTouched && inlineName) setInlineSlug(slugify(inlineName));
+    if (!inlineSlugTouched && !inlineName) setInlineSlug("");
+  }, [inlineName, inlineSlugTouched, inlineEditId]);
+
+  useEffect(() => {
+    if (inlineEditId == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancelInlineEdit();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [inlineEditId]);
+
+  function beginInlineEdit(term: WooAttributeTerm) {
+    if (locked) {
+      toast({ title: t("products.toolbar.lockedHint"), variant: "destructive" });
+      return;
+    }
+    setInlineEditId(term.id);
+    setInlineName(term.name);
+    setInlineSlug(term.slug || "");
+    setInlineDesc(term.description || "");
+    setInlineSlugTouched(false);
+  }
+
+  function cancelInlineEdit() {
+    setInlineEditId(null);
+    setInlineSlugTouched(false);
+  }
+
+  function activateRowEdit(term: WooAttributeTerm) {
+    if (disableWrites) return;
+    if (inlineEditId === term.id) return;
+    if (inlineEditId != null) cancelInlineEdit();
+    beginInlineEdit(term);
+  }
+
+  async function saveInlineEdit() {
+    if (inlineEditId == null || !inlineName.trim() || locked) return;
+    try {
+      await updateMut.mutateAsync({
+        termId: inlineEditId,
+        payload: {
+          name: inlineName.trim(),
+          slug: inlineSlug.trim() || undefined,
+          description: inlineDesc.trim() || undefined,
+        },
+      });
+      cancelInlineEdit();
+      toast({ title: t("attributes.terms.toast.updated") });
+    } catch (err) {
+      toast({
+        title: t("attributes.terms.errors.updateFailed"),
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    }
   }
 
   async function submitCreate(e: React.FormEvent) {
@@ -126,35 +168,13 @@ function AttributeTermsInner() {
     }
   }
 
-  async function submitEdit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editing || !editName.trim() || locked) return;
-    try {
-      await updateMut.mutateAsync({
-        termId: editing.id,
-        payload: {
-          name: editName.trim(),
-          slug: editSlug.trim() || undefined,
-          description: editDesc.trim() || undefined,
-        },
-      });
-      setEditOpen(false);
-      setEditing(null);
-      toast({ title: t("attributes.terms.toast.updated") });
-    } catch (err) {
-      toast({
-        title: t("attributes.terms.errors.updateFailed"),
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive",
-      });
-    }
-  }
-
   async function confirmDelete() {
     if (!deleteTarget || locked) return;
+    const deletedId = deleteTarget.id;
     try {
-      await deleteMut.mutateAsync(deleteTarget.id);
+      await deleteMut.mutateAsync(deletedId);
       setDeleteTarget(null);
+      if (inlineEditId === deletedId) cancelInlineEdit();
       toast({ title: t("attributes.terms.toast.deleted") });
     } catch (err) {
       toast({
@@ -174,7 +194,7 @@ function AttributeTermsInner() {
     );
   }
 
-  const disableWrites = locked || !syncReady;
+  const disableWrites = locked;
   const heading = attribute?.name
     ? t("attributes.terms.title", { name: attribute.name })
     : attrLoading
@@ -184,12 +204,16 @@ function AttributeTermsInner() {
   return (
     <div className="p-6 space-y-4 max-w-[1200px] mx-auto">
       <div className="flex flex-wrap items-start gap-3">
-        <Button variant="ghost" size="sm" className="h-8 gap-1.5 -ms-2" asChild>
-          <Link href={`/sites/${storeId}/attributes`}>
-            <ArrowLeft className="h-4 w-4" />
-            {t("attributes.terms.back")}
-          </Link>
-        </Button>
+        <Link
+          href={`/sites/${storeId}/attributes`}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "h-8 gap-1.5 -ms-2 inline-flex w-fit shrink-0 items-center",
+          )}
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" />
+          {t("attributes.terms.back")}
+        </Link>
         <div className="min-w-0 flex-1 space-y-0.5">
           <h1 className="text-lg font-semibold truncate">{heading}</h1>
           <p className="text-sm text-muted-foreground">{t("attributes.terms.subtitle")}</p>
@@ -256,6 +280,7 @@ function AttributeTermsInner() {
         <Card className="border shadow-none">
           <CardHeader className="pb-2 border-b border-border">
             <CardTitle className="text-sm font-medium">{t("attributes.terms.tableTitle")}</CardTitle>
+            <p className="text-xs text-muted-foreground font-normal pt-0.5">{t("attributes.terms.inlineHint")}</p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -266,7 +291,7 @@ function AttributeTermsInner() {
                     <TableHead>{t("attributes.terms.columns.slug")}</TableHead>
                     <TableHead className="max-w-[200px]">{t("attributes.terms.columns.description")}</TableHead>
                     <TableHead className="text-right w-[100px]">{t("attributes.terms.columns.products")}</TableHead>
-                    <TableHead className="w-[52px] text-right">{t("attributes.terms.columns.actions")}</TableHead>
+                    <TableHead className="min-w-[7.5rem] text-right">{t("attributes.terms.columns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -285,51 +310,143 @@ function AttributeTermsInner() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    sortedTerms.map((term) => (
-                      <TableRow key={term.id} className="hover:bg-muted/30">
-                        <TableCell className="font-medium">{term.name}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{term.slug}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate">
-                          {term.description || "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-xs">
-                          {formatNumber(term.count ?? 0, i18n.language)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                disabled={disableWrites}
-                                title={locked ? t("products.toolbar.lockedHint") : undefined}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => openEdit(term)}
-                                disabled={disableWrites}
-                                className="gap-2"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                {t("attributes.terms.editTitle")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => setDeleteTarget(term)}
-                                disabled={disableWrites}
-                                className="gap-2 text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                {tc("actions.delete", "Delete")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    sortedTerms.map((term) => {
+                      const isEditing = inlineEditId === term.id;
+                      return (
+                        <TableRow
+                          key={term.id}
+                          role={isEditing ? undefined : "button"}
+                          tabIndex={disableWrites || isEditing ? undefined : 0}
+                          className={cn(
+                            "hover:bg-muted/30",
+                            !disableWrites && !isEditing && "cursor-pointer",
+                            isEditing && "bg-muted/25",
+                          )}
+                          onClick={() => activateRowEdit(term)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              activateRowEdit(term);
+                            }
+                          }}
+                        >
+                          <TableCell className="font-medium align-top">
+                            {isEditing ? (
+                              <div onClick={(e) => e.stopPropagation()} className="py-0.5">
+                                <Input
+                                  value={inlineName}
+                                  onChange={(e) => setInlineName(e.target.value)}
+                                  className="h-9 font-medium"
+                                  disabled={updateMut.isPending}
+                                  autoFocus
+                                  aria-label={t("attributes.terms.fields.name")}
+                                />
+                              </div>
+                            ) : (
+                              term.name
+                            )}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground align-top">
+                            {isEditing ? (
+                              <div onClick={(e) => e.stopPropagation()} className="py-0.5">
+                                <Input
+                                  value={inlineSlug}
+                                  onChange={(e) => {
+                                    setInlineSlugTouched(true);
+                                    setInlineSlug(slugify(e.target.value));
+                                  }}
+                                  className="h-9 font-mono text-xs"
+                                  disabled={updateMut.isPending}
+                                  aria-label={t("attributes.terms.fields.slug")}
+                                />
+                              </div>
+                            ) : (
+                              term.slug
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[220px] align-top">
+                            {isEditing ? (
+                              <div onClick={(e) => e.stopPropagation()} className="py-0.5">
+                                <Textarea
+                                  value={inlineDesc}
+                                  onChange={(e) => setInlineDesc(e.target.value)}
+                                  rows={2}
+                                  className="text-xs resize-y min-h-[52px]"
+                                  disabled={updateMut.isPending}
+                                  aria-label={t("attributes.terms.fields.description")}
+                                />
+                              </div>
+                            ) : (
+                              <span className="line-clamp-2">{term.description || "—"}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-xs align-middle">
+                            {formatNumber(term.count ?? 0, i18n.language)}
+                          </TableCell>
+                          <TableCell className="text-right align-middle" onClick={(e) => e.stopPropagation()}>
+                            <div className="inline-flex shrink-0 items-center justify-end gap-1">
+                              {isEditing ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="default"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    disabled={updateMut.isPending || !inlineName.trim()}
+                                    onClick={() => void saveInlineEdit()}
+                                    aria-label={tc("actions.save", "Save")}
+                                  >
+                                    {updateMut.isPending ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Check className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    disabled={updateMut.isPending}
+                                    onClick={cancelInlineEdit}
+                                    aria-label={tc("actions.cancel", "Cancel")}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  disabled={disableWrites}
+                                  title={locked ? t("products.toolbar.lockedHint") : t("attributes.terms.editTitle")}
+                                  aria-label={t("attributes.terms.editTitle")}
+                                  onClick={() => activateRowEdit(term)}
+                                >
+                                  <SquarePen className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {!isEditing && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  disabled={disableWrites}
+                                  title={locked ? t("products.toolbar.lockedHint") : tc("actions.delete", "Delete")}
+                                  aria-label={tc("actions.delete", "Delete")}
+                                  onClick={() => setDeleteTarget(term)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -337,62 +454,6 @@ function AttributeTermsInner() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={submitEdit}>
-            <DialogHeader>
-              <DialogTitle>{t("attributes.terms.editTitle")}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-term-name">{t("attributes.terms.fields.name")}</Label>
-                <Input
-                  id="edit-term-name"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="h-9"
-                  required
-                  disabled={disableWrites}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-term-slug">{t("attributes.terms.fields.slug")}</Label>
-                <Input
-                  id="edit-term-slug"
-                  value={editSlug}
-                  onChange={(e) => setEditSlug(e.target.value)}
-                  className="h-9 font-mono text-xs"
-                  disabled={disableWrites}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-term-desc">{t("attributes.terms.fields.description")}</Label>
-                <Textarea
-                  id="edit-term-desc"
-                  value={editDesc}
-                  onChange={(e) => setEditDesc(e.target.value)}
-                  rows={3}
-                  className="text-sm resize-y min-h-[72px]"
-                  disabled={disableWrites}
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-                {tc("actions.cancel", "Cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={disableWrites || updateMut.isPending}
-                title={locked ? t("products.toolbar.lockedHint") : undefined}
-              >
-                {updateMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : tc("actions.save", "Save")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -214,6 +214,15 @@
       "applyTarget": "تطبيق النتيجة على",
       "additionalPrompt": "تعليمات إضافية",
       "additionalPromptPlaceholder": "توجيهات اختيارية إضافية للنموذج (الأسلوب، الخلفية، إلخ). تُستخدم عند التوليد وإعادة التوليد.",
+      "outputDimensions": "أبعاد المخرجات",
+      "dimensionModeSize": "حجم بالبكسل",
+      "dimensionModeAspect": "نسبة العرض إلى الارتفاع",
+      "dimensionHintSize": "اختر إعدادًا بالبكسل أو الأصل. نسبة العرض تُتجاهل لأبعاد المخرج في هذا الوضع.",
+      "dimensionHintAspect": "المخرج يعتمد فقط على نسبة العرض أدناه. إعدادات البكسل مُعطّلة.",
+      "aspectRatio": "نسبة العرض إلى الارتفاع",
+      "outputSize": "حجم المخرجات",
+      "customOutputSize": "عرض وارتفاع مخصصان",
+      "customOutputSizeShort": "مخصص",
       "previewOutput": "معاينة مُولَّدة",
       "pickFromLibrary": "اختر من مكتبة الوسائط",
       "uploadFailed": "فشل الرفع",
@@ -277,7 +286,10 @@
         "editorCrashed": "فشل تشغيل محرّر الصور.",
         "close": "إغلاق"
       },
-      "removeMainImage": "إزالة صورة المنتج"
+      "removeMainImage": "إزالة صورة المنتج",
+      "slug": "المسار (slug)",
+      "slugPlaceholder": "مسار-url-للمنتج",
+      "slugHint": "افتح القفل للتعديل. تغيير المسار يغيّر رابط المنتج العلني."
     },
     "toolbar": {
       "sort": "ترتيب",
@@ -940,6 +952,7 @@
       "name": "الاسم",
       "nameHint": "يُعرض في صفحة المنتج.",
       "slug": "المعرف",
+      "slugPlaceholder": "تلقائياً من الاسم — افتح القفل للتعديل",
       "slugHint": "مرجع فريد للسمة (بحد أقصى 28 حرفاً).",
       "type": "النوع",
       "typeSelect": "قائمة",
@@ -987,6 +1000,7 @@
       "deleted": "تم حذف السمة"
     },
     "terms": {
+      "inlineHint": "انقر على صف أو أيقونة التعديل لتغيير القيم. اضغط Esc للإلغاء.",
       "back": "العودة إلى السمات",
       "title": "{{name}} — المصطلحات",
       "subtitle": "إضافة أو تعديل أو حذف قيم هذه السمة.",
@@ -1000,6 +1014,7 @@
       "fields": {
         "name": "الاسم",
         "slug": "المعرف",
+        "slugPlaceholder": "تلقائياً من الاسم — افتح القفل للتعديل",
         "description": "الوصف",
         "menuOrder": "الترتيب"
       },
@@ -1024,6 +1039,16 @@
         "deleted": "تم حذف المصطلح"
       }
     }
+  },
+  "slugField": {
+    "unlock": "فتح لتحرير المعرّف",
+    "lock": "قفل المعرّف",
+    "hint": "قد تؤثر تغييرات المسار على الروابط والتكاملات.",
+    "relockTitle": "تجاهل تعديلات المسار؟",
+    "relockDescription": "ستُفقَد تغييرات المسار الحالية عند قفل الحقل من جديد.",
+    "keepEditing": "متابعة التحرير",
+    "discard": "تجاهل التغييرات",
+    "inputAria": "المعرّف النصي"
   },
   "taxonomy": {
     "search": "ابحث في {{mode}}…",
@@ -1059,6 +1084,77 @@
     "toasts": {
       "synced": "تمت مزامنة {{count}} {{mode}}",
       "refreshFailed": "فشل التحديث"
+    },
+    "pageTitle": {
+      "categories": "الفئات",
+      "tags": "الوسوم",
+      "brands": "العلامات التجارية"
+    },
+    "pageSubtitle": {
+      "categories": "تنظيم المنتجات بفئات هرمية من WooCommerce.",
+      "tags": "وسوم للتصفية والحملات — من WooCommerce.",
+      "brands": "علامات تجارية أو مصنّع — من WooCommerce."
+    },
+    "tableSectionTitle": "تصفح",
+    "batchLabel": "دفعة:",
+    "batchRowsTitle": "صفوف لكل تحميل",
+    "addCard": {
+      "titleCategories": "فئة جديدة",
+      "titleTags": "وسم جديد",
+      "titleBrands": "علامة جديدة",
+      "hintCategories": "يُنشئ الفئة في WooCommerce ويُزامنها هنا.",
+      "hintTags": "يُنشئ الوسم في WooCommerce ويُزامنه هنا.",
+      "hintBrands": "يُنشئ العلامة في WooCommerce ويُزامنها هنا."
+    },
+    "create": {
+      "successCategory": "تم إنشاء الفئة",
+      "successTag": "تم إنشاء الوسم",
+      "successBrand": "تم إنشاء العلامة",
+      "nameLabel": "الاسم",
+      "slugLabel": "المعرّف",
+      "namePlaceholder": "أدخل اسم {{singular}}",
+      "slugPlaceholder": "يُملأ تلقائياً من الاسم — افتح القفل للتعديل",
+      "parentLabel": "الفئة الأب",
+      "parentNone": "لا شيء (جذر)",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "وصف اختياري",
+      "submit": "إنشاء {{singular}}",
+      "errors": {
+        "nameRequired": "الاسم مطلوب.",
+        "nameLength": "يجب ألا يتجاوز الاسم 120 حرفاً.",
+        "slugMissing": "تعذّر توليد المعرّف — افتح حقل المعرّف واضبطه يدوياً."
+      }
+    },
+    "expanded": {
+      "singularCategory": "الفئة",
+      "singularTag": "الوسم",
+      "singularBrand": "العلامة",
+      "titleCategory": "تفاصيل الفئة",
+      "titleTag": "تفاصيل الوسم",
+      "titleBrand": "تفاصيل العلامة",
+      "description": "تُزامن التغييرات مع WooCommerce عند الحفظ. افتح قفل المعرّف لتحريره؛ يتبع الاسم حتى تغيّره.",
+      "delete": "حذف",
+      "cancel": "إلغاء",
+      "save": "حفظ التغييرات",
+      "savedToast": "تمت المزامنة مع WooCommerce",
+      "deletedToast": "تم الحذف من WooCommerce",
+      "deleteConfirm": "حذف {{singular}}؟ سيزيلها من WooCommerce.",
+      "errors": {
+        "nameRequired": "الاسم مطلوب.",
+        "slugRequired": "المعرّف مطلوب."
+      }
+    },
+    "categoryTree": {
+      "dragHint": "اسحب وأفلت لإعادة ترتيب الفئات. أفلت على النصف السفلي من الصف لتصبح فئة فرعية، أو اضغط Alt أثناء الإفلات.",
+      "dragDisabledSearch": "امسح البحث لإعادة الترتيب بالسحب.",
+      "dragDisabledLocked": "أكمل مزامنة الكتالوج قبل إعادة ترتيب الفئات.",
+      "dragHandleAria": "اسحب لإعادة الترتيب",
+      "productCountShort": "{{count}} منتج",
+      "edit": "تعديل",
+      "invalidMoveTitle": "لا يمكن النقل هنا",
+      "invalidMoveDesc": "سيؤدي ذلك إلى وضع فئة داخل نفسها أو موضع غير صالح.",
+      "reorderSaved": "تم تحديث ترتيب الفئات",
+      "reorderFailedTitle": "تعذّر حفظ الترتيب"
     }
   },
   "downloads": {
@@ -1601,5 +1697,28 @@
     "noTokens": "لا رموز بعد.",
     "tokenSavedOnce": "احفظ هذا الرمز الآن — لن يُعرض مجدداً.",
     "cancel": "إلغاء"
+  },
+  "assistant": {
+    "title": "مساعد Proxima",
+    "descriptionWithStore": "اسأل عن التنقل أو مقاييس المتجر أو البحث عن المنتجات. الأجوبة تتبع صلاحياتك وهذا المتجر فقط.",
+    "descriptionNoStore": "اسأل عن استخدام Proxima. افتح متجراً من المشاريع للأسئلة عن الكتالوج أو المبيعات.",
+    "emptyHint": "جرّب أحد الاقتراحات أدناه، أو اكتب سؤالك.",
+    "placeholder": "رسالة…",
+    "send": "إرسال",
+    "stop": "إيقاف",
+    "open": "فتح المساعد",
+    "avatarHelp": "مساعد Proxima — التنقل والإرشاد",
+    "avatarOpenAI": "إجابة من نموذج OpenAI المُعدّ (مثل GPT)",
+    "avatarOtherModel": "إجابة من نموذج الذكاء المُعدّ",
+    "scrollToBottom": "التمرير لآخر رسالة",
+    "quickPrompts": "اقتراحات سريعة",
+    "clear": "مسح المحادثة",
+    "thinking": "جارٍ التفكير…",
+    "notSignedIn": "سجّل الدخول لاستخدام المساعد.",
+    "genericError": "حدث خطأ. حاول مرة أخرى.",
+    "rateLimited": "طلبات كثيرة. انتظر قليلاً ثم أعد المحاولة.",
+    "suggestedReportSales": "لخص مبيعات هذا الشهر",
+    "suggestedProductTop": "ما هي أكثر منتجاتي مبيعاً؟",
+    "suggestedProductCatalog": "ساعدني في العثور على منتج في الكتالوج"
   }
 }

@@ -26,20 +26,52 @@ export const googleGeminiProvider: AIImageProvider = {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(input.model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const mimeOut = "image/png";
+    const generationConfig: Record<string, unknown> = {
+      responseModalities: ["TEXT", "IMAGE"],
+      temperature: 0.45,
+    };
+    if (input.geminiImage) {
+      generationConfig.responseFormat = {
+        image: {
+          aspectRatio: input.geminiImage.aspectRatio,
+          imageSize: input.geminiImage.imageSize,
+        },
+      };
+    }
+    const contents = [{ role: "user", parts }];
     const body = {
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
-        temperature: 0.45,
-      },
+      contents,
+      generationConfig,
     };
 
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const json = await res.json().catch(() => ({}));
+    let json = await res.json().catch(() => ({}));
+
+    if (!res.ok && input.geminiImage && res.status === 400) {
+      const errBlob = JSON.stringify(json);
+      const maybeUnsupported =
+        /responseFormat|response_format|imageSize|aspectRatio|ImageConfig|unknown field|Unknown name/i.test(errBlob);
+      if (maybeUnsupported) {
+        const fallbackBody = {
+          contents,
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+            temperature: 0.45,
+          },
+        };
+        res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(fallbackBody),
+        });
+        json = await res.json().catch(() => ({}));
+      }
+    }
+
     if (!res.ok) {
       const msg = (json as { error?: { message?: string } })?.error?.message || res.statusText;
       throw new Error(`Gemini: ${msg}`);

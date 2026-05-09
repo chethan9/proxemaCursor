@@ -22,6 +22,7 @@
     "postinstall": "node scripts/patch-scaleflex-filerobot-tippy.mjs && node scripts/patch-filerobot-react-imports.mjs"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.63",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -74,6 +75,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.4.4",
     "@vercel/speed-insights": "^2.0.0",
+    "ai": "^6.0.177",
     "bwip-js": "^4.10.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -112,9 +114,11 @@
     "react-intersection-observer": "^9.15.1",
     "react-is": "^19.2.5",
     "react-konva": "^18.2.12",
+    "react-markdown": "^10.1.0",
     "react-quill-new": "^3.8.3",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^3.8.1",
+    "remark-breaks": "^4.0.0",
     "server-only": "^0.0.1",
     "sharp": "^0.34.5",
     "stripe": "^17.6.0",
@@ -123,7 +127,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tippy.js": "^6.3.7",
     "vaul": "^1.1.2",
-    "zod": "^3.24.1"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.4",

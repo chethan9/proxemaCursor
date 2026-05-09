@@ -16,6 +16,7 @@ import { getEffectiveHistoryFrom } from "@/lib/history-window";
 import { normalizeWooDate } from "@/lib/woo-date";
 import { scheduleDashboardSummaryRefresh } from "@/lib/dashboard-summary.server";
 import { authorizeCronOrStoreMember, cronHeaders } from "@/lib/authorize-cron-or-store.server";
+import { runProductAttributesAspectChunk } from "@/lib/product-global-attributes-mirror.server";
 
 export const maxDuration = 300;
 export const config = { maxDuration: 300 };
@@ -26,7 +27,7 @@ const PER_PAGE = 100;
 const INLINE_CHAIN_ELAPSED_CAP_MS = 240_000;
 
 /** Taxonomy first so filters/lists warm before heavy product/order pulls (Phase 1 UX). */
-const ASPECT_WAVE_TAXONOMY = ["categories", "tags", "brands"] as const;
+const ASPECT_WAVE_TAXONOMY = ["categories", "tags", "brands", "product_attributes"] as const;
 const ASPECT_WAVE_HEAVY = ["products", "orders", "customers", "coupons"] as const;
 
 const TAXONOMY_ASPECT_SET = new Set<string>(ASPECT_WAVE_TAXONOMY as unknown as string[]);
@@ -53,6 +54,8 @@ interface SyncRunRow {
   records_updated: number | null;
   last_heartbeat_at: string | null;
   is_initial: boolean | null;
+  /** JSON metadata for multi-phase aspects (e.g. product_attributes terms pass). */
+  info_message: string | null;
 }
 
 type Counters = { processed: number; created: number; updated: number };
@@ -279,7 +282,7 @@ async function fetchRunningAspectRun(storeId: string, aspectName: string): Promi
   const { data } = await supabase
     .from("sync_runs")
     .select(
-      "id, store_id, aspect, status, started_at, cursor_page, total_pages, records_processed, records_created, records_updated, last_heartbeat_at, is_initial"
+      "id, store_id, aspect, status, started_at, cursor_page, total_pages, records_processed, records_created, records_updated, last_heartbeat_at, is_initial, info_message"
     )
     .eq("store_id", storeId)
     .eq("aspect", aspectName)
@@ -478,6 +481,30 @@ async function runAspectChunk(
   }
 }
 
+function isRegisteredAspect(aspectName: string): boolean {
+  return !!ASPECTS[aspectName] || aspectName === "product_attributes";
+}
+
+async function dispatchAspectChunk(
+  store: StoreToSync,
+  aspectName: string,
+  modifiedAfter: string | null,
+  isInitial: boolean,
+  resumeRun: SyncRunRow | null,
+  ordersHistoryFrom: string | null,
+): Promise<AspectResult> {
+  if (aspectName === "product_attributes") {
+    return runProductAttributesAspectChunk(
+      store,
+      isInitial,
+      resumeRun,
+      getWooSyncMaxPagesPerChunk(),
+      getWooSyncTaxonomyPageConcurrency(),
+    ) as Promise<AspectResult>;
+  }
+  return runAspectChunk(store, aspectName, modifiedAfter, isInitial, resumeRun, ordersHistoryFrom);
+}
+
 async function fetchStoreForSync(storeId: string): Promise<{ store: StoreToSync; isInitial: boolean; modifiedAfter: string | null; ordersHistoryFrom: string | null; allRunId: string | null; allStartedAt: string | null; rawStore: { last_full_sync_at: string | null; last_sync_at: string | null; initial_sync_completed_at: string | null; client_id: string | null; logo_url: string | null; name: string | null; url: string } } | { error: string; status: number }> {
   const { data: store, error: storeError } = await supabase
     .from("stores")
@@ -616,16 +643,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ---------- RESUME single aspect ----------
     if (isResume && targetAspect && targetAspect !== "all") {
-      if (!ASPECTS[targetAspect]) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
+      if (!isRegisteredAspect(targetAspect)) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
       const { data: runRow } = await supabase
         .from("sync_runs")
-        .select("id, store_id, aspect, status, started_at, cursor_page, total_pages, records_processed, records_created, records_updated, last_heartbeat_at, is_initial")
+        .select("id, store_id, aspect, status, started_at, cursor_page, total_pages, records_processed, records_created, records_updated, last_heartbeat_at, is_initial, info_message")
         .eq("store_id", storeId).eq("aspect", targetAspect).eq("status", "running")
         .order("started_at", { ascending: false }).limit(1).maybeSingle();
       if (!runRow) {
         return res.status(404).json({ error: "No running run to resume", aspect: targetAspect });
       }
-      const result = await runAspectChunk(store, targetAspect, modifiedAfter, !!runRow.is_initial, runRow as unknown as SyncRunRow, ordersHistoryFrom);
+      const result = await dispatchAspectChunk(store, targetAspect, modifiedAfter, !!runRow.is_initial, runRow as unknown as SyncRunRow, ordersHistoryFrom);
 
       // After this chunk, check whether the whole "all" run is now complete
       if (allRunId) {
@@ -673,8 +700,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ---------- Fresh single aspect ----------
     if (targetAspect && targetAspect !== "all" && targetAspect !== "variations") {
-      if (!ASPECTS[targetAspect]) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
-      const result = await runAspectChunk(store, targetAspect, modifiedAfter, false, null, ordersHistoryFrom);
+      if (!isRegisteredAspect(targetAspect)) return res.status(400).json({ error: `Unknown aspect: ${targetAspect}` });
+      const result = await dispatchAspectChunk(store, targetAspect, modifiedAfter, false, null, ordersHistoryFrom);
       if (!result.hasMore) {
         await supabase.from("stores").update({ status: "connected", last_sync_at: new Date().toISOString() }).eq("id", storeId);
       }
@@ -686,7 +713,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const waveTaxonomy = await runAspectWave(
       ASPECT_WAVE_TAXONOMY,
       getWooSyncTaxonomyAspectConcurrency(),
-      (name) => runAspectChunk(store, name, modifiedAfter, isInitial, null, ordersHistoryFrom)
+      (name) => dispatchAspectChunk(store, name, modifiedAfter, isInitial, null, ordersHistoryFrom)
     );
     const waveHeavy = await runAspectWave(
       ASPECT_WAVE_HEAVY,
@@ -706,7 +733,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!r || !r.hasMore || r.error) return r!;
         const runRow = await fetchRunningAspectRun(storeId, name);
         if (!runRow) return r;
-        return runAspectChunk(store, name, modifiedAfter, isInitial, runRow, ordersHistoryFrom);
+        return dispatchAspectChunk(store, name, modifiedAfter, isInitial, runRow, ordersHistoryFrom);
       };
 
       const secondTaxonomy = await runAspectWave(

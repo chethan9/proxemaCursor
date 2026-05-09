@@ -12,31 +12,41 @@ import {
   WooAttribute,
 } from "@/services/wooAttributeService";
 import { queryKeys } from "@/lib/query-client";
+import { useStoreSyncStatus } from "@/hooks/queries/useStoreSyncStatus";
 
 export function useWooAttributes(storeId: string) {
+  const { data: syncStatus } = useStoreSyncStatus(storeId);
+  const poll = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
   return useQuery({
     queryKey: ["woo", "attributes", storeId] as const,
     queryFn: () => listAttributes(storeId),
     enabled: !!storeId,
     staleTime: 5 * 60_000,
+    refetchInterval: poll ? 5000 : false,
   });
 }
 
 export function useWooAttribute(storeId: string, attributeId: number | null) {
+  const { data: syncStatus } = useStoreSyncStatus(storeId);
+  const poll = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
   return useQuery({
     queryKey: ["woo", "attributes", storeId, attributeId] as const,
     queryFn: () => getAttribute(storeId, attributeId!),
     enabled: !!storeId && attributeId !== null && !Number.isNaN(attributeId),
     staleTime: 5 * 60_000,
+    refetchInterval: poll ? 5000 : false,
   });
 }
 
 export function useWooAttributeTerms(storeId: string, attributeId: number | null) {
+  const { data: syncStatus } = useStoreSyncStatus(storeId);
+  const poll = syncStatus?.running || (syncStatus ? !syncStatus.initialSyncDone : false);
   return useQuery({
     queryKey: ["woo", "attributes", storeId, attributeId, "terms"] as const,
     queryFn: () => listAttributeTerms(storeId, attributeId!),
     enabled: !!storeId && !!attributeId,
     staleTime: 5 * 60_000,
+    refetchInterval: poll ? 5000 : false,
   });
 }
 

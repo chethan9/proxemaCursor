@@ -1,3 +1,7 @@
+import type { GeminiImageParams, OpenAiImageSizeParam } from "../image-generation-controls";
+
+export type { GeminiImageParams, OpenAiImageSizeParam };
+
 export type AIProviderId = "google_gemini" | "openai_image";
 
 export type GenerateImageInput = {
@@ -7,10 +11,13 @@ export type GenerateImageInput = {
   /** How many distinct images to produce */
   outputCount: number;
   model: string;
+  /** Effective output aspect label (aligned with width/height / Gemini config). */
   aspectRatio?: string;
   targetWidth?: number;
   targetHeight?: number;
-  openAiSize?: "1024x1024" | "1536x1024" | "1024x1536";
+  openAiSize?: OpenAiImageSizeParam;
+  /** Gemini native image generation — keeps prompt geometry consistent with API constraints. */
+  geminiImage?: GeminiImageParams;
 };
 
 export type GenerateImageOutput = {

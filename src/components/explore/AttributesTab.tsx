@@ -11,6 +11,7 @@ import type { WooAttribute } from "@/services/wooAttributeService";
 import { slugify } from "@/lib/slugify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LockedSlugField } from "@/components/ui/locked-slug-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -46,9 +47,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Pencil, Plus, Trash2, Settings2 } from "lucide-react";
+import { Loader2, Plus, SquarePen, Tags, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 const ATTR_SLUG_MAX = 28;
 
 const ORDER_OPTIONS: { value: string; labelKey: string }[] = [
@@ -247,16 +249,19 @@ export function AttributesTab({ storeId, search, onSearchChange, locked = false 
                 <p className="text-[11px] text-muted-foreground">{t("attributes.fields.nameHint")}</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">{t("attributes.fields.slug")}</Label>
-                <Input
+                <Label className="text-xs" htmlFor="attr-new-slug">
+                  {t("attributes.fields.slug")}
+                </Label>
+                <LockedSlugField
+                  id="attr-new-slug"
                   value={slug}
-                  onChange={(e) => {
+                  onChange={(v) => {
                     setSlugTouched(true);
-                    setSlug(clampSlug(e.target.value));
+                    setSlug(clampSlug(v));
                   }}
-                  className="h-9 font-mono text-xs bg-background"
                   maxLength={ATTR_SLUG_MAX}
                   disabled={locked}
+                  placeholder={t("attributes.fields.slugPlaceholder")}
                 />
                 <p className="text-[11px] text-muted-foreground">{t("attributes.fields.slugHint")}</p>
               </div>
@@ -312,6 +317,7 @@ export function AttributesTab({ storeId, search, onSearchChange, locked = false 
             <CardTitle className="text-base">{t("attributes.table.title")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0 sm:p-2">
+            <TooltipProvider delayDuration={400}>
             <div className="rounded-md border border-border overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -320,7 +326,7 @@ export function AttributesTab({ storeId, search, onSearchChange, locked = false 
                     <TableHead className="hidden sm:table-cell">{t("attributes.table.slug")}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t("attributes.table.type")}</TableHead>
                     <TableHead className="hidden md:table-cell">{t("attributes.table.orderBy")}</TableHead>
-                    <TableHead className="w-[160px] text-end">{t("attributes.table.actions")}</TableHead>
+                    <TableHead className="w-[1%] min-w-[8.5rem] whitespace-nowrap text-end">{t("attributes.table.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -352,43 +358,65 @@ export function AttributesTab({ storeId, search, onSearchChange, locked = false 
                         <TableCell className="hidden md:table-cell text-xs">
                           {orderLabel(row.order_by)}
                         </TableCell>
-                        <TableCell className="text-end">
-                          <div className="flex justify-end gap-1 flex-wrap">
-                            <Button variant="outline" size="sm" className="h-8 gap-1" asChild>
-                              <Link
-                                href={`/sites/${storeId}/attributes/${row.id}`}
-                                className={cn("inline-flex items-center gap-1", locked && "pointer-events-none opacity-50")}
-                                tabIndex={locked ? -1 : undefined}
-                                aria-disabled={locked}
-                                title={locked ? t("products.toolbar.lockedHint") : undefined}
-                              >
-                                <Settings2 className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">{t("attributes.table.configureTerms")}</span>
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => openEdit(row)}
-                              aria-label={t("attributes.table.edit")}
-                              disabled={locked}
-                              title={locked ? t("products.toolbar.lockedHint") : undefined}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setDeleteRow(row)}
-                              aria-label={t("attributes.table.delete")}
-                              disabled={locked}
-                              title={locked ? t("products.toolbar.lockedHint") : undefined}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                        <TableCell className="text-end whitespace-nowrap">
+                            <div className="inline-flex shrink-0 items-center justify-end gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" asChild>
+                                    <Link
+                                      href={`/sites/${storeId}/attributes/${row.id}`}
+                                      className={cn("inline-flex items-center justify-center", locked && "pointer-events-none opacity-50")}
+                                      tabIndex={locked ? -1 : undefined}
+                                      aria-disabled={locked}
+                                      aria-label={t("attributes.table.configureTerms")}
+                                    >
+                                      <Tags className="h-4 w-4" aria-hidden />
+                                    </Link>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="end">
+                                  {locked ? t("products.toolbar.lockedHint") : t("attributes.table.configureTerms")}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex shrink-0">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0"
+                                      onClick={() => openEdit(row)}
+                                      aria-label={t("attributes.table.edit")}
+                                      disabled={locked}
+                                    >
+                                      <SquarePen className="h-4 w-4" />
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="end">
+                                  {locked ? t("products.toolbar.lockedHint") : t("attributes.table.edit")}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex shrink-0">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={() => setDeleteRow(row)}
+                                      aria-label={t("attributes.table.delete")}
+                                      disabled={locked}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="end">
+                                  {locked ? t("products.toolbar.lockedHint") : t("attributes.table.delete")}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -396,6 +424,7 @@ export function AttributesTab({ storeId, search, onSearchChange, locked = false 
                 </TableBody>
               </Table>
             </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
       </div>
@@ -416,16 +445,20 @@ export function AttributesTab({ storeId, search, onSearchChange, locked = false 
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">{t("attributes.fields.slug")}</Label>
-              <Input
+              <Label className="text-xs" htmlFor="attr-edit-slug">
+                {t("attributes.fields.slug")}
+              </Label>
+              <LockedSlugField
+                id="attr-edit-slug"
                 value={editSlug}
-                onChange={(e) => {
+                onChange={(v) => {
                   setEditSlugTouched(true);
-                  setEditSlug(clampSlug(e.target.value));
+                  setEditSlug(clampSlug(v));
                 }}
-                className="h-9 font-mono text-xs bg-background"
                 maxLength={ATTR_SLUG_MAX}
                 disabled={locked}
+                committedValue={editRow?.slug ?? ""}
+                placeholder={t("attributes.fields.slugPlaceholder")}
               />
             </div>
             <div className="space-y-1">

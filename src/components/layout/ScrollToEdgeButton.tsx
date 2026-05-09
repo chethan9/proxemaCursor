@@ -110,13 +110,13 @@ export function ScrollToEdgeButton() {
       onClick={handleClick}
       aria-label={mode === "up" ? "Scroll to top" : "Scroll to bottom"}
       className={cn(
-        "fixed bottom-6 h-10 w-10 rounded-full border bg-background shadow-lg",
+        /** Outer corner — scroll FAB sits rightmost; assistant is inward (`right-[4.75rem]`). */
+        "fixed bottom-6 z-[10000] h-11 w-11 rounded-full border bg-background shadow-lg",
         "flex items-center justify-center text-foreground/80 hover:text-foreground hover:shadow-xl",
         "transition-all duration-200",
         isRtl ? "left-6" : "right-6",
         visible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
       )}
-      style={{ zIndex: 9999 }}
     >
       {mode === "up" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
     </button>

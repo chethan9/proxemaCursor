@@ -243,6 +243,15 @@
       "applyTarget": "Apply result to",
       "additionalPrompt": "Additional instructions",
       "additionalPromptPlaceholder": "Optional extra directions for the model (style, background, etc.). Used on generate and regenerate.",
+      "outputDimensions": "Output dimensions",
+      "dimensionModeSize": "Pixel size",
+      "dimensionModeAspect": "Aspect ratio",
+      "dimensionHintSize": "Choose a pixel preset or Original. Aspect ratio is ignored for output size in this mode.",
+      "dimensionHintAspect": "Output is driven only by the aspect control below. Pixel size presets are disabled.",
+      "aspectRatio": "Aspect ratio",
+      "outputSize": "Output size",
+      "customOutputSize": "Custom width and height",
+      "customOutputSizeShort": "Custom",
       "previewOutput": "Generated preview",
       "pickFromLibrary": "Pick from media library",
       "uploadFailed": "Upload failed",
@@ -308,6 +317,7 @@
       },
       "removeMainImage": "Remove product image",
       "taxonomy": {
+      "slugPlaceholder": "product-url-slug",
         "addCategory": "Add category",
         "addBrand": "Add brand",
         "searchOrCreate": "Search or create…",
@@ -988,6 +998,7 @@
       "slug": "Slug",
       "slugHint": "Unique reference for the attribute (max 28 characters).",
       "type": "Type",
+      "slugPlaceholder": "Auto from name — unlock to edit",
       "typeSelect": "Select",
       "typeText": "Text",
       "orderBy": "Default sort order",
@@ -1035,6 +1046,7 @@
     "terms": {
       "back": "Back to attributes",
       "title": "{{name}} — terms",
+      "inlineHint": "Click a row or the edit icon to change values. Press Esc to cancel.",
       "subtitle": "Add, edit, or remove values for this attribute.",
       "addTitle": "Add term",
       "addSubmit": "Add term",
@@ -1047,7 +1059,8 @@
         "name": "Name",
         "slug": "Slug",
         "description": "Description",
-        "menuOrder": "Order"
+        "menuOrder": "Order",
+        "slugPlaceholder": "Auto from name — unlock to edit"
       },
       "columns": {
         "name": "Name",
@@ -1071,10 +1084,43 @@
       }
     }
   },
+  "slugField": {
+    "unlock": "Unlock to edit slug",
+  "slugField": {
+    "unlock": "Unlock to edit slug",
+    "lock": "Lock slug",
+    "hint": "Slug changes can affect URLs and integrations.",
+    "relockTitle": "Discard slug edits?",
+    "relockDescription": "Your draft slug changes will be lost when you lock this field again.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes",
+    "inputAria": "Slug"
+  },
+    "lock": "Lock slug",
+    "hint": "Slugs affect storefront URLs and integrations. Unlock only when you intend to change them.",
+    "inputAria": "Product slug",
+    "relockTitle": "Discard slug edits?",
+    "relockDescription": "Locking discards your unsaved slug changes and restores the previous value.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes"
+  },
   "taxonomy": {
     "search": "Search {{mode}}…",
     "sort": "Sort",
     "sortBy": "Sort by",
+    "pageTitle": {
+      "categories": "Categories",
+      "tags": "Tags",
+      "brands": "Brands"
+    },
+    "pageSubtitle": {
+      "categories": "Browse and manage WooCommerce product categories (including parents).",
+      "tags": "Browse and manage product tags synced from WooCommerce.",
+      "brands": "Browse and manage product brands synced from WooCommerce."
+    },
+    "tableSectionTitle": "Browse",
+    "batchLabel": "Batch:",
+    "batchRowsTitle": "Rows fetched per scroll",
     "export": "Export",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
@@ -1083,7 +1129,78 @@
     "newTag": "New tag",
     "newBrand": "New brand",
     "rows": "Rows:",
+    "pageTitle": {
+      "categories": "Categories",
+      "tags": "Tags",
+      "brands": "Brands"
+    },
+    "pageSubtitle": {
+      "categories": "Browse and manage WooCommerce product categories (including parents).",
+      "tags": "Browse and manage product tags synced from WooCommerce.",
+      "brands": "Browse and manage product brands synced from WooCommerce."
+    },
+    "tableSectionTitle": "Browse",
+    "batchLabel": "Batch:",
+    "batchRowsTitle": "Rows fetched per scroll",
     "sortOptions": {
+    },
+    "addCard": {
+      "titleCategories": "New category",
+      "titleTags": "New tag",
+      "titleBrands": "New brand",
+      "hintCategories": "Creates the category in WooCommerce and syncs it here.",
+      "hintTags": "Creates the tag in WooCommerce and syncs it here.",
+      "hintBrands": "Creates the brand in WooCommerce and syncs it here."
+    },
+    "create": {
+      "successCategory": "Category created",
+      "successTag": "Tag created",
+      "successBrand": "Brand created",
+      "nameLabel": "Name",
+      "slugLabel": "Slug",
+      "namePlaceholder": "Enter {{singular}} name",
+      "slugPlaceholder": "Auto-filled from name — unlock to edit",
+      "parentLabel": "Parent category",
+      "parentNone": "None (root)",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "submit": "Create {{singular}}",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "nameLength": "Name must be 120 characters or fewer.",
+        "slugMissing": "Slug could not be generated — unlock Slug and set it manually."
+      }
+    },
+    "expanded": {
+      "singularCategory": "category",
+      "singularTag": "tag",
+      "singularBrand": "brand",
+      "titleCategory": "Category details",
+      "titleTag": "Tag details",
+      "titleBrand": "Brand details",
+      "description": "Changes sync to WooCommerce when you save. Unlock the slug to edit it; it follows the name until you change it.",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "savedToast": "Synced to WooCommerce",
+      "deletedToast": "Deleted from WooCommerce",
+      "deleteConfirm": "Delete this {{singular}}? This will remove it from WooCommerce.",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "slugRequired": "Slug is required."
+      }
+    },
+    "categoryTree": {
+      "dragHint": "Drag and drop to re-order categories. Drop on the lower half of a row to nest under it, or hold Alt while dropping.",
+      "dragDisabledSearch": "Clear search to drag and reorder categories.",
+      "dragDisabledLocked": "Finish catalog sync before reordering categories.",
+      "dragHandleAria": "Drag to reorder",
+      "productCountShort": "{{count}} products",
+      "edit": "Edit",
+      "invalidMoveTitle": "Cannot move there",
+      "invalidMoveDesc": "That would place a category inside itself or an invalid position.",
+      "reorderSaved": "Category order updated",
+      "reorderFailedTitle": "Could not save order",
       "nameAsc": "Name A→Z",
       "nameDesc": "Name Z→A",
       "countDesc": "Most products",
@@ -1105,6 +1222,38 @@
     "toasts": {
       "synced": "Synced {{count}} {{mode}}",
       "refreshFailed": "Refresh failed"
+    },
+    "addCard": {
+      "titleCategories": "New category",
+      "titleTags": "New tag",
+      "titleBrands": "New brand",
+      "hintCategories": "Creates the category in WooCommerce and syncs it here. Unlock the slug only if you need a custom URL segment.",
+      "hintTags": "Creates the tag in WooCommerce and syncs it here. Unlock the slug only if you need a custom URL segment.",
+      "hintBrands": "Creates the brand in WooCommerce and syncs it here. Unlock the slug only if you need a custom URL segment."
+    },
+    "create": {
+      "successCategory": "Category created",
+      "successTag": "Tag created",
+      "successBrand": "Brand created",
+      "nameLabel": "Name",
+      "slugLabel": "Slug",
+      "descriptionLabel": "Description",
+      "parentLabel": "Parent category",
+      "parentNone": "None (root)",
+      "namePlaceholder": "Enter {{singular}} name",
+      "slugPlaceholder": "Auto-filled from name — unlock to customize",
+      "descriptionPlaceholder": "Optional description",
+      "submit": "Create {{singular}}",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "nameLength": "Name must be 120 characters or fewer.",
+        "slugMissing": "Slug could not be generated — unlock Slug and set it manually."
+      }
+    },
+    "expanded": {
+      "deleteConfirm": "Delete this {{singular}}? This will remove it from WooCommerce.",
+      "savedToast": "Synced to WooCommerce",
+      "deletedToast": "Deleted from WooCommerce"
     }
   },
   "downloads": {
@@ -1652,5 +1801,28 @@
     "noTokens": "No tokens yet.",
     "tokenSavedOnce": "Save this token now — it will not be shown again.",
     "cancel": "Cancel"
+  },
+  "assistant": {
+    "title": "Proxima assistant",
+    "descriptionWithStore": "Ask about navigation, your store metrics, or search products. Answers use your permissions and this store only.",
+    "descriptionNoStore": "Ask how to use Proxima. Open a store from Projects to ask about catalog or sales for that store.",
+    "emptyHint": "Try one of the prompts below, or type your own question.",
+    "placeholder": "Message…",
+    "send": "Send",
+    "stop": "Stop",
+    "open": "Open assistant",
+    "avatarHelp": "Proxima help — navigation and how-to",
+    "avatarOpenAI": "Answer from your configured OpenAI model (e.g. GPT)",
+    "avatarOtherModel": "Answer from your configured AI model",
+    "scrollToBottom": "Scroll to latest message",
+    "quickPrompts": "Suggested prompts",
+    "clear": "Clear chat",
+    "thinking": "Thinking…",
+    "notSignedIn": "Sign in to use the assistant.",
+    "genericError": "Something went wrong. Try again.",
+    "rateLimited": "Too many requests. Wait a moment and try again.",
+    "suggestedReportSales": "Summarize sales for this month",
+    "suggestedProductTop": "What are my top-selling products?",
+    "suggestedProductCatalog": "Help me find a product in my catalog"
   }
 }

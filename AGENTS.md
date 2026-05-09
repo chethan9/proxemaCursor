@@ -1,5 +1,23 @@
 # Agent instructions
 
+## Project map (remember for this repo)
+
+| Item | Value |
+|------|--------|
+| **Workspace path** | `/Users/wb/Desktop/proxemacr` (open this folder in Cursor; same as *Desktop/proxemacr*) |
+| **App GitHub** | `https://github.com/chethan9/proxemaCursor` |
+| **Docs GitHub (canonical Docusaurus)** | `https://github.com/chethan9/wiki` — production docs and Vercel “Edit this page” target this repo |
+| **Docs live URL** | `https://wiki-pi-blue.vercel.app` |
+| **Database** | **Supabase** — `supabase/` (migrations, local config). Use Supabase MCP or CLI; project ref in workflow below. |
+
+Local preview of docs beside the app: `documentation/` (mirror; align edits with `chethan9/wiki` for production).
+
+## Vercel (MCP + CLI)
+
+- **MCP server:** `plugin-vercel-vercel`. Use **`list_projects`** (requires `teamId` from [`.vercel/project.json`](./.vercel/project.json) `orgId`), **`get_deployment`**, **`list_deployments`**, and **`get_deployment_build_logs`** to inspect status and failed builds.
+- **`deploy_to_vercel`:** In this integration, the tool does **not** start a remote deploy by itself; it returns guidance to run **`vercel deploy`** (or rely on **Git → Vercel**). The agent should still **invoke it** when the user asks to deploy, then run the **CLI** from the correct directory with a linked **`.vercel`** (or use **`vercel pull`** first).
+- **Docs site (`wiki-pi-blue.vercel.app`):** Vercel project name **`wiki`**. Work from a clone of **`chethan9/wiki`**, then `vercel pull --yes --environment production`, `vercel build --prod`, `vercel deploy --prebuilt --prod --yes` (reliable for Docusaurus). The main app project is **`proximacursor`**—do not deploy it unless the user names it.
+
 ## Completion workflow
 
 When work is finished (unless the user opts out):

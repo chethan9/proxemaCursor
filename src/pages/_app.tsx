@@ -43,6 +43,10 @@ const ScrollToEdgeButton = dynamic(
   () => import("@/components/layout/ScrollToEdgeButton").then((m) => m.ScrollToEdgeButton),
   { ssr: false }
 );
+const GlobalAssistantDock = dynamic(
+  () => import("@/components/assistant/AssistantDock").then((m) => m.GlobalAssistantDock),
+  { ssr: false }
+);
 const IncompleteOnboardingPrompt = dynamic(
   () => import("@/components/IncompleteOnboardingPrompt").then((m) => m.IncompleteOnboardingPrompt),
   { ssr: false }
@@ -200,6 +204,7 @@ function Providers({ children }: { children: ReactNode }) {
               <TopProgressBar />
               <I18nReadyGate>
                 <Shell>{children}</Shell>
+                <GlobalAssistantDock />
                 <GlobalScrollButton />
               </I18nReadyGate>
               <IncompleteOnboardingPrompt />

@@ -23,7 +23,8 @@ export const openaiImageProvider: AIImageProvider = {
     form.append("model", input.model || "gpt-image-1");
     form.append("prompt", input.prompt);
     form.append("n", "1");
-    form.append("size", input.openAiSize || "1024x1024");
+    const size = input.openAiSize || "1024x1024";
+    form.append("size", size);
     form.append("image", fileBlob, "source.png");
 
     const res = await fetch("https://api.openai.com/v1/images/edits", {

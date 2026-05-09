@@ -44,6 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         slug: (wooResponse.slug as string) ?? category.slug,
         description: (wooResponse.description as string) ?? category.description,
         parent_id: (wooResponse.parent as number) ?? category.parent_id,
+        menu_order: (wooResponse.menu_order as number) ?? category.menu_order,
         count: (wooResponse.count as number) ?? category.count,
         raw_data: wooResponse as unknown as Json,
         synced_at: new Date().toISOString(),
