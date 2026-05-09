@@ -22,7 +22,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AssistantMessageMarkdown } from "@/components/assistant/AssistantMessageMarkdown";
+import { AssistantMessageBody } from "@/components/assistant/AssistantMessageBody";
+import { stripTrailingIncompleteMarkdown } from "@/lib/assistant/streaming-markdown";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -324,8 +325,12 @@ export function AssistantDock() {
                   >
                     {m.role === "user" ? (
                       <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                    ) : streaming && i === messages.length - 1 ? (
+                      <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                        {stripTrailingIncompleteMarkdown(m.content)}
+                      </div>
                     ) : (
-                      <AssistantMessageMarkdown content={m.content} />
+                      <AssistantMessageBody content={m.content} storeId={storeId} />
                     )}
                   </div>
                 </div>

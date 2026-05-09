@@ -104,7 +104,7 @@ export function AssistantMessageMarkdown({ content }: Props) {
                   <img
                     src={url}
                     alt={typeof alt === "string" ? alt : "Product"}
-                    className="block max-h-44 w-auto max-w-[min(100%,280px)] object-contain"
+                    className="block max-h-24 w-auto max-w-[min(100%,140px)] object-contain"
                     loading="lazy"
                     decoding="async"
                   />

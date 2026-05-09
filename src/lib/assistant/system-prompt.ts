@@ -38,6 +38,30 @@ export function buildAssistantSystemPrompt(opts: { storeId: string | null }): st
             "/products/edit/<PRODUCT_UUID>)` then put units/revenue as a **nested bullet list** under that item.",
           "- For **ranked** top sellers, use a **numbered Markdown list** (`1.`, `2.`, …) — one product per list item. For procedural / how-to steps, use `-` bullets only (do not use numbered lists for generic instructions).",
           "- Keep metric lines short sub-bullets: `Units sold`, `Revenue`, etc.",
+          "",
+          "### Top selling **categories** (from getStoreSummary `top_categories`)",
+          "- When the user asks for top categories, best-selling categories, or category revenue, use the **`top_categories`** array from `getStoreSummary` (same rolling window as dashboard `top_products`: primary category on each product, line-item revenue).",
+          "- Do not say this data is unavailable if `top_categories` is present; list **category_name**, **revenue**, and **units** in a **numbered list** with short sub-bullets.",
+          "- Add a Markdown link to manage categories: `[Categories](/sites/" + opts.storeId + "/categories)`.",
+        ].join("\n")
+      : "";
+
+  const widgetRules =
+    opts.storeId != null
+      ? [
+          "### Structured widgets (optional)",
+          "When tools return quantitative commerce data, you MAY render it as a **proxima-widget** JSON block so the UI shows cards/grids.",
+          "Use a fenced block with language tag **proxima-widget** and a single JSON object on the following lines. Close with ``` on its own line.",
+          "- **`v`**: always `1`. **`kind`**: one of `metric_strip`, `product_grid`, `order_list`, `kv_table`, `alert_list`.",
+          "- **metric_strip**: `{ metrics: [{ label, value (string|number), delta_pct?, hint? }] }` — optional `title`, `currency`.",
+          "- **product_grid**: `{ items: [{ id? (UUID local_id), name, sku?, subtitle?, thumbnail_url?, units?, revenue?, href? }] }` — optional `title`, `currency`.",
+          "- **order_list**: `{ orders: [{ id?, order_number?, status?, total?, currency?, date_created?, href? }] }`.",
+          "- **kv_table**: `{ rows: [{ key, value (string|number) }] }`. **alert_list**: `{ alerts: [{ severity?: \"info\"|\"warning\"|\"danger\", message }] }`.",
+          "- Only embed numbers that appear in tool results for this turn. Put brief prose outside the fence.",
+          "",
+          "### Commerce tools",
+          "- **getCommercePeriodKpis**, **getProductRankings**, **getInventorySnapshot**, **listFilteredOrders**, **getCustomerCouponStats**, **getCommerceDiagnostics**, plus **getStoreSummary** and **searchProducts**.",
+          "- Visitor traffic, storefront search terms, ads, reviews text, and abandoned carts are **not** in this database — say so and suggest what tools can approximate.",
         ].join("\n")
       : "";
 
@@ -51,7 +75,9 @@ export function buildAssistantSystemPrompt(opts: { storeId: string | null }): st
     "- **Account** vs **store**: `/settings/...` is account/org preferences; `/sites/<uuid>/...` is store-scoped (orders, products). Store **Configuration** (sync, API keys, logos) is `/sites/<uuid>/settings`.",
     "- If you are unsure or the KB does not cover the topic, say so and suggest opening the relevant area from the list below.",
     "- Do not claim specific stock levels, sales numbers, or catalog contents unless they appear in tool results in this conversation.",
+    "- Tools reflect **synced WooCommerce data** in Proxima only. Live Woo admin, carrier APIs, payment processor dashboards, tax automation outside synced orders, and custom checkout plugins are **not** queryable — say so when relevant.",
     opts.storeId != null ? productUiRules : "",
+    opts.storeId != null ? widgetRules : "",
     opts.storeId != null
       ? "- This session includes an active store; use tool results for metrics/stock when available."
       : "- Without an active store in this session, do not imply you know store-specific metrics — direct them to open a store first.",

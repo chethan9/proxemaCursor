@@ -3754,6 +3754,87 @@ export type Database = {
         }
         Returns: Json
       }
+      get_top_selling_categories: {
+        Args: {
+          p_combine_all?: boolean
+          p_currency?: string | null
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_store_id: string
+          p_tz?: string
+        }
+        Returns: Json
+      }
+      assistant_period_kpis: {
+        Args: {
+          p_combine_all?: boolean
+          p_currency?: string | null
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_store_id: string
+          p_tz?: string
+        }
+        Returns: Json
+      }
+      assistant_product_rankings: {
+        Args: {
+          p_combine_all?: boolean
+          p_currency?: string | null
+          p_limit?: number
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_sort?: string
+          p_store_id: string
+          p_tz?: string
+        }
+        Returns: Json
+      }
+      assistant_inventory_snapshot: {
+        Args: {
+          p_limit?: number
+          p_low_stock_threshold?: number
+          p_store_id: string
+        }
+        Returns: Json
+      }
+      assistant_orders_filtered: {
+        Args: {
+          p_limit?: number
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_status_csv?: string | null
+          p_store_id: string
+          p_tz?: string
+        }
+        Returns: Json
+      }
+      assistant_customer_coupon_stats: {
+        Args: {
+          p_combine_all?: boolean
+          p_currency?: string | null
+          p_coupon_limit?: number
+          p_customer_limit?: number
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_store_id: string
+          p_tz?: string
+        }
+        Returns: Json
+      }
+      assistant_basket_pairs: {
+        Args: {
+          p_max_orders?: number
+          p_pair_limit?: number
+          p_period_end?: string | null
+          p_period_start?: string | null
+          p_store_id: string
+        }
+        Returns: Json
+      }
+      assistant_catalog_quality: {
+        Args: { p_store_id: string }
+        Returns: Json
+      }
       refresh_dashboard_summaries_for_store: {
         Args: { p_store_id: string }
         Returns: undefined

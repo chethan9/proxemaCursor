@@ -11,7 +11,16 @@ import {
   getAssistantModelId,
 } from "@/lib/assistant/openai-key.server";
 import { checkAssistantRateLimit } from "@/lib/assistant/rate-limit.server";
-import { fetchStoreSummaryForAssistant, searchProductsForAssistant } from "@/lib/assistant/tools.server";
+import {
+  fetchAssistantCommerceDiagnostics,
+  fetchAssistantCustomerCouponStats,
+  fetchAssistantInventorySnapshot,
+  fetchAssistantOrdersFiltered,
+  fetchAssistantPeriodKpis,
+  fetchAssistantProductRankings,
+  fetchStoreSummaryForAssistant,
+  searchProductsForAssistant,
+} from "@/lib/assistant/tools.server";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
 
 export const config = {
@@ -128,12 +137,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const system = buildAssistantSystemPrompt({ storeId: validatedStoreId });
 
+  const assistantWindowSchema = z.object({
+    range: z
+      .enum(["30d", "7d", "60d", "90d", "today", "yesterday", "all", "custom"])
+      .optional()
+      .describe("Preset window; default 30d. Use custom with fromYmd+toYmd."),
+    fromYmd: z.string().optional().describe("When range is custom: start YYYY-MM-DD (store TZ)."),
+    toYmd: z.string().optional().describe("When range is custom: end YYYY-MM-DD (store TZ)."),
+    combineAll: z
+      .boolean()
+      .optional()
+      .describe("Combine all order currencies via FX into store currency (dashboard combine-all mode)."),
+  });
+
   const tools =
     validatedStoreId != null
       ? {
           getStoreSummary: tool({
             description:
-              "Load dashboard-style sales and order stats for the active store (rolling window aligned with the site home dashboard). Includes top_products with optional image URLs per row. Use when the user asks for revenue, orders, top sellers, or performance numbers.",
+              "Load dashboard-style sales and order stats for the active store (rolling window aligned with the site home dashboard). Includes top_products (with optional image URLs), top_categories (revenue and units by primary product category), and recent order snippets. Use for revenue, orders, top sellers, top-selling categories, or performance questions.",
             inputSchema: z.object({}),
             execute: async () => fetchStoreSummaryForAssistant(validatedStoreId),
           }),
@@ -145,6 +167,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }),
             execute: async ({ query }) => searchProductsForAssistant(validatedStoreId, query),
           }),
+          getCommercePeriodKpis: tool({
+            description:
+              "Compare net revenue and completed/processing order counts for the selected period vs the immediately preceding period of equal length (dashboard-aligned net revenue). Returns delta_pct for trends.",
+            inputSchema: assistantWindowSchema,
+            execute: async (input) => fetchAssistantPeriodKpis(validatedStoreId, input),
+          }),
+          getProductRankings: tool({
+            description:
+              "Rank products by revenue or units sold in the selected window (line items from paid-adjacent orders). Includes thumbnail-friendly image fields mapped server-side.",
+            inputSchema: assistantWindowSchema.extend({
+              sort: z.enum(["revenue", "units"]).optional().describe("Sort key; default revenue."),
+              limit: z.number().int().min(1).max(50).optional(),
+            }),
+            execute: async (input) => fetchAssistantProductRankings(validatedStoreId, input),
+          }),
+          getInventorySnapshot: tool({
+            description:
+              "Low-stock and out-of-stock counts plus a bounded list of SKUs below threshold (manage_stock products). Use before claiming stock levels.",
+            inputSchema: z.object({
+              lowStockThreshold: z.number().int().min(0).max(999).optional(),
+              limit: z.number().int().min(1).max(100).optional(),
+            }),
+            execute: async (input) => fetchAssistantInventorySnapshot(validatedStoreId, input),
+          }),
+          listFilteredOrders: tool({
+            description:
+              "List recent orders in the selected date window. Optional CSV statuses (e.g. completed,pending). Does not replace Woo admin detail.",
+            inputSchema: assistantWindowSchema.extend({
+              statusCsv: z
+                .string()
+                .max(200)
+                .optional()
+                .describe("Comma-separated order statuses to filter (lowercase). Omit for all in window."),
+              limit: z.number().int().min(1).max(100).optional(),
+            }),
+            execute: async (input) => fetchAssistantOrdersFiltered(validatedStoreId, input),
+          }),
+          getCustomerCouponStats: tool({
+            description:
+              "Top customers by net revenue in the window (requires synced customer linkage) and top Woo coupon codes used on orders (from coupon_lines).",
+            inputSchema: assistantWindowSchema.extend({
+              customerLimit: z.number().int().min(1).max(50).optional(),
+              couponLimit: z.number().int().min(1).max(50).optional(),
+            }),
+            execute: async (input) => fetchAssistantCustomerCouponStats(validatedStoreId, input),
+          }),
+          getCommerceDiagnostics: tool({
+            description:
+              "Optional: frequent product pairs in orders (bounded scan) and catalog completeness counters (missing images, drafts, missing SKU). Heavier — use when asked about bundles or catalog hygiene.",
+            inputSchema: assistantWindowSchema,
+            execute: async (input) => fetchAssistantCommerceDiagnostics(validatedStoreId, input),
+          }),
         }
       : undefined;
 
@@ -154,7 +228,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       system,
       messages: parsed.messages,
       tools,
-      stopWhen: stepCountIs(tools ? 8 : 1),
+      stopWhen: stepCountIs(tools ? 18 : 1),
       toolChoice: tools ? "auto" : undefined,
     });
 
