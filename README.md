@@ -4,6 +4,12 @@ Source repository: **https://github.com/chethan9/proxemaCursor**
 
 ## Docs
 
+### End-user Help Center (Docusaurus)
+
+Customer-facing guides live in **[`documentation/`](./documentation/)** (Proxima Cursor UI: Projects, store workspace, catalog, billing, troubleshooting). Build and deploy that folder as a static site (see [`documentation/README.md`](./documentation/README.md)); point Vercel **Root Directory** at `documentation` when hosting separately from the Next.js app.
+
+### Engineering / ops
+
 - [Deployment Guide](./docs/DEPLOYMENT.md) — safe-deploy workflow, migration runner, rollback procedures
 
 ### Analytics env cleanup (ops)
