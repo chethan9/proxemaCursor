@@ -15,7 +15,7 @@ const config: Config = {
   baseUrl: '/',
 
   organizationName: 'chethan9',
-  projectName: 'proxemaCursor',
+  projectName: 'wiki',
 
   onBrokenLinks: 'throw',
 
@@ -30,8 +30,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl:
-            'https://github.com/chethan9/proxemaCursor/edit/main/documentation/',
+          editUrl: 'https://github.com/chethan9/wiki/edit/main/',
         },
         blog: false,
         theme: {
@@ -60,7 +59,7 @@ const config: Config = {
           label: 'Help Center',
         },
         {
-          href: 'https://github.com/chethan9/proxemaCursor',
+          href: 'https://github.com/chethan9/wiki',
           label: 'GitHub',
           position: 'right',
         },
@@ -86,8 +85,12 @@ const config: Config = {
           title: 'Repository',
           items: [
             {
-              label: 'Proxima Cursor on GitHub',
+              label: 'App source (Proxima Cursor)',
               href: 'https://github.com/chethan9/proxemaCursor',
+            },
+            {
+              label: 'This documentation on GitHub',
+              href: 'https://github.com/chethan9/wiki',
             },
           ],
         },

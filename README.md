@@ -6,7 +6,9 @@ Source repository: **https://github.com/chethan9/proxemaCursor**
 
 ### End-user Help Center (Docusaurus)
 
-Customer-facing guides live in **[`documentation/`](./documentation/)** (Proxima Cursor UI: Projects, store workspace, catalog, billing, troubleshooting). Build and deploy that folder as a static site (see [`documentation/README.md`](./documentation/README.md)); point Vercel **Root Directory** at `documentation` when hosting separately from the Next.js app.
+**Canonical docs repo:** **[github.com/chethan9/wiki](https://github.com/chethan9/wiki)** — deploy **`wiki-pi-blue.vercel.app`** from that repository (Vercel root = repo root).
+
+A copy also exists under **[`documentation/`](./documentation/)** in this repo for local preview beside the app; prefer editing and PRs on **`chethan9/wiki`** so “Edit this page” and production stay aligned.
 
 ### Engineering / ops
 
