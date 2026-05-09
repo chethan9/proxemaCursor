@@ -5,6 +5,7 @@
     "orders": "Orders",
     "customers": "Customers",
     "categories": "Categories",
+    "attributes": "Attributes",
     "tags": "Tags",
     "brands": "Brands",
     "downloads": "Downloads",
@@ -12,10 +13,24 @@
     "settings": "Settings"
   },
   "home": {
+    "combineAll": "Combine all currencies",
+    "combineHint": "Show revenue in the store default currency (ECB rates).",
+    "fxFallback": "ECB rates are not loaded yet; combined amounts may be approximate until the next dashboard refresh.",
+    "range": {
+      "last7d": "Last 7 days (store time)",
+      "last30d": "Last 30 days (store time)",
+      "last90d": "Last 90 days (store time)",
+      "today": "Today (store time)",
+      "yesterday": "Yesterday (store time)",
+      "all": "All time (store time)",
+      "selected": "Selected range (store time)"
+    },
     "refresh": "更新",
     "errorTitle": "ダッシュボード統計を読み込めません",
     "errorBody": "サイト統計の取得中にエラーが発生しました。",
     "retry": "再試行",
+    "dataUpdated": "Updated {{relative}}",
+    "refreshingData": "Refreshing…",
     "emptyTitle": "ダッシュボードは最初の注文を待っています",
     "emptyBody": "お客様がストアで注文を開始すると、売上トレンド、人気商品、アクティビティがここに自動的に表示されます。",
     "multiCurrency": "複数通貨ストア",
@@ -27,14 +42,19 @@
       "todaySales": "本日の売上",
       "weeklySales": "週間売上",
       "monthlySales": "月間売上",
-      "avgOrder": "平均注文(30日)"
+      "avgOrder": "平均注文(30日)",
+      "ordersInPeriod": "Orders in range",
+      "salesInRange": "Sales in range"
     },
     "spark": {
       "sales": "売上",
       "ordersInCurrency": "{{currency}} の注文 (30日)",
       "ordersLast30d": "過去30日の注文",
+      "ordersInRange": "Orders in selected range",
       "revenue": "収益",
+      "revenueInRange": "Revenue in selected range",
       "vsPrev30d": "前30日比",
+      "vsPrevPeriod": "vs prior period",
       "last30d": "過去30日"
     },
     "cards": {
@@ -77,7 +97,82 @@
       "onBackorder": "On backorder",
       "clear": "Clear",
       "category": "Category",
-      "status": "Status"
+      "status": "Status",
+      "typeSimple": "Simple products",
+      "typeVariable": "Variable products",
+      "typeAll": "All",
+      "typeAllHint": "All product types",
+      "typeSimpleShort": "Simple",
+      "typeVariableShort": "Variable",
+      "productType": "Product type filters"
+    },
+    "catalog": {
+      "columns": {
+        "image": "Image",
+        "id": "ID",
+        "wooId": "Woo ID",
+        "name": "Product name",
+        "slug": "Slug",
+        "sku": "SKU",
+        "type": "Type",
+        "status": "Status",
+        "permalink": "Permalink",
+        "parent_id": "Parent ID",
+        "price": "Price",
+        "regular_price": "Regular price",
+        "sale_price": "Sale price",
+        "stock": "Stock qty",
+        "stock_status": "Stock status",
+        "manage_stock": "Manage stock",
+        "tax_status": "Tax status",
+        "tax_class": "Tax class",
+        "shipping_required": "Shipping required",
+        "category": "Categories",
+        "brands": "Brands",
+        "attributes": "Attributes",
+        "images_count": "Images count",
+        "short_desc": "Short description",
+        "description": "Description",
+        "date_created": "Date created (Woo)",
+        "date_modified": "Date modified (Woo)",
+        "sales": "Last synced",
+        "created": "Created at (DB)",
+        "updated": "Updated at (DB)"
+      }
+    },
+    "sort": {
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first",
+      "nameAz": "Name A-Z",
+      "nameZa": "Name Z-A",
+      "priceHigh": "Price high to low",
+      "priceLow": "Price low to high",
+      "stockHigh": "Stock high to low",
+      "stockLow": "Stock low to high",
+      "recentSync": "Recently synced"
+    },
+    "columnGroups": {
+      "product": "Product",
+      "pricingInventory": "Pricing & Inventory",
+      "contentDates": "Content & Dates"
+    },
+    "productStatus": {
+      "publish": {
+        "label": "Active",
+        "description": "Visible in your catalog"
+      },
+      "draft": {
+        "label": "Draft",
+        "description": "Hidden from customers"
+      },
+      "pending": {
+        "label": "Pending",
+        "description": "Awaiting review"
+      },
+      "private": {
+        "label": "Private",
+        "description": "Only visible to admins"
+      }
     },
     "statuses": {
       "publish": "Published",
@@ -102,6 +197,148 @@
       "truncatedDesc": "最初の {{count}} 行のみ（上限 {{max}}）。フィルターを絞ってください。",
       "pdfTooManyRows": "PDF は最大 {{max}} 行です。Excel または CSV を使うか、フィルターを絞ってください。"
     },
+    "quickEdit": {
+      "title": "Quick edit",
+      "description": "Syncs to WooCommerce immediately.",
+      "name": "Name",
+      "sku": "SKU",
+      "status": "Status",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "manageStock": "Manage stock",
+      "stockStatus": "Stock status",
+      "qty": "Qty",
+      "lastSync": "Last sync",
+      "editFull": "Edit full product",
+      "cancel": "Cancel",
+      "save": "Save",
+      "syncedToast": "Synced to WooCommerce",
+      "notReadyTitle": "Not ready",
+      "notReadyDesc": "Wait for the product to finish loading, then try again.",
+      "invalidPriceTitle": "Invalid price",
+      "invalidRegularDesc": "Regular price must be greater than 0.",
+      "invalidSaleTitle": "Invalid sale price",
+      "invalidSalePositiveDesc": "Sale price must be greater than 0.",
+      "invalidSaleLessDesc": "Sale price must be less than regular price.",
+      "invalidQtyTitle": "Invalid quantity",
+      "invalidQtyDesc": "Stock quantity cannot be negative.",
+      "variationsHeading": "Variations",
+      "loadingVariations": "Loading variations…",
+      "variationsError": "Could not load variations.",
+      "noVariations": "No variations found for this product.",
+      "variationFallback": "Variation #{{id}}",
+      "stockTracked": "Stock tracked",
+      "stockNotTracked": "Stock not tracked",
+      "qtyDisabledHint": "Turn on stock management for this variation in the full editor to edit quantity here.",
+      "resolveMissingWoo": "This product is still syncing — open again after sync, or use Edit full product.",
+      "resolveFailed": "Could not resolve product id.",
+      "variationInvalidRegular": "Variation \"{{label}}\": regular price must be greater than 0 when published.",
+      "variationInvalidSalePositive": "Variation \"{{label}}\": sale price must be greater than 0.",
+      "variationInvalidSaleLess": "Variation \"{{label}}\": sale price must be less than regular price.",
+      "variationInvalidQty": "Variation \"{{label}}\": quantity cannot be negative."
+    },
+    "ai": {
+      "open": "AI images",
+      "title": "AI image generation",
+      "feature": "Feature",
+      "referenceImage": "Reference image",
+      "tabProduct": "Product",
+      "tabUpload": "Upload",
+      "tabLibrary": "Library",
+      "hintOriginalUrl": "Uses the image URL from your store (original file path). Select a thumbnail below.",
+      "chooseFile": "Choose image file",
+      "openMediaLibrary": "Choose from media library",
+      "librarySelected": "Image selected from library.",
+      "noProductImages": "No images on this product yet — upload or add images first.",
+      "mainBadge": "Main",
+      "applyTarget": "Apply result to",
+      "additionalPrompt": "Additional instructions",
+      "additionalPromptPlaceholder": "Optional extra directions for the model (style, background, etc.). Used on generate and regenerate.",
+      "outputDimensions": "Output dimensions",
+      "dimensionModeSize": "Pixel size",
+      "dimensionModeAspect": "Aspect ratio",
+      "dimensionHintSize": "Choose a pixel preset or Original. Aspect ratio is ignored for output size in this mode.",
+      "dimensionHintAspect": "Output is driven only by the aspect control below. Pixel size presets are disabled.",
+      "aspectRatio": "Aspect ratio",
+      "outputSize": "Output size",
+      "customOutputSize": "Custom width and height",
+      "customOutputSizeShort": "Custom",
+      "previewOutput": "Generated preview",
+      "pickFromLibrary": "Pick from media library",
+      "uploadFailed": "Upload failed",
+      "openaiNeedsSource": "OpenAI image editing requires a reference image — select product image, upload a file, or pick from the library.",
+      "optionalRef": "optional ref.",
+      "customColor": "Custom color",
+      "noFeatures": "No AI image features are configured for this store yet.",
+      "source": "Source image",
+      "sourceMain": "Main product image",
+      "sourceGallery": "Gallery image",
+      "gallerySlot": "Slot {{n}}",
+      "outputCount": "Number of outputs",
+      "generate": "Generate",
+      "generating": "Generating…",
+      "failed": "AI generation failed",
+      "noImage": "Add or select an image first.",
+      "customPromptRequired": "Enter your custom prompt before generating.",
+      "creditsUsed": "{{count}} credits used",
+      "applyBest": "Apply best to source slot",
+      "appendAllGallery": "Append all to gallery",
+      "regenerate": "Regenerate",
+      "discard": "Discard",
+      "close": "Close",
+      "applied": "Images applied",
+      "reverted": "Reverted local changes",
+      "revert": "Revert unsaved image changes",
+      "hintApplyMain": "Apply best replaces the main image after you approve (uploads to your store).",
+      "hintApplyGallery": "Apply best replaces gallery slot {{n}} after approval. Regenerate runs again from that same slot.",
+      "hintRegenerateActions": "Regenerate creates new staging images; Discard removes staging without changing your product."
+    },
+    "edit": {
+      "imageEditor": {
+        "title": "Edit image",
+        "dialogDescription": "Crop, filter, and export the product image.",
+        "loading": "Loading image…",
+        "noImageSelected": "No image selected. Add or choose an image first.",
+        "loadFailed": "Could not load this image. Check the URL or try again.",
+        "tabBasic": "Basic",
+        "tabAdvanced": "Advanced",
+        "aspect": "Aspect ratio",
+        "aspectFree": "Original proportions",
+        "aspect11": "1 : 1",
+        "aspect43": "4 : 3",
+        "aspect169": "16 : 9",
+        "zoom": "Zoom",
+        "flipH": "Flip horizontal",
+        "flipV": "Flip vertical",
+        "rotate90": "Rotate 90°",
+        "brightness": "Brightness",
+        "contrast": "Contrast",
+        "saturate": "Saturation",
+        "maxWidth": "Max width (px)",
+        "maxHeight": "Max height (px)",
+        "advancedHint": "Drag handles to move, scale, or rotate. Export uses the whole canvas including white margins.",
+        "cancel": "Cancel",
+        "apply": "Save to product",
+        "saved": "Image updated",
+        "cropWait": "Adjust the crop area slightly so the editor can read it, then try again.",
+        "uploadFailed": "Upload failed",
+        "exportFailed": "Could not export the transformed image.",
+        "editorCrashed": "The image editor failed to start.",
+        "close": "Close"
+      },
+      "removeMainImage": "Remove product image",
+      "taxonomy": {
+        "slugPlaceholder": "product-url-slug",
+        "addCategory": "Add category",
+        "addBrand": "Add brand",
+        "searchOrCreate": "Search or create…",
+        "searchOrCreateBrand": "Search or create brand…",
+        "noCategories": "No categories",
+        "noBrands": "No brands",
+        "createNamed": "Create \"{{name}}\"",
+        "createBrandNamed": "Create \"{{name}}\""
+      }
+    },
     "toolbar": {
       "sort": "Sort",
       "sortBy": "Sort by",
@@ -123,11 +360,6 @@
       "stockHigh": "Stock high to low",
       "stockLow": "Stock low to high",
       "recentlySynced": "Recently synced"
-    },
-    "columnGroups": {
-      "product": "Product",
-      "pricingInventory": "Pricing & Inventory",
-      "contentDates": "Content & Dates"
     },
     "columns": {
       "image": "Image",
@@ -168,24 +400,34 @@
       "syncProgress": "{{percent}}% complete — new products will appear automatically"
     },
     "bulk": {
+      "selectAll": "Select all",
+      "selectAllHint": "Select / clear all loaded products",
       "selected": "selected",
       "maxLimit": "(max {{max}} per job)",
       "lockedDuringSync": "Bulk actions disabled during initial sync",
-      "price": "Price",
-      "stock": "Stock",
       "status": "Status",
       "categories": "Categories",
+      "tags": "Tags",
+      "brands": "Brands",
       "delete": "Delete",
       "clear": "Clear",
       "skipped": "{{count}} product(s) skipped",
       "skippedDesc": "Already queued in another bulk job.",
       "noEligible": "No eligible products",
       "noEligibleDesc": "All selected products are already queued in another bulk job.",
+      "jobQueued": "Bulk job queued",
+      "jobQueuedDesc": "{{count}} product(s) — changes apply in the background.",
+      "jobFailed": "Bulk action failed",
+      "selectCategories": "Select at least one category.",
+      "selectTags": "Select at least one tag.",
+      "selectBrands": "Select at least one brand.",
       "dialog": {
         "updatePrice": "Update price",
         "updateStock": "Update stock",
         "updateStatus": "Update status",
         "updateCategories": "Update categories",
+        "updateTags": "Update tags",
+        "updateBrands": "Update brands",
         "deleteProducts": "Delete products",
         "deleteConfirm": "Permanently delete {{count}} product(s)? This cannot be undone.",
         "applyTo": "Apply this change to {{count}} selected product(s).",
@@ -197,6 +439,10 @@
         "mode": "Mode",
         "categoriesField": "Categories",
         "noCategoriesAvailable": "No categories available",
+        "tagsField": "Tags",
+        "brandsField": "Brands",
+        "noTagsAvailable": "No tags available",
+        "noBrandsAvailable": "No brands available",
         "categoryNote": "Note: category lookup uses names. For ID-precise targeting, use the bulk-jobs page.",
         "removeExistingCategories": "既存のカテゴリを先に外してから適用",
         "ops": {
@@ -211,7 +457,13 @@
           "setStockStatus": "Set stock status",
           "addCats": "Add categories",
           "removeCats": "Remove categories",
-          "replaceCats": "Replace with"
+          "replaceCats": "Replace with",
+          "addTags": "Add tags",
+          "removeTags": "Remove tags",
+          "replaceTags": "Replace tags with",
+          "addBrands": "Add brands",
+          "removeBrands": "Remove brands",
+          "replaceBrands": "Replace brands with"
         }
       }
     },
@@ -237,6 +489,8 @@
       "priceUpdate": "Scheduled for price update",
       "stockUpdate": "Scheduled for stock update",
       "categoryUpdate": "Scheduled for category update",
+      "tagUpdate": "Scheduled for tag update",
+      "brandUpdate": "Scheduled for brand update",
       "scheduledGeneric": "Scheduled: {{action}}"
     }
   },
@@ -304,6 +558,7 @@
     "search": "Search orders by #, customer, or email...",
     "filters": {
       "all": "All",
+      "date": "Date",
       "payment": "Payment",
       "allPaymentMethods": "All payment methods",
       "filterByPayment": "Filter by payment",
@@ -314,6 +569,59 @@
       "clear": "Clear",
       "clearAll": "Clear"
     },
+    "dateRange": {
+      "trigger": "Date",
+      "custom": "Custom",
+      "fromPrefix": "From {{date}}",
+      "rangeSeparator": "–",
+      "pickEndDate": "{{start}} – pick end date",
+      "pickStartEnd": "Pick start and end dates",
+      "cancel": "Cancel",
+      "apply": "Apply",
+      "presets": {
+        "all": "All time",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "90d": "Last 90 days",
+        "custom": "Custom range…"
+      }
+    },
+    "columnGroups": {
+      "order": "Order",
+      "customer": "Customer",
+      "paymentAmounts": "Payment & amounts",
+      "actions": "Actions"
+    },
+    "columns": {
+      "internalId": "Internal ID",
+      "wooId": "Woo ID",
+      "orderNumber": "Order #",
+      "status": "Status",
+      "dateCreated": "Date created",
+      "dateModified": "Date modified",
+      "syncedAt": "Last synced",
+      "sourceUtm": "Source (UTM)",
+      "createdVia": "Created via",
+      "customerId": "Customer ID",
+      "customerName": "Name",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "itemCount": "Item",
+      "lineItemsSummary": "Items (name × qty)",
+      "currency": "Currency",
+      "total": "Total",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "shipping": "Shipping",
+      "discount": "Discount",
+      "paymentTitle": "Payment title",
+      "paymentMethod": "Payment method",
+      "actions": "Actions"
+    },
     "statuses": {
       "processing": "Processing",
       "onHold": "On hold",
@@ -321,7 +629,10 @@
       "cancelled": "Cancelled",
       "refunded": "Refunded",
       "failed": "Failed",
-      "pending": "Pending"
+      "pending": "Pending",
+      "draft": "Draft",
+      "trash": "Trash",
+      "unknown": "Unknown"
     },
     "toolbar": {
       "sort": "Sort",
@@ -330,7 +641,11 @@
       "customizeColumns": "Customize columns",
       "export": "Export",
       "reset": "Reset",
-      "lockedHint": "Available after initial sync completes"
+      "lockedHint": "Available after initial sync completes",
+      "batch": "Batch:",
+      "rowsPerScroll": "Rows fetched per scroll",
+      "statusSortDisabledLive": "Sort by status is available after orders are synced to the database.",
+      "statusSortOptionDisabledLive": "Available after initial sync completes"
     },
     "sortOptions": {
       "newestFirst": "Newest first",
@@ -339,7 +654,13 @@
       "totalLow": "Total low to high",
       "orderNumAsc": "Order # ascending",
       "orderNumDesc": "Order # descending",
-      "recentlySynced": "Recently synced"
+      "recentlySynced": "Recently synced",
+      "statusAsc": "Status A → Z",
+      "statusDesc": "Status Z → A"
+    },
+    "exportCsv": {
+      "ready": "Export ready",
+      "description": "Exported {{count}} orders to CSV"
     },
     "empty": {
       "title": "No orders yet",
@@ -535,6 +856,22 @@
       "actions": "Actions",
       "viewDetails": "View details",
       "editCustomer": "Edit customer"
+    },
+    "newPage": {
+      "title": "New Customer",
+      "breadcrumb": "Customers / New",
+      "storeNotFound": "Store not found",
+      "account": "Account",
+      "passwordOptional": "Password (optional)",
+      "passwordPlaceholder": "Leave empty to auto-generate",
+      "create": "Create customer",
+      "creating": "Creating…",
+      "emailRequired": "Email required",
+      "toastCreated": "Customer created",
+      "saved": "Saved",
+      "savedToStore": "Saved to {{siteName}}",
+      "copyFromBilling": "Copy from billing",
+      "countryIso": "Country (ISO)"
     }
   },
   "customerDetail": {
@@ -649,10 +986,137 @@
       "storeNotFound": "Store not found"
     }
   },
+  "attributes": {
+    "title": "Product attributes",
+    "subtitle": "Define extra product data (size, color, etc.). Values are managed per attribute as terms.",
+    "loading": "Loading attributes…",
+    "searchPlaceholder": "Search attributes…",
+    "empty": "No attributes match your search.",
+    "emptyNone": "No attributes yet. Add one below or sync from WooCommerce.",
+    "addCard": {
+      "title": "Add attribute",
+      "hint": "Visible name on the storefront; slug is the internal reference (max 28 characters).",
+      "submit": "Add attribute"
+    },
+    "fields": {
+      "name": "Name",
+      "nameHint": "Shown on the product page.",
+      "slug": "Slug",
+      "slugHint": "Unique reference for the attribute (max 28 characters).",
+      "type": "Type",
+      "slugPlaceholder": "Auto from name — unlock to edit",
+      "typeSelect": "Select",
+      "typeText": "Text",
+      "orderBy": "Default sort order",
+      "hasArchives": "Enable archives"
+    },
+    "orderBy": {
+      "orderMenu": "Custom ordering",
+      "orderName": "Name",
+      "orderNameNum": "Name (numeric)",
+      "orderId": "Term ID"
+    },
+    "table": {
+      "title": "Attributes",
+      "name": "Name",
+      "slug": "Slug",
+      "type": "Type",
+      "orderBy": "Order by",
+      "actions": "Actions",
+      "configureTerms": "Terms",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "edit": {
+      "title": "Edit attribute",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "delete": {
+      "title": "Delete attribute?",
+      "description": "Remove “{{name}}” from WooCommerce? Products using this attribute may be affected.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "errors": {
+      "nameRequired": "Name is required",
+      "createFailed": "Could not create attribute",
+      "updateFailed": "Could not update attribute",
+      "deleteFailed": "Could not delete attribute"
+    },
+    "toast": {
+      "created": "Attribute created",
+      "updated": "Attribute updated",
+      "deleted": "Attribute deleted"
+    },
+    "terms": {
+      "back": "Back to attributes",
+      "title": "{{name}} — terms",
+      "inlineHint": "Click a row or the edit icon to change values. Press Esc to cancel.",
+      "subtitle": "Add, edit, or remove values for this attribute.",
+      "addTitle": "Add term",
+      "addSubmit": "Add term",
+      "tableTitle": "Terms",
+      "editTitle": "Edit term",
+      "deleteTitle": "Delete term?",
+      "deleteDescription": "Remove “{{name}}”? Products using this value may need updating.",
+      "empty": "No terms yet.",
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "menuOrder": "Order",
+        "slugPlaceholder": "Auto from name — unlock to edit"
+      },
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "products": "Products",
+        "order": "Order",
+        "actions": "Actions"
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "invalidAttribute": "Invalid or missing attribute.",
+        "createFailed": "Could not create term",
+        "updateFailed": "Could not update term",
+        "deleteFailed": "Could not delete term"
+      },
+      "toast": {
+        "created": "Term created",
+        "updated": "Term updated",
+        "deleted": "Term deleted"
+      }
+    }
+  },
+  "slugField": {
+    "unlock": "Unlock to edit slug",
+    "lock": "Lock slug",
+    "hint": "Slugs affect storefront URLs and integrations. Unlock only when you intend to change them.",
+    "inputAria": "Product slug",
+    "relockTitle": "Discard slug edits?",
+    "relockDescription": "Locking discards your unsaved slug changes and restores the previous value.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes"
+  },
   "taxonomy": {
     "search": "Search {{mode}}…",
     "sort": "Sort",
     "sortBy": "Sort by",
+    "pageTitle": {
+      "categories": "Categories",
+      "tags": "Tags",
+      "brands": "Brands"
+    },
+    "pageSubtitle": {
+      "categories": "Browse and manage WooCommerce product categories (including parents).",
+      "tags": "Browse and manage product tags synced from WooCommerce.",
+      "brands": "Browse and manage product brands synced from WooCommerce."
+    },
+    "tableSectionTitle": "Browse",
+    "batchLabel": "Batch:",
+    "batchRowsTitle": "Rows fetched per scroll",
     "export": "Export",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
@@ -662,6 +1126,69 @@
     "newBrand": "New brand",
     "rows": "Rows:",
     "sortOptions": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "countDesc": "Most products",
+      "countAsc": "Fewest products",
+      "recent": "Recently added"
+    },
+    "addCard": {
+      "titleCategories": "New category",
+      "titleTags": "New tag",
+      "titleBrands": "New brand",
+      "hintCategories": "Creates the category in WooCommerce and syncs it here. Unlock the slug only if you need a custom URL segment.",
+      "hintTags": "Creates the tag in WooCommerce and syncs it here. Unlock the slug only if you need a custom URL segment.",
+      "hintBrands": "Creates the brand in WooCommerce and syncs it here. Unlock the slug only if you need a custom URL segment."
+    },
+    "create": {
+      "successCategory": "Category created",
+      "successTag": "Tag created",
+      "successBrand": "Brand created",
+      "nameLabel": "Name",
+      "slugLabel": "Slug",
+      "descriptionLabel": "Description",
+      "parentLabel": "Parent category",
+      "parentNone": "None (root)",
+      "namePlaceholder": "Enter {{singular}} name",
+      "slugPlaceholder": "Auto-filled from name — unlock to customize",
+      "descriptionPlaceholder": "Optional description",
+      "submit": "Create {{singular}}",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "nameLength": "Name must be 120 characters or fewer.",
+        "slugMissing": "Slug could not be generated — unlock Slug and set it manually."
+      }
+    },
+    "expanded": {
+      "singularCategory": "category",
+      "singularTag": "tag",
+      "singularBrand": "brand",
+      "titleCategory": "Category details",
+      "titleTag": "Tag details",
+      "titleBrand": "Brand details",
+      "description": "Changes sync to WooCommerce when you save. Unlock the slug to edit it; it follows the name until you change it.",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "savedToast": "Synced to WooCommerce",
+      "deletedToast": "Deleted from WooCommerce",
+      "deleteConfirm": "Delete this {{singular}}? This will remove it from WooCommerce.",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "slugRequired": "Slug is required."
+      }
+    },
+    "categoryTree": {
+      "dragHint": "Drag and drop to re-order categories. Drop on the lower half of a row to nest under it, or hold Alt while dropping.",
+      "dragDisabledSearch": "Clear search to drag and reorder categories.",
+      "dragDisabledLocked": "Finish catalog sync before reordering categories.",
+      "dragHandleAria": "Drag to reorder",
+      "productCountShort": "{{count}} products",
+      "edit": "Edit",
+      "invalidMoveTitle": "Cannot move there",
+      "invalidMoveDesc": "That would place a category inside itself or an invalid position.",
+      "reorderSaved": "Category order updated",
+      "reorderFailedTitle": "Could not save order",
       "nameAsc": "Name A→Z",
       "nameDesc": "Name Z→A",
       "countDesc": "Most products",
@@ -709,6 +1236,12 @@
       "clear": "Clear"
     },
     "selected": "{{count}} selected",
+    "gridHint": "Use checkboxes to select · Up to 7 cards per row on wide screens · Scroll to load more · Click a PDF card or Preview to open · Bulk exports appear here when the job finishes",
+    "preview": "Preview",
+    "previewTitle": "{{name}}",
+    "previewLoading": "Loading preview…",
+    "previewUnavailable": "Preview not available",
+    "previewUnavailableDesc": "Only PDF files can be previewed in the browser.",
     "downloadSelected": "Download selected",
     "expired": "Expired",
     "daysLeft": "{{days}}d left",
@@ -734,6 +1267,7 @@
     },
     "actions": {
       "download": "Download",
+      "preview": "Preview",
       "remove": "Remove from downloads"
     },
     "toasts": {
@@ -773,7 +1307,8 @@
       "completed": "completed",
       "partial": "partial",
       "failed": "failed",
-      "cancelled": "cancelled"
+      "cancelled": "cancelled",
+      "cancelledByUser": "Cancelled by you"
     },
     "history": "Job History",
     "columns": {
@@ -823,6 +1358,94 @@
       "retryFailed": "Retry failed"
     }
   },
+  "settingsAi": {
+    "title": "AI credits",
+    "subtitle": "Usage from your plan and purchased top-ups.",
+    "noSub": "No active subscription — credits are unavailable.",
+    "plan": "Plan",
+    "monthlyUsed": "{{used}} / {{allowance}} monthly credits used",
+    "topupBalance": "Top-up balance",
+    "totalAvailable": "Total available now",
+    "featureCosts": "Credit cost per generation",
+    "topupSoon": "Purchase credits (coming soon)",
+    "buyCredits": "Buy credits",
+    "creditsPack": "Credits",
+    "priceEstimate": "Estimated charge",
+    "checkoutError": "Could not start checkout",
+    "recentPurchases": "Recent purchases",
+    "purchasePending": "Pending",
+    "purchasePaid": "Paid",
+    "purchaseFailed": "Failed",
+    "topupProcessing": "Payment received — credits update shortly."
+  },
+  "storePreferences": {
+    "wizardTitle": "Finish setting up this site",
+    "wizardDescription": "These defaults keep dates, dashboards, and currency aligned with this WooCommerce store.",
+    "language": "Interface language",
+    "languageHint": "Applies to your whole account, not only this site.",
+    "timezone": "Timezone",
+    "selectTimezone": "Select timezone",
+    "searchTimezone": "Search time zones…",
+    "noTzMatches": "No matching time zones.",
+    "selectCurrency": "Select currency",
+    "searchCurrency": "Search currencies…",
+    "currency": "Currency",
+    "country": "Country / region",
+    "selectCountry": "Select country",
+    "searchCountry": "Search countries…",
+    "storeType": "What type of store is this?",
+    "selectStoreType": "Select store type",
+    "searchStoreType": "Search store types…",
+    "storeTypes": {
+      "physical_products": "Physical products",
+      "digital_products": "Digital products / downloads",
+      "subscriptions_memberships": "Subscriptions & memberships",
+      "services_bookings": "Services & bookings",
+      "marketplace": "Marketplace / multi-vendor",
+      "wholesale_b2b": "Wholesale / B2B",
+      "food_beverage": "Food & beverage",
+      "fashion_apparel": "Fashion & apparel",
+      "electronics_tech": "Electronics & tech",
+      "health_beauty": "Health & beauty",
+      "home_garden": "Home & garden",
+      "other": "Other"
+    },
+    "acquisition": "How did you find us?",
+    "selectAcquisition": "Select one",
+    "searchAcquisition": "Search options…",
+    "acquisitionSources": {
+      "direct": "Direct / word of mouth",
+      "referral": "Referral",
+      "instagram": "Instagram",
+      "search_engine": "Search engine",
+      "facebook": "Facebook",
+      "linkedin": "LinkedIn",
+      "youtube": "YouTube",
+      "tiktok": "TikTok",
+      "podcast": "Podcast",
+      "event": "Event / conference",
+      "other": "Other"
+    },
+    "acquisitionOtherDetail": "Tell us more",
+    "acquisitionOtherPlaceholder": "e.g. podcast name, community, partner…",
+    "saveContinue": "Save & continue",
+    "saving": "Saving…",
+    "saveFailed": "Could not save. Try again.",
+    "saveSettings": "Save preferences",
+    "settingsSaved": "Store preferences saved",
+    "cardTitle": "Store preferences",
+    "cardDescription": "Regional settings for this site (timezone, currency, country). You can change these anytime.",
+    "languageNote": "Interface language applies to your entire account.",
+    "languageLink": "Change language in profile",
+    "validation": {
+      "timezone": "Choose a time zone.",
+      "currency": "Choose a currency.",
+      "country": "Choose a country.",
+      "storeType": "Choose a store type.",
+      "acquisition": "Tell us how you found us.",
+      "acquisitionOther": "Please add a short description when you choose Other."
+    }
+  },
   "settings": {
     "title": "Configuration",
     "backToSites": "Back to Sites",
@@ -839,6 +1462,21 @@
       "unsupportedDesc": "Use PNG, JPG, or WebP",
       "updated": "Logo updated",
       "removed": "Logo removed",
+      "uploadFailed": "Upload failed",
+      "removeFailed": "Remove failed"
+    },
+    "invoiceLogo": {
+      "title": "Invoice logo",
+      "upload": "Upload",
+      "replace": "Replace",
+      "remove": "Remove",
+      "hint": "Shown on printed invoices and PDFs. If unset, the site logo is used. 250×250 · PNG/JPG/WebP/SVG · ≤ 2MB",
+      "tooLarge": "File too large",
+      "tooLargeDesc": "Image must be ≤ 2MB",
+      "unsupported": "Unsupported format",
+      "unsupportedDesc": "Use PNG, JPG, WebP, or SVG",
+      "updated": "Invoice logo updated",
+      "removed": "Invoice logo removed — site logo will be used on invoices",
       "uploadFailed": "Upload failed",
       "removeFailed": "Remove failed"
     },
@@ -1119,5 +1757,28 @@
     "noTokens": "No tokens yet.",
     "tokenSavedOnce": "Save this token now — it will not be shown again.",
     "cancel": "Cancel"
+  },
+  "assistant": {
+    "title": "Proxima assistant",
+    "descriptionWithStore": "Ask about navigation, your store metrics, or search products. Answers use your permissions and this store only.",
+    "descriptionNoStore": "Ask how to use Proxima. Open a store from Projects to ask about catalog or sales for that store.",
+    "emptyHint": "Try one of the prompts below, or type your own question.",
+    "placeholder": "Message…",
+    "send": "Send",
+    "stop": "Stop",
+    "open": "Open assistant",
+    "avatarHelp": "Proxima help — navigation and how-to",
+    "avatarOpenAI": "Answer from your configured OpenAI model (e.g. GPT)",
+    "avatarOtherModel": "Answer from your configured AI model",
+    "scrollToBottom": "Scroll to latest message",
+    "quickPrompts": "Suggested prompts",
+    "clear": "Clear chat",
+    "thinking": "Thinking…",
+    "notSignedIn": "Sign in to use the assistant.",
+    "genericError": "Something went wrong. Try again.",
+    "rateLimited": "Too many requests. Wait a moment and try again.",
+    "suggestedReportSales": "Summarize sales for this month",
+    "suggestedProductTop": "What are my top-selling products?",
+    "suggestedProductCatalog": "Help me find a product in my catalog"
   }
 }

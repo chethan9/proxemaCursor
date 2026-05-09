@@ -197,6 +197,46 @@
       "truncatedDesc": "أول {{count}} صفوف فقط (الحد {{max}}). ضيّق المرشحات.",
       "pdfTooManyRows": "PDF محدود بـ {{max}} صف. استخدم Excel أو CSV أو ضيّق المرشحات."
     },
+    "quickEdit": {
+      "title": "Quick edit",
+      "description": "Syncs to WooCommerce immediately.",
+      "name": "Name",
+      "sku": "SKU",
+      "status": "Status",
+      "regularPrice": "Regular price",
+      "salePrice": "Sale price",
+      "manageStock": "Manage stock",
+      "stockStatus": "Stock status",
+      "qty": "Qty",
+      "lastSync": "Last sync",
+      "editFull": "Edit full product",
+      "cancel": "Cancel",
+      "save": "Save",
+      "syncedToast": "Synced to WooCommerce",
+      "notReadyTitle": "Not ready",
+      "notReadyDesc": "Wait for the product to finish loading, then try again.",
+      "invalidPriceTitle": "Invalid price",
+      "invalidRegularDesc": "Regular price must be greater than 0.",
+      "invalidSaleTitle": "Invalid sale price",
+      "invalidSalePositiveDesc": "Sale price must be greater than 0.",
+      "invalidSaleLessDesc": "Sale price must be less than regular price.",
+      "invalidQtyTitle": "Invalid quantity",
+      "invalidQtyDesc": "Stock quantity cannot be negative.",
+      "variationsHeading": "Variations",
+      "loadingVariations": "Loading variations…",
+      "variationsError": "Could not load variations.",
+      "noVariations": "No variations found for this product.",
+      "variationFallback": "Variation #{{id}}",
+      "stockTracked": "Stock tracked",
+      "stockNotTracked": "Stock not tracked",
+      "qtyDisabledHint": "Turn on stock management for this variation in the full editor to edit quantity here.",
+      "resolveMissingWoo": "This product is still syncing — open again after sync, or use Edit full product.",
+      "resolveFailed": "Could not resolve product id.",
+      "variationInvalidRegular": "Variation \"{{label}}\": regular price must be greater than 0 when published.",
+      "variationInvalidSalePositive": "Variation \"{{label}}\": sale price must be greater than 0.",
+      "variationInvalidSaleLess": "Variation \"{{label}}\": sale price must be less than regular price.",
+      "variationInvalidQty": "Variation \"{{label}}\": quantity cannot be negative."
+    },
     "ai": {
       "open": "صور بالذكاء الاصطناعي",
       "title": "توليد صور بالذكاء الاصطناعي",
@@ -287,9 +327,17 @@
         "close": "إغلاق"
       },
       "removeMainImage": "إزالة صورة المنتج",
-      "slug": "المسار (slug)",
-      "slugPlaceholder": "مسار-url-للمنتج",
-      "slugHint": "افتح القفل للتعديل. تغيير المسار يغيّر رابط المنتج العلني."
+      "taxonomy": {
+        "slugPlaceholder": "product-url-slug",
+        "addCategory": "Add category",
+        "addBrand": "Add brand",
+        "searchOrCreate": "Search or create…",
+        "searchOrCreateBrand": "Search or create brand…",
+        "noCategories": "No categories",
+        "noBrands": "No brands",
+        "createNamed": "Create \"{{name}}\"",
+        "createBrandNamed": "Create \"{{name}}\""
+      }
     },
     "toolbar": {
       "sort": "ترتيب",
@@ -352,6 +400,8 @@
       "syncProgress": "{{percent}}% مكتمل — ستظهر المنتجات الجديدة تلقائياً"
     },
     "bulk": {
+      "selectAll": "Select all",
+      "selectAllHint": "Select / clear all loaded products",
       "selected": "محدد",
       "maxLimit": "(الحد الأقصى {{max}} لكل مهمة)",
       "lockedDuringSync": "الإجراءات المجمعة معطلة خلال المزامنة الأولية",
@@ -952,9 +1002,9 @@
       "name": "الاسم",
       "nameHint": "يُعرض في صفحة المنتج.",
       "slug": "المعرف",
-      "slugPlaceholder": "تلقائياً من الاسم — افتح القفل للتعديل",
       "slugHint": "مرجع فريد للسمة (بحد أقصى 28 حرفاً).",
       "type": "النوع",
+      "slugPlaceholder": "تلقائياً من الاسم — افتح القفل للتعديل",
       "typeSelect": "قائمة",
       "typeText": "نص",
       "orderBy": "ترتيب افتراضي",
@@ -1000,9 +1050,9 @@
       "deleted": "تم حذف السمة"
     },
     "terms": {
-      "inlineHint": "انقر على صف أو أيقونة التعديل لتغيير القيم. اضغط Esc للإلغاء.",
       "back": "العودة إلى السمات",
       "title": "{{name}} — المصطلحات",
+      "inlineHint": "انقر على صف أو أيقونة التعديل لتغيير القيم. اضغط Esc للإلغاء.",
       "subtitle": "إضافة أو تعديل أو حذف قيم هذه السمة.",
       "addTitle": "إضافة مصطلح",
       "addSubmit": "إضافة مصطلح",
@@ -1014,9 +1064,9 @@
       "fields": {
         "name": "الاسم",
         "slug": "المعرف",
-        "slugPlaceholder": "تلقائياً من الاسم — افتح القفل للتعديل",
         "description": "الوصف",
-        "menuOrder": "الترتيب"
+        "menuOrder": "الترتيب",
+        "slugPlaceholder": "تلقائياً من الاسم — افتح القفل للتعديل"
       },
       "columns": {
         "name": "الاسم",
@@ -1044,16 +1094,29 @@
     "unlock": "فتح لتحرير المعرّف",
     "lock": "قفل المعرّف",
     "hint": "قد تؤثر تغييرات المسار على الروابط والتكاملات.",
+    "inputAria": "المعرّف النصي",
     "relockTitle": "تجاهل تعديلات المسار؟",
     "relockDescription": "ستُفقَد تغييرات المسار الحالية عند قفل الحقل من جديد.",
     "keepEditing": "متابعة التحرير",
-    "discard": "تجاهل التغييرات",
-    "inputAria": "المعرّف النصي"
+    "discard": "تجاهل التغييرات"
   },
   "taxonomy": {
     "search": "ابحث في {{mode}}…",
     "sort": "ترتيب",
     "sortBy": "ترتيب حسب",
+    "pageTitle": {
+      "categories": "الفئات",
+      "tags": "الوسوم",
+      "brands": "العلامات التجارية"
+    },
+    "pageSubtitle": {
+      "categories": "تنظيم المنتجات بفئات هرمية من WooCommerce.",
+      "tags": "وسوم للتصفية والحملات — من WooCommerce.",
+      "brands": "علامات تجارية أو مصنّع — من WooCommerce."
+    },
+    "tableSectionTitle": "تصفح",
+    "batchLabel": "دفعة:",
+    "batchRowsTitle": "صفوف لكل تحميل",
     "export": "تصدير",
     "refresh": "تحديث",
     "refreshing": "جاري التحديث…",
@@ -1069,35 +1132,6 @@
       "countAsc": "الأقل منتجات",
       "recent": "أُضيف مؤخراً"
     },
-    "columns": {
-      "name": "الاسم",
-      "slug": "المعرّف النصي",
-      "products": "المنتجات",
-      "description": "الوصف",
-      "wooId": "معرّف Woo"
-    },
-    "empty": {
-      "noMatch": "لا توجد {{mode}} تطابق \"{{search}}\"",
-      "noItems": "لا توجد {{mode}} بعد",
-      "noItemsHint": "أنشئ واحدة أو شغّل المزامنة لجلبها."
-    },
-    "toasts": {
-      "synced": "تمت مزامنة {{count}} {{mode}}",
-      "refreshFailed": "فشل التحديث"
-    },
-    "pageTitle": {
-      "categories": "الفئات",
-      "tags": "الوسوم",
-      "brands": "العلامات التجارية"
-    },
-    "pageSubtitle": {
-      "categories": "تنظيم المنتجات بفئات هرمية من WooCommerce.",
-      "tags": "وسوم للتصفية والحملات — من WooCommerce.",
-      "brands": "علامات تجارية أو مصنّع — من WooCommerce."
-    },
-    "tableSectionTitle": "تصفح",
-    "batchLabel": "دفعة:",
-    "batchRowsTitle": "صفوف لكل تحميل",
     "addCard": {
       "titleCategories": "فئة جديدة",
       "titleTags": "وسم جديد",
@@ -1112,11 +1146,11 @@
       "successBrand": "تم إنشاء العلامة",
       "nameLabel": "الاسم",
       "slugLabel": "المعرّف",
-      "namePlaceholder": "أدخل اسم {{singular}}",
-      "slugPlaceholder": "يُملأ تلقائياً من الاسم — افتح القفل للتعديل",
+      "descriptionLabel": "الوصف",
       "parentLabel": "الفئة الأب",
       "parentNone": "لا شيء (جذر)",
-      "descriptionLabel": "الوصف",
+      "namePlaceholder": "أدخل اسم {{singular}}",
+      "slugPlaceholder": "يُملأ تلقائياً من الاسم — افتح القفل للتعديل",
       "descriptionPlaceholder": "وصف اختياري",
       "submit": "إنشاء {{singular}}",
       "errors": {
@@ -1154,7 +1188,28 @@
       "invalidMoveTitle": "لا يمكن النقل هنا",
       "invalidMoveDesc": "سيؤدي ذلك إلى وضع فئة داخل نفسها أو موضع غير صالح.",
       "reorderSaved": "تم تحديث ترتيب الفئات",
-      "reorderFailedTitle": "تعذّر حفظ الترتيب"
+      "reorderFailedTitle": "تعذّر حفظ الترتيب",
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "countDesc": "Most products",
+      "countAsc": "Fewest products",
+      "recent": "Recently added"
+    },
+    "columns": {
+      "name": "الاسم",
+      "slug": "المعرّف النصي",
+      "products": "المنتجات",
+      "description": "الوصف",
+      "wooId": "معرّف Woo"
+    },
+    "empty": {
+      "noMatch": "لا توجد {{mode}} تطابق \"{{search}}\"",
+      "noItems": "لا توجد {{mode}} بعد",
+      "noItemsHint": "أنشئ واحدة أو شغّل المزامنة لجلبها."
+    },
+    "toasts": {
+      "synced": "تمت مزامنة {{count}} {{mode}}",
+      "refreshFailed": "فشل التحديث"
     }
   },
   "downloads": {
@@ -1332,11 +1387,15 @@
     "selectTimezone": "اختر المنطقة الزمنية",
     "searchTimezone": "البحث في المناطق الزمنية…",
     "noTzMatches": "لا مناطق زمنية مطابقة.",
+    "selectCurrency": "Select currency",
+    "searchCurrency": "Search currencies…",
     "currency": "العملة",
     "country": "البلد / المنطقة",
     "selectCountry": "اختر البلد",
+    "searchCountry": "Search countries…",
     "storeType": "ما نوع هذا المتجر؟",
     "selectStoreType": "اختر نوع المتجر",
+    "searchStoreType": "Search store types…",
     "storeTypes": {
       "physical_products": "منتجات مادية",
       "digital_products": "منتجات رقمية / تنزيلات",
@@ -1353,6 +1412,7 @@
     },
     "acquisition": "كيف عرفتنا؟",
     "selectAcquisition": "اختر واحداً",
+    "searchAcquisition": "Search options…",
     "acquisitionSources": {
       "direct": "مباشرة / إشارة شفهية",
       "referral": "إحالة",

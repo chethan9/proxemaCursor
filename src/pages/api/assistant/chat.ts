@@ -19,6 +19,7 @@ import {
   fetchAssistantPeriodKpis,
   fetchAssistantProductRankings,
   fetchStoreSummaryForAssistant,
+  getAssistantStorePrefsForPrompt,
   searchProductsForAssistant,
 } from "@/lib/assistant/tools.server";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
@@ -135,7 +136,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const openai = createOpenAI({ apiKey });
   const model = openai(modelId);
 
-  const system = buildAssistantSystemPrompt({ storeId: validatedStoreId });
+  const storePrefs =
+    validatedStoreId != null ? await getAssistantStorePrefsForPrompt(validatedStoreId) : null;
+  const system = buildAssistantSystemPrompt({
+    storeId: validatedStoreId,
+    storeCurrency: storePrefs?.currency ?? null,
+    storeTimezone: storePrefs?.timezone ?? null,
+  });
 
   const assistantWindowSchema = z.object({
     range: z

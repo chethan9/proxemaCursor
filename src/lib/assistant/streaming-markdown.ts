@@ -34,5 +34,19 @@ export function stripTrailingIncompleteMarkdown(raw: string): string {
     }
     if (s.length === len) break;
   }
-  return stripTrailingIncompleteProximaWidget(s);
+  s = stripTrailingIncompleteProximaWidget(s);
+  return stripTrailingUnclosedOddDoubleAsterisks(s);
+}
+
+/** If `**` count is odd, the last segment is an unclosed bold — drop from the orphan opener */
+function stripTrailingUnclosedOddDoubleAsterisks(s: string): string {
+  let t = s;
+  while (true) {
+    const count = (t.match(/\*\*/g) ?? []).length;
+    if (count % 2 === 0) break;
+    const last = t.lastIndexOf("**");
+    if (last === -1) break;
+    t = t.slice(0, last).replace(/\s+$/, "");
+  }
+  return t;
 }

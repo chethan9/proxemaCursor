@@ -9,4 +9,10 @@ module.exports = {
   reloadOnPrerender: process.env.NODE_ENV === "development",
   defaultNS: "common",
   fallbackLng: "en",
+  /** Surface missing keys during local dev (does not block builds). */
+  ...(process.env.NODE_ENV === "development" && {
+    missingKeyHandler(lng, ns, key) {
+      console.warn(`[i18n missing] ${lng}/${ns}: ${key}`);
+    },
+  }),
 };

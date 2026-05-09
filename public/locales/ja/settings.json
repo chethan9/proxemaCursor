@@ -56,7 +56,17 @@
     "loading": "読み込み中…",
     "empty": "アクティビティはまだありません。",
     "loadMore": "さらに読み込む",
-    "viewAll": "完全な監査ログを表示"
+    "viewAll": "完全な監査ログを表示",
+    "exportCsv": "Export CSV",
+    "exportReady": "Download started",
+    "exportFailed": "Export failed",
+    "moduleLabel": "Module",
+    "moduleAll": "All modules",
+    "actionPlaceholder": "Filter by action…",
+    "searchPlaceholder": "Search action, entity…",
+    "fromDate": "From",
+    "toDate": "To",
+    "immutableNotice": "Audit history cannot be deleted from the app; entries older than 90 days may be purged per retention policy."
   },
   "branding": {
     "title": "ブランディング",
@@ -230,6 +240,7 @@
     "productsPerSite": "Products / site",
     "maxUsers": "Max users",
     "apiCallsPerMonth": "API calls / month",
+    "monthlyAiCredits": "AI credits / month",
     "maxInitialHistory": "Max initial history (days)",
     "unlimited": "Unlimited",
     "historyHelper": "Cap on how far back orders & customers are fetched on initial/full sync. Empty = unlimited. Suggested: Free 90, Pro 365.",

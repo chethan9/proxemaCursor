@@ -3789,6 +3789,10 @@ export type Database = {
         }
         Returns: Json
       }
+      assistant_resolve_mirror_entry: {
+        Args: { p_key: string; p_store_id: string }
+        Returns: Json
+      }
       assistant_inventory_snapshot: {
         Args: {
           p_limit?: number

@@ -11,6 +11,11 @@
     "actionPlaceholder": "操作",
     "entityPlaceholder": "实体类型",
     "entityIdPlaceholder": "实体 ID…",
+    "modulePlaceholder": "Module",
+    "moduleAll": "All modules",
+    "clientIdPlaceholder": "Client ID (tenant)…",
+    "searchPlaceholder": "Search…",
+    "toDate": "To date",
     "allActions": "全部操作",
     "allEntities": "全部实体",
     "filterActive_one": "{{count}} 个筛选生效",
@@ -19,5 +24,23 @@
     "empty": "没有匹配筛选的活动。",
     "loadMore": "加载更多",
     "unknownError": "未知错误"
+  },
+  "ai": {
+    "settingsTitle": "AI providers",
+    "settingsSubtitle": "Store API keys for image generation (encrypted at rest).",
+    "geminiKey": "Google Gemini API key",
+    "openaiKey": "OpenAI API key",
+    "save": "Save keys",
+    "saved": "Provider keys updated",
+    "featuresTitle": "AI features",
+    "featuresSubtitle": "Prompts, models, and credit cost per output.",
+    "addFeature": "Add feature",
+    "test": "Test",
+    "slug": "Slug",
+    "name": "Name",
+    "provider": "Provider",
+    "model": "Model",
+    "credits": "Credits / output",
+    "active": "Active"
   }
 }

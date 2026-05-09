@@ -11,6 +11,11 @@
     "actionPlaceholder": "Aktion",
     "entityPlaceholder": "Entitätstyp",
     "entityIdPlaceholder": "Entitäts-ID…",
+    "modulePlaceholder": "Module",
+    "moduleAll": "All modules",
+    "clientIdPlaceholder": "Client ID (tenant)…",
+    "searchPlaceholder": "Search…",
+    "toDate": "To date",
     "allActions": "Alle Aktionen",
     "allEntities": "Alle Entitäten",
     "filterActive_one": "{{count}} Filter aktiv",
@@ -19,5 +24,23 @@
     "empty": "Keine Aktivität entspricht den Filtern.",
     "loadMore": "Mehr laden",
     "unknownError": "Unbekannter Fehler"
+  },
+  "ai": {
+    "settingsTitle": "AI providers",
+    "settingsSubtitle": "Store API keys for image generation (encrypted at rest).",
+    "geminiKey": "Google Gemini API key",
+    "openaiKey": "OpenAI API key",
+    "save": "Save keys",
+    "saved": "Provider keys updated",
+    "featuresTitle": "AI features",
+    "featuresSubtitle": "Prompts, models, and credit cost per output.",
+    "addFeature": "Add feature",
+    "test": "Test",
+    "slug": "Slug",
+    "name": "Name",
+    "provider": "Provider",
+    "model": "Model",
+    "credits": "Credits / output",
+    "active": "Active"
   }
 }

@@ -1086,16 +1086,6 @@
   },
   "slugField": {
     "unlock": "Unlock to edit slug",
-  "slugField": {
-    "unlock": "Unlock to edit slug",
-    "lock": "Lock slug",
-    "hint": "Slug changes can affect URLs and integrations.",
-    "relockTitle": "Discard slug edits?",
-    "relockDescription": "Your draft slug changes will be lost when you lock this field again.",
-    "keepEditing": "Keep editing",
-    "discard": "Discard changes",
-    "inputAria": "Slug"
-  },
     "lock": "Lock slug",
     "hint": "Slugs affect storefront URLs and integrations. Unlock only when you intend to change them.",
     "inputAria": "Product slug",
@@ -1129,20 +1119,12 @@
     "newTag": "New tag",
     "newBrand": "New brand",
     "rows": "Rows:",
-    "pageTitle": {
-      "categories": "Categories",
-      "tags": "Tags",
-      "brands": "Brands"
-    },
-    "pageSubtitle": {
-      "categories": "Browse and manage WooCommerce product categories (including parents).",
-      "tags": "Browse and manage product tags synced from WooCommerce.",
-      "brands": "Browse and manage product brands synced from WooCommerce."
-    },
-    "tableSectionTitle": "Browse",
-    "batchLabel": "Batch:",
-    "batchRowsTitle": "Rows fetched per scroll",
     "sortOptions": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "countDesc": "Most products",
+      "countAsc": "Fewest products",
+      "recent": "Recently added"
     },
     "addCard": {
       "titleCategories": "New category",
@@ -1249,11 +1231,6 @@
         "nameLength": "Name must be 120 characters or fewer.",
         "slugMissing": "Slug could not be generated — unlock Slug and set it manually."
       }
-    },
-    "expanded": {
-      "deleteConfirm": "Delete this {{singular}}? This will remove it from WooCommerce.",
-      "savedToast": "Synced to WooCommerce",
-      "deletedToast": "Deleted from WooCommerce"
     }
   },
   "downloads": {

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { assertStoreAccess } from "@/lib/assert-store-access";
-import { getWooUserAgent } from "@/lib/brand-name-server";
+import { normalizeProductImageSrc, productImageStorageKey } from "@/lib/product-image-urls";
 import { hostAllowedForStore, resolveImageUrl } from "@/lib/store-image-url";
 
 function getBearer(req: NextApiRequest): string | null {
@@ -10,11 +10,17 @@ function getBearer(req: NextApiRequest): string | null {
   return bearer || (req.cookies?.["sb-access-token"] as string | undefined) || null;
 }
 
-const MAX_BYTES = 25 * 1024 * 1024;
+function pickMirrorUrl(entry: unknown, fallback: string): string {
+  if (!entry || typeof entry !== "object") return fallback;
+  const o = entry as Record<string, unknown>;
+  const thumb = typeof o.thumb === "string" ? o.thumb.trim() : "";
+  const card = typeof o.card === "string" ? o.card.trim() : "";
+  return thumb || card || fallback;
+}
 
 /**
- * Same-origin image fetch for the product image editor: avoids canvas taint from
- * cross-origin Woo/media URLs. Authenticated; URL host must match store or Cloudflare delivery.
+ * JSON: { url } — prefers Cloudflare Images `thumb`, then `card`, else the canonical source URL.
+ * Used by the assistant UI (fetch + Bearer); returned URLs are typically public CDNs.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -43,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const resolvedHref = resolveImageUrl(rawUrlParam, storeUrl);
   if (!resolvedHref) {
-    return res.status(400).json({ error: "Invalid or unresolved url (need absolute URL or store site URL for relative paths)" });
+    return res.status(400).json({ error: "Invalid or unresolved url" });
   }
 
   let target: URL;
@@ -60,50 +66,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: "URL host not allowed for this store" });
   }
 
-  const ua = await getWooUserAgent();
-  let upstream: Response;
-  try {
-    upstream = await fetch(target.href.split("#")[0], {
-      headers: { "User-Agent": ua, Accept: "image/*,*/*;q=0.8" },
-      redirect: "follow",
-    });
-  } catch {
-    return res.status(502).json({ error: "Failed to fetch image" });
+  const normalized = normalizeProductImageSrc(resolvedHref);
+  const key = productImageStorageKey(normalized);
+
+  const { data: entry, error: rpcErr } = await supabaseAdmin.rpc("assistant_resolve_mirror_entry", {
+    p_store_id: storeId,
+    p_key: key,
+  });
+
+  if (rpcErr) {
+    console.error("[resolved-product-thumb]", rpcErr);
+    return res.status(200).json({ url: resolvedHref });
   }
 
-  if (!upstream.ok) {
-    const status = upstream.status === 404 ? 404 : 502;
-    return res.status(status).json({
-      error: "Image fetch failed",
-      upstreamStatus: upstream.status,
-    });
-  }
-
-  const buf = Buffer.from(await upstream.arrayBuffer());
-  if (buf.length > MAX_BYTES) {
-    return res.status(413).json({ error: "Image too large" });
-  }
-
-  let ct =
-    upstream.headers.get("content-type")?.split(";")[0]?.trim() ||
-    "application/octet-stream";
-
-  const sniffImage = (): boolean => {
-    if (buf.length < 12) return false;
-    if (buf[0] === 0xff && buf[1] === 0xd8) return true;
-    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return true;
-    if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return true;
-    if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return true;
-    return false;
-  };
-
-  if (!/^image\//i.test(ct)) {
-    if (!sniffImage()) return res.status(415).json({ error: "Not an image" });
-    ct = "image/jpeg";
-  }
-
-  res.setHeader("Content-Type", ct);
-  res.setHeader("Cache-Control", "private, max-age=300");
-  res.setHeader("Content-Length", String(buf.length));
-  return res.status(200).send(buf);
+  const url = pickMirrorUrl(entry, resolvedHref);
+  return res.status(200).json({ url });
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, Info, Package, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProximaWidget } from "@/lib/assistant/widget-schema";
+import { ResolvedStoreImage } from "@/components/assistant/ResolvedStoreImage";
 
 type Props = {
   widget: ProximaWidget;
@@ -65,49 +66,49 @@ function ProductMiniGrid({
 }) {
   if (widget.kind !== "product_grid") return null;
   return (
-    <div className="not-prose space-y-2">
-      {widget.title ? <p className="text-xs font-medium text-muted-foreground">{widget.title}</p> : null}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="not-prose space-y-1.5">
+      {widget.title ? <p className="text-[10px] font-medium text-muted-foreground">{widget.title}</p> : null}
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {widget.items.map((p, i) => {
           const href =
             p.href ?? (storeId && p.id ? `/sites/${storeId}/products/edit/${p.id}` : undefined);
           const inner = (
-            <>
-              <div className="relative mb-1.5 aspect-square w-full overflow-hidden rounded-lg border border-border/70 bg-muted/50 ring-1 ring-black/[0.04] dark:ring-white/10">
+            <div className="flex gap-2">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted/50 ring-1 ring-black/[0.04] dark:ring-white/10">
                 {p.thumbnail_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- remote thumbs
-                  <img
+                  <ResolvedStoreImage
+                    storeId={storeId}
                     src={p.thumbnail_url}
                     alt=""
-                    className="h-full w-full object-contain p-1"
-                    loading="lazy"
+                    imgClassName="h-full w-full object-contain p-1"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
-                    <Package className="h-8 w-8 text-muted-foreground/50" aria-hidden />
+                    <Package className="h-7 w-7 text-muted-foreground/50" aria-hidden />
                   </div>
                 )}
               </div>
-              <p className="line-clamp-2 text-[11px] font-medium leading-snug text-foreground">{p.name}</p>
-              {(p.units != null || p.revenue != null) && (
-                <p className="text-[10px] text-muted-foreground">
-                  {p.units != null ? <span>{p.units} sold</span> : null}
-                  {p.units != null && p.revenue != null ? " · " : null}
-                  {p.revenue != null ? <span>{p.revenue}</span> : null}
-                </p>
-              )}
-            </>
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="line-clamp-3 text-[10px] font-medium leading-tight text-foreground">{p.name}</p>
+                {(p.units != null || p.revenue != null) && (
+                  <div className="space-y-0 text-[10px] leading-tight text-muted-foreground">
+                    {p.units != null ? <p className="tabular-nums">Units sold · {p.units}</p> : null}
+                    {p.revenue != null ? <p className="tabular-nums font-medium text-foreground/90">{p.revenue}</p> : null}
+                  </div>
+                )}
+              </div>
+            </div>
           );
           return href ? (
             <Link
               key={`${p.name}-${i}`}
               href={href}
-              className="block rounded-xl border border-transparent p-1.5 transition hover:border-primary/25 hover:bg-muted/60"
+              className="block rounded-lg border border-transparent p-1.5 transition hover:border-primary/25 hover:bg-muted/60"
             >
               {inner}
             </Link>
           ) : (
-            <div key={`${p.name}-${i}`} className="rounded-xl p-1.5">
+            <div key={`${p.name}-${i}`} className="rounded-lg p-1.5">
               {inner}
             </div>
           );

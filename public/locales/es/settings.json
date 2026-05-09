@@ -56,7 +56,17 @@
     "loading": "Cargando…",
     "empty": "Aún sin actividad.",
     "loadMore": "Cargar más",
-    "viewAll": "Ver registro de auditoría completo"
+    "viewAll": "Ver registro de auditoría completo",
+    "exportCsv": "Export CSV",
+    "exportReady": "Download started",
+    "exportFailed": "Export failed",
+    "moduleLabel": "Module",
+    "moduleAll": "All modules",
+    "actionPlaceholder": "Filter by action…",
+    "searchPlaceholder": "Search action, entity…",
+    "fromDate": "From",
+    "toDate": "To",
+    "immutableNotice": "Audit history cannot be deleted from the app; entries older than 90 days may be purged per retention policy."
   },
   "branding": {
     "title": "Marca",
@@ -230,6 +240,7 @@
     "productsPerSite": "Products / site",
     "maxUsers": "Max users",
     "apiCallsPerMonth": "API calls / month",
+    "monthlyAiCredits": "AI credits / month",
     "maxInitialHistory": "Max initial history (days)",
     "unlimited": "Unlimited",
     "historyHelper": "Cap on how far back orders & customers are fetched on initial/full sync. Empty = unlimited. Suggested: Free 90, Pro 365.",

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { CircleHelp, Globe, ListPlus, Loader2, Send, Square, User } from "lucide-react";
+import { CircleHelp, LifeBuoy, ListPlus, Loader2, Send, Square, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { cn } from "@/lib/utils";
@@ -68,8 +68,8 @@ function AssistantAvatar({
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="relative flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full bg-primary/15 ring-1 ring-primary/25">
-            <CircleHelp className="h-4 w-4 text-primary" aria-hidden />
+          <div className="relative flex h-6 w-6 shrink-0 cursor-default items-center justify-center rounded-full bg-primary/15 ring-1 ring-primary/25">
+            <CircleHelp className="h-3.5 w-3.5 text-primary" aria-hidden />
             {showModelDot && (kind === "openai" || kind === "other") ? (
               <span
                 className={cn(
@@ -91,7 +91,6 @@ function AssistantAvatar({
 
 export function AssistantDock() {
   const { t } = useTranslation("site");
-  const router = useRouter();
   const { user } = useAuth();
   const storeId = useActiveStoreId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -272,23 +271,26 @@ export function AssistantDock() {
   };
 
   const chatPanel = (
-    <div className="flex max-h-[min(90vh,800px)] w-[min(100vw-1rem,400px)] flex-col">
+    <div className="flex h-[min(86.4vh,504px)] w-[min(74.4vw,336px)] flex-col overflow-hidden text-xs">
       {error ? (
-        <div className="border-b border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
+        <div className="border-b border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">{error}</div>
       ) : null}
 
-      <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 overflow-y-auto px-2 py-1.5 [&_.assistant-md]:text-xs [&_.assistant-md]:leading-snug"
+      >
         {messages.length === 0 ? (
-          <div className="space-y-2 text-xs text-muted-foreground">
+          <div className="space-y-1.5 text-[11px] leading-snug text-muted-foreground">
             <p>{t("assistant.emptyHint")}</p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {suggested.map(({ id, label }) => (
                 <Button
                   key={id}
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-auto justify-start whitespace-normal rounded-lg border-dashed py-2.5 text-left text-xs font-normal leading-snug"
+                  className="h-auto justify-start whitespace-normal rounded-md border-dashed px-2 py-1.5 text-left text-[11px] font-normal leading-tight"
                   disabled={streaming}
                   onClick={() => void sendInternal(label)}
                 >
@@ -298,7 +300,7 @@ export function AssistantDock() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {messages.map((m, i) => {
               const streamingTail =
                 streaming && m.role === "assistant" && !m.content.trim() && i === messages.length - 1;
@@ -309,26 +311,27 @@ export function AssistantDock() {
                   className={cn("flex gap-2", m.role === "user" ? "flex-row-reverse" : "flex-row")}
                 >
                   {m.role === "user" ? (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-border">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-border">
+                      <User className="h-3 w-3 text-muted-foreground" aria-hidden />
                     </div>
                   ) : (
                     <AssistantAvatar llm={m.llm} labels={avatarLabels} />
                   )}
                   <div
                     className={cn(
-                      "min-w-0 max-w-[calc(100%-2.25rem)] rounded-lg",
+                      "min-w-0 max-w-[calc(100%-2rem)] rounded-md",
                       m.role === "user"
-                        ? "bg-muted px-2.5 py-1.5 text-xs text-foreground"
-                        : "border bg-background px-2 py-2 text-foreground sm:px-3",
+                        ? "bg-muted px-2 py-1 text-[11px] leading-snug text-foreground"
+                        : "border bg-background px-2 py-1.5 text-foreground",
                     )}
                   >
                     {m.role === "user" ? (
                       <div className="whitespace-pre-wrap break-words">{m.content}</div>
                     ) : streaming && i === messages.length - 1 ? (
-                      <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-                        {stripTrailingIncompleteMarkdown(m.content)}
-                      </div>
+                      <AssistantMessageBody
+                        content={stripTrailingIncompleteMarkdown(m.content)}
+                        storeId={storeId}
+                      />
                     ) : (
                       <AssistantMessageBody content={m.content} storeId={storeId} />
                     )}
@@ -341,9 +344,9 @@ export function AssistantDock() {
             !messages[messages.length - 1]?.content ? (
               <div className="flex gap-2">
                 <AssistantAvatar llm={streamingLlm ?? "openai"} labels={avatarLabels} />
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span className="text-[11px]">{t("assistant.thinking")}</span>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span className="text-[10px]">{t("assistant.thinking")}</span>
                 </div>
               </div>
             ) : null}
@@ -352,27 +355,27 @@ export function AssistantDock() {
         )}
       </div>
 
-      <div className="border-t bg-popover px-3 py-2">
-        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1.5">
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={clearChat}>
+      <div className="border-t bg-popover px-2 py-1.5">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
+          <Button type="button" variant="ghost" size="sm" className="h-6 px-1.5 text-[10px]" onClick={clearChat}>
             {t("assistant.clear")}
           </Button>
           {streaming ? (
-            <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-[11px]" onClick={stopGeneration}>
-              <Square className="h-3 w-3" />
+            <Button type="button" variant="outline" size="sm" className="h-6 gap-0.5 px-1.5 text-[10px]" onClick={stopGeneration}>
+              <Square className="h-2.5 w-2.5" />
               {t("assistant.stop")}
             </Button>
           ) : null}
         </div>
-        <div className="rounded-xl border border-input bg-muted/40 p-1.5 shadow-inner dark:bg-muted/25">
-          <div className="flex items-end gap-2">
+        <div className="rounded-lg border border-input bg-muted/40 p-1 shadow-inner dark:bg-muted/25">
+          <div className="flex items-end gap-1.5">
             <Textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("assistant.placeholder")}
               rows={2}
-              className="min-h-[44px] max-h-[120px] flex-1 resize-none border-0 bg-transparent px-2 py-2 text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="min-h-[34px] max-h-[88px] flex-1 resize-none border-0 bg-transparent px-1.5 py-1.5 text-[11px] leading-snug shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
               disabled={streaming}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -381,21 +384,21 @@ export function AssistantDock() {
                 }
               }}
             />
-            <div className="flex shrink-0 flex-col gap-1 pb-0.5 pr-0.5">
+            <div className="flex shrink-0 flex-col gap-0.5 pb-0.5 pr-0.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7"
                     disabled={streaming}
                     aria-label={t("assistant.quickPrompts")}
                   >
-                    <ListPlus className="h-4 w-4" />
+                    <ListPlus className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="max-h-[min(50vh,280px)] max-w-[min(100vw-2rem,320px)] overflow-y-auto">
+                <DropdownMenuContent align="end" className="max-h-[min(50vh,240px)] max-w-[min(100vw-2rem,260px)] overflow-y-auto text-[11px]">
                   {suggested.map(({ id, label }) => (
                     <DropdownMenuItem
                       key={id}
@@ -411,12 +414,12 @@ export function AssistantDock() {
                 type="button"
                 size="icon"
                 variant="default"
-                className="h-8 w-8 shrink-0"
+                className="h-7 w-7 shrink-0"
                 disabled={streaming || !input.trim()}
                 onClick={() => void sendInternal(input)}
                 aria-label={t("assistant.send")}
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -428,7 +431,7 @@ export function AssistantDock() {
   /** Inward from scroll FAB (`right-6` / `left-6`): gap + scroll button width (right-6 + w-11 + gap-2). */
   const dockCorner = isRtl ? "bottom-6 left-[4.75rem]" : "bottom-6 right-[4.75rem]";
   const roundDockBtn =
-    "h-11 w-11 shrink-0 rounded-full border border-orange-500/35 bg-orange-500 text-white shadow-md backdrop-blur-sm hover:bg-orange-600 hover:text-white focus-visible:ring-2 focus-visible:ring-orange-400/90";
+    "h-10 w-10 shrink-0 rounded-full border border-orange-500/35 bg-orange-500 text-white shadow-md backdrop-blur-sm hover:bg-orange-600 hover:text-white focus-visible:ring-2 focus-visible:ring-orange-400/90";
 
   return (
     <div className={cn("fixed z-[10000]", dockCorner)}>
@@ -442,7 +445,7 @@ export function AssistantDock() {
             aria-label={t("assistant.open")}
             aria-expanded={open}
           >
-            <Globe className="h-5 w-5" strokeWidth={2} aria-hidden />
+            <LifeBuoy className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -450,7 +453,7 @@ export function AssistantDock() {
           align="end"
           sideOffset={10}
           collisionPadding={16}
-          className="w-auto max-w-[min(100vw-1rem,400px)] border bg-popover p-0 shadow-lg"
+          className="w-auto max-w-[min(74.4vw,336px)] border bg-popover p-0 shadow-lg"
         >
           {chatPanel}
         </PopoverContent>

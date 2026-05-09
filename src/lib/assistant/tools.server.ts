@@ -4,6 +4,51 @@ import { getProductThumbnailWithMirrors } from "@/lib/product-image-urls";
 import type { SiteHomeStatsQuery, SiteStatsResponse } from "@/services/siteStatsService";
 import { siteHomeStatsRpcPeriod } from "@/services/siteStatsService";
 
+/** Intl formatting for assistant tool payloads — avoids the model inventing $ for non-USD stores. */
+export function formatAssistantMoney(amount: number, currencyCode: string): string {
+  const code = (currencyCode || "USD").trim().toUpperCase();
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${code}`;
+  }
+}
+
+function buildAssistantPeriodContext(
+  opts: AssistantToolRangeOpts,
+  bundle: { tz: string; currency: string | null },
+): string {
+  const range = opts.range ?? "30d";
+  const reporting = (bundle.currency?.trim() || "USD").toUpperCase();
+  const parts = [
+    `Reporting currency (ISO 4217): ${reporting}. Monetary amounts in this result set use this currency.`,
+    `Store timezone for rolling windows and calendar cutoffs: ${bundle.tz}.`,
+    `Range preset: "${range}".`,
+  ];
+  if (opts.combineAll) {
+    parts.push("combine_all=true: multi-currency orders are converted into reporting currency via FX.");
+  }
+  if (range === "custom" && opts.fromYmd && opts.toYmd) {
+    parts.push(`Custom inclusive calendar dates in store TZ: ${opts.fromYmd} through ${opts.toYmd}.`);
+  } else {
+    parts.push(
+      "Date boundaries follow the same rules as the site dashboard home stats (rolling windows anchored in the store timezone).",
+    );
+  }
+  return parts.join(" ");
+}
+
+/** Store prefs for system prompt + consistent defaults */
+export async function getAssistantStorePrefsForPrompt(
+  storeId: string,
+): Promise<{ timezone: string; currency: string }> {
+  const row = await loadStoreRow(storeId);
+  return {
+    timezone: row?.timezone?.trim() || "UTC",
+    currency: (row?.currency?.trim() || "USD").toUpperCase(),
+  };
+}
+
 function escapeIlikePattern(raw: string): string {
   return raw.trim().replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
@@ -70,16 +115,19 @@ type RpcRankRow = {
   local_id?: string | null;
 };
 
-function mapRankingForAssistant(row: RpcRankRow, storeId: string) {
+function mapRankingForAssistant(row: RpcRankRow, storeId: string, reportingCurrency: string) {
   const thumb = getProductThumbnailWithMirrors(row.images, row.image_mirror_urls, "thumb");
   const rid = row.local_id ?? undefined;
+  const rev = typeof row.revenue === "number" ? Math.round(row.revenue * 100) / 100 : row.revenue;
   return {
     id: rid,
     name: row.name ?? "Product",
     sku: row.sku ?? null,
     thumbnail_url: thumb,
     units: row.units,
-    revenue: typeof row.revenue === "number" ? Math.round(row.revenue * 100) / 100 : row.revenue,
+    revenue: rev,
+    revenue_display:
+      typeof rev === "number" ? formatAssistantMoney(rev, reportingCurrency) : String(rev),
     woo_id: row.product_id,
     href: rid ? `/sites/${storeId}/products/edit/${rid}` : undefined,
   };
@@ -121,25 +169,43 @@ export async function fetchStoreSummaryForAssistant(storeId: string): Promise<un
     currency: o.currency,
     date_created: o.date_created,
   }));
+  const reporting =
+    (typeof raw.currency === "string" && raw.currency.trim()) ||
+    (currency?.trim() || "USD").toUpperCase();
+
   const top = (raw.top_products ?? []).slice(0, 5).map((p) => ({
     name: p.name,
     units: p.units,
     revenue: p.revenue,
+    revenue_display:
+      typeof p.revenue === "number" ? formatAssistantMoney(p.revenue, reporting) : undefined,
     local_id: p.local_id,
     /** Public Woo/feature image URL when available — use in Markdown e.g. ![name](url) */
     image: p.image ?? null,
   }));
 
-  const topCategories = Array.isArray(topCategoriesRaw) ? topCategoriesRaw : [];
+  const rawCats = Array.isArray(topCategoriesRaw) ? topCategoriesRaw : [];
+  const topCategories = rawCats.slice(0, 10).map((c) => {
+    const row = c && typeof c === "object" && !Array.isArray(c) ? (c as Record<string, unknown>) : {};
+    const rev = row.revenue;
+    return {
+      ...row,
+      revenue_display:
+        typeof rev === "number" ? formatAssistantMoney(rev, reporting) : undefined,
+    };
+  });
 
   return {
     store_id: storeId,
+    reporting_currency: reporting,
     store_timezone: tz,
+    period_context:
+      "Rolling window matches the site dashboard home (same ~30-day logic and revenue statuses); boundaries use the store timezone above.",
     stats: raw.stats,
     status_breakdown: raw.status_breakdown,
     recent_orders: recent,
     top_products: top,
-    top_categories: topCategories.slice(0, 10),
+    top_categories: topCategories,
     currency: raw.currency,
     meta: raw.meta,
     snapshot_updated_at: raw.snapshot_updated_at ?? null,
@@ -162,8 +228,12 @@ export async function searchProductsForAssistant(storeId: string, query: string)
 
   if (error) throw error;
   const rows = data ?? [];
+  const rowMeta = await loadStoreRow(storeId);
+  const reporting = (rowMeta?.currency?.trim() || "USD").toUpperCase();
   return {
     store_id: storeId,
+    reporting_currency: reporting,
+    store_timezone: rowMeta?.timezone?.trim() || "UTC",
     products: rows.map(({ images, image_mirror_urls, ...r }) => ({
       ...r,
       thumbnail_url: getProductThumbnailWithMirrors(images, image_mirror_urls, "thumb"),
@@ -183,7 +253,29 @@ export async function fetchAssistantPeriodKpis(storeId: string, opts: AssistantT
     p_combine_all: b.p_combine_all,
   });
   if (error) throw error;
-  return data;
+  const payload = (data ?? {}) as {
+    meta?: { currency?: string };
+    current?: { revenue?: number };
+    previous?: { revenue?: number };
+    delta_pct?: unknown;
+  };
+  const reporting = (
+    payload.meta?.currency?.trim() ||
+    b.currency?.trim() ||
+    "USD"
+  ).toUpperCase();
+  const curRev = payload.current?.revenue;
+  const prevRev = payload.previous?.revenue;
+  return {
+    reporting_currency: reporting,
+    store_timezone: b.tz,
+    period_context: buildAssistantPeriodContext(opts, b),
+    ...payload,
+    current_revenue_display:
+      typeof curRev === "number" ? formatAssistantMoney(curRev, reporting) : undefined,
+    previous_revenue_display:
+      typeof prevRev === "number" ? formatAssistantMoney(prevRev, reporting) : undefined,
+  };
 }
 
 /** Top products by revenue or units for the selected window. */
@@ -204,10 +296,14 @@ export async function fetchAssistantProductRankings(
   });
   if (error) throw error;
   const rows = (Array.isArray(data) ? data : []) as RpcRankRow[];
+  const reporting = (b.currency?.trim() || "USD").toUpperCase();
   return {
     store_id: storeId,
+    reporting_currency: reporting,
+    store_timezone: b.tz,
+    period_context: buildAssistantPeriodContext(opts, b),
     sort: opts.sort ?? "revenue",
-    products: rows.map((r) => mapRankingForAssistant(r, storeId)),
+    products: rows.map((r) => mapRankingForAssistant(r, storeId, reporting)),
   };
 }
 
@@ -259,7 +355,14 @@ export async function fetchAssistantOrdersFiltered(
     p_limit: opts.limit ?? 25,
   });
   if (error) throw error;
-  return { store_id: storeId, orders: Array.isArray(data) ? data : [] };
+  const reporting = (b.currency?.trim() || "USD").toUpperCase();
+  return {
+    store_id: storeId,
+    reporting_currency: reporting,
+    store_timezone: b.tz,
+    period_context: buildAssistantPeriodContext(opts, b),
+    orders: Array.isArray(data) ? data : [],
+  };
 }
 
 /** Top customers + coupon code frequency for the window. */
@@ -279,7 +382,13 @@ export async function fetchAssistantCustomerCouponStats(
     p_coupon_limit: opts.couponLimit ?? 12,
   });
   if (error) throw error;
-  return data;
+  const reporting = (b.currency?.trim() || "USD").toUpperCase();
+  return {
+    reporting_currency: reporting,
+    store_timezone: b.tz,
+    period_context: buildAssistantPeriodContext(opts, b),
+    ...(typeof data === "object" && data !== null && !Array.isArray(data) ? data : { data }),
+  };
 }
 
 /** Frequent basket pairs + catalog QA — optional diagnostics beyond core dashboard tools. */
@@ -297,7 +406,11 @@ export async function fetchAssistantCommerceDiagnostics(storeId: string, opts: A
   ]);
   if (pairsRes.error) throw pairsRes.error;
   if (catRes.error) throw catRes.error;
+  const reporting = (b.currency?.trim() || "USD").toUpperCase();
   return {
+    reporting_currency: reporting,
+    store_timezone: b.tz,
+    period_context: buildAssistantPeriodContext(opts, b),
     basket_pairs: pairsRes.data ?? [],
     catalog_quality: catRes.data ?? {},
   };

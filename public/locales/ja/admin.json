@@ -11,6 +11,11 @@
     "actionPlaceholder": "アクション",
     "entityPlaceholder": "エンティティ種別",
     "entityIdPlaceholder": "エンティティ ID…",
+    "modulePlaceholder": "Module",
+    "moduleAll": "All modules",
+    "clientIdPlaceholder": "Client ID (tenant)…",
+    "searchPlaceholder": "Search…",
+    "toDate": "To date",
     "allActions": "すべてのアクション",
     "allEntities": "すべてのエンティティ",
     "filterActive_one": "{{count}} 件のフィルター適用中",
@@ -19,5 +24,23 @@
     "empty": "フィルターに一致するアクティビティがありません。",
     "loadMore": "さらに読み込む",
     "unknownError": "不明なエラー"
+  },
+  "ai": {
+    "settingsTitle": "AI providers",
+    "settingsSubtitle": "Store API keys for image generation (encrypted at rest).",
+    "geminiKey": "Google Gemini API key",
+    "openaiKey": "OpenAI API key",
+    "save": "Save keys",
+    "saved": "Provider keys updated",
+    "featuresTitle": "AI features",
+    "featuresSubtitle": "Prompts, models, and credit cost per output.",
+    "addFeature": "Add feature",
+    "test": "Test",
+    "slug": "Slug",
+    "name": "Name",
+    "provider": "Provider",
+    "model": "Model",
+    "credits": "Credits / output",
+    "active": "Active"
   }
 }

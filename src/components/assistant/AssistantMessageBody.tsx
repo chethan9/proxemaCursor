@@ -16,7 +16,7 @@ export function AssistantMessageBody({ content, storeId = null }: Props) {
     <div className="space-y-2">
       {parts.map((part, i) =>
         part.type === "markdown" ? (
-          <AssistantMessageMarkdown key={i} content={part.text} />
+          <AssistantMessageMarkdown key={i} content={part.text} storeId={storeId} />
         ) : (
           <AssistantWidgets key={i} widget={part.widget} storeId={storeId} />
         ),
