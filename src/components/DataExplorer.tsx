@@ -15,6 +15,20 @@ import {
 
 type DataAspect = "products" | "orders" | "customers" | "categories" | "tags" | "coupons";
 
+/** PostgREST builder for dynamic `from(aspect)` — all aspects are store-scoped mirrors with `store_id`. */
+type DynamicTableQuery = {
+  eq(column: string, value: string): DynamicTableQuery;
+  order(column: string, options: { ascending: boolean }): DynamicTableQuery;
+  range(from: number, to: number): DynamicTableQuery;
+  or(filters: string): DynamicTableQuery;
+};
+
+type ExplorerQueryResult = {
+  data: Record<string, unknown>[] | null;
+  count: number | null;
+  error: { message: string } | null;
+};
+
 interface Column {
   key: string;
   label: string;
@@ -151,7 +165,9 @@ export function DataExplorer({ storeId, aspect, storeName }: DataExplorerProps) 
     try {
       let query = supabase
         .from(aspect)
-        .select("*", { count: "exact" })
+        .select("*", { count: "exact" }) as unknown as DynamicTableQuery;
+
+      query = query
         .eq("store_id", storeId)
         .order(sortCol, { ascending: sortDir === "asc" })
         .range((page - 1) * perPage, page * perPage - 1);
@@ -165,7 +181,7 @@ export function DataExplorer({ storeId, aspect, storeName }: DataExplorerProps) 
         else if (aspect === "coupons") query = query.or(`code.ilike.${s},discount_type.ilike.${s}`);
       }
 
-      const { data: rows, count, error } = await query;
+      const { data: rows, count, error } = await (query as unknown as PromiseLike<ExplorerQueryResult>);
       if (error) { console.error("DataExplorer query error:", error); return; }
       setData((rows || []) as Record<string, unknown>[]);
       setTotal(count || 0);
