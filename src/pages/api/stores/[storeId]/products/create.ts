@@ -70,6 +70,11 @@ async function checkSkuConflict(storeId: string, sku: string): Promise<string | 
 }
 
 function normalizeStockFields(payload: Record<string, unknown>): void {
+  if (payload.manage_stock === false) {
+    delete payload.stock_quantity;
+    if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
+    return;
+  }
   const qty = payload.stock_quantity;
   if (qty != null) {
     payload.manage_stock = true;
@@ -77,10 +82,6 @@ function normalizeStockFields(payload: Record<string, unknown>): void {
     payload.stock_quantity = Number.isFinite(n) ? Math.max(0, n) : 0;
     if ((payload.stock_quantity as number) === 0) payload.stock_status = "outofstock";
     else if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
-  }
-  if (payload.manage_stock === false) {
-    delete payload.stock_quantity;
-    if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
   }
   if (typeof payload.stock_quantity === "number" && (payload.stock_quantity as number) < 0) {
     payload.stock_quantity = 0;

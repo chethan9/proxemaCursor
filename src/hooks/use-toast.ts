@@ -5,8 +5,12 @@ import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
+/** Auto-dismiss duration for toasts unless callers pass `duration` (use `Infinity` to persist). */
+export const DEFAULT_TOAST_DURATION_MS = 5000;
+
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+/** Time after close before unmounting (exit animation + buffer). */
+const TOAST_REMOVE_DELAY = 1000;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -139,8 +143,9 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
-function toast({ ...props }: Toast) {
+function toast({ duration: durationProp, ...rest }: Toast) {
   const id = genId();
+  const duration = durationProp ?? DEFAULT_TOAST_DURATION_MS;
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -153,7 +158,8 @@ function toast({ ...props }: Toast) {
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
-      ...props,
+      ...rest,
+      duration,
       id,
       open: true,
       onOpenChange: (open) => {

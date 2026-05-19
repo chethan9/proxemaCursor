@@ -1,6 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { z } from "zod";
 import { supabaseAdmin as supabase } from "@/integrations/supabase/admin";
 import { authenticateRequest, logApiRequest } from "@/lib/api-auth";
+
+function firstQuery(v: string | string[] | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+
+const productsQuerySchema = z.object({
+  store_id: z.string().uuid().optional(),
+  limit: z.coerce.number().min(1).max(200).optional(),
+  offset: z.coerce.number().min(0).optional(),
+  search: z.string().max(500).optional(),
+  status: z.string().max(64).optional(),
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const start = Date.now();
@@ -17,7 +31,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { store_id, limit = "50", offset = "0", search, status } = req.query;
+    const parsed = productsQuerySchema.safeParse({
+      store_id: firstQuery(req.query.store_id),
+      limit: firstQuery(req.query.limit),
+      offset: firstQuery(req.query.offset),
+      search: firstQuery(req.query.search),
+      status: firstQuery(req.query.status),
+    });
+    if (!parsed.success) {
+      await logApiRequest(auth.tokenId, auth.clientId, req, 400, Date.now() - start);
+      return res.status(400).json({ error: "Invalid query parameters", details: parsed.error.flatten() });
+    }
+    const { store_id, limit = 50, offset = 0, search, status } = parsed.data;
     
     // Get stores owned by this client
     const { data: stores } = await supabase.from("stores").select("id").eq("client_id", auth.clientId!);
@@ -44,8 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (search && typeof search === "string") query = query.ilike("name", `%${search}%`);
     if (status && typeof status === "string") query = query.eq("status", status);
     
-    const limitNum = Math.min(parseInt(limit as string) || 50, 200);
-    const offsetNum = parseInt(offset as string) || 0;
+    const limitNum = limit;
+    const offsetNum = offset;
     
     const { data, count, error } = await query.range(offsetNum, offsetNum + limitNum - 1).order("synced_at", { ascending: false });
     

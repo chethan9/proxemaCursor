@@ -56,7 +56,6 @@ function applyVariationCheckboxChange(p: ProductFormState, idx: number, checked:
   a[idx] = {
     ...a[idx],
     variation: checked,
-    visible: checked ? false : a[idx].visible,
   };
   const anyVariation = a.some((x) => x.variation);
   /** Stay variable until the user explicitly switches product type — avoids losing the Variants tab when all rows are cleared. */
@@ -453,10 +452,9 @@ export function AttributeEditor({ storeId, form, setForm, productMode, onPromote
                       onNewInputChange={(v) => setNewValueInput((s) => ({ ...s, [idx]: v }))}
                     />
                   </div>
-                  <label className={cn("flex items-center gap-2 text-sm", attr.variation ? "cursor-not-allowed opacity-60" : "cursor-pointer")}>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <Checkbox
                       checked={attr.visible}
-                      disabled={attr.variation}
                       onCheckedChange={(v) =>
                         setForm((p) => {
                           const a = [...p.attributes];

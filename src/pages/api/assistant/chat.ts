@@ -105,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId = userRes.user.id;
 
-  const limited = checkAssistantRateLimit(userId);
+  const limited = await checkAssistantRateLimit(userId);
   if (limited.ok === false) {
     res.setHeader("Retry-After", String(Math.ceil(limited.retryAfterMs / 1000)));
     return res.status(429).json({ error: "Too many requests. Try again shortly." });

@@ -326,10 +326,22 @@ export default function OrderDetailsPage() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3"><User className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.customer.title")}</h3></div>
                       <dl className="text-sm space-y-1.5">
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.name")}</dt><dd className="text-right truncate">{getCustomerName(order.billing)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.email")}</dt><dd className="text-right truncate">{getCustomerEmail(order.billing) || "—"}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.phone")}</dt><dd className="text-right truncate">{billing.phone || "—"}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.customer.ip")}</dt><dd className="text-right font-mono text-xs truncate">{raw.customer_ip_address || "—"}</dd></div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.customer.name")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-words">{getCustomerName(order.billing)}</dd>
+                        </div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.customer.email")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-all sm:break-words">{getCustomerEmail(order.billing) || "—"}</dd>
+                        </div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.customer.phone")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-words">{billing.phone || "—"}</dd>
+                        </div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.customer.ip")}</dt>
+                          <dd className="min-w-0 flex-1 text-left font-mono text-xs break-all">{raw.customer_ip_address || "—"}</dd>
+                        </div>
                       </dl>
                     </CardContent>
                   </Card>
@@ -354,11 +366,28 @@ export default function OrderDetailsPage() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3"><Package className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{t("orderDetail.details.title")}</h3></div>
                       <dl className="text-sm space-y-1.5">
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.placedOn")}</dt><dd className="text-right">{fmtDateTime(order.date_created, i18n.language)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.payment")}</dt><dd className="text-right truncate">{order.payment_method_title || order.payment_method || "—"}</dd></div>
-                        {raw.transaction_id && <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.txnId")}</dt><dd className="text-right font-mono text-xs truncate">{raw.transaction_id}</dd></div>}
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.paidOn")}</dt><dd className="text-right">{fmtDateTime(raw.date_paid, i18n.language)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground shrink-0">{t("orderDetail.details.updated")}</dt><dd className="text-right">{fmtDateTime(order.date_modified, i18n.language)}</dd></div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.details.placedOn")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-words">{fmtDateTime(order.date_created, i18n.language)}</dd>
+                        </div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.details.payment")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-words">{order.payment_method_title || order.payment_method || "—"}</dd>
+                        </div>
+                        {raw.transaction_id && (
+                          <div className="flex items-start gap-x-3 gap-y-0.5">
+                            <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.details.txnId")}</dt>
+                            <dd className="min-w-0 flex-1 text-left font-mono text-xs break-all">{raw.transaction_id}</dd>
+                          </div>
+                        )}
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.details.paidOn")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-words">{fmtDateTime(raw.date_paid, i18n.language)}</dd>
+                        </div>
+                        <div className="flex items-start gap-x-3 gap-y-0.5">
+                          <dt className="text-muted-foreground shrink-0 w-28">{t("orderDetail.details.updated")}</dt>
+                          <dd className="min-w-0 flex-1 text-left break-words">{fmtDateTime(order.date_modified, i18n.language)}</dd>
+                        </div>
                         {raw.customer_note && <div className="pt-1 border-t border-border"><dt className="text-muted-foreground text-xs mb-0.5">{t("orderDetail.details.customerNote")}</dt><dd className="text-xs">{raw.customer_note}</dd></div>}
                       </dl>
                     </CardContent>

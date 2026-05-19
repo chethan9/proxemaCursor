@@ -62,6 +62,29 @@ export type ProductFormState = {
   image_mirror_urls?: ProductImageMirrorUrlsMap;
 };
 
+/**
+ * When the user leaves Variations mode for a variable product, treat the product as **simple**:
+ * validation, save payload, and WooCommerce type must match the Basic editor.
+ * Clears in-memory variation rows, marks existing variation IDs for deletion on save (edit flow),
+ * and turns off `variation` on all attributes so the parent is a normal simple product.
+ */
+export function demoteVariableProductToSimple(form: ProductFormState): ProductFormState {
+  const idsFromRows = form.variations
+    .filter((v) => typeof v.id === "number" && v.id > 0)
+    .map((v) => v.id as number);
+  const prev = form.deletedVariationIds ?? [];
+  const deletedVariationIds = Array.from(new Set([...prev, ...idsFromRows]));
+
+  return {
+    ...form,
+    type: "simple",
+    variations: [],
+    default_attributes: [],
+    deletedVariationIds,
+    attributes: form.attributes.map((a) => ({ ...a, variation: false })),
+  };
+}
+
 export function emptyProductForm(): ProductFormState {
   return {
     name: "",

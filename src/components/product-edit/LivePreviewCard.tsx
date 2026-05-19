@@ -214,7 +214,9 @@ export function LivePreviewCard({ form, storeId, productId, setForm, onHidePrevi
           <div className="grid grid-cols-3 gap-2 pt-2 border-t">
             <div>
               <div className="text-[10px] text-muted-foreground uppercase">Stock</div>
-              <div className="font-semibold text-sm">{form.stock_quantity ?? "—"}</div>
+              <div className="font-semibold text-sm">
+                {form.manage_stock === true && form.stock_quantity != null ? form.stock_quantity : "—"}
+              </div>
             </div>
             <div>
               <div className="text-[10px] text-muted-foreground uppercase">Weight</div>

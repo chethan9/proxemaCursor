@@ -382,7 +382,16 @@ export function BasicEditor({ storeId, productId, form, setForm, committedSlug =
                 Inventory
               </div>
               <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <Checkbox checked={form.manage_stock} onCheckedChange={(v) => setForm((p) => ({ ...p, manage_stock: !!v }))} />
+                <Checkbox
+                  checked={form.manage_stock}
+                  onCheckedChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      manage_stock: !!v,
+                      ...(v ? {} : { stock_quantity: null }),
+                    }))
+                  }
+                />
                 Track stock
               </label>
               {form.manage_stock && (

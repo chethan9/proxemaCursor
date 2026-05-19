@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  FileText, FileSpreadsheet, Files, Receipt, Search, Download as DownloadIcon, Filter, RefreshCw, Trash2, Loader2, Layers, Eye,
+  FileText, FileSpreadsheet, Files, Receipt, Search, Download as DownloadIcon, RefreshCw, Trash2, Loader2, Layers, Eye,
 } from "lucide-react";
 import { useSiteDownloads } from "@/hooks/queries/useSiteDownloads";
 import { dismissJobArtifact, type DownloadFile } from "@/services/downloadsService";
@@ -368,7 +368,6 @@ function DownloadsInner() {
               className="h-3.5 w-3.5 rounded border-border shrink-0"
               aria-label={t("downloads.selectAll")}
             />
-            <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <div className="relative flex-1 min-w-[180px] max-w-md">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <Input

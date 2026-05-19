@@ -8,7 +8,7 @@ import { BasicInfoTab } from "@/components/product-edit/tabs/BasicInfoTab";
 import { PricingTaxTab } from "@/components/product-edit/tabs/PricingTaxTab";
 import { InventoryShippingTab } from "@/components/product-edit/tabs/InventoryShippingTab";
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
-import { emptyProductForm, createProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
+import { demoteVariableProductToSimple, emptyProductForm, createProduct, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, AlertCircle, Layers, Pencil, X } from "lucide-react";
@@ -329,6 +329,7 @@ function Inner() {
             <AlertDialogAction
               onClick={() => {
                 setSwitchToBasicOpen(false);
+                setForm((p) => (p.type === "variable" ? demoteVariableProductToSimple(p) : p));
                 setMode("basic");
               }}
             >

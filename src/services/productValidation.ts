@@ -26,21 +26,21 @@ function clampNonNeg(n: number | null | undefined): number | null {
 function normalizeStockCoupling(
   form: { manage_stock: boolean; stock_quantity: number | null; stock_status: "instock" | "outofstock" | "onbackorder" }
 ): { manage_stock: boolean; stock_quantity: number | null; stock_status: "instock" | "outofstock" | "onbackorder" } {
-  let { manage_stock, stock_quantity, stock_status } = form;
+  const { manage_stock } = form;
+  let { stock_quantity, stock_status } = form;
   stock_quantity = clampNonNeg(stock_quantity);
-  // Rule: if stock_quantity provided → manage_stock auto-true
-  if (stock_quantity != null && !manage_stock) manage_stock = true;
-  if (manage_stock) {
-    if (stock_quantity == null) stock_quantity = 0;
-    // qty=0 → outofstock; qty>0 → instock (unless onbackorder preserved explicitly)
-    if (stock_quantity === 0) stock_status = "outofstock";
-    else if (stock_status !== "onbackorder") stock_status = "instock";
-  } else {
-    // manage_stock off → omit qty; status defaults to instock unless onbackorder
-    stock_quantity = null;
-    if (stock_status !== "onbackorder") stock_status = "instock";
+  /** Never infer manage_stock from quantity when the user turned tracking off (stale qty must not re-enable). */
+  if (!manage_stock) {
+    return {
+      manage_stock: false,
+      stock_quantity: null,
+      stock_status: stock_status !== "onbackorder" ? "instock" : stock_status,
+    };
   }
-  return { manage_stock, stock_quantity, stock_status };
+  if (stock_quantity == null) stock_quantity = 0;
+  if (stock_quantity === 0) stock_status = "outofstock";
+  else if (stock_status !== "onbackorder") stock_status = "instock";
+  return { manage_stock: true, stock_quantity, stock_status };
 }
 
 export function normalizeProductForm(form: ProductFormState): ProductFormState {

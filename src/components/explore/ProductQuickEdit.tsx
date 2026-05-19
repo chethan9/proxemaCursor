@@ -329,9 +329,9 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
         name,
         sku,
         status,
-        stock_status: stockStatus,
         manage_stock: manageStock,
       };
+      if (manageStock) patch.stock_status = stockStatus;
       if (product.type) patch.type = product.type;
       patch.regular_price = regular;
       patch.sale_price = sale;
@@ -510,8 +510,11 @@ export function ProductQuickEdit({ open, onOpenChange, product, siteName }: Prop
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <Label className="text-[11px] text-muted-foreground">{t("products.quickEdit.stockStatus")}</Label>
-                    <Select value={stockStatus} onValueChange={setStockStatus}>
-                      <SelectTrigger className="h-8 bg-card text-sm text-foreground">
+                    <Select value={stockStatus} onValueChange={setStockStatus} disabled={!manageStock}>
+                      <SelectTrigger
+                        className={cn("h-8 bg-card text-sm text-foreground", !manageStock && "opacity-60 cursor-not-allowed")}
+                        title={!manageStock ? t("products.quickEdit.stockStatusDisabledHint") : undefined}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

@@ -8,7 +8,7 @@ import { BasicInfoTab } from "@/components/product-edit/tabs/BasicInfoTab";
 import { PricingTaxTab } from "@/components/product-edit/tabs/PricingTaxTab";
 import { InventoryShippingTab } from "@/components/product-edit/tabs/InventoryShippingTab";
 import { VariantsTab } from "@/components/product-edit/tabs/VariantsTab";
-import { emptyProductForm, updateProduct, fetchProductVariations, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
+import { demoteVariableProductToSimple, emptyProductForm, updateProduct, fetchProductVariations, ProductFormState, ProductValidationIssue } from "@/services/productEditService";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSiteMutation } from "@/hooks/useSiteMutation";
@@ -569,6 +569,7 @@ function Inner() {
             <AlertDialogAction
               onClick={() => {
                 setSwitchToBasicOpen(false);
+                setForm((p) => (p && p.type === "variable" ? demoteVariableProductToSimple(p) : p));
                 setMode("basic");
               }}
             >

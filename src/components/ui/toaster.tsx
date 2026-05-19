@@ -1,5 +1,5 @@
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, Bell } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_TOAST_DURATION_MS, useToast } from "@/hooks/use-toast";
 import {
   Toast,
   ToastClose,
@@ -21,12 +21,12 @@ export function Toaster() {
   const { toasts } = useToast();
 
   return (
-    <ToastProvider>
-      {toasts.map(({ id, title, description, action, variant, ...props }) => {
+    <ToastProvider duration={DEFAULT_TOAST_DURATION_MS}>
+      {toasts.map(({ id, title, description, action, variant, duration, ...props }) => {
         const v = (variant as keyof typeof ICON_MAP) || "default";
         const { Icon, cls } = ICON_MAP[v] || ICON_MAP.default;
         return (
-          <Toast key={id} variant={variant} {...props}>
+          <Toast key={id} variant={variant} duration={duration ?? DEFAULT_TOAST_DURATION_MS} {...props}>
             <Icon className={`h-4 w-4 shrink-0 mt-0.5 ${cls}`} />
             <div className="flex-1 min-w-0">
               {title && <ToastTitle>{title}</ToastTitle>}

@@ -219,6 +219,7 @@
       "stockTracked": "Stock tracked",
       "stockNotTracked": "Stock not tracked",
       "qtyDisabledHint": "Turn on stock management for this variation in the full editor to edit quantity here.",
+      "stockStatusDisabledHint": "Turn on Manage stock to change stock status.",
       "resolveMissingWoo": "This product is still syncing — open again after sync, or use Edit full product.",
       "resolveFailed": "Could not resolve product id.",
       "variationInvalidRegular": "Variation \"{{label}}\": regular price must be greater than 0 when published.",

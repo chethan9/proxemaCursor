@@ -12,6 +12,7 @@ import { getStore } from "@/services/storeService";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import type { Database } from "@/integrations/supabase/helpers";
+import { useAuth } from "@/contexts/AuthProvider";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 
@@ -41,12 +42,13 @@ function getSeededStore(id: string): StoreRow | undefined {
 
 export function useSiteFromRoute() {
   const router = useRouter();
+  const { user } = useAuth();
   const id = typeof router.query.id === "string" ? router.query.id : "";
   const seeded = getSeededStore(id);
   const { data: store, isLoading } = useQuery({
     queryKey: queryKeys.store(id),
     queryFn: () => getStore(id),
-    enabled: !!id,
+    enabled: !!id && !!user,
     initialData: seeded,
     staleTime: 60_000,
   });

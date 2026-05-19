@@ -31,6 +31,17 @@ Dev `.env.local` uses the same keys pointing at your dev Supabase project and `N
 
 `NEXT_PUBLIC_APP_URL` drives webhook delivery URLs. Getting this wrong = webhooks go to the wrong domain. Double-check it on every environment.
 
+### API rate limiting (optional, recommended for production)
+
+Edge middleware rate-limits `/api/*` when Upstash Redis credentials are present (anonymous vs Bearer tiers). Cron routes, `/api/billing/webhooks/*`, `/api/webhooks/*`, `/api/build-info`, `/api/i18n/*`, and `/api/dev/*` are excluded — see [`src/lib/api-rate-limit-config.ts`](../src/lib/api-rate-limit-config.ts).
+
+| Variable | Notes |
+|---|---|
+| `UPSTASH_REDIS_REST_URL` | From [Upstash](https://console.upstash.com/) Redis REST API. |
+| `UPSTASH_REDIS_REST_TOKEN` | Pair with the URL above. |
+
+If these are unset, middleware skips limiting (safe for local dev). Same Redis is reused for assistant chat limits when configured.
+
 ### WooCommerce sync tuning (optional)
 
 Large catalogs (for example ~50k orders, ~5k products, ~25k customers) finish via **many resumable chunks** plus cron resume; defaults favor **low parallel load** on the store’s WordPress host.

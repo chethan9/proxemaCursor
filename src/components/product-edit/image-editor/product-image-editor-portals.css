@@ -10,3 +10,23 @@ body #SfxPopper {
 body .SfxModal-Wrapper {
   z-index: 2147483001 !important;
 }
+
+/*
+ * globals.css (modern preset) sets `input { height: 2.625rem }` on all inputs. Scaleflex /
+ * Filerobot controls are built for shorter rows (~28px); the mismatch misaligns numeric
+ * fields, hex color inputs, and toolbar rows. Portaled SfxModal / SfxPopper live outside
+ * `.FIE_root`, so these rules mirror ProductImageEditorDialog `isScaleflexOverlayTarget`.
+ */
+[data-theme-preset="modern"] .FIE_root input:not([type="checkbox"]):not([type="radio"]),
+[data-theme-preset="modern"] .SfxModal-Wrapper input:not([type="checkbox"]):not([type="radio"]),
+[data-theme-preset="modern"] .SfxDropdownList input:not([type="checkbox"]):not([type="radio"]),
+[data-theme-preset="modern"] .SfxPopover-Wrapper input:not([type="checkbox"]):not([type="radio"]),
+[data-theme-preset="modern"] #SfxPopper input:not([type="checkbox"]):not([type="radio"]),
+[data-theme-preset="modern"] [id="SfxPopper"] input:not([type="checkbox"]):not([type="radio"]) {
+  height: auto;
+  min-height: unset;
+}
+
+[data-theme-preset="modern"] .FIE_resize-tool-options {
+  align-items: center;
+}

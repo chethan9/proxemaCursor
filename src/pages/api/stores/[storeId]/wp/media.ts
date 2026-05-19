@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import formidable from "formidable";
 import fs from "fs";
 import { getWooUserAgent } from "@/lib/brand-name-server";
+import { asciiFilenameForContentDisposition } from "@/lib/http-filename";
 
 export const config = { api: { bodyParser: false } };
 
@@ -101,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!file) return res.status(400).json({ error: "No file provided" });
 
       const buffer = fs.readFileSync(file.filepath);
-      const filename = file.originalFilename || "upload.jpg";
+      const filename = asciiFilenameForContentDisposition(file.originalFilename || "upload.jpg");
       const mime = file.mimetype || "image/jpeg";
 
       const r = await fetch(`${creds.url}/wp-json/wp/v2/media`, {
@@ -109,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         headers: {
           Authorization: authHeader,
           "Content-Type": mime,
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
           "User-Agent": ua,
         },
         body: buffer,

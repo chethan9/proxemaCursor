@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Ban, Briefcase, Clock, Search, Filter, RefreshCw, RotateCcw, Download, BellOff } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Ban, Briefcase, Clock, Search, RefreshCw, RotateCcw, Download, BellOff } from "lucide-react";
 import { useStoreBulkJobs } from "@/hooks/queries/useBulkJobs";
 import { computeBulkJobSidebarBadgeCounts, useBulkJobNotificationDismiss } from "@/hooks/useBulkJobNotificationDismiss";
 import { cancelBulkJob, retryFailedBulkJobItems, JOB_TYPE_LABEL, type BulkJob } from "@/services/bulkJobService";
@@ -223,7 +223,6 @@ function BulkJobsInner() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Filter className="h-4 w-4 text-muted-foreground" />
             <div className="relative flex-1 min-w-[200px] max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input placeholder={t("bulkJobs.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -307,9 +306,9 @@ function BulkJobsInner() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                            <span className="font-mono">{j.processed}/{j.total}</span>
-                            <span>{pct}%</span>
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                            <span className="min-w-0 truncate font-mono">{j.processed}/{j.total}</span>
+                            <span className="shrink-0 whitespace-nowrap tabular-nums">{pct}%</span>
                           </div>
                           <Progress value={pct} className="h-1.5" />
                         </div>
@@ -426,9 +425,9 @@ function JobDetailsDialog({ job, onClose }: { job: BulkJob | null; onClose: () =
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{t("bulkJobs.details.progress")}</span>
-                <span className="font-mono">{pct}%</span>
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span className="min-w-0 truncate">{t("bulkJobs.details.progress")}</span>
+                <span className="shrink-0 whitespace-nowrap font-mono tabular-nums">{pct}%</span>
               </div>
               <Progress value={pct} className="h-2" />
             </div>

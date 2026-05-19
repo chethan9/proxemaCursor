@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getWooUserAgent } from "@/lib/brand-name-server";
+import { asciiFilenameForContentDisposition } from "@/lib/http-filename";
 
 async function getWpCreds(storeId: string) {
   const { data } = await supabaseAdmin
@@ -60,13 +61,14 @@ export async function uploadImageBufferToWp(
 
   const authHeader = "Basic " + Buffer.from(`${creds.user}:${creds.pass}`).toString("base64");
   const ua = await getWooUserAgent();
+  const safeName = asciiFilenameForContentDisposition(filename);
 
   const r = await fetch(`${creds.url}/wp-json/wp/v2/media`, {
     method: "POST",
     headers: {
       Authorization: authHeader,
       "Content-Type": mime,
-      "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
+      "Content-Disposition": `attachment; filename="${safeName.replace(/"/g, "")}"`,
       "User-Agent": ua,
     },
     body: buffer,

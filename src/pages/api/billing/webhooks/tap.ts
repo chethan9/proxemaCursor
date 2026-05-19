@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { assertContentLength, MAX_WEBHOOK_RAW_BYTES } from "@/lib/api/validation";
 import { tapGateway } from "@/lib/payments/tap";
 import { logActivity } from "@/lib/activity-log";
 import { recordPaidConversion, recordReversal } from "@/services/referralService.server";
@@ -8,11 +9,20 @@ import { tryFinalizeAiCreditPurchaseFromWebhook } from "@/lib/billing/finalize-a
 
 export const config = { api: { bodyParser: false } };
 
-async function getRawBody(req: NextApiRequest): Promise<string> {
+async function getRawBody(req: NextApiRequest, maxBytes: number): Promise<string> {
   return new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", (chunk) => { data += chunk; });
-    req.on("end", () => resolve(data));
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    req.on("data", (chunk: Buffer | string) => {
+      const buf = typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk;
+      bytes += buf.length;
+      if (bytes > maxBytes) {
+        reject(new Error("payload too large"));
+        return;
+      }
+      chunks.push(buf);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
 }
@@ -20,7 +30,18 @@ async function getRawBody(req: NextApiRequest): Promise<string> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const rawBody = await getRawBody(req);
+  if (!assertContentLength(req, MAX_WEBHOOK_RAW_BYTES)) {
+    return res.status(413).json({ error: "Payload too large" });
+  }
+
+  let rawBody: string;
+  try {
+    rawBody = await getRawBody(req, MAX_WEBHOOK_RAW_BYTES);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg === "payload too large") return res.status(413).json({ error: "Payload too large" });
+    throw e;
+  }
   let body: Record<string, unknown>;
   try { body = JSON.parse(rawBody); } catch { return res.status(400).json({ error: "Invalid JSON" }); }
 

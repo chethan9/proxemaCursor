@@ -34,6 +34,13 @@ When work is finished (unless the user opts out):
 
 Report blockers briefly when a step is impossible (auth failure, missing tooling).
 
+## Security
+
+- Follow [`.cursor/rules/security-baseline.mdc`](./.cursor/rules/security-baseline.mdc). Validated env lives in [`src/env.ts`](./src/env.ts); service-role keys stay server-only.
+- HTTP APIs: global limits via [`src/middleware.ts`](./src/middleware.ts) when Upstash env is set; exclusions in [`src/lib/api-rate-limit-config.ts`](./src/lib/api-rate-limit-config.ts).
+- Supabase login abuse: configure dashboard controls per [`documentation/security/supabase-auth-hardening.md`](./documentation/security/supabase-auth-hardening.md) (browser auth does not hit Next.js `/api/*`).
+- CI: [`.github/workflows/security.yml`](./.github/workflows/security.yml) runs `npm audit` and TruffleHog (Docker).
+
 ## Global navigation / menu editor
 
 When adding a new **top-level** route under `src/pages/` (anything **not** under `src/pages/sites/`), add a matching row to **`MENU_REGISTRY`** in [`src/lib/menu-registry.ts`](src/lib/menu-registry.ts): `href`, label, icon (must exist on `ICON_MAP`), default group/order, and **`superAdminOnly`** or **`permission`** to match the page guard. Store/scoped routes stay in **`SITE_MENU_REGISTRY`** only.

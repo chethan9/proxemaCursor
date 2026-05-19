@@ -31,6 +31,69 @@ function trimStr(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+type WooVariationMetaRow = { id?: number; key: string; value: unknown };
+
+/** Normalize WP attachment IDs from the client (numbers or numeric strings). */
+function normalizeVariationGalleryEntries(
+  gallery: unknown,
+): Array<{ id: number; src: string; alt?: string }> {
+  if (!Array.isArray(gallery)) return [];
+  const out: Array<{ id: number; src: string; alt?: string }> = [];
+  for (const g of gallery) {
+    if (!g || typeof g !== "object") continue;
+    const rawId = (g as { id?: unknown }).id;
+    const id =
+      typeof rawId === "number"
+        ? rawId
+        : typeof rawId === "string"
+          ? parseInt(rawId, 10)
+          : NaN;
+    if (!Number.isFinite(id) || id <= 0) continue;
+    out.push({
+      id,
+      src: String((g as { src?: string }).src || ""),
+      alt: (g as { alt?: string }).alt ? String((g as { alt?: string }).alt) : undefined,
+    });
+  }
+  return out;
+}
+
+/**
+ * WooCommerce REST merges `meta_data` by row `id` when present. Sending only the gallery meta row can drop
+ * other variation meta or fail to update `_wc_additional_variation_images` in place — merge with the last
+ * REST snapshot from our mirror (`raw_data.meta_data`).
+ */
+function metaDataWithVariationGallery(
+  existingVariationRow: Record<string, unknown> | undefined,
+  galleryAttachmentIds: number[],
+): { meta_data: WooVariationMetaRow[] } {
+  const raw = existingVariationRow?.raw_data;
+  let prev: WooVariationMetaRow[] = [];
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const md = (raw as { meta_data?: unknown }).meta_data;
+    if (Array.isArray(md)) {
+      prev = md.filter(
+        (m): m is WooVariationMetaRow =>
+          m != null && typeof m === "object" && typeof (m as WooVariationMetaRow).key === "string",
+      );
+    }
+  }
+  const others = prev.filter((m) => m.key !== "_wc_additional_variation_images");
+  const oldGal = prev.find((m) => m.key === "_wc_additional_variation_images");
+  const value = galleryAttachmentIds;
+  const galEntry: WooVariationMetaRow =
+    oldGal && typeof oldGal.id === "number" && oldGal.id > 0
+      ? { id: oldGal.id, key: "_wc_additional_variation_images", value }
+      : { key: "_wc_additional_variation_images", value };
+  return { meta_data: [...others, galEntry] };
+}
+
+function galleryMetaForNewVariation(galleryAttachmentIds: number[]): { meta_data: WooVariationMetaRow[] } {
+  return {
+    meta_data: [{ key: "_wc_additional_variation_images", value: galleryAttachmentIds }],
+  };
+}
+
 /**
  * WooCommerce `POST …/variations/batch` frequently returns **partial** variation objects: omitted fields,
  * or `attributes: []`, or prices only in `price` / omitted entirely. Shallow-merging that response over
@@ -92,6 +155,12 @@ async function checkSkuConflictUpdate(storeId: string, sku: string, excludeProdu
 }
 
 function couplePayloadStock(payload: Record<string, unknown>): void {
+  /** Apply “not tracking” before qty→manage_stock inference so stale quantities cannot re-enable tracking. */
+  if (payload.manage_stock === false) {
+    delete payload.stock_quantity;
+    if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
+    return;
+  }
   const qty = payload.stock_quantity;
   if (qty != null) {
     payload.manage_stock = true;
@@ -99,10 +168,6 @@ function couplePayloadStock(payload: Record<string, unknown>): void {
     payload.stock_quantity = Number.isFinite(n) ? Math.max(0, n) : 0;
     if ((payload.stock_quantity as number) === 0) payload.stock_status = "outofstock";
     else if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
-  }
-  if (payload.manage_stock === false) {
-    delete payload.stock_quantity;
-    if (payload.stock_status !== "onbackorder") payload.stock_status = "instock";
   }
   if (typeof payload.stock_quantity === "number" && (payload.stock_quantity as number) < 0) {
     payload.stock_quantity = 0;
@@ -422,12 +487,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? { image: (v.image as Record<string, unknown>).id ? { id: (v.image as Record<string, unknown>).id } : { src: (v.image as Record<string, unknown>).src, alt: (v.image as Record<string, unknown>).alt || "" } }
           : {};
 
-        const userGallery = Array.isArray(v.gallery)
-          ? (v.gallery as Array<{ id: number; src: string; alt?: string }>).filter((g) => g && typeof g.id === "number" && g.id > 0)
-          : [];
-        const galleryMetaForWoo = userGallery.length > 0
-          ? { meta_data: [{ key: "_wc_additional_variation_images", value: userGallery.map((g) => g.id) }] }
-          : { meta_data: [{ key: "_wc_additional_variation_images", value: [] }] };
+        const userGallery = normalizeVariationGalleryEntries(v.gallery);
+        const galleryIds = userGallery.map((g) => g.id);
+        const galleryMetaForWooNew = galleryMetaForNewVariation(galleryIds);
 
         if (!v.id) {
           // Defensive: never create variations with empty attributes (would dupe as broken rows)
@@ -449,7 +511,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             description: (v.description as string) || "",
             attributes: v.attributes || [],
             ...img,
-            ...galleryMetaForWoo,
+            ...galleryMetaForWooNew,
           });
           continue;
         }
@@ -459,6 +521,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           continue;
         }
         userGalleryByWooId.set(wid, userGallery);
+        const existingRow = byWooId.get(wid);
+        const galleryMetaForWooUpdate = metaDataWithVariationGallery(existingRow, galleryIds);
         // Always send variation updates to Woo when the client submits them. Skipping “unchanged” rows relied on
         // fragile string/number comparisons and produced successful API responses with no Woo batch write.
         toUpdate.push({
@@ -473,7 +537,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           dimensions: v.dimensions || { length: "", width: "", height: "" },
           description: (v.description as string) || "",
           ...img,
-          ...galleryMetaForWoo,
+          ...galleryMetaForWooUpdate,
         });
       }
 

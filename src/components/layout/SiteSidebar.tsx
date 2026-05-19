@@ -3,7 +3,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthProvider";
-import { getStores, type StoreWithClient } from "@/services/storeService";
+import { type StoreWithClient } from "@/services/storeService";
+import { useStores } from "@/hooks/queries/useStores";
 import { getSiteMenuConfig } from "@/services/menuConfigService";
 import { mergeSiteMenu, resolveForSiteSidebar, buildInitialSiteTree, type ResolvedMenuNode } from "@/lib/menu-merge";
 import { resolveIcon } from "@/lib/menu-registry";
@@ -63,7 +64,8 @@ function collectMenuHrefs(nodes: ResolvedMenuNode[]): string[] {
 
 export function SiteSidebar({ siteId }: Props) {
   const router = useRouter();
-  const { profile, isSuperAdmin, can } = useAuth();
+  const { profile, isSuperAdmin, can, profileLoaded } = useAuth();
+  const { data: storesList } = useStores();
   const { t } = useTranslation("common");
   const [sites, setSites] = useState<StoreWithClient[]>(() => loadCachedSites());
   const [open, setOpen] = useState(false);
@@ -96,17 +98,18 @@ export function SiteSidebar({ siteId }: Props) {
   const currentSite = useMemo(() => sites.find((s) => s.id === siteId), [sites, siteId]);
 
   useEffect(() => {
-    getStores().then((list) => {
-      const cachedHash = sites.map((s) => `${s.id}:${s.updated_at || ""}`).join("|");
-      const newHash = list.map((s) => `${s.id}:${s.updated_at || ""}`).join("|");
-      cachedSites = list;
-      try { localStorage.setItem("sidebar-sites-cache", JSON.stringify(list)); } catch { /* ignore */ }
-      if (cachedHash !== newHash) setSites(list);
-    }).catch(() => { /* keep cached */ });
+    if (!storesList?.length) return;
+    const list = storesList;
+    const cachedHash = sites.map((s) => `${s.id}:${s.updated_at || ""}`).join("|");
+    const newHash = list.map((s) => `${s.id}:${s.updated_at || ""}`).join("|");
+    cachedSites = list;
+    try { localStorage.setItem("sidebar-sites-cache", JSON.stringify(list)); } catch { /* ignore */ }
+    if (cachedHash !== newHash) setSites(list);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [storesList]);
 
   useEffect(() => {
+    if (!profileLoaded) return;
     const cached = cachedSiteMenuByKey.get(menuCacheKey);
     if (cached) {
       setMenuTree((prev) => (JSON.stringify(prev) === JSON.stringify(cached) ? prev : cached));
@@ -121,7 +124,7 @@ export function SiteSidebar({ siteId }: Props) {
       setMenuTree((prev) => (JSON.stringify(prev) === JSON.stringify(resolved) ? prev : resolved));
     }).catch(() => { /* keep current */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleKey, siteId]);
+  }, [roleKey, siteId, profileLoaded]);
 
   useEffect(() => {
     const next: Record<string, boolean> = {};
