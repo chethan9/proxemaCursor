@@ -46,6 +46,7 @@ const GATEWAYS = [
   { id: "myfatoorah", name: "MyFatoorah", region: "MENA" },
   { id: "razorpay", name: "Razorpay", region: "Global" },
   { id: "tap", name: "Tap Payments", region: "MENA" },
+  { id: "polar", name: "Polar", region: "Global (MoR)" },
 ];
 
 export default function PaymentGatewaysPage() {

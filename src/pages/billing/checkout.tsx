@@ -27,6 +27,7 @@ const GATEWAY_LABEL: Record<string, string> = {
   myfatoorah: "MyFatoorah",
   razorpay: "Razorpay",
   tap: "Tap Payments",
+  polar: "Polar",
 };
 
 function CheckoutInner() {

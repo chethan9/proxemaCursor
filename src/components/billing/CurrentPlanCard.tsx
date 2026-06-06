@@ -30,9 +30,14 @@ export function CurrentPlanCard() {
 
   useEffect(() => {
     if (!subscription?.plan_id) return;
-    supabase.from("plans").select("id,name,prices,billing_interval").eq("id", subscription.plan_id).maybeSingle().then(({ data }) => {
-      if (data) setPlan(data as unknown as PlanRow);
-    });
+    (supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (col: string, val: string) => { maybeSingle: () => Promise<{ data: unknown }> } } } })
+      .from("plans")
+      .select("id,name,prices,billing_interval")
+      .eq("id", subscription.plan_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setPlan(data as PlanRow);
+      });
   }, [subscription?.plan_id]);
 
   const handleCancel = async (uncancel: boolean) => {

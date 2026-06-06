@@ -7,11 +7,13 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import { usePlansAdmin } from "@/hooks/queries/usePlans";
 import type { Plan } from "@/services/planService";
 import { PlanDialog } from "@/components/plans/PlanDialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { getPolarPlanEnvRefs } from "@/lib/payments/polar-types";
 
 function PlansContent() {
   const { t } = useTranslation("settings");
@@ -19,6 +21,30 @@ function PlansContent() {
   const { plans, isLoading, save, isSaving, delete: deletePlan } = usePlansAdmin();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
+  const [syncingPolar, setSyncingPolar] = useState(false);
+
+  async function syncAllPolar() {
+    setSyncingPolar(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/plans/sync-all-polar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Sync failed");
+      const failed = (j.results as Array<{ ok: boolean }>).filter((r) => !r.ok).length;
+      toast({
+        title: "Polar sync complete",
+        description: failed ? `${failed} plan(s) failed (${j.polarServer})` : `All plans synced (${j.polarServer})`,
+        variant: failed ? "destructive" : "default",
+      });
+    } catch (e) {
+      toast({ title: "Polar sync failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setSyncingPolar(false);
+    }
+  }
 
   function openCreate() {
     setEditing(null);
@@ -65,10 +91,16 @@ function PlansContent() {
           <h1 className="text-2xl font-semibold">{t("plans.title")}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t("plans.subtitle")}</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t("plans.newPlan")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={syncAllPolar} disabled={syncingPolar}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncingPolar ? "animate-spin" : ""}`} />
+            Sync all to Polar
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("plans.newPlan")}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -100,6 +132,10 @@ function PlansContent() {
                   <td className="px-4 py-2 font-medium">
                     {plan.name}
                     {plan.is_custom ? <Badge variant="secondary" className="ml-2 text-[10px]">{t("plans.contactSales")}</Badge> : null}
+                    {(getPolarPlanEnvRefs((plan as Plan & { polar_refs?: unknown }).polar_refs, "sandbox") ||
+                      getPolarPlanEnvRefs((plan as Plan & { polar_refs?: unknown }).polar_refs, "production")) ? (
+                      <Badge variant="outline" className="ml-2 text-[10px]">Polar</Badge>
+                    ) : null}
                   </td>
                   <td className="px-4 py-2 text-xs font-mono text-muted-foreground">{formatPrices(plan.prices)}</td>
                   <td className="px-4 py-2 text-right">{plan.max_sites ?? t("plans.noValue")}</td>

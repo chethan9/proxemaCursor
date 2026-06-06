@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 type CheckoutResponse = {
   subscriptionId: string;
-  gateway: "myfatoorah" | "razorpay" | "tap";
+  gateway: "myfatoorah" | "razorpay" | "tap" | "polar";
   payload: {
     type: string;
     paymentUrl?: string;
@@ -39,6 +39,10 @@ export function useCheckout() {
         return null;
       }
       if (data.gateway === "myfatoorah" && data.payload.paymentUrl) {
+        window.location.href = data.payload.paymentUrl;
+        return null;
+      }
+      if (data.gateway === "polar" && data.payload.paymentUrl) {
         window.location.href = data.payload.paymentUrl;
         return null;
       }

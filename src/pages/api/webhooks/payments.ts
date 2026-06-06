@@ -14,9 +14,10 @@ async function readRawBody(req: NextApiRequest): Promise<string> {
 
 function detectGateway(req: NextApiRequest, rawBody: string): GatewayName | null {
   const q = (req.query.gateway as string | undefined)?.toLowerCase();
-  if (q === "myfatoorah" || q === "razorpay" || q === "tap") return q;
+  if (q === "myfatoorah" || q === "razorpay" || q === "tap" || q === "polar") return q;
 
   const headers = req.headers;
+  if (headers["webhook-id"] || headers["webhook-signature"]) return "polar";
   if (headers["x-razorpay-signature"] || headers["X-Razorpay-Signature" as never]) return "razorpay";
   if (headers["mfsignature"] || headers["MFSignature" as never]) return "myfatoorah";
 
@@ -44,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: { headers: Object.keys(req.headers), body_preview: rawBody.slice(0, 300) },
       actorType: "system",
     });
-    return res.status(400).json({ error: "Unable to detect gateway. Pass ?gateway=myfatoorah|razorpay|tap or include the gateway's signature header." });
+    return res.status(400).json({ error: "Unable to detect gateway. Pass ?gateway=myfatoorah|razorpay|tap|polar or include the gateway's signature header." });
   }
 
   let event: WebhookEvent;

@@ -1,6 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchAllPlans, fetchActivePlans, createPlan, updatePlan, deletePlan } from "@/services/planService";
 import type { Plan, PlanInsert, PlanUpdate } from "@/services/planService";
+import { supabase } from "@/integrations/supabase/client";
+
+async function syncPlanToPolarApi(planId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return;
+  try {
+    await fetch(`/api/admin/plans/${planId}/sync-polar`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+  } catch {
+    /* non-blocking */
+  }
+}
 
 export function usePlans() {
   return useQuery({
@@ -23,9 +37,13 @@ export function usePlansAdmin() {
     mutationFn: async (input: Partial<Plan>) => {
       if (input.id) {
         const { id, ...rest } = input;
-        return updatePlan(id, rest as PlanUpdate);
+        const saved = await updatePlan(id, rest as PlanUpdate);
+        await syncPlanToPolarApi(saved.id);
+        return saved;
       }
-      return createPlan(input as PlanInsert);
+      const saved = await createPlan(input as PlanInsert);
+      await syncPlanToPolarApi(saved.id);
+      return saved;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["plans"] });

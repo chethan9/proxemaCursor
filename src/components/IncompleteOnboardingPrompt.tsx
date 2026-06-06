@@ -34,7 +34,8 @@ export function IncompleteOnboardingPrompt() {
         .select("id, name, onboarding_completed_at")
         .is("onboarding_completed_at", null)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(10)
+        .returns<{ id: string; name: string | null; onboarding_completed_at: string | null }[]>();
       const incomplete = (data || []).map((s) => ({ id: s.id, name: s.name || "Untitled site" }));
       if (incomplete.length > 0) {
         setSites(incomplete);

@@ -1,4 +1,4 @@
-export type GatewayName = "myfatoorah" | "razorpay" | "tap";
+export type GatewayName = "myfatoorah" | "razorpay" | "tap" | "polar";
 
 export interface ChargeRequest {
   amountMinor: number;

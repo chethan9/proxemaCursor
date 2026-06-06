@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { getGateway } from "@/lib/payments";
 import type { GatewayName } from "@/lib/payments/types";
 import { getResolvedGatewayForCountry } from "@/lib/payments/gateway-routing.server";
+import { ensurePolarAiCreditsProduct } from "@/lib/payments/polar-ai-credits.server";
 
 const MIN_CREDITS = 10;
 const MAX_CREDITS = 50_000;
@@ -84,6 +85,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       amountMinor,
       currency,
     });
+  }
+
+  if (gatewayName === "polar") {
+    try {
+      const productId = await ensurePolarAiCreditsProduct();
+      const gw = getGateway("polar");
+      const init = await gw.initiateCharge({
+        amountMinor,
+        currency,
+        description: `AI image credits (${credits})`,
+        customerEmail: profile?.email || ud.user.email || "",
+        customerName: profile?.full_name || undefined,
+        clientReference: `ai_credit_${purchase.id}`,
+        returnUrl,
+        metadata: {
+          polarProductId: productId,
+          purchaseId: purchase.id,
+          externalCustomerId: clientId,
+          purpose: "ai_credits",
+          polarUseCustomAmount: "true",
+        },
+      });
+      await supabaseAdmin
+        .from("ai_credit_purchases")
+        .update({
+          gateway: "polar",
+          gateway_ref: init.gatewayRef,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", purchase.id);
+      return res.status(200).json({
+        purchaseId: purchase.id,
+        gateway: "polar",
+        payload: init.payload,
+        amountMinor,
+        currency,
+      });
+    } catch (e) {
+      await supabaseAdmin.from("ai_credit_purchases").update({ status: "failed" }).eq("id", purchase.id);
+      return res.status(502).json({ error: e instanceof Error ? e.message : "Polar checkout failed" });
+    }
   }
 
   const gw = getGateway(gatewayName);

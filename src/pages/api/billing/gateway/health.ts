@@ -40,5 +40,18 @@ async function probeGateway(name: string): Promise<boolean> {
     });
     return r.status < 500;
   }
+  if (name === "polar") {
+    const key = process.env.POLAR_ACCESS_TOKEN;
+    if (!key) return false;
+    const base =
+      process.env.POLAR_SERVER === "production" || process.env.POLAR_SERVER === "live"
+        ? "https://api.polar.sh"
+        : "https://sandbox-api.polar.sh";
+    const r = await fetch(`${base}/v1/products/?limit=1`, {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    return r.ok;
+  }
   return true;
 }

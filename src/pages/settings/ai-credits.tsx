@@ -102,6 +102,11 @@ export default function AICreditsPage() {
         return;
       }
 
+      if (j.gateway === "polar" && j.payload?.paymentUrl) {
+        window.location.href = j.payload.paymentUrl as string;
+        return;
+      }
+
       if (j.gateway === "razorpay" && j.payload?.type === "inline") {
         const p = j.payload as {
           orderId: string;

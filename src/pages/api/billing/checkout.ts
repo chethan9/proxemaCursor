@@ -5,6 +5,7 @@ import { getGateway } from "@/lib/payments";
 import type { GatewayName } from "@/lib/payments/types";
 import { validateCoupon } from "@/services/couponService.server";
 import { getResolvedGatewayForCountry } from "@/lib/payments/gateway-routing.server";
+import { ensurePlanPolarRefs } from "@/lib/payments/polar-plan-sync.server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -92,8 +93,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const gw = getGateway(gatewayName);
   const host = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.host}`;
+  const returnUrl = `${host}/billing/return?sub=${sub.id}`;
+
+  if (gatewayName === "polar") {
+    try {
+      const polarRefs = await ensurePlanPolarRefs(sub.plan_id);
+      const gw = getGateway("polar");
+      const init = await gw.initiateCharge({
+        amountMinor: Math.round(amt * 100),
+        currency,
+        description: `${plan?.name || "Plan"} subscription`,
+        customerEmail: ud.user.email || "",
+        clientReference: `sub_${sub.id}_${Date.now()}`,
+        returnUrl,
+        metadata: {
+          polarProductId: polarRefs.product_id,
+          subscriptionId: sub.id,
+          externalCustomerId: clientId,
+          purpose: "subscription",
+          polarAllowTrial: String((sub.plans as { trial_days?: number } | null)?.trial_days ?? 0) !== "0" ? "true" : "false",
+        },
+      });
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          gateway: "polar" as never,
+          gateway_subscription_ref: init.gatewayRef,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", sub.id);
+      return res.status(200).json({
+        subscriptionId: sub.id,
+        gateway: "polar",
+        payload: init.payload,
+        discount: baseAmt - amt,
+      });
+    } catch (e) {
+      return res.status(502).json({ error: e instanceof Error ? e.message : "Polar checkout failed" });
+    }
+  }
+
+  const gw = getGateway(gatewayName);
   const init = await gw.initiateCharge({
     amountMinor: Math.round(amt * 100),
     currency,

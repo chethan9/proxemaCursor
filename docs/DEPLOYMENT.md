@@ -6,13 +6,18 @@ Safe-deploy workflow for Proxima Cursor. Read this before every production push.
 
 Canonical Supabase refs for this codebase live in **`supabase/current-project.json`** (dashboard URLs live there too).
 
-| Env | Domain | Supabase project | Purpose |
-|---|---|---|---|
-| Dev | localhost:3000 / Vercel preview | dev DB of your choice | Daily development |
-| Staging (future) | (optional) | separate Supabase project | Pre-prod smoke tests |
-| Production | e.g. `proximacursor.vercel.app` | **`fyqvmbrgyncthksbgrrr`** (`woosync-live-prod`) | Live customer data |
+| Env | Domain | Supabase project | GitHub repo | Vercel project | Purpose |
+|---|---|---|---|---|---|
+| Dev/Test | `proximacursor-dev.vercel.app` / localhost:3000 | **`frnkjhjhsbiuibpuldzb`** (`woosync-test`) | `chethan9/proxemaCursor-dev` | `proximacursor-dev` | Full prod clone for testing |
+| Production | e.g. `proximacursor.vercel.app` | **`fyqvmbrgyncthksbgrrr`** (`woosync-live-prod`) | `chethan9/proxemaCursor` | `proximacursor` | Live customer data |
 
-**Rule:** dev never points at the prod Supabase. Staging is optional today, mandatory once you have >5 paying clients.
+**Rule:** dev never points at the prod Supabase. The `woosync-test` project (`frnkjhjhsbiuibpuldzb`) is a full clone of production (schema + data + auth users) created 2026-06-03; treat its data as sensitive as prod since it contains real customer records.
+
+**Dev/Test caveats:**
+- Standard Supabase API-role grants (`anon`/`authenticated`/`service_role`) were re-applied to the clone after restore (the `--no-acl` dump stripped them); PostgREST/REST access depends on these.
+- Storage object metadata is cloned, but the underlying file bytes remain in prod's storage backend (a SQL clone does not copy the object store). Product images still resolve via Cloudflare where mirrored.
+- The dev/test Vercel project copies prod's env vars (`CRON_SECRET`, `PAYMENT_ENCRYPTION_KEY`, `METABASE_*`, etc.) as-is. These are live third-party credentials — swap to test keys before exercising payments/integrations.
+- Preview-scope env vars were not set on the dev Vercel project (CLI quirk); production + development scopes are configured. Add preview scope from the dashboard if branch previews are needed.
 
 **Stale snapshot:** `supabase/prod_full_dump.sql` embeds an older project ref (`zhsmlfdmtlzyxvioppex`). Do **not** treat that file as today’s production database identity — use `current-project.json` and Vercel env vars.
 

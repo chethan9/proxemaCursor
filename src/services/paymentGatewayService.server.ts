@@ -132,6 +132,14 @@ export async function testGatewayConnection(gateway: string, mode: "test" | "liv
       });
       testResult.success = response.ok;
       if (!response.ok) testResult.error = await response.text();
+    } else if (gateway === "polar") {
+      const base =
+        mode === "live" ? "https://api.polar.sh" : "https://sandbox-api.polar.sh";
+      const response = await fetch(`${base}/v1/products/?limit=1`, {
+        headers: { Authorization: `Bearer ${credentials.api_key}` },
+      });
+      testResult.success = response.ok;
+      if (!response.ok) testResult.error = await response.text();
     }
   } catch (err) {
     testResult.error = err instanceof Error ? err.message : String(err);

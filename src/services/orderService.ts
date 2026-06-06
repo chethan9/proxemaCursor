@@ -37,6 +37,43 @@ export interface FetchOrdersOptions {
   listProjection?: "list" | "full";
 }
 
+function toNumericTotal(value: unknown): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const n = Number.parseFloat(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function toSortableText(value: unknown): string {
+  if (value == null) return "";
+  return String(value);
+}
+
+function sortOrdersInMemory(rows: OrderRow[], field: OrderSortField, direction: SortDirection): OrderRow[] {
+  const dir = direction === "asc" ? 1 : -1;
+  const copy = [...rows];
+  copy.sort((a, b) => {
+    let cmp = 0;
+    if (field === "total") {
+      cmp = toNumericTotal(a.total) - toNumericTotal(b.total);
+    } else if (field === "order_number") {
+      cmp = toSortableText(a.order_number).localeCompare(toSortableText(b.order_number), undefined, { numeric: true });
+    } else if (field === "status") {
+      cmp = toSortableText(a.status).localeCompare(toSortableText(b.status));
+    } else if (field === "synced_at") {
+      cmp = toSortableText(a.synced_at).localeCompare(toSortableText(b.synced_at));
+    } else if (field === "created_at") {
+      cmp = toSortableText(a.created_at).localeCompare(toSortableText(b.created_at));
+    } else {
+      cmp = toSortableText(a.date_created).localeCompare(toSortableText(b.date_created));
+    }
+    return cmp * dir;
+  });
+  return copy;
+}
+
 function wooOrderToRow(o: Record<string, unknown>, storeId: string): OrderRow {
   return {
     id: `live-${o.id}`,
@@ -153,11 +190,15 @@ export async function fetchOrders(opts: FetchOrdersOptions): Promise<{ data: Ord
   if (totalMax !== undefined && !isNaN(totalMax)) query = query.lte("total", String(totalMax));
   if (dateFrom) query = query.gte("date_created", dateFrom);
   if (dateTo) query = query.lte("date_created", dateTo);
-  query = query.order(sortField, { ascending: sortDirection === "asc", nullsFirst: false });
+  const requiresInMemorySort = sortField !== "date_created";
+  const dbSortField: OrderSortField = requiresInMemorySort ? "date_created" : sortField;
+  query = query.order(dbSortField, { ascending: sortDirection === "asc", nullsFirst: false });
   query = query.range(page * pageSize, (page + 1) * pageSize - 1);
   const { data, count, error } = await query;
   if (error) throw error;
-  return { data: (data ?? []) as unknown as OrderRow[], count: count ?? 0 };
+  const rows = (data ?? []) as unknown as OrderRow[];
+  const sorted = requiresInMemorySort ? sortOrdersInMemory(rows, sortField, sortDirection) : rows;
+  return { data: sorted, count: count ?? 0 };
 }
 
 export function getCustomerName(billing: unknown): string {

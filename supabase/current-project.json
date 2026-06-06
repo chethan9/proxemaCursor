@@ -13,6 +13,26 @@
       "http://localhost:3000/**"
     ]
   },
+  "development_testing": {
+    "project_ref": "frnkjhjhsbiuibpuldzb",
+    "dashboard_name": "woosync-test",
+    "purpose": "Full clone of production (schema + data + auth users) for the development/testing environment. Created 2026-06-03. Treat data as sensitive as prod.",
+    "api_url": "https://frnkjhjhsbiuibpuldzb.supabase.co",
+    "general_settings": "https://supabase.com/dashboard/project/frnkjhjhsbiuibpuldzb/settings/general",
+    "database_settings": "https://supabase.com/dashboard/project/frnkjhjhsbiuibpuldzb/settings/database",
+    "api_keys_settings": "https://supabase.com/dashboard/project/frnkjhjhsbiuibpuldzb/settings/api-keys",
+    "auth_url_allowlist": "https://supabase.com/dashboard/project/frnkjhjhsbiuibpuldzb/auth/url-configuration",
+    "auth_site_url": "https://proximacursor-dev.vercel.app",
+    "auth_redirect_urls": [
+      "https://proximacursor-dev.vercel.app/**",
+      "http://localhost:3000/**"
+    ],
+    "vercel_project": "proximacursor-dev",
+    "vercel_url": "https://proximacursor-dev.vercel.app",
+    "github_repo": "https://github.com/chethan9/proxemaCursor-dev",
+    "clone_notes": "Cloned via pg_dump (public/auth/storage) + pg_restore. Standard Supabase API-role grants (anon/authenticated/service_role) re-applied after restore since --no-acl stripped them. Storage object metadata (116 rows) copied; underlying file bytes live in prod's storage backend and were not transferred.",
+    "schema_repair_2026_06_04": "The original pg_restore silently dropped the entire post-data section: public schema had 0 PKs/FKs/unique constraints/indexes (only inline CHECKs survived). Symptom: super-admin /projects empty because PostgREST embedded join stores->clients(name) failed with PGRST200 (no FK relationship). Fix: re-derived DDL from prod via MCP and applied to test — 66 PKs, 27 unique, 95 FKs, 223 indexes, 25 triggers (now exactly matches prod). Also deduped product_image_mirrors (12191->11657, double-loaded rows) before adding its unique constraint. Reloaded PostgREST schema cache (NOTIFY pgrst). Super-admin login chethan@vizsoft.in password reset in TEST only to 'SuperAdmin!2026Test'."
+  },
   "other_projects_same_org": {
     "woosync_new_20260429": {
       "project_ref": "ayucistyyoffqcjsqmra",
