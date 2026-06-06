@@ -80,6 +80,22 @@ export async function updatePlan(id: string, updates: PlanUpdate): Promise<Plan>
 }
 
 export async function deletePlan(id: string): Promise<void> {
+  const { count, error: countError } = await supabase
+    .from("subscriptions")
+    .select("id", { count: "exact", head: true })
+    .eq("plan_id", id);
+  if (countError) throw countError;
+  if (count && count > 0) {
+    throw new Error(
+      `This plan is used by ${count} subscription${count === 1 ? "" : "s"}. Set it to inactive instead of deleting.`,
+    );
+  }
+
   const { error } = await supabase.from("plans").delete().eq("id", id);
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23503") {
+      throw new Error("This plan is still referenced elsewhere. Set it to inactive instead of deleting.");
+    }
+    throw error;
+  }
 }

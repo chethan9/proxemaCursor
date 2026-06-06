@@ -191,6 +191,7 @@
       "planCreated": "Plan created",
       "planUpdated": "Plan updated",
       "planDeleted": "Plan deleted",
+      "deleteFailed": "Could not delete plan",
       "saveFailed": "Save failed"
     }
   },
@@ -214,7 +215,9 @@
     "defaultTrial": "Default trial plan",
     "defaultTrialTip": "When a new client is created, automatically start a trial on this plan. Only one plan can be marked as default.",
     "localizedPrices": "Localized prices",
-    "pricesHelper": "Leave blank for \"contact us\" in that currency",
+    "pricesHelper": "Enter USD to auto-fill other currencies from latest FX rates. Edit any field to keep your own value.",
+    "usdFxHint": "Other currencies update when you change USD. Manual edits are kept until you close this dialog.",
+    "usdAnchor": "anchor",
     "perYear": "/ yr",
     "perMonth": "/ mo",
     "preview": "Preview:",

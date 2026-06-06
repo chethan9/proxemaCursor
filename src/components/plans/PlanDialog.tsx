@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "next-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trash2, Info } from "lucide-react";
 import { SUPPORTED_CURRENCIES, CURRENCY_LABELS, formatPrice, type Plan } from "@/services/planService";
+import { derivePricesFromUsdMinor, fetchUsdFxRates } from "@/lib/plan-price-fx";
 
 interface PlanDialogProps {
   open: boolean;
@@ -43,9 +44,15 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
   const [maxMonthlyAi, setMaxMonthlyAi] = useState<number | "">("");
   const [maxHistory, setMaxHistory] = useState<number | "">("");
   const [features, setFeatures] = useState<Record<string, boolean>>({});
+  const [fxRates, setFxRates] = useState<Record<string, number> | null>(null);
+  const manualPriceOverrides = useRef(new Set<string>());
 
   useEffect(() => {
     if (!open) return;
+    manualPriceOverrides.current = new Set();
+    void fetchUsdFxRates()
+      .then(setFxRates)
+      .catch(() => setFxRates(null));
     setSlug(plan?.slug ?? "");
     setName(plan?.name ?? "");
     setDescription(plan?.description ?? "");
@@ -71,9 +78,45 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
     setFeatures(fInit);
   }, [open, plan]);
 
+  useEffect(() => {
+    if (!open || !fxRates) return;
+    setPrices((prev) => {
+      const usd = prev.USD;
+      if (typeof usd !== "number" || usd <= 0) return prev;
+      const derived = derivePricesFromUsdMinor(usd, fxRates, manualPriceOverrides.current);
+      const next = { ...prev };
+      let changed = false;
+      for (const cur of SUPPORTED_CURRENCIES) {
+        if (cur === "USD" || manualPriceOverrides.current.has(cur)) continue;
+        if (typeof derived[cur] === "number" && next[cur] !== derived[cur]) {
+          next[cur] = derived[cur]!;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [open, fxRates]);
+
   function setPrice(currency: string, value: string) {
     const num = value === "" ? "" : Number(value);
-    setPrices((p) => ({ ...p, [currency]: num }));
+
+    if (currency !== "USD") {
+      if (value !== "") manualPriceOverrides.current.add(currency);
+      setPrices((p) => ({ ...p, [currency]: num }));
+      return;
+    }
+
+    setPrices((prev) => {
+      const next = { ...prev, USD: num };
+      if (typeof num === "number" && !Number.isNaN(num) && num > 0 && fxRates) {
+        const derived = derivePricesFromUsdMinor(num, fxRates, manualPriceOverrides.current);
+        for (const cur of SUPPORTED_CURRENCIES) {
+          if (cur === "USD" || manualPriceOverrides.current.has(cur)) continue;
+          if (typeof derived[cur] === "number") next[cur] = derived[cur]!;
+        }
+      }
+      return next;
+    });
   }
 
   async function handleSave() {
@@ -180,12 +223,20 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
             <div>
               <h3 className="text-sm font-semibold">{t("planDialog.localizedPrices")}</h3>
               <p className="text-xs text-muted-foreground">{t("planDialog.pricesHelper")}</p>
+              {fxRates ? (
+                <p className="text-xs text-muted-foreground mt-1">{t("planDialog.usdFxHint")}</p>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {SUPPORTED_CURRENCIES.map((cur) => (
                 <div key={cur} className="space-y-1">
                   <Label className="text-[11px] flex items-center justify-between">
-                    <span>{cur} <span className="text-muted-foreground">· {CURRENCY_LABELS[cur]}</span></span>
+                    <span>
+                      {cur} <span className="text-muted-foreground">· {CURRENCY_LABELS[cur]}</span>
+                      {cur === "USD" ? (
+                        <span className="ml-1 text-primary font-medium">{t("planDialog.usdAnchor")}</span>
+                      ) : null}
+                    </span>
                   </Label>
                   <Input
                     type="number"
@@ -193,6 +244,7 @@ export function PlanDialog({ open, onOpenChange, plan, onSave, onDelete, saving 
                     placeholder="0"
                     value={prices[cur] ?? ""}
                     onChange={(e) => setPrice(cur, e.target.value)}
+                    className={cur === "USD" ? "border-primary/50" : undefined}
                   />
                   {typeof prices[cur] === "number" && (prices[cur] as number) > 0 && (
                     <div className="text-[10px] text-muted-foreground">

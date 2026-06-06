@@ -62,7 +62,7 @@ export function usePlansAdmin() {
     isLoading: query.isLoading,
     save: saveMutation.mutateAsync,
     isSaving: saveMutation.isPending,
-    delete: (id: string) => deleteMutation.mutate(id),
+    delete: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
   };
 }

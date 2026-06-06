@@ -8,9 +8,21 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthProvider";
-import { Loader2, CheckCircle2, XCircle, Key, RefreshCw, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Key, RefreshCw, AlertTriangle, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +71,9 @@ export default function PaymentGatewaysPage() {
   const [formData, setFormData] = useState<Record<string, { api_key?: string; api_secret?: string; webhook_secret?: string; enabled?: boolean }>>({});
   const [routeCountry, setRouteCountry] = useState("US");
   const [routeGateway, setRouteGateway] = useState("razorpay");
+  const [defaultGateway, setDefaultGateway] = useState("polar");
+  const [disableOverridesOnDefault, setDisableOverridesOnDefault] = useState(true);
+  const [removeGatewayTarget, setRemoveGatewayTarget] = useState("myfatoorah");
 
   const { data: configs = [], isLoading } = useQuery({
     queryKey: ["payment-gateways"],
@@ -153,6 +168,64 @@ export default function PaymentGatewaysPage() {
     },
   });
 
+  const routingDeleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const response = await fetch("/api/admin/payment-gateways", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "delete_routing", id }),
+      });
+      if (!response.ok) throw new Error("Failed to delete routing");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-routing"] });
+      toast({ title: "Routing rule removed" });
+    },
+  });
+
+  const setDefaultGatewayMutation = useMutation({
+    mutationFn: async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const response = await fetch("/api/admin/payment-gateways", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          action: "set_default_gateway",
+          gateway: defaultGateway,
+          disable_country_overrides: disableOverridesOnDefault,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to set default gateway");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-routing"] });
+      toast({ title: "Global default gateway updated" });
+    },
+  });
+
+  const removeGatewayRoutingMutation = useMutation({
+    mutationFn: async (gateway: string) => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const response = await fetch("/api/admin/payment-gateways", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "remove_gateway_routing", gateway }),
+      });
+      if (!response.ok) throw new Error("Failed to remove gateway routes");
+      return response.json() as Promise<{ removed_count: number }>;
+    },
+    onSuccess: (data, gateway) => {
+      queryClient.invalidateQueries({ queryKey: ["payment-routing"] });
+      toast({ title: `Removed ${data.removed_count} route(s) for ${gateway}` });
+    },
+  });
+
   const regenerateMutation = useMutation({
     mutationFn: async ({ gateway, mode }: { gateway: string; mode: "test" | "live" }) => {
       const session = await supabase.auth.getSession();
@@ -186,6 +259,13 @@ export default function PaymentGatewaysPage() {
 
   const getConfig = (gateway: string, mode: "test" | "live") =>
     configs.find((c) => c.gateway === gateway && c.mode === mode);
+
+  const wildcardRoute = routing.find((r) => r.country_code === "*" && r.enabled);
+  const routingBusy =
+    routingUpsertMutation.isPending ||
+    routingDeleteMutation.isPending ||
+    setDefaultGatewayMutation.isPending ||
+    removeGatewayRoutingMutation.isPending;
 
   const handleSave = (gateway: string, mode: "test" | "live") => {
     const key = `${gateway}_${mode}`;
@@ -401,13 +481,113 @@ export default function PaymentGatewaysPage() {
             ))}
           </TabsContent>
 
-          <TabsContent value="routing" className="mt-6">
+          <TabsContent value="routing" className="mt-6 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Region routing</CardTitle>
+                <CardTitle>Global default</CardTitle>
                 <CardDescription>
-                  Exact ISO country code matches before the <code className="text-xs">*</code> fallback. Lower priority runs first. Checkout resolves the gateway from these rows (cached ~1 minute).
+                  Set the <code className="text-xs">*</code> fallback gateway for every country without its own enabled rule. Optionally disable all country-specific overrides so only this gateway is used.
                 </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {wildcardRoute && (
+                  <p className="text-sm text-muted-foreground">
+                    Active fallback:{" "}
+                    <Badge variant="outline" className="font-normal">
+                      {GATEWAYS.find((g) => g.id === wildcardRoute.gateway)?.name ?? wildcardRoute.gateway}
+                    </Badge>
+                  </p>
+                )}
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
+                  <div className="space-y-1.5">
+                    <Label>Default gateway for all regions</Label>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={defaultGateway}
+                      onChange={(e) => setDefaultGateway(e.target.value)}
+                    >
+                      {GATEWAYS.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setDefaultGatewayMutation.mutate()}
+                    disabled={routingBusy}
+                  >
+                    {setDefaultGatewayMutation.isPending && (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
+                    )}
+                    Set global default
+                  </Button>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="disable-overrides"
+                    checked={disableOverridesOnDefault}
+                    onCheckedChange={(v) => setDisableOverridesOnDefault(v === true)}
+                  />
+                  <Label htmlFor="disable-overrides" className="text-sm font-normal leading-snug cursor-pointer">
+                    Disable all country-specific routes when setting default (recommended when switching to one gateway everywhere)
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle>Region routing</CardTitle>
+                    <CardDescription>
+                      Exact ISO country code matches before the <code className="text-xs">*</code> fallback. Lower priority runs first. Checkout resolves the gateway from these rows (cached ~1 minute).
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-2 shrink-0">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Remove gateway from routing</Label>
+                      <select
+                        className="flex h-8 rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm min-w-[140px]"
+                        value={removeGatewayTarget}
+                        onChange={(e) => setRemoveGatewayTarget(e.target.value)}
+                      >
+                        {GATEWAYS.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" disabled={routingBusy}>
+                          Remove all routes
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove all {removeGatewayTarget} routes?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Deletes every region routing row for{" "}
+                            {GATEWAYS.find((g) => g.id === removeGatewayTarget)?.name ?? removeGatewayTarget}. Countries
+                            without another enabled rule will use the <code>*</code> fallback or legacy defaults.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => removeGatewayRoutingMutation.mutate(removeGatewayTarget)}
+                          >
+                            Remove routes
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="rounded-md border divide-y max-h-[320px] overflow-y-auto">
@@ -418,7 +598,7 @@ export default function PaymentGatewaysPage() {
                       return a.country_code.localeCompare(b.country_code);
                     })
                     .map((row) => (
-                      <div key={row.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 p-3 text-sm">
+                      <div key={row.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-3 p-3 text-sm">
                         <span className="font-mono font-medium min-w-[3ch]">
                           {row.country_code === "*" ? "* (fallback)" : row.country_code}
                         </span>
@@ -433,7 +613,7 @@ export default function PaymentGatewaysPage() {
                               priority: row.priority,
                             })
                           }
-                          disabled={routingUpsertMutation.isPending}
+                          disabled={routingBusy}
                         >
                           {GATEWAYS.map((g) => (
                             <option key={g.id} value={g.id}>
@@ -451,17 +631,46 @@ export default function PaymentGatewaysPage() {
                               priority: row.priority,
                             })
                           }
-                          disabled={routingUpsertMutation.isPending}
+                          disabled={routingBusy}
                           aria-label={`Toggle ${row.country_code} routing`}
                         />
                         <Badge variant={row.enabled ? "default" : "secondary"} className="min-w-[68px] justify-center">
                           {row.enabled ? "Enabled" : "Disabled"}
                         </Badge>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              disabled={routingBusy}
+                              aria-label={`Delete ${row.country_code} ${row.gateway} route`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete this routing rule?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Remove {row.country_code === "*" ? "the global fallback" : row.country_code} →{" "}
+                                {GATEWAYS.find((g) => g.id === row.gateway)?.name ?? row.gateway}. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => routingDeleteMutation.mutate(row.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     ))}
                   {routing.length === 0 && (
                     <div className="p-6 text-sm text-muted-foreground text-center">
-                      No routing rules yet. Add one below or seed the wildcard <code>*</code> fallback.
+                      No routing rules yet. Set a global default above or add a country rule below.
                     </div>
                   )}
                 </div>
@@ -499,7 +708,7 @@ export default function PaymentGatewaysPage() {
                   <Button
                     type="button"
                     onClick={() => routingUpsertMutation.mutate({})}
-                    disabled={routingUpsertMutation.isPending}
+                    disabled={routingBusy}
                   >
                     {routingUpsertMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />}
                     Save route

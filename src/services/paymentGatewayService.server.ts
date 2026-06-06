@@ -193,3 +193,49 @@ export async function updateRegionRouting(
   if (error) throw error;
   return data;
 }
+
+export async function deleteRegionRouting(id: string) {
+  const { data, error } = await supabaseAdmin
+    .from("payment_region_routing")
+    .delete()
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteRegionRoutingForGateway(gateway: string) {
+  const { data, error } = await supabaseAdmin
+    .from("payment_region_routing")
+    .delete()
+    .eq("gateway", gateway)
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function setGlobalDefaultGateway(
+  gateway: string,
+  options?: { disableCountryOverrides?: boolean },
+) {
+  const { data, error } = await supabaseAdmin
+    .from("payment_region_routing")
+    .upsert(
+      { country_code: "*", gateway, enabled: true, priority: 1 },
+      { onConflict: "country_code,gateway" },
+    )
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (options?.disableCountryOverrides) {
+    const { error: disableError } = await supabaseAdmin
+      .from("payment_region_routing")
+      .update({ enabled: false })
+      .neq("country_code", "*");
+    if (disableError) throw disableError;
+  }
+
+  return data;
+}

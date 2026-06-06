@@ -18,7 +18,7 @@ import { getPolarPlanEnvRefs } from "@/lib/payments/polar-types";
 function PlansContent() {
   const { t } = useTranslation("settings");
   const { toast } = useToast();
-  const { plans, isLoading, save, isSaving, delete: deletePlan } = usePlansAdmin();
+  const { plans, isLoading, save, isSaving, delete: deletePlan, isDeleting } = usePlansAdmin();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [syncingPolar, setSyncingPolar] = useState(false);
@@ -67,13 +67,17 @@ function PlansContent() {
     }
   }
 
-  function handleDelete(id: string, name: string) {
+  async function handleDelete(id: string, name: string) {
     if (!confirm(`Delete plan "${name}"?`)) return;
     try {
-      deletePlan(id);
+      await deletePlan(id);
       toast({ title: t("plans.toast.planDeleted") });
     } catch (e) {
-      toast({ title: t("plans.toast.saveFailed"), description: e instanceof Error ? e.message : "", variant: "destructive" });
+      toast({
+        title: t("plans.toast.deleteFailed"),
+        description: e instanceof Error ? e.message : t("plans.toast.saveFailed"),
+        variant: "destructive",
+      });
     }
   }
 
@@ -155,7 +159,12 @@ function PlansContent() {
                       <Button variant="ghost" size="sm" onClick={() => openEdit(plan)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(plan.id, plan.name)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(plan.id, plan.name)}
+                        disabled={isDeleting}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

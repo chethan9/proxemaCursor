@@ -7,6 +7,9 @@ import {
   regenerateWebhookSecret,
   listRegionRouting,
   updateRegionRouting,
+  deleteRegionRouting,
+  deleteRegionRoutingForGateway,
+  setGlobalDefaultGateway,
 } from "@/services/paymentGatewayService.server";
 import { invalidatePaymentRoutingCache } from "@/lib/payments/gateway-routing.server";
 import { logActivity } from "@/lib/activity-log";
@@ -83,6 +86,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           entityType: "payment_region_routing",
           entityId: result.id,
           metadata: { country_code, gateway, enabled, priority },
+        });
+        return res.json(result);
+      }
+
+      if (action === "delete_routing") {
+        const { id } = req.body;
+        if (!id || typeof id !== "string") {
+          return res.status(400).json({ error: "id is required" });
+        }
+        const result = await deleteRegionRouting(id);
+        invalidatePaymentRoutingCache();
+        await logActivity({
+          action: "payment_gateway.delete_routing",
+          entityType: "payment_region_routing",
+          entityId: id,
+          metadata: { country_code: result.country_code, gateway: result.gateway },
+        });
+        return res.json(result);
+      }
+
+      if (action === "remove_gateway_routing") {
+        if (!gateway || typeof gateway !== "string") {
+          return res.status(400).json({ error: "gateway is required" });
+        }
+        const removed = await deleteRegionRoutingForGateway(gateway);
+        invalidatePaymentRoutingCache();
+        await logActivity({
+          action: "payment_gateway.remove_gateway_routing",
+          entityType: "payment_region_routing",
+          entityId: gateway,
+          metadata: { gateway, removed_count: removed.length },
+        });
+        return res.json({ gateway, removed_count: removed.length });
+      }
+
+      if (action === "set_default_gateway") {
+        if (!gateway || typeof gateway !== "string") {
+          return res.status(400).json({ error: "gateway is required" });
+        }
+        const { disable_country_overrides } = req.body;
+        const result = await setGlobalDefaultGateway(gateway, {
+          disableCountryOverrides: disable_country_overrides === true,
+        });
+        invalidatePaymentRoutingCache();
+        await logActivity({
+          action: "payment_gateway.set_default_gateway",
+          entityType: "payment_region_routing",
+          entityId: result.id,
+          metadata: { gateway, disable_country_overrides: disable_country_overrides === true },
         });
         return res.json(result);
       }

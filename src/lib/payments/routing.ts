@@ -11,7 +11,7 @@ export const MYFATOORAH_COUNTRIES = ["KW", "SA", "AE", "BH", "OM", "QA", "JO"] a
 
 function normalizeGatewayId(g: string): GatewayName {
   const x = g.toLowerCase();
-  if (x === "myfatoorah" || x === "razorpay" || x === "tap") return x;
+  if (x === "myfatoorah" || x === "razorpay" || x === "tap" || x === "polar") return x;
   return "razorpay";
 }
 
